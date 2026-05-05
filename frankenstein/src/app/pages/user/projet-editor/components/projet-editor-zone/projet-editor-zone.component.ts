@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChild, ElementRef, inject, NgZone, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -97,6 +97,14 @@ interface DropIndicator {
   position: 'before' | 'after' | 'inside';
 }
 
+interface VisuSectionState {
+  sectionId: string;
+  folderName: string;
+  level: number;
+  contentHtml: string;
+  markdownBefore: string;
+}
+
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
@@ -105,7 +113,7 @@ interface DropIndicator {
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
 })
-export class ProjetEditorZoneComponent implements OnChanges {
+export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Input() files: FileNode[] = [];
   @Input() scrollToNodeId: string | null = null;
   @Input() saveStatus: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' = 'idle';
@@ -126,6 +134,8 @@ export class ProjetEditorZoneComponent implements OnChanges {
   @ViewChild('mirror') mirrorRef?: ElementRef<HTMLDivElement>;
   @ViewChild('overlay') overlayRef?: ElementRef<HTMLDivElement>;
   @ViewChild('visu') visuRef?: ElementRef<HTMLDivElement>;
+  @ViewChildren('visuSectionEl') visuSectionEls!: QueryList<ElementRef<HTMLElement>>;
+  @ViewChild('visuImgInput') visuImgInputRef?: ElementRef<HTMLInputElement>;
 
   private sanitizer = inject(DomSanitizer);
   private zone = inject(NgZone);
@@ -160,8 +170,17 @@ export class ProjetEditorZoneComponent implements OnChanges {
   private fileRanges: FileRange[] = [];
 
   // Highlights
-  private highlightedFolderIds = new Set<string>();
+  highlightedFolderIds = new Set<string>();
   private highlightedFileIds = new Set<string>();
+
+  // ── Visu edit mode ─────────────────────────────────────────
+  visuSections: VisuSectionState[] = [];
+  visuToolbar: { top: number; left: number } | null = null;
+  visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
+  activeVisuSectionId: string | null = null;
+  private dirtyVisuSectionIds = new Set<string>();
+  private visuSelectionListener: (() => void) | null = null;
+  visuImageSectionId: string | null = null;
   mirrorLines: MirrorLine[] = [];
   renderedHtml: SafeHtml = '';
 
@@ -364,6 +383,7 @@ export class ProjetEditorZoneComponent implements OnChanges {
     this.recomputeHighlights();
     this.recomputeHandles();
     this.recomputeRenderedHtml();
+    if (this.mode === 'visu') this.buildVisuSections();
   }
 
   private recomputeHandles() {
@@ -616,9 +636,15 @@ export class ProjetEditorZoneComponent implements OnChanges {
   // ── Mode toggle ─────────────────────────────────────────────
   setMode(m: 'edit' | 'visu') {
     if (this.mode === m) return;
+    if (this.mode === 'visu') {
+      this.flushVisuSections();
+      this.teardownVisuSelectionListener();
+      this.visuToolbar = null;
+      this.visuInsertMenu = null;
+    }
     if (this.mode === 'edit') {
       this.flushContentModifications();
-      if (this.focusedHandle) this.exitFocusMode(); // sortie focus avant de passer en visu
+      if (this.focusedHandle) this.exitFocusMode();
       else this.saveAll();
     }
     this.mode = m;
@@ -626,6 +652,14 @@ export class ProjetEditorZoneComponent implements OnChanges {
     if (this.activeNodeId) {
       setTimeout(() => this.scrollToActive(), 80);
     }
+    if (m === 'visu') {
+      this.setupVisuSelectionListener();
+      setTimeout(() => this.initVisuSectionHtml(), 50);
+    }
+  }
+
+  ngOnDestroy() {
+    this.teardownVisuSelectionListener();
   }
 
   // ── Mode focus : édition d'une seule section / document ─────
@@ -1700,5 +1734,436 @@ export class ProjetEditorZoneComponent implements OnChanges {
       }
     }
     return key;
+  }
+
+  // ── Visu edit : construction du HTML par section ────────────
+  private buildVisuSections() {
+    this.visuSections = this.docSections.map(sec => {
+      const existing = this.visuSections.find(vs => vs.sectionId === sec.folderId);
+      const isDirty = this.dirtyVisuSectionIds.has(sec.folderId);
+
+      const range = this.sectionRanges.find(r => r.folderId === sec.folderId);
+      const lines = this.unifiedContent.split('\n');
+      const markdownBefore = range
+        ? lines.slice(range.lineStart + 1, range.lineEnd + 1).join('\n').trim()
+        : '';
+
+      return {
+        sectionId: sec.folderId,
+        folderName: sec.folderName,
+        level: sec.level,
+        contentHtml: isDirty && existing ? existing.contentHtml : this.buildVisuSectionHtml(sec),
+        markdownBefore: isDirty && existing ? existing.markdownBefore : markdownBefore,
+      };
+    });
+  }
+
+  private buildVisuSectionHtml(sec: DocSection): string {
+    const lines = sec.textContent.split('\n');
+    let contentMd = lines.slice(1).join('\n');
+
+    // Extraire les blocs fichier avant marked (placeholders)
+    const fileBlocks: { token: string; html: string; md: string }[] = [];
+    contentMd = contentMd.replace(/^(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_m, _d, name, content) => {
+      const trimmed = (name as string).trim();
+      const mdSource = `'${trimmed}\n${((content as string) || '').trimEnd()}\n'`;
+      const inner = marked.parse((content as string) || '', { async: false }) as string;
+      const token = `@@FB${fileBlocks.length}@@`;
+      const encoded = btoa(unescape(encodeURIComponent(mdSource)));
+      fileBlocks.push({
+        token,
+        html: `<div class="visu-file" contenteditable="false" data-block-md="${encoded}"><div class="visu-file__title">${this.escapeHtml(trimmed)}</div>${inner}</div>`,
+        md: mdSource,
+      });
+      return `\n\n${token}\n\n`;
+    });
+
+    // Remplacer les images (placeholders)
+    const imgTokens: { token: string; html: string }[] = [];
+    contentMd = contentMd.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (_, id) => {
+      const img = this.allImages.find(im => im.id === id);
+      const token = `@@IM${imgTokens.length}@@`;
+      if (img) {
+        const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
+        const url = this.svc.getImageUrl(this.projectName, encodedPath);
+        imgTokens.push({
+          token,
+          html: `<div class="visu-img-wrap" contenteditable="false" data-img-id="${id}"><img src="${url}" alt="${this.escapeHtml(img.name)}"><div class="visu-img-bar"><span class="visu-img-name">${this.escapeHtml(img.name)}</span><button class="visu-img-del" data-img-id="${id}" type="button"><span class="material-symbols-outlined">delete</span></button></div></div>`,
+        });
+      } else {
+        imgTokens.push({ token, html: `<span class="text-red-400 text-xs">[image manquante: ${id}]</span>` });
+      }
+      return `\n\n${token}\n\n`;
+    });
+
+    let html = marked.parse(contentMd, { async: false }) as string;
+
+    for (const fb of fileBlocks) {
+      html = html.replace(new RegExp(`<p>\\s*${fb.token}\\s*</p>`, 'g'), fb.html).replace(fb.token, fb.html);
+    }
+    for (const im of imgTokens) {
+      html = html.replace(new RegExp(`<p>\\s*${im.token}\\s*</p>`, 'g'), im.html).replace(im.token, im.html);
+    }
+    return html;
+  }
+
+  // ── Visu edit : init/refresh du innerHTML des contenteditable ──
+  initVisuSectionHtml() {
+    this.visuSectionEls.forEach((ref, i) => {
+      const el = ref.nativeElement;
+      const sec = this.visuSections[i];
+      if (sec && !this.dirtyVisuSectionIds.has(sec.sectionId)) {
+        el.innerHTML = sec.contentHtml;
+      }
+    });
+  }
+
+  private flushVisuSections() {
+    if (this.mode !== 'visu') return;
+    this.visuSectionEls.forEach((ref, i) => {
+      const el = ref.nativeElement;
+      const sec = this.visuSections[i];
+      if (sec && this.dirtyVisuSectionIds.has(sec.sectionId)) {
+        const md = this.htmlSectionToMarkdown(el);
+        this.saveVisuSection(sec.sectionId, md, sec.markdownBefore);
+        this.dirtyVisuSectionIds.delete(sec.sectionId);
+      }
+    });
+  }
+
+  // ── Visu edit : événements section ─────────────────────────
+  onVisuSectionFocus(sectionId: string) {
+    this.activeVisuSectionId = sectionId;
+    this.suppressScrollOnNextActiveChange = true;
+    this.nodeActive.emit(sectionId);
+  }
+
+  onVisuSectionBlur(sectionId: string, el: HTMLElement) {
+    if (!this.dirtyVisuSectionIds.has(sectionId)) return;
+    const md = this.htmlSectionToMarkdown(el);
+    const sec = this.visuSections.find(vs => vs.sectionId === sectionId);
+    this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
+    this.dirtyVisuSectionIds.delete(sectionId);
+  }
+
+  onVisuSectionInput(sectionId: string) {
+    this.dirtyVisuSectionIds.add(sectionId);
+    if (!this.localDirty) {
+      this.localDirty = true;
+      this.dirtyChange.emit(true);
+    }
+  }
+
+  onVisuSectionKeydown(ev: KeyboardEvent) {
+    // Fermer le menu d'insertion sur Escape
+    if (ev.key === 'Escape') this.visuInsertMenu = null;
+  }
+
+  // ── Visu edit : sauvegarde d'une section ────────────────────
+  private saveVisuSection(sectionId: string, newMd: string, mdBefore: string) {
+    const range = this.sectionRanges.find(r => r.folderId === sectionId);
+    if (!range) return;
+
+    const lines = this.unifiedContent.split('\n');
+    const headingLine = lines[range.lineStart];
+    const before = lines.slice(0, range.lineStart);
+    const after = lines.slice(range.lineEnd + 1);
+
+    const newContentLines = newMd.trim() ? newMd.trim().split('\n') : [];
+    const newLines = [...before, headingLine, ...newContentLines, ...after];
+    const newContent = newLines.join('\n');
+
+    if (newContent === this.unifiedContent) return;
+
+    const node = this.findNode(sectionId, this.files);
+    const snapshot = this.sectionFileSnapshot.get(sectionId);
+    this.woHistory.track({
+      section: 'projets/contenu',
+      actionType: 'update',
+      label: `Modification visu — «${node?.name || sectionId}»`,
+      entityType: 'content',
+      entityId: sectionId,
+      beforeState: { content: mdBefore },
+      afterState: { content: newMd },
+      context: { projectId: this.projectName },
+      undoable: !!snapshot?.fileId,
+      undoAction: snapshot?.fileId ? {
+        endpoint: `/api/file-projects/${this.projectName}/files/${snapshot.fileId}`,
+        method: 'PUT',
+        payload: { content: snapshot.content },
+      } : undefined,
+    }).catch(() => {});
+
+    // Mettre à jour markdownBefore dans visuSections
+    const vs = this.visuSections.find(s => s.sectionId === sectionId);
+    if (vs) vs.markdownBefore = newMd;
+
+    this.unifiedContent = newContent;
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = newContent;
+    this.recomputeRanges();
+    this.recomputeMirrorLines();
+    this.scheduleSave();
+  }
+
+  // ── Visu edit : HTML → Markdown ─────────────────────────────
+  private htmlSectionToMarkdown(el: HTMLElement): string {
+    return this.nodesToMd(Array.from(el.childNodes)).replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  private nodesToMd(nodes: Node[]): string {
+    return nodes.map(n => this.nodeToMd(n)).join('');
+  }
+
+  private nodeToMd(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    // Blocs non-éditables : restaurer depuis data-block-md ou data-img-id
+    if (el.getAttribute('contenteditable') === 'false') {
+      if (el.hasAttribute('data-block-md')) {
+        try { return '\n' + decodeURIComponent(escape(atob(el.getAttribute('data-block-md')!))) + '\n'; } catch { return ''; }
+      }
+      if (el.hasAttribute('data-img-id')) {
+        return `\n{{IMG:${el.getAttribute('data-img-id')}}}\n`;
+      }
+      return '';
+    }
+
+    const inner = () => this.nodesToMd(Array.from(el.childNodes));
+
+    switch (tag) {
+      case 'h1': return `\n# ${inner().trim()}\n`;
+      case 'h2': return `\n## ${inner().trim()}\n`;
+      case 'h3': return `\n### ${inner().trim()}\n`;
+      case 'h4': return `\n#### ${inner().trim()}\n`;
+      case 'p': { const t = inner(); return t.trim() ? `\n${t.trim()}\n` : ''; }
+      case 'br': return '\n';
+      case 'strong': case 'b': return `**${inner()}**`;
+      case 'em': case 'i': return `*${inner()}*`;
+      case 'del': case 's': return `~~${inner()}~~`;
+      case 'u': return `<u>${inner()}</u>`;
+      case 'code': {
+        if (el.parentElement?.tagName.toLowerCase() === 'pre') return el.textContent || '';
+        return `\`${inner()}\``;
+      }
+      case 'pre': {
+        const codeEl = el.querySelector('code');
+        const lang = Array.from(codeEl?.classList || []).find(c => c.startsWith('language-'))?.replace('language-', '') || '';
+        return `\n\`\`\`${lang}\n${codeEl?.textContent || ''}\n\`\`\`\n`;
+      }
+      case 'ul': {
+        const items = Array.from(el.children).map(li => `- ${this.nodesToMd(Array.from(li.childNodes)).trim()}`);
+        return '\n' + items.join('\n') + '\n';
+      }
+      case 'ol': {
+        const items = Array.from(el.children).map((li, i) => `${i + 1}. ${this.nodesToMd(Array.from(li.childNodes)).trim()}`);
+        return '\n' + items.join('\n') + '\n';
+      }
+      case 'li': return inner();
+      case 'blockquote': return `\n> ${inner().trim()}\n`;
+      case 'hr': return '\n---\n';
+      case 'img': return '';
+      default: return inner();
+    }
+  }
+
+  // ── Visu edit : toolbar formatage ───────────────────────────
+  private setupVisuSelectionListener() {
+    this.visuSelectionListener = () => this.zone.run(() => this.onVisuSelectionChange());
+    document.addEventListener('selectionchange', this.visuSelectionListener);
+  }
+
+  private teardownVisuSelectionListener() {
+    if (this.visuSelectionListener) {
+      document.removeEventListener('selectionchange', this.visuSelectionListener);
+      this.visuSelectionListener = null;
+    }
+  }
+
+  onVisuSelectionChange() {
+    if (this.mode !== 'visu') return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      this.visuToolbar = null;
+      this.cdr.detectChanges();
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const visuEl = this.visuRef?.nativeElement;
+    if (!visuEl?.contains(range.commonAncestorContainer)) {
+      this.visuToolbar = null;
+      this.cdr.detectChanges();
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    const visuRect = visuEl.getBoundingClientRect();
+    const toolbarW = 200;
+    let left = rect.left - visuRect.left + rect.width / 2 - toolbarW / 2;
+    left = Math.max(4, Math.min(left, visuRect.width - toolbarW - 4));
+    this.visuToolbar = { top: rect.top - visuRect.top - 44, left };
+    this.cdr.detectChanges();
+  }
+
+  applyVisuFormat(command: string) {
+    document.execCommand(command, false);
+    const activeId = this.getActiveVisuSectionId();
+    if (activeId) this.dirtyVisuSectionIds.add(activeId);
+    this.visuToolbar = null;
+  }
+
+  private getActiveVisuSectionId(): string | null {
+    const sel = window.getSelection();
+    if (sel?.focusNode) {
+      let el: Node | null = sel.focusNode;
+      while (el && (el as HTMLElement).tagName !== 'BODY') {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.hasAttribute?.('data-section-id') && htmlEl.getAttribute('contenteditable') === 'true') {
+          return htmlEl.getAttribute('data-section-id');
+        }
+        el = htmlEl.parentElement;
+      }
+    }
+    return this.activeVisuSectionId;
+  }
+
+  // ── Visu edit : menu d'insertion ───────────────────────────
+  showVisuInsertMenu(sectionId: string, ev: MouseEvent) {
+    ev.stopPropagation();
+    const btn = ev.currentTarget as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    const visuEl = this.visuRef?.nativeElement;
+    const visuRect = visuEl?.getBoundingClientRect() ?? { top: 0, left: 0 };
+    this.visuInsertMenu = {
+      sectionId,
+      top: rect.bottom - visuRect.top + 4,
+      left: rect.left - visuRect.left,
+    };
+  }
+
+  insertVisuBlock(type: 'menu' | 'doc' | 'code', sectionId: string) {
+    this.visuInsertMenu = null;
+    const range = this.sectionRanges.find(r => r.folderId === sectionId);
+    if (!range) return;
+
+    const lines = this.unifiedContent.split('\n');
+    let insertion = '';
+    if (type === 'menu')  insertion = '\n## Nouveau titre\n';
+    if (type === 'doc')   insertion = "\n'Nouveau document\n\n'\n";
+    if (type === 'code')  insertion = '\n```\ncode ici\n```\n';
+
+    lines.splice(range.lineEnd + 1, 0, ...insertion.split('\n'));
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+    this.scheduleSave();
+
+    const sec = this.visuSections.find(vs => vs.sectionId === sectionId);
+    if (sec) {
+      const node = this.findNode(sectionId, this.files);
+      this.woHistory.track({
+        section: 'projets/contenu',
+        actionType: 'update',
+        label: `Insertion ${type} — «${node?.name || sectionId}»`,
+        entityType: 'content',
+        entityId: sectionId,
+        context: { projectId: this.projectName },
+        undoable: false,
+      }).catch(() => {});
+    }
+
+    setTimeout(() => this.initVisuSectionHtml(), 50);
+  }
+
+  onVisuContainerClick(ev: MouseEvent) {
+    const target = ev.target as HTMLElement;
+    // Fermer le menu d'insertion si clic en dehors
+    if (this.visuInsertMenu && !target.closest('.visu-insert-menu') && !target.closest('.visu-insert-btn')) {
+      this.visuInsertMenu = null;
+    }
+    // Bouton suppression image
+    const delBtn = target.closest('.visu-img-del') as HTMLElement | null;
+    if (delBtn) {
+      const imgId = delBtn.getAttribute('data-img-id');
+      if (imgId) this.deleteVisuImage(imgId);
+    }
+  }
+
+  // ── Visu edit : gestion images ──────────────────────────────
+  triggerVisuImageUpload(sectionId: string) {
+    this.visuImageSectionId = sectionId;
+    this.visuImgInputRef?.nativeElement.click();
+  }
+
+  async onVisuImageSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !this.visuImageSectionId) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp'];
+    if (!allowed.includes(file.type)) { this.imageUploadError = 'Type non autorisé.'; return; }
+    if (file.size > 1024 * 1024) { this.imageUploadError = `Fichier trop grand (max 1 Mo).`; return; }
+
+    const sectionId = this.visuImageSectionId;
+    this.visuImageSectionId = null;
+    try {
+      const node = await this.svc.uploadImage(this.projectName, file, sectionId);
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'upload',
+        label: `Import image visu «${file.name}»`,
+        entityType: 'image',
+        entityId: node.id,
+        entityLabel: file.name,
+        afterState: { fileName: file.name, size: file.size },
+        context: { projectId: this.projectName },
+        undoable: true,
+        undoAction: { endpoint: `/api/file-projects/${this.projectName}/files/${node.id}`, method: 'DELETE' },
+      }).catch(() => {});
+
+      // Insérer le marqueur image dans unifiedContent après la section
+      const range = this.sectionRanges.find(r => r.folderId === sectionId);
+      if (range) {
+        const lines = this.unifiedContent.split('\n');
+        lines.splice(range.lineEnd + 1, 0, '', `{{IMG:${node.id}}}`, '');
+        this.unifiedContent = lines.join('\n');
+        const ta = this.textareaRef?.nativeElement;
+        if (ta) ta.value = this.unifiedContent;
+        this.recomputeAll();
+        this.scheduleSave();
+        this.refresh.emit();
+        setTimeout(() => this.initVisuSectionHtml(), 80);
+      }
+    } catch (e: any) {
+      this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';
+    }
+  }
+
+  private deleteVisuImage(imgId: string) {
+    this.svc.deleteFile(this.projectName, imgId).then(() => {
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'delete',
+        label: `Suppression image visu`,
+        entityType: 'image',
+        entityId: imgId,
+        context: { projectId: this.projectName },
+        undoable: false,
+      }).catch(() => {});
+      // Retirer le marqueur de unifiedContent
+      const lines = this.unifiedContent.split('\n');
+      const idx = lines.findIndex(l => l.trim() === `{{IMG:${imgId}}}`);
+      if (idx !== -1) lines.splice(idx, 1);
+      this.unifiedContent = lines.join('\n');
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = this.unifiedContent;
+      this.recomputeAll();
+      this.scheduleSave();
+      this.refresh.emit();
+      setTimeout(() => this.initVisuSectionHtml(), 80);
+    }).catch(() => {});
   }
 }

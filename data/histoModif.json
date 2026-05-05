@@ -1998,7 +1998,7 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "le système doit enregistré toutes les actions comme cela doit être le cas avec wo-action-history pour pouvoir annulé une action et revenir en arrière. actuellement cela enregistre l'action mais ne permet pas de revenir en arrière, améliore le système pour pouvoir avoir l'option sur tous les actions du projet",
-      "startedAt": "2026-05-03T00:00:00.000Z",
+      "startedAt": "2026-05-03T00:00:00Z",
       "completedAt": "2026-05-03T21:41:25.756Z"
     },
     {
@@ -2197,13 +2197,13 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "tu as fait des retour en arrière, Cela n'enregistre plus les modification ou la partie historique n'affiche plus les modifications. Exemple j'ai modifié le document Doc 2 et cela ne m'indique rien dans l'historique [Image #10]. la selection d'une zone ne doit afficher que l'historique lié à cette section. Tu doit afficher tous le texte de la section modifié et pas juste le texte modifié [Image #9].",
-      "startedAt": "2026-05-04T00:00:00.000Z",
+      "startedAt": "2026-05-04T00:00:00Z",
       "completedAt": "2026-05-04T18:28:44.479Z"
     },
     {
       "id": "mod-091",
       "version": "THI-0.52",
-      "date": "2026-05-04T18:41:17.490Z",
+      "date": "2026-05-04T18:41:17.49Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -2221,8 +2221,8 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "Cela ne fonctionne toujours pas, Zone 4 Edition/visu, le textes est divisé en menu, document ou image. Lorsque je fait une modification celle ci est enregistré et la section dans lequel elle est modifié est gardé en mémoire. Ainsi si je selectionne une section comme un document, seul les modifications de cette zone est affiché dans l'onglet historique. Si c'est une zone menu cela doit affiché toutes les sous section (sous menu et document interne à cette section). Lorsqu'une modification est enregistré elle enregistre le texte de la section avant et après et affiche dans la zone 4 en mode \"Modification\" TOUS le texte de la section selectionné, ainsi si on modifi une ligne d'un document et que celui ci est selectionné, cela doit affiché tous le texte de la section et d'indiqué les modifications.",
-      "startedAt": "2026-05-04T00:00:00.000Z",
-      "completedAt": "2026-05-04T18:41:17.490Z"
+      "startedAt": "2026-05-04T00:00:00Z",
+      "completedAt": "2026-05-04T18:41:17.49Z"
     },
     {
       "id": "mod-092",
@@ -2242,7 +2242,7 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "lorsque je fait une modif (exemple dans un document) dés l'enregistrement, cela doit affiché la modif dans la zone historique, actuellement cela met du temps à s'afficher. Lorsque je selectionne une section exemple un document et que je clique sur la modif à droite dans la zone du centre cela ne doit affiché que le texte du document.",
-      "startedAt": "2026-05-04T00:00:00.000Z",
+      "startedAt": "2026-05-04T00:00:00Z",
       "completedAt": "2026-05-04T18:51:06.722Z"
     },
     {
@@ -2263,7 +2263,7 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "lorsque je fait une modif et que je clique sur l'historique de la modif, celle ci s'affiche bien mais lorsque je clique sur Retour à l'editeur, c'est l'ancienne version qui s'affiche (avant enregistrement), corrige le problème. Pour info si je reactualise la page la bonne version du texte (modifié) s'affiche bien.",
-      "startedAt": "2026-05-04T00:00:00.000Z",
+      "startedAt": "2026-05-04T00:00:00Z",
       "completedAt": "2026-05-04T18:58:00.331Z"
     },
     {
@@ -2286,7 +2286,7 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "lorsqu'on modifi une section dossier, document ou image, l'enregistrement ne doit ce faire que lorsqu'on clique en dehors de la zone ou si on ne fait rien sur la page plus de 10 secondes. Affiche le titre du document, du dossier ou de l'image dans la zone 5b en dessous des onglets",
-      "startedAt": "2026-05-04T23:00:00.000Z",
+      "startedAt": "2026-05-04T23:00:00Z",
       "completedAt": "2026-05-04T22:51:12.697Z"
     },
     {
@@ -2310,7 +2310,7 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "si une modification à lieu dans une section, cela doit être indiqué directement dans la zone 5b historique et ce mettre à jour petit à petit en live mais grisé tans que celle ci n'a pas encore été enregistré automatiquement.",
-      "startedAt": "2026-05-04T23:30:00.000Z",
+      "startedAt": "2026-05-04T23:30:00Z",
       "completedAt": "2026-05-04T23:01:16.082Z"
     },
     {
@@ -2335,7 +2335,7 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "idem le bouton Sauvegardé doit être affiché en gris des que l'utilisateur commence à modifié une section et en vert lors de l'enregistrement",
-      "startedAt": "2026-05-04T23:50:00.000Z",
+      "startedAt": "2026-05-04T23:50:00Z",
       "completedAt": "2026-05-04T23:06:44.867Z"
     },
     {
@@ -2359,16 +2359,19 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "il y a actuellement 2 infos/bouton Sauvegardé merge les 2 en 1 seul garde celui entouré en vert, attention met les fonctionnalité de celui de droite dans celui que tu garde",
-      "startedAt": "2026-05-05T00:00:00.000Z",
+      "startedAt": "2026-05-05T00:00:00Z",
       "completedAt": "2026-05-05T07:40:54.788Z"
     },
     {
       "id": "mod-098",
       "version": "THI-0.58",
-      "date": "2026-05-05T08:35:00.000Z",
+      "date": "2026-05-05T08:35:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein", "server"],
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
       "features": "frankenstein:projets,server:projets",
       "title": "Historique zone 5b : effacer + couleur user + masquage jours",
       "description": "Zone 5b Historique : (1) Bouton 'Effacer l'historique' en bas avec modale de confirmation affichant le nombre d'entrées concernées, scopée à la section sélectionnée. Non-admin : seul son propre historique. Admin : choix 'mes actions' ou 'tous les utilisateurs'. (2) Couleur de fond différente pour les actions du user connecté (jaune) vs autres users (bleu) + suffixe '(moi)'. (3) Toggle pour masquer les actions des jours précédents, masqué par défaut sauf jour courant, avec compteur d'entrées masquées. Nouveau endpoint DELETE /api/collab/:projetId/history avec query params entityIds + scope (mine|all), scope all réservé aux admins.",
@@ -2381,16 +2384,18 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "Dans le menu projet : Zone 5b : Ajoute un bouton en bas de la liste de l'historique qui permet d'effacer l'historique (scopé à la section sélectionnée, confirmation avec nombre, user efface seulement le sien, admin a le choix tous/mes actions). Couleur background différente pour les actions du user connecté vs autres users. Option pour cacher les actions d'un jour, cachées par défaut sauf jour courant.",
-      "startedAt": "2026-05-05T08:24:30.000Z",
-      "completedAt": "2026-05-05T08:35:00.000Z"
+      "startedAt": "2026-05-05T08:24:30Z",
+      "completedAt": "2026-05-05T08:35:00Z"
     },
     {
       "id": "mod-099",
       "version": "THI-0.58",
-      "date": "2026-05-05T08:45:00.000Z",
+      "date": "2026-05-05T08:45:00Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Historique zone 5b : jours toujours visibles, contenu repliable",
       "description": "Remplacement du toggle global 'masquer les jours précédents' : chaque ligne de jour est désormais cliquable pour déplier/replier ses entrées. Toutes les lignes de date restent toujours affichées avec un compteur d'entrées et un chevron (chevron_right replié / expand_more déplié). Par défaut, seul le jour courant est déplié, les jours précédents sont repliés. État géré par deux Sets (expandedDays / collapsedDays) pour permettre aussi de replier le jour courant.",
@@ -2401,16 +2406,18 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "l'affichage ou non des jours de la zone historique ne me conviens pas, je veux que la ligne des jours apparaisse toujours, ce sont les données pour chaque jour qui doivent être caché, en cliquant sur un jour, les données s'affiche, on reclique dessus les données ce ache. Mais la liste des jours doivent resté affiché",
-      "startedAt": "2026-05-05T08:40:00.000Z",
-      "completedAt": "2026-05-05T08:45:00.000Z"
+      "startedAt": "2026-05-05T08:40:00Z",
+      "completedAt": "2026-05-05T08:45:00Z"
     },
     {
       "id": "mod-100",
       "version": "THI-0.59",
-      "date": "2026-05-05T09:00:00.000Z",
+      "date": "2026-05-05T09:00:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Zone 5b : pending devient définitif dès le save",
       "description": "Les entrées 'en cours' dans l'historique (zone 5b) restaient en attente même après que le bouton Sauvegardé soit vert. Fix : ajout de clearAllPending() dans ProjetCollabService, appelé dans processSectionsChange au moment où saveStatus passe à 'saved'. Les pending sont ainsi vidés en même temps que le bouton devient vert, sans attendre l'événement SSE.",
@@ -2421,16 +2428,18 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "dans la zone 5b l'action ne prend pas le style \"action enregistré\" terminé, elle reste en attente [Image #13], il faut que la zone devienne définitive des que le bouton \"Sauvegardé\" deviens vert [Image #14]",
-      "startedAt": "2026-05-05T08:50:00.000Z",
-      "completedAt": "2026-05-05T09:00:00.000Z"
+      "startedAt": "2026-05-05T08:50:00Z",
+      "completedAt": "2026-05-05T09:00:00Z"
     },
     {
       "id": "mod-101",
       "version": "THI-0.59",
-      "date": "2026-05-05T09:30:00.000Z",
+      "date": "2026-05-05T09:30:00Z",
       "type": "feature",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Save : 3 états visuels + bouton 'Non sauvegardé' cliquable",
       "description": "Refonte du flux save/historique zone 5b pour distinguer 3 états des entrées en attente : 'editing' (section sélectionnée, grisé) → 'saving' (déselectionné, animate-pulse + badge 'sauvegarde…') → 'saved' (entrée définitive via SSE). Ajout de l'état 'state' sur PendingHistoryEntry et de la méthode markAllPendingSaving() dans ProjetCollabService. Nouvel output saveStarting depuis projet-editor-zone, gérée par onSaveStarting() côté parent : passe saveStatus à 'saving' immédiatement (avant l'analyse async de processSectionsChange) pour rendre le 'Sauvegarde…' visible entre 'Non sauvegardé' et 'Sauvegardé'. Le bouton 'Non sauvegardé' devient un button cliquable (forceSave) avec icône save et bordure orange. La sortie tôt de processSectionsChange réinitialise correctement saveStatus à 'saved' et purge les pending.",
@@ -2446,33 +2455,39 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "Cela ne fonctionne pas\nDans la zone 4, lorsque je lance une modification de texte, le bouton Sauvegarde deviens \"Non sauvegardé\" et dans l'historique on à l'information de l'action en cours (grisé) mais lorsque je désélectionne la section, le bouton reste un certain temps en \"Non sauvegardé\", il faudrait qu'il passe \"En cours de sauvegarde\" avant de passé ensuite à \"Sauvegardé\". Cela doit faire un peu la même chose pour la zone historique, en grisé lorsque la modification est en cours (section selectionné), cela doit clignoté lorsqu'on désélectionne la zone tans que cela n'est pas sauvegardé et s'affiché normalement lorsque l'action de modification est bien sauvegardé.\n- Actuellement la zone modifié ne s'affiche pas en version final dans l'historique zone 5b. \n- Ajoute l'option de pouvoir appuyé sur le bouton \"Non sauvegardé\", pour lancer l'enregistrement de la modification",
-      "startedAt": "2026-05-05T09:15:00.000Z",
-      "completedAt": "2026-05-05T09:30:00.000Z"
+      "startedAt": "2026-05-05T09:15:00Z",
+      "completedAt": "2026-05-05T09:30:00Z"
     },
     {
       "id": "mod-102",
       "version": "THI-0.60",
-      "date": "2026-05-05T09:45:00.000Z",
+      "date": "2026-05-05T09:45:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "system:workflow",
       "title": "wo_action_history : fix génération d'ID dupliqué",
       "description": "Le calcul de l'ID utilisait COUNT(*)+1 ce qui génère un doublon dès qu'un enregistrement est supprimé (count=69, maxId=wah-070 → conflit). Remplacé par MAX(CAST(SUBSTRING(id,5) AS UNSIGNED))+1 qui extrait le numéro max réel de la table, garantissant un ID unique même après suppressions.",
-      "files": ["server/server-data.js"],
+      "files": [
+        "server/server-data.js"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "Dans la zone 4 sur certaine section comme par exemple le document \"Doc 1aaa\" lorsque je clique sur le bouton \"Non sauvegardé\" l'action dans historique qui était grisé, disparait. L'action de modification ne s'affiche pas (elle n'a pas l'air de s'enregistré) zone 5b. wo-action-history.service.ts:64 POST http://localhost:3001/api/wo-action-history 500 (Internal Server Error)",
-      "startedAt": "2026-05-05T09:40:00.000Z",
-      "completedAt": "2026-05-05T09:45:00.000Z"
+      "startedAt": "2026-05-05T09:40:00Z",
+      "completedAt": "2026-05-05T09:45:00Z"
     },
     {
       "id": "mod-103",
       "version": "THI-0.61",
-      "date": "2026-05-05T10:00:00.000Z",
+      "date": "2026-05-05T10:00:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Projet editor : suppression du scroll au clic sidebar",
       "description": "Cliquer sur une section dans la sidebar ne doit pas déplacer le scroll de la zone d'édition. Suppression du scrollToNodeId dans onNodeSelect et ajout de suppressScrollOnNextActiveChange avant la mise à jour de activeNodeId.",
@@ -2483,16 +2498,18 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "dans le menu projets/ dans la zone Edition, si je clique sur une section, il ne doit pas y avoir de scroll qui deplace le contenue du document dans la zone",
-      "startedAt": "2026-05-05T09:55:00.000Z",
-      "completedAt": "2026-05-05T10:00:00.000Z"
+      "startedAt": "2026-05-05T09:55:00Z",
+      "completedAt": "2026-05-05T10:00:00Z"
     },
     {
       "id": "mod-104",
       "version": "THI-0.61",
-      "date": "2026-05-05T10:10:00.000Z",
+      "date": "2026-05-05T10:10:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Projet editor : restauration scroll zone 3, conservation no-scroll zone 4",
       "description": "Le fix précédent avait supprimé le scroll pour les deux zones (3 et 4). Revert de onNodeSelect pour restaurer le scroll au clic dans la sidebar (zone 3). Le no-scroll zone 4 (textarea) était déjà garanti via suppressScrollOnNextActiveChange dans onTextareaCursor.",
@@ -2502,16 +2519,18 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "le scroll est desactivé lorsque je clique dans la zone d'edition mais elle à aussi été désactivé lorsqu'on clique sur le menu fichier zone 3 et il faut quelle soi activé, lorsqu'on clique sur un menu ou un document dans le menu fichier il faut scroller vers cette section",
-      "startedAt": "2026-05-05T10:05:00.000Z",
-      "completedAt": "2026-05-05T10:10:00.000Z"
+      "startedAt": "2026-05-05T10:05:00Z",
+      "completedAt": "2026-05-05T10:10:00Z"
     },
     {
       "id": "mod-105",
       "version": "THI-0.61",
-      "date": "2026-05-05T10:20:00.000Z",
+      "date": "2026-05-05T10:20:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Projet editor : scroll uniquement depuis zone 3, jamais depuis zone 4",
       "description": "Suppression du scrollToActive() déclenché par le changement de activeNodeId. Le scroll n'est plus jamais déclenché par des actions dans la zone d'édition (zone 4). Seul scrollToNodeId (set par onNodeSelect depuis le menu fichier zone 3) provoque le scroll de l'éditeur. activeNodeId gère uniquement le highlight.",
@@ -2521,16 +2540,18 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "si je clique dans une section dans la zone selection 4a et que je clique sur une image dans une autre section, la zone d'edition scroll vers la section selectionné avant l'image, il ne faut pas de scroll lorsque je clique dans une section de la partie edition, le scroll ne fonctionne que lorsqu'on clique dans le menu de fichier*",
-      "startedAt": "2026-05-05T10:15:00.000Z",
-      "completedAt": "2026-05-05T10:20:00.000Z"
+      "startedAt": "2026-05-05T10:15:00Z",
+      "completedAt": "2026-05-05T10:20:00Z"
     },
     {
       "id": "mod-108",
       "version": "THI-0.63",
-      "date": "2026-05-05T12:00:00.000Z",
+      "date": "2026-05-05T12:00:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Fix critique : bloc réordonnancement onSectionsChange corrupteur",
       "description": "Le bloc ajouté en THI-0.61 dans onSectionsChange reconstruisait folder.children uniquement depuis orderedFileIds (fichiers texte seulement), excluant images standalone et sous-dossiers non listés. Sur chaque save, des noeuds disparaissaient du serveur (corruption). Suppression du bloc entier + ChangeDetectorRef inutile. Restauration du comportement stable de THI-0.60.",
@@ -2541,16 +2562,18 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "la nouvelle version ne fonctionne pas reviens à la version précédente / le mode edition ne fonctionne plus corectement verifi avec les anciennes version pour voir ce qui à causé le soucis.",
-      "startedAt": "2026-05-05T11:45:00.000Z",
-      "completedAt": "2026-05-05T12:00:00.000Z"
+      "startedAt": "2026-05-05T11:45:00Z",
+      "completedAt": "2026-05-05T12:00:00Z"
     },
     {
       "id": "mod-109",
       "version": "THI-0.64",
-      "date": "2026-05-05T14:30:00.000Z",
+      "date": "2026-05-05T14:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Drag ligne par ligne pour blocs fichier (document/code)",
       "description": "Extension du drag ligne-par-ligne (existant pour les images) aux blocs de type 'file' (document/code). Dans updateDropTarget, la branche image inclut désormais aussi kind='file'. Dans onDragUp, un nouveau cas 'file' appelle moveFileBlockToLine qui extrait le bloc multi-lignes, le retire puis le réinsère à la position cible en ajustant l'index si le drop est après la source.",
@@ -2560,8 +2583,31 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "c'est exact cela fonctionne pour les images mais je voudrais la même option pour déplacer une section (document/code)",
-      "startedAt": "2026-05-05T14:00:00.000Z",
-      "completedAt": "2026-05-05T14:30:00.000Z"
+      "startedAt": "2026-05-05T14:00:00Z",
+      "completedAt": "2026-05-05T14:30:00Z"
+    },
+    {
+      "prompt": "Propose moi une solution pour pouvoir modifier les textes en mode visu : changement de texte, mise en forme (gras, souligné, barré, italic), ajout de menu, ajout de document/code, ajout/suppresion d'image. Chaque modification devra être enregistré dans l'historique des actions lié à la section selectionné.",
+      "scope": [
+        "frankenstein"
+      ],
+      "ai": "Claude Code",
+      "description": "Mode Visu devient éditable section par section : contenteditable par section, toolbar de formatage flottante sur sélection (gras/italic/souligné/barré via execCommand), menu d'insertion de blocs (titre/document/code), ajout et suppression d'image par section. Chaque modification est tracée dans WoActionHistoryService. Conversion HTML→Markdown propre avec restauration des blocs fichier et images via data-attributes.",
+      "completedAt": "2026-05-05T20:03:50Z",
+      "date": "2026-05-05T20:03:50Z",
+      "id": "mod-110",
+      "model": "claude-sonnet-4-6",
+      "version": "THI-0.65",
+      "type": "feature",
+      "title": "Edition inline en mode Visu (Option B)",
+      "features": "frankenstein:projet-editor",
+      "commitType": "AMELIORATION",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "startedAt": "2026-05-05T00:00:00Z"
     }
   ]
 }

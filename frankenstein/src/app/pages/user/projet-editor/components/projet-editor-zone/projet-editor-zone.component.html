@@ -230,12 +230,89 @@
       </div>
     }
 
-    <!-- Mode Visu : markdown rendu -->
+    <!-- Mode Visu : sections éditables + toolbar sélection -->
     @if (mode === 'visu') {
       <div #visu
-           class="visu-wrap flex-1 min-h-0 overflow-y-auto px-8 py-6"
-           (click)="onVisuClick($event)"
-           [innerHTML]="renderedHtml"></div>
+           class="visu-wrap flex-1 min-h-0 overflow-y-auto px-8 py-6 relative"
+           (click)="onVisuContainerClick($event)">
+
+        @for (sec of visuSections; track sec.sectionId) {
+          <div class="visu-section-wrap" [class.visu-section-wrap--active]="activeVisuSectionId === sec.sectionId">
+
+            <!-- Titre de section (non éditable) -->
+            @switch (sec.level) {
+              @case (1) { <h1 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h1> }
+              @case (2) { <h2 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h2> }
+              @case (3) { <h3 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h3> }
+              @default  { <h4 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h4> }
+            }
+
+            <!-- Contenu éditable -->
+            <div #visuSectionEl
+                 class="visu-sec-content"
+                 contenteditable="true"
+                 [attr.data-section-id]="sec.sectionId"
+                 (focus)="onVisuSectionFocus(sec.sectionId)"
+                 (blur)="onVisuSectionBlur(sec.sectionId, $any($event.target))"
+                 (input)="onVisuSectionInput(sec.sectionId)"
+                 (keydown)="onVisuSectionKeydown($event)">
+            </div>
+
+            <!-- Actions d'insertion -->
+            <div class="visu-insert-row">
+              <button class="visu-insert-btn"
+                      type="button"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="showVisuInsertMenu(sec.sectionId, $event)"
+                      title="Insérer un bloc">
+                <span class="material-symbols-outlined">add</span>
+                Insérer
+              </button>
+              <button class="visu-insert-btn visu-insert-btn--img"
+                      type="button"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="triggerVisuImageUpload(sec.sectionId)"
+                      title="Ajouter une image">
+                <span class="material-symbols-outlined">image</span>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Toolbar formatage (popover sur sélection) -->
+        @if (visuToolbar) {
+          <div class="visu-format-toolbar"
+               [style.top.px]="visuToolbar.top"
+               [style.left.px]="visuToolbar.left">
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S̶</s></button>
+            <span class="visu-format-toolbar__sep"></span>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('removeFormat')" title="Effacer la mise en forme" class="visu-format-toolbar__clear">Aa</button>
+          </div>
+        }
+
+        <!-- Menu d'insertion -->
+        @if (visuInsertMenu) {
+          <div class="visu-insert-menu"
+               [style.top.px]="visuInsertMenu.top"
+               [style.left.px]="visuInsertMenu.left">
+            <button type="button" (click)="insertVisuBlock('menu', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">title</span> Titre
+            </button>
+            <button type="button" (click)="insertVisuBlock('doc', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">description</span> Document
+            </button>
+            <button type="button" (click)="insertVisuBlock('code', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">code</span> Code
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Input image caché (mode visu) -->
+      <input #visuImgInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onVisuImageSelected($event)">
     }
 
   }
