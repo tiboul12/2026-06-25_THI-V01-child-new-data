@@ -18,16 +18,20 @@ param(
     [string]$BaseVersion
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 # Tag de date pour les backups (YYYYMMDD)
 $dateTag = Get-Date -Format "yyyyMMdd"
 $dateIso = Get-Date -Format "yyyy-MM-dd HH:mm"
 
 # Liste des fichiers qui different entre HEAD et base/main
-$diffFiles = @(git diff --name-only HEAD base/main 2>$null) | Where-Object { $_ }
+# --diff-filter=M : seulement les fichiers presents dans les DEUX et modifies
+# (exclut les fichiers child-only et les fichiers nouveaux cote base)
+$modifiedFiles = @(git diff --name-only --diff-filter=M HEAD base/main 2>$null) | Where-Object { $_ }
+$addedInBase   = @(git diff --name-only --diff-filter=A HEAD base/main 2>$null) | Where-Object { $_ }
+$childOnly     = @(git diff --name-only --diff-filter=D HEAD base/main 2>$null) | Where-Object { $_ }
 
-if ($diffFiles.Count -eq 0) {
+if ($modifiedFiles.Count -eq 0 -and $addedInBase.Count -eq 0) {
     Write-Host "  Aucun fichier divergent entre HEAD et base/main."
     exit 0
 }
@@ -36,39 +40,55 @@ $backedUp = @()
 $newFromBase = @()
 $skippedOurs = @()
 
-foreach ($file in $diffFiles) {
+# Helper : construit un nom de backup robuste pour un chemin de fichier
+function Get-BackupName {
+    param([string]$FilePath, [string]$DateTag)
+    $dir  = [System.IO.Path]::GetDirectoryName($FilePath)
+    $leaf = [System.IO.Path]::GetFileName($FilePath)
+    # Si le nom commence par un point (.gitattributes) ou n'a pas d'extension separable
+    # -> suffixer apres le nom complet : <leaf>-old-<date>
+    # Sinon -> inserer avant l'extension : <name>-old-<date>.<ext>
+    if ($leaf.StartsWith(".")) {
+        $newLeaf = "$leaf-old-$DateTag"
+    } else {
+        $name = [System.IO.Path]::GetFileNameWithoutExtension($leaf)
+        $ext  = [System.IO.Path]::GetExtension($leaf)
+        if ([string]::IsNullOrEmpty($ext)) {
+            $newLeaf = "$leaf-old-$DateTag"
+        } else {
+            $newLeaf = "$name-old-$DateTag$ext"
+        }
+    }
+    if ($dir) { return ($dir + "/" + $newLeaf) } else { return $newLeaf }
+}
 
-    # 1. Verifier si le fichier est marque merge=ours dans .gitattributes
+# Traitement des fichiers ajoutes cote base (juste a logguer, le merge les ajoutera)
+foreach ($file in $addedInBase) {
+    $newFromBase += $file
+}
+
+# Traitement des fichiers modifies des deux cotes : backup de la version child
+foreach ($file in $modifiedFiles) {
+
+    # 1. Verifier si le fichier est marque merge=ours -> on garde la version child, pas de backup
     $attrLine = git check-attr merge -- "$file" 2>$null
     if ($attrLine -match "merge:\s*ours") {
         $skippedOurs += $file
         continue
     }
 
-    # 2. Le fichier existe-t-il dans HEAD ? Sinon c'est un nouveau fichier base
-    git cat-file -e "HEAD:$file" 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        $newFromBase += $file
-        continue
-    }
-
-    # 3. Construire le chemin du backup : <basename>-old-YYYYMMDD.<ext>
-    $dir       = [System.IO.Path]::GetDirectoryName($file)
-    $name      = [System.IO.Path]::GetFileNameWithoutExtension($file)
-    $ext       = [System.IO.Path]::GetExtension($file)
-    $backupRel = if ($dir) { "$dir/$name-old-$dateTag$ext" } else { "$name-old-$dateTag$ext" }
+    # 2. Construire le chemin du backup
+    $backupRel = Get-BackupName -FilePath $file -DateTag $dateTag
     $backupAbs = Join-Path (Get-Location) $backupRel
 
-    # 4. Recuperer le contenu HEAD (version child) et l'ecrire dans le backup
-    #    Utilise git show pour preserver le contenu exact (gere binaires via -p)
+    # 3. Recuperer le contenu HEAD (version child) et l'ecrire dans le backup
     $tmpFile = [System.IO.Path]::GetTempFileName()
     try {
         cmd /c "git show ""HEAD:$file"" > ""$tmpFile""" 2>$null
-        if ($LASTEXITCODE -ne 0) {
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tmpFile)) {
             Write-Warning "  Impossible de recuperer HEAD:$file - skip"
             continue
         }
-        # S'assurer que le dossier de destination existe
         $backupDir = [System.IO.Path]::GetDirectoryName($backupAbs)
         if ($backupDir -and -not (Test-Path $backupDir)) {
             New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
@@ -78,8 +98,8 @@ foreach ($file in $diffFiles) {
         if (Test-Path $tmpFile) { Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
     }
 
-    # 5. Stage le backup
-    git add -- "$backupRel" 2>$null
+    # 4. Stage le backup avec -f pour outrepasser .gitignore eventuel
+    git add -f -- "$backupRel" 2>&1 | Out-Null
 
     Write-Host ("  [B] " + $file + "  ->  " + $backupRel)
     $backedUp += @{ File = $file; Backup = $backupRel }
@@ -128,6 +148,14 @@ if ($newFromBase.Count -gt 0) {
 if ($skippedOurs.Count -gt 0) {
     $entry += "### Fichiers child preserves (merge=ours)" + $nl + $nl
     foreach ($f in $skippedOurs) {
+        $entry += "- " + $bt + $f + $bt + $nl
+    }
+    $entry += $nl
+}
+
+if ($childOnly.Count -gt 0) {
+    $entry += "### Fichiers presents uniquement cote child (non concernes)" + $nl + $nl
+    foreach ($f in $childOnly) {
         $entry += "- " + $bt + $f + $bt + $nl
     }
     $entry += $nl
