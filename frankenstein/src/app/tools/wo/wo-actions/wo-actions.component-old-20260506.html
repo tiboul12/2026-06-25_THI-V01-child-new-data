@@ -1,0 +1,622 @@
+<section class="mb-12">
+  <h2 class="text-xs tracking-[0.3em] text-light-text-muted dark:text-white/40 uppercase mb-6 flex items-center gap-3">
+    <span class="w-8 h-[1px] bg-light-accent dark:bg-accent"></span> Gestion des Actions
+  </h2>
+
+  <!-- ===== MODE D'EMPLOI ===== -->
+  <div class="bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-xl mb-6 overflow-hidden">
+    <!-- Header cliquable -->
+    <button (click)="toggleGuide()"
+            class="w-full flex items-center justify-between px-5 py-4 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-colors">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-light-primary dark:text-primary text-[20px]">menu_book</span>
+        <span class="text-sm font-bold text-light-text dark:text-white">Mode d'emploi — Agent orchestrateur de prompts</span>
+      </div>
+      <span class="material-symbols-outlined text-light-text-muted dark:text-white/40 transition-transform duration-200"
+            [style.transform]="showActionsGuide ? 'rotate(180deg)' : 'rotate(0deg)'">
+        expand_more
+      </span>
+    </button>
+
+    <div *ngIf="showActionsGuide" class="border-t border-light-border dark:border-white/10 px-5 py-5 space-y-5">
+
+      <!-- Étape 1 : Serveurs requis -->
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-3 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold flex-shrink-0">1</span>
+          Démarrer les 3 serveurs requis
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+          <!-- Serveur Data :3001 -->
+          <div class="bg-light-surface-hover dark:bg-background rounded-xl p-4 border transition-colors"
+               [ngClass]="serverStatus.data === true ? 'border-green-500/30' : serverStatus.data === false ? 'border-red-500/30' : 'border-light-border dark:border-white/10'">
+            <div class="flex items-center gap-2 mb-3">
+              <!-- Indicateur statut -->
+              <span *ngIf="serverStatus.data === null" class="w-2 h-2 rounded-full bg-white/20 flex-shrink-0"></span>
+              <span *ngIf="serverStatus.data === true" class="w-2 h-2 rounded-full bg-green-400 flex-shrink-0 animate-pulse"></span>
+              <span *ngIf="serverStatus.data === false" class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0"></span>
+              <span class="text-xs font-bold text-light-text dark:text-white">Serveur Data</span>
+              <span class="ml-auto text-[10px] font-mono text-light-text-muted dark:text-white/30 bg-light-surface dark:bg-surface px-1.5 py-0.5 rounded">:3001</span>
+            </div>
+            <!-- Badge statut -->
+            <div class="mb-2">
+              <span *ngIf="serverStatus.data === null" class="text-[10px] text-white/30">En attente de vérification...</span>
+              <span *ngIf="serverStatus.data === true" class="text-[10px] font-medium text-green-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">check_circle</span> Actif
+              </span>
+              <span *ngIf="serverStatus.data === false" class="text-[10px] font-medium text-red-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">cancel</span> Non détecté
+              </span>
+            </div>
+            <!-- Commande -->
+            <div class="relative group">
+              <code class="block text-[11px] font-mono text-green-400 bg-black/20 dark:bg-black/40 rounded-lg px-3 py-2 pr-8">node server/server-data.js</code>
+              <button (click)="copyCmd('node server/server-data.js')" title="Copier"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-white/40 hover:text-white">
+                <span class="material-symbols-outlined text-[14px]">{{ copiedCmd === 'node server/server-data.js' ? 'check' : 'content_copy' }}</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-light-text-muted dark:text-white/40 mt-2">Données, projets, config. Toujours actif.</p>
+          </div>
+
+          <!-- Serveur Executor :3002 -->
+          <div class="bg-light-surface-hover dark:bg-background rounded-xl p-4 border transition-colors"
+               [ngClass]="serverStatus.executor === true ? 'border-purple-500/30' : serverStatus.executor === false ? 'border-red-500/30' : 'border-light-border dark:border-white/10'">
+            <div class="flex items-center gap-2 mb-3">
+              <span *ngIf="serverStatus.executor === null" class="w-2 h-2 rounded-full bg-white/20 flex-shrink-0"></span>
+              <span *ngIf="serverStatus.executor === true" class="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0 animate-pulse"></span>
+              <span *ngIf="serverStatus.executor === false" class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0"></span>
+              <span class="text-xs font-bold text-light-text dark:text-white">Serveur Executor</span>
+              <span class="ml-auto text-[10px] font-mono text-light-text-muted dark:text-white/30 bg-light-surface dark:bg-surface px-1.5 py-0.5 rounded">:3002</span>
+            </div>
+            <div class="mb-2">
+              <span *ngIf="serverStatus.executor === null" class="text-[10px] text-white/30">En attente de vérification...</span>
+              <span *ngIf="serverStatus.executor === true" class="text-[10px] font-medium text-purple-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">check_circle</span> Actif
+              </span>
+              <span *ngStatus="serverStatus.executor === false" class="text-[10px] font-medium text-red-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">cancel</span> Non détecté
+              </span>
+            </div>
+            <div class="relative group">
+              <code class="block text-[11px] font-mono text-purple-400 bg-black/20 dark:bg-black/40 rounded-lg px-3 py-2 pr-8">node electron/executor/server-executor.js</code>
+              <button (click)="copyCmd('node electron/executor/server-executor.js')" title="Copier"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-white/40 hover:text-white">
+                <span class="material-symbols-outlined text-[14px]">{{ copiedCmd === 'node electron/executor/server-executor.js' ? 'check' : 'content_copy' }}</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-light-text-muted dark:text-white/40 mt-2">CLI IA (Claude / Gemini) en local.</p>
+          </div>
+
+          <!-- Serveur Agent :3003 -->
+          <div class="bg-light-surface-hover dark:bg-background rounded-xl p-4 border transition-colors"
+               [ngClass]="serverStatus.agent === true ? 'border-light-primary/40 dark:border-primary/40' : serverStatus.agent === false ? 'border-red-500/30' : 'border-light-primary/20 dark:border-primary/20'">
+            <div class="flex items-center gap-2 mb-3">
+              <span *ngIf="serverStatus.agent === null" class="w-2 h-2 rounded-full bg-white/20 flex-shrink-0"></span>
+              <span *ngIf="serverStatus.agent === true" class="w-2 h-2 rounded-full bg-light-primary dark:bg-primary flex-shrink-0 animate-pulse"></span>
+              <span *ngIf="serverStatus.agent === false" class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0"></span>
+              <span class="text-xs font-bold text-light-primary dark:text-primary">Serveur Agent</span>
+              <span class="ml-auto text-[10px] font-mono text-light-text-muted dark:text-white/30 bg-light-surface dark:bg-surface px-1.5 py-0.5 rounded">:3003</span>
+            </div>
+            <div class="mb-2">
+              <span *ngIf="serverStatus.agent === null" class="text-[10px] text-white/30">En attente de vérification...</span>
+              <span *ngIf="serverStatus.agent === true" class="text-[10px] font-medium text-light-primary dark:text-primary flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">check_circle</span> Actif — prêt à lancer
+              </span>
+              <span *ngIf="serverStatus.agent === false" class="text-[10px] font-medium text-red-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">cancel</span> Non détecté — requis !
+              </span>
+            </div>
+            <div class="relative group">
+              <code class="block text-[11px] font-mono text-light-primary dark:text-primary bg-black/20 dark:bg-black/40 rounded-lg px-3 py-2 pr-8">node server/server-agent.js</code>
+              <button (click)="copyCmd('node server/server-agent.js')" title="Copier"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-white/40 hover:text-white">
+                <span class="material-symbols-outlined text-[14px]">{{ copiedCmd === 'node server/server-agent.js' ? 'check' : 'content_copy' }}</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-light-text-muted dark:text-white/40 mt-2">Orchestrateur batch. <strong class="text-light-primary dark:text-primary">Requis pour lancer les prompts.</strong></p>
+          </div>
+
+        </div>
+
+        <!-- Actions du bas : rafraîchir + avertissement -->
+        <div class="mt-3 flex items-center justify-between gap-4">
+          <div class="flex items-start gap-2 text-[11px] text-yellow-600 dark:text-yellow-400/80">
+            <span class="material-symbols-outlined text-[14px] flex-shrink-0 mt-0.5">warning</span>
+            <span>Le bouton <strong>Lancer les prompts</strong> sera grisé si le serveur Agent (port 3003) n'est pas détecté.</span>
+          </div>
+          <button (click)="checkServersStatus()" class="flex items-center gap-1.5 px-3 py-1.5 text-[11px] bg-light-surface-hover dark:bg-white/5 hover:bg-light-border/50 dark:hover:bg-white/10 text-light-text-muted dark:text-white/50 rounded-lg transition-colors flex-shrink-0">
+            <span class="material-symbols-outlined text-[13px]">refresh</span>
+            Actualiser
+          </button>
+        </div>
+      </div>
+
+      <div class="border-t border-light-border dark:border-white/10"></div>
+
+      <!-- Étape 2 : Sélectionner et lancer -->
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-3 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold flex-shrink-0">2</span>
+          Sélectionner et lancer les prompts
+        </h4>
+        <div class="space-y-2.5">
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-[16px] text-light-primary dark:text-primary flex-shrink-0 mt-0.5">check_box</span>
+            <p class="text-xs text-light-text dark:text-white/80">Cochez une ou plusieurs actions dans le tableau ci-dessous (les colonnes <strong>Nom</strong> et <strong>Prompt</strong> sont les plus importantes).</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-[16px] text-light-primary dark:text-primary flex-shrink-0 mt-0.5">visibility</span>
+            <p class="text-xs text-light-text dark:text-white/80">Cliquez sur <strong>Voir les prompts sélectionnés</strong> — un popup s'ouvre avec la liste et le bouton <strong class="text-light-primary dark:text-primary">Lancer les prompts</strong>.</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-[16px] text-light-primary dark:text-primary flex-shrink-0 mt-0.5">settings</span>
+            <p class="text-xs text-light-text dark:text-white/80">Le fournisseur IA et le modèle utilisés sont ceux sélectionnés dans la page <strong>Config</strong> du site. Vous pouvez les changer avant de lancer.</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-[16px] text-light-primary dark:text-primary flex-shrink-0 mt-0.5">rocket_launch</span>
+            <p class="text-xs text-light-text dark:text-white/80">Cliquez sur <strong>Lancer les prompts</strong> : la page live s'ouvre automatiquement dans un nouvel onglet.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-light-border dark:border-white/10"></div>
+
+      <!-- Étape 3 : Ce qui se passe -->
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-3 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold flex-shrink-0">3</span>
+          Ce qui se passe pour chaque prompt
+        </h4>
+        <div class="relative pl-4">
+          <div class="absolute left-1.5 top-2 bottom-2 w-[1px] bg-light-border dark:bg-white/10"></div>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3 relative">
+              <span class="w-3 h-3 rounded-full bg-light-primary dark:bg-primary border-2 border-light-surface dark:border-surface flex-shrink-0 mt-0.5 relative z-10 -ml-[5px]"></span>
+              <p class="text-xs text-light-text dark:text-white/80"><strong>Branche git créée</strong> — une branche <code class="text-[10px] bg-light-surface-hover dark:bg-white/10 px-1 rounded">action/&lt;id&gt;-&lt;nom&gt;</code> est créée depuis <code class="text-[10px] bg-light-surface-hover dark:bg-white/10 px-1 rounded">main</code>.</p>
+            </div>
+            <div class="flex items-start gap-3 relative">
+              <span class="w-3 h-3 rounded-full bg-light-primary dark:bg-primary border-2 border-light-surface dark:border-surface flex-shrink-0 mt-0.5 relative z-10 -ml-[5px]"></span>
+              <p class="text-xs text-light-text dark:text-white/80"><strong>IA exécutée</strong> — le prompt est envoyé à la CLI IA (Claude ou Gemini) qui modifie les fichiers du projet directement.</p>
+            </div>
+            <div class="flex items-start gap-3 relative">
+              <span class="w-3 h-3 rounded-full bg-light-primary dark:bg-primary border-2 border-light-surface dark:border-surface flex-shrink-0 mt-0.5 relative z-10 -ml-[5px]"></span>
+              <p class="text-xs text-light-text dark:text-white/80"><strong>Chat disponible</strong> — si l'IA pose une question ou attend une réponse, utilisez le champ de chat en bas de la page live pour lui répondre.</p>
+            </div>
+            <div class="flex items-start gap-3 relative">
+              <span class="w-3 h-3 rounded-full bg-light-primary dark:bg-primary border-2 border-light-surface dark:border-surface flex-shrink-0 mt-0.5 relative z-10 -ml-[5px]"></span>
+              <p class="text-xs text-light-text dark:text-white/80"><strong>Commit + Push</strong> — les fichiers modifiés sont commités et la branche est poussée vers le dépôt distant (si configuré).</p>
+            </div>
+            <div class="flex items-start gap-3 relative">
+              <span class="w-3 h-3 rounded-full bg-green-400 border-2 border-light-surface dark:border-surface flex-shrink-0 mt-0.5 relative z-10 -ml-[5px]"></span>
+              <p class="text-xs text-light-text dark:text-white/80"><strong>Rapport enregistré</strong> — la liste des fichiers modifiés, le nom de branche et le hash de commit sont sauvegardés sur l'action. Cliquez sur <strong>Rapport →</strong> dans le tableau pour les consulter.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-light-border dark:border-white/10"></div>
+
+      <!-- Page live -->
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-3 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold flex-shrink-0">4</span>
+          Page live — suivi et reprise
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="flex items-start gap-3 bg-light-surface-hover dark:bg-background rounded-xl p-3 border border-light-border dark:border-white/10">
+            <span class="material-symbols-outlined text-[18px] text-blue-400 flex-shrink-0">open_in_new</span>
+            <div>
+              <p class="text-xs font-bold text-light-text dark:text-white mb-0.5">Accès direct</p>
+              <p class="text-[11px] text-light-text-muted dark:text-white/50">La page live s'ouvre automatiquement au lancement. URL : <code class="text-[10px] bg-light-surface dark:bg-surface px-1 rounded">/agent/live/&lt;runId&gt;</code></p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 bg-light-surface-hover dark:bg-background rounded-xl p-3 border border-light-border dark:border-white/10">
+            <span class="material-symbols-outlined text-[18px] text-green-400 flex-shrink-0">history</span>
+            <div>
+              <p class="text-xs font-bold text-light-text dark:text-white mb-0.5">Reprise après fermeture</p>
+              <p class="text-[11px] text-light-text-muted dark:text-white/50">Si la page a été fermée, cliquez sur <strong>Revoir</strong> dans le bandeau en haut de cette section. Tout l'historique est rejoué depuis le serveur.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 bg-light-surface-hover dark:bg-background rounded-xl p-3 border border-light-border dark:border-white/10">
+            <span class="material-symbols-outlined text-[18px] text-yellow-400 flex-shrink-0">chat</span>
+            <div>
+              <p class="text-xs font-bold text-light-text dark:text-white mb-0.5">Chat bidirectionnel</p>
+              <p class="text-[11px] text-light-text-muted dark:text-white/50">Pendant l'exécution, tapez dans le champ en bas de la page live et appuyez sur <kbd class="text-[9px] bg-light-surface dark:bg-surface border border-light-border dark:border-white/20 px-1.5 py-0.5 rounded">Entrée</kbd> pour envoyer une réponse à l'IA.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 bg-light-surface-hover dark:bg-background rounded-xl p-3 border border-light-border dark:border-white/10">
+            <span class="material-symbols-outlined text-[18px] text-red-400 flex-shrink-0">stop_circle</span>
+            <div>
+              <p class="text-xs font-bold text-light-text dark:text-white mb-0.5">Arrêt propre</p>
+              <p class="text-[11px] text-light-text-muted dark:text-white/50">Cliquez sur <strong>Arrêter</strong> (bandeau ou page live) pour stopper le batch après le prompt en cours. La branche en cours reste intacte.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <!-- ===== FIN MODE D'EMPLOI ===== -->
+
+  <!-- Action Form -->
+  <div class="bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-lg p-6 mb-6">
+    <h3 class="text-sm font-bold text-light-text dark:text-white mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-lg" [ngClass]="editingActionId ? 'text-light-primary dark:text-primary' : 'text-light-text-muted dark:text-white/40'">{{editingActionId ? 'edit' : 'add_circle'}}</span>
+      {{editingActionId ? 'Modifier l\'action' : 'Nouvelle action'}}
+    </h3>
+    
+    <form (submit)="saveAction(); $event.preventDefault()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Nom d'action -->
+      <div>
+        <label class="block text-xs font-medium text-light-text-muted dark:text-white/60 mb-1.5 uppercase tracking-wider">Nom d'action <span class="text-red-500">*</span></label>
+        <input type="text" [(ngModel)]="actionForm.name" name="actionName" required placeholder="Nom de l'action"
+               class="w-full bg-white dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-4 py-2.5 text-sm text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 focus:border-light-primary dark:focus:border-primary focus:outline-none transition-all">
+      </div>
+      
+      <!-- Commentaire (Prompt) -->
+      <div class="col-span-1 md:col-span-2">
+        <label class="block text-xs font-medium text-light-text-muted dark:text-white/60 mb-1.5 uppercase tracking-wider">Commentaire (Prompt)</label>
+        <textarea [(ngModel)]="actionForm.prompt" name="actionPrompt" placeholder="Commentaire / Prompt" rows="4"
+               class="w-full bg-white dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-4 py-2.5 text-sm text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 focus:border-light-primary dark:focus:border-primary focus:outline-none transition-all resize-y"></textarea>
+      </div>
+
+      <!-- Git Branch -->
+      <div>
+        <label class="block text-xs font-medium text-light-text-muted dark:text-white/60 mb-1.5 uppercase tracking-wider">Branche Git</label>
+        <input type="text" [(ngModel)]="actionForm.gitBranch" name="actionGitBranch" placeholder="Nom de la branche"
+               class="w-full bg-white dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-4 py-2.5 text-sm text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 focus:border-light-primary dark:focus:border-primary focus:outline-none transition-all">
+      </div>
+
+      <!-- Rapport -->
+      <div class="col-span-1 md:col-span-2">
+        <label class="block text-xs font-medium text-light-text-muted dark:text-white/60 mb-1.5 uppercase tracking-wider">Rapport</label>
+        <textarea [(ngModel)]="actionForm.report" name="actionReport" placeholder="Rapport de l'action..." rows="4"
+               class="w-full bg-white dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-4 py-2.5 text-sm text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 focus:border-light-primary dark:focus:border-primary focus:outline-none transition-all resize-y"></textarea>
+      </div>
+
+      <!-- Fichiers modifiés -->
+      <div class="col-span-1 md:col-span-2">
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-xs font-medium text-light-text-muted dark:text-white/60 uppercase tracking-wider mb-0">Fichiers modifiés</label>
+          <button type="button" (click)="addActionFile()" class="text-xs flex items-center gap-1 text-light-primary dark:text-primary hover:text-light-primary/80 transition-colors">
+            <span class="material-symbols-outlined text-sm">add</span> Ajouter un fichier
+          </button>
+        </div>
+        <div *ngFor="let file of actionForm.modifiedFiles; let i = index; trackBy: trackByFn" class="flex gap-2 mb-2">
+          <input type="text" [(ngModel)]="actionForm.modifiedFiles[i]" [name]="'actionFile_' + i" placeholder="Chemin du fichier (ex: src/app/test.ts)"
+                 class="flex-grow bg-white dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-4 py-2 text-sm text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 focus:border-light-primary dark:focus:border-primary focus:outline-none transition-all">
+          <button type="button" (click)="removeActionFile(i)" class="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20" title="Supprimer">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+        <div *ngIf="!actionForm.modifiedFiles || actionForm.modifiedFiles.length === 0" class="text-xs text-light-text-muted dark:text-white/40 italic py-2">
+          Aucun fichier ajouté.
+        </div>
+      </div>
+      
+      <!-- État GIT (Radio Options) -->
+      <div class="col-span-1 md:col-span-2">
+        <label class="block text-xs font-medium text-light-text-muted dark:text-white/60 mb-1.5 uppercase tracking-wider">État GIT</label>
+        <div class="flex items-center gap-6">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" [(ngModel)]="actionForm.gitState" name="actionGitState" value="Créé" class="text-blue-500 focus:ring-blue-500">
+            <span class="text-sm text-light-text dark:text-white">Créé</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" [(ngModel)]="actionForm.gitState" name="actionGitState" value="Commité" class="text-yellow-500 focus:ring-yellow-500">
+            <span class="text-sm text-light-text dark:text-white">Commité</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" [(ngModel)]="actionForm.gitState" name="actionGitState" value="Pushé" class="text-purple-500 focus:ring-purple-500">
+            <span class="text-sm text-light-text dark:text-white">Pushé</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" [(ngModel)]="actionForm.gitState" name="actionGitState" value="Mergé" class="text-green-500 focus:ring-green-500">
+            <span class="text-sm text-light-text dark:text-white">Mergé</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Priorité (Radio Options) -->
+      <div class="col-span-1 md:col-span-2">
+        <label class="block text-xs font-medium text-light-text-muted dark:text-white/60 mb-1.5 uppercase tracking-wider">Priorité</label>
+        <div class="flex items-center gap-6">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" [(ngModel)]="actionForm.priority" name="actionPriority" value="Basse" class="text-light-primary dark:text-primary focus:ring-light-primary dark:focus:ring-primary">
+            <span class="text-sm text-light-text dark:text-white">Basse</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" [(ngModel)]="actionForm.priority" name="actionPriority" value="Moyenne" class="text-light-primary dark:text-primary focus:ring-light-primary dark:focus:ring-primary">
+            <span class="text-sm text-light-text dark:text-white">Moyenne</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" [(ngModel)]="actionForm.priority" name="actionPriority" value="Haute" class="text-light-primary dark:text-primary focus:ring-light-primary dark:focus:ring-primary">
+            <span class="text-sm text-light-text dark:text-white">Haute</span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="col-span-1 md:col-span-2 flex items-center gap-3 pt-2">
+        <button type="submit" [disabled]="!actionForm.name?.trim()"
+                class="px-6 py-2.5 bg-light-primary dark:bg-primary text-white text-sm font-bold rounded-lg hover:bg-light-primary/90 dark:hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">{{editingActionId ? 'save' : 'add'}}</span>
+          {{editingActionId ? 'Enregistrer' : 'Créer l\'action'}}
+        </button>
+        <button *ngIf="editingActionId" type="button" (click)="resetActionForm()"
+                class="px-4 py-2.5 bg-light-surface-hover dark:bg-surface-light text-light-text dark:text-white text-sm font-medium rounded-lg border border-light-border dark:border-white/10 hover:bg-light-border/50 dark:hover:bg-white/5 transition-colors">
+          Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Actions List -->
+
+  <!-- Bandeau agent actif -->
+  <div *ngIf="agentIsRunning && activeRun" class="flex items-center justify-between bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4">
+    <div class="flex items-center gap-3">
+      <span class="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+      <span class="text-sm text-blue-300">
+        Agent en cours — Action {{ (activeRun.currentActionIndex || 0) + 1 }}/{{ activeRun.actionIds.length || 0 }}
+        <strong *ngIf="getCurrentActionName()" class="ml-1">: {{ getCurrentActionName() }}</strong>
+      </span>
+      <span class="text-xs text-blue-400/60 font-mono">{{ activeRun.provider }} / {{ activeRun.model }}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button (click)="openLivePage()" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs font-medium transition-colors">
+        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+        Page live
+      </button>
+      <button (click)="stopAgent()" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs transition-colors">
+        <span class="material-symbols-outlined text-[14px]">stop</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Bandeau dernier run + bouton live (run terminé) -->
+  <div *ngIf="!agentIsRunning && agentService.getLastRunId()" class="flex items-center justify-between bg-light-surface-hover dark:bg-white/5 border border-light-border dark:border-white/10 rounded-xl px-4 py-2.5 mb-4">
+    <span class="text-xs text-light-text-muted dark:text-white/40">
+      Dernier run : <span class="font-mono">{{ agentService.getLastRunId() }}</span>
+    </span>
+    <button (click)="openLivePage()" class="flex items-center gap-1.5 px-3 py-1.5 bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white rounded-lg text-xs transition-colors">
+      <span class="material-symbols-outlined text-[14px]">history</span>
+      Revoir
+    </button>
+  </div>
+
+  <div class="flex justify-end mb-4">
+    <button *ngIf="selectedActionIds.length > 0" (click)="showPromptsPopup = true" class="px-4 py-2 bg-light-primary dark:bg-primary text-white text-sm font-bold rounded-lg flex items-center gap-2 hover:bg-light-primary/90 dark:hover:bg-primary/90 transition-colors shadow-lg">
+      <span class="material-symbols-outlined text-[18px]">visibility</span>
+      Voir les prompts sélectionnés ({{selectedActionIds.length}})
+    </button>
+  </div>
+  <div class="bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-light-surface-hover dark:bg-surface-light border-b border-light-border dark:border-white/10">
+            <th class="p-4 w-10">
+              <input type="checkbox" [checked]="actions.length > 0 && selectedActionIds.length === actions.length" (change)="toggleAllActions($event)" class="cursor-pointer rounded border-light-border dark:border-white/20 text-light-primary dark:text-primary focus:ring-light-primary dark:focus:ring-primary bg-white dark:bg-background">
+            </th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Exécution</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">État GIT</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Date & Heure</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Nom</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Utilisateur</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Priorité</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Branche</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Fichiers</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Prompt</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Rapport</th>
+            <th class="p-4 text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="actions.length === 0">
+            <td colspan="12" class="p-8 text-center text-sm text-light-text-muted dark:text-white/40">
+              Aucune action trouvée.
+            </td>
+          </tr>
+          <tr *ngFor="let a of actions" class="border-b border-light-border dark:border-white/5 transition-colors group"
+              [ngClass]="{
+                'bg-blue-500/5 hover:bg-blue-500/10': a.gitState === 'Créé',
+                'bg-yellow-500/5 hover:bg-yellow-500/10': a.gitState === 'Commité',
+                'bg-purple-500/5 hover:bg-purple-500/10': a.gitState === 'Pushé',
+                'bg-green-500/5 hover:bg-green-500/10': a.gitState === 'Mergé',
+                'hover:bg-light-surface-hover dark:hover:bg-white/5': !a.gitState
+              }">
+            <td class="p-4 w-10">
+              <input type="checkbox"
+                     [checked]="isActionSelected(a.id)"
+                     [disabled]="isActionRunningOrQueued(a)"
+                     (change)="toggleActionSelection(a.id)"
+                     class="cursor-pointer rounded border-light-border dark:border-white/20 text-light-primary dark:text-primary focus:ring-light-primary dark:focus:ring-primary bg-white dark:bg-background disabled:opacity-40 disabled:cursor-not-allowed">
+            </td>
+            <!-- Colonne statut exécution -->
+            <td class="p-4 text-sm">
+              <div class="flex flex-col gap-1">
+                <span *ngIf="a.execution?.status === 'running'" class="text-xs text-blue-400 animate-pulse flex items-center gap-1">
+                  <span class="inline-block w-1.5 h-1.5 bg-blue-400 rounded-full"></span> En cours
+                </span>
+                <span *ngIf="a.execution?.status === 'completed'" class="text-xs text-green-400 flex items-center gap-1">✅ Terminé</span>
+                <span *ngIf="a.execution?.status === 'failed'" class="text-xs text-red-400 flex items-center gap-1">❌ Échoué</span>
+                <span *ngIf="a.execution?.status === 'stopped'" class="text-xs text-yellow-400 flex items-center gap-1">⏹ Arrêté</span>
+                <span *ngIf="!a.execution?.status || a.execution?.status === 'idle'" class="text-xs text-light-text-muted dark:text-white/20">--</span>
+                <button *ngIf="a.execution?.status === 'completed' || a.execution?.status === 'failed'"
+                        (click)="openReport(a)"
+                        class="text-[10px] text-light-primary dark:text-primary hover:underline text-left mt-0.5">
+                  Rapport →
+                </button>
+              </div>
+            </td>
+            <td class="p-4 text-sm">
+              <span *ngIf="a.gitState" class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider"
+                    [ngClass]="{
+                      'bg-blue-500/20 text-blue-500': a.gitState === 'Créé',
+                      'bg-yellow-500/20 text-yellow-600 dark:text-yellow-500': a.gitState === 'Commité',
+                      'bg-purple-500/20 text-purple-500': a.gitState === 'Pushé',
+                      'bg-green-500/20 text-green-600 dark:text-green-500': a.gitState === 'Mergé'
+                    }">
+                {{a.gitState}}
+              </span>
+              <span *ngIf="!a.gitState" class="text-xs text-light-text-muted dark:text-white/40">--</span>
+            </td>
+            <td class="p-4 text-sm text-light-text-muted dark:text-white/60">
+              {{formatDateTime(a.date)}}
+            </td>
+            <td class="p-4">
+              <span class="text-sm font-bold text-light-text dark:text-white">{{a.name}}</span>
+            </td>
+            <td class="p-4 text-sm text-light-text-muted dark:text-white/60">
+              <span class="px-2 py-1 rounded bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary text-xs">{{a.user}}</span>
+            </td>
+            <td class="p-4 text-sm">
+              <span class="px-2 py-1 rounded text-xs font-medium"
+                    [ngClass]="{
+                      'bg-red-500/10 text-red-500 border border-red-500/20': a.priority === 'Haute',
+                      'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20': a.priority === 'Moyenne',
+                      'bg-green-500/10 text-green-500 border border-green-500/20': a.priority === 'Basse'
+                    }">
+                {{a.priority}}
+              </span>
+            </td>
+            <td class="p-4 text-sm text-light-text-muted dark:text-white/60">
+              <span *ngIf="a.gitBranch" class="px-2 py-1 rounded bg-light-surface-hover dark:bg-white/10 text-light-text dark:text-white text-xs">{{a.gitBranch}}</span>
+              <span *ngIf="!a.gitBranch" class="text-xs opacity-50">--</span>
+            </td>
+            <td class="p-4">
+              <div class="flex flex-col gap-1">
+                <span *ngFor="let file of a.modifiedFiles" class="text-xs text-light-text-muted dark:text-white/60 bg-light-surface-hover dark:bg-surface-light px-2 py-0.5 rounded border border-light-border dark:border-white/5 truncate max-w-[150px]" [title]="file">
+                  {{file}}
+                </span>
+                <span *ngIf="!a.modifiedFiles || a.modifiedFiles.length === 0" class="text-xs opacity-50 text-light-text-muted dark:text-white/60">--</span>
+              </div>
+            </td>
+            <td class="p-4 text-sm text-light-text-muted dark:text-white/60 max-w-[150px] truncate" [title]="a.prompt">
+              {{a.prompt || '--'}}
+            </td>
+            <td class="p-4 text-sm text-light-text-muted dark:text-white/60 max-w-[150px] truncate" [title]="a.report">
+              {{a.report || '--'}}
+            </td>
+            <td class="p-4 text-right">
+              <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button (click)="editAction(a)" class="p-1.5 rounded-md text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary hover:bg-light-primary/10 dark:hover:bg-primary/10 transition-colors" title="Modifier">
+                  <span class="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+                <button (click)="deleteAction(a.id)" class="p-1.5 rounded-md text-light-text-muted dark:text-white/40 hover:text-red-500 hover:bg-red-500/10 transition-colors" title="Supprimer">
+                  <span class="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Popup Prompts -->
+  <div *ngIf="showPromptsPopup" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-2xl p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-light-text dark:text-white flex items-center gap-2">
+          <span class="material-symbols-outlined text-light-primary dark:text-primary">visibility</span>
+          Prompts sélectionnés
+        </h3>
+        <button (click)="showPromptsPopup = false" class="p-2 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface-hover dark:hover:bg-white/10 rounded-lg transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      
+      <div class="overflow-y-auto flex-grow pr-2 space-y-4">
+        <div *ngFor="let a of getSelectedPrompts()" class="p-4 bg-light-surface-hover dark:bg-background border border-light-border dark:border-white/10 rounded-xl">
+          <h4 class="text-sm font-bold text-light-text dark:text-white mb-2">{{a.name}} <span *ngIf="a.gitBranch" class="ml-2 px-2 py-1 rounded bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary text-[10px]">{{a.gitBranch}}</span></h4>
+          <p class="text-sm text-light-text-muted dark:text-white/70 whitespace-pre-wrap">{{a.prompt || 'Aucun prompt.'}}</p>
+        </div>
+        <div *ngIf="getSelectedPrompts().length === 0" class="text-center text-sm text-light-text-muted dark:text-white/40 py-8">
+          Aucune action sélectionnée.
+        </div>
+      </div>
+      
+      <div class="mt-6 pt-4 border-t border-light-border dark:border-white/10 space-y-4">
+
+        <!-- Toggle Git mode -->
+        <div class="flex items-center gap-3 px-1">
+          <span class="material-symbols-outlined text-[18px] text-light-text-muted dark:text-white/40">account_tree</span>
+          <span class="text-sm text-light-text dark:text-white/80 flex-grow">Mode Git</span>
+          <div class="flex rounded-lg overflow-hidden border border-light-border dark:border-white/15 text-xs font-medium">
+            <button (click)="useGit = true"
+                    [ngClass]="useGit ? 'bg-light-primary dark:bg-primary text-white' : 'bg-light-surface-hover dark:bg-white/5 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70'"
+                    class="px-3 py-1.5 transition-colors flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px]">merge</span>
+              Branche + Commit + Push
+            </button>
+            <button (click)="useGit = false"
+                    [ngClass]="!useGit ? 'bg-amber-500 text-white' : 'bg-light-surface-hover dark:bg-white/5 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70'"
+                    class="px-3 py-1.5 border-l border-light-border dark:border-white/15 transition-colors flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px]">bolt</span>
+              Sans Git
+            </button>
+          </div>
+        </div>
+        <p class="text-[11px] text-light-text-muted dark:text-white/30 px-1">
+          <span *ngIf="useGit">Chaque prompt sera exécuté dans une branche dédiée, puis commité et poussé.</span>
+          <span *ngIf="!useGit">Les prompts seront exécutés directement sans aucune opération Git.</span>
+        </p>
+
+        <!-- Bandeau run en cours dans le popup -->
+        <div *ngIf="agentIsRunning && activeRun" class="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-xl px-4 py-3">
+          <span class="inline-block w-2 h-2 bg-blue-400 rounded-full animate-pulse shrink-0"></span>
+          <div class="flex-grow min-w-0">
+            <span class="text-sm font-medium text-blue-300">Run en cours</span>
+            <span *ngIf="getCurrentActionName()" class="ml-2 text-xs text-blue-400/70 truncate">— {{ getCurrentActionName() }}</span>
+          </div>
+          <button (click)="openLivePage()" class="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs transition-colors flex items-center gap-1 shrink-0">
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+            Live
+          </button>
+          <button (click)="stopAgentFromPopup()" class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 shrink-0">
+            <span class="material-symbols-outlined text-[14px]">stop</span>
+            Arrêter
+          </button>
+        </div>
+
+        <!-- Footer boutons -->
+        <div class="flex items-center justify-between gap-4">
+          <!-- Info provider/model -->
+          <div *ngIf="agentAvailable" class="text-xs text-light-text-muted dark:text-white/40 font-mono flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+            {{ aiProvider || 'claude' }} / {{ aiModel || '...' }}
+          </div>
+          <div *ngIf="!agentAvailable" class="text-xs text-red-400/70 flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
+            Agent non disponible (port 3003)
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button (click)="showPromptsPopup = false" class="px-4 py-2 bg-light-surface-hover dark:bg-surface-light text-light-text dark:text-white text-sm font-medium rounded-lg hover:bg-light-border/50 dark:hover:bg-white/5 transition-colors">
+              Fermer
+            </button>
+            <button (click)="launchAgent()"
+                    [disabled]="agentLaunching || agentIsRunning || !agentAvailable || selectedActionIds.length === 0"
+                    class="px-5 py-2 bg-light-primary dark:bg-primary text-white text-sm font-bold rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
+              <span *ngIf="!agentLaunching" class="material-symbols-outlined text-[18px]">rocket_launch</span>
+              <span *ngIf="agentLaunching" class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+              {{ agentLaunching ? 'Lancement...' : (agentIsRunning ? 'Run en cours...' : 'Lancer les prompts') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal rapport d'exécution -->
+  <wo-action-report-modal
+    *ngIf="showReportModal && reportAction"
+    [action]="reportAction"
+    (close)="closeReport()">
+  </wo-action-report-modal>
+
+</section>

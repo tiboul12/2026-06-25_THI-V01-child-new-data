@@ -1,0 +1,320 @@
+<div class="h-full flex flex-col bg-white dark:bg-[#0f0f17] overflow-hidden">
+
+  <!-- Barre d'outils -->
+  <div class="flex flex-wrap items-center gap-1 p-2 bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
+
+    <!-- Indicateur mode focus -->
+    @if (focusedHandle) {
+      <button class="ed-focus-exit" (click)="exitFocusMode()" title="Revenir à l'édition complète">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Vue complète
+      </button>
+      <div class="ed-focus-label">
+        <span class="ed-focus-label__badge">{{ focusedHandle.kind === 'folder' ? 'H' + focusedHandle.level : 'Doc' }}</span>
+        {{ focusedHandle.label }}
+      </div>
+      <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
+    }
+
+    <!-- Toggle Édition / Visu -->
+    <div class="inline-flex rounded border border-light-border dark:border-white/10 overflow-hidden mr-2">
+      <button type="button"
+              class="px-3 py-1 text-xs font-semibold transition-colors"
+              [ngClass]="mode === 'edit'
+                ? 'bg-primary/20 text-primary'
+                : 'text-white/40 hover:text-white/70'"
+              (click)="setMode('edit')">Édition</button>
+      <button type="button"
+              class="px-3 py-1 text-xs font-semibold transition-colors"
+              [ngClass]="mode === 'visu'
+                ? 'bg-primary/20 text-primary'
+                : 'text-white/40 hover:text-white/70'"
+              (click)="setMode('visu')">Visu</button>
+    </div>
+
+    @if (mode === 'edit') {
+      <button type="button" class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10" title="Gras" (click)="insertAt('**', '**')"><strong>B</strong></button>
+      <button type="button" class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10" title="Italique" (click)="insertAt('*', '*')"><em>I</em></button>
+      <button type="button" class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10" title="Barré" (click)="insertAt('~~', '~~')"><s>S</s></button>
+      <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
+      <button type="button" class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10" title="Titre 1" (click)="insertAt('\n# ', '')">H1</button>
+      <button type="button" class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10" title="Titre 2" (click)="insertAt('\n## ', '')">H2</button>
+      <button type="button" class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10" title="Titre 3" (click)="insertAt('\n### ', '')">H3</button>
+      <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
+      <button type="button" class="px-2.5 py-1 rounded text-xs text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10" title="Liste" (click)="insertAt('- ')">&#8226; Liste</button>
+      <button type="button" class="px-2.5 py-1 rounded text-xs font-mono text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10" title="Code" (click)="insertAt('`', '`')">&lt;/&gt;</button>
+      <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
+      <button type="button" class="px-2.5 py-1 rounded text-xs text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 transition-all border border-transparent hover:border-light-border dark:hover:border-white/10 flex items-center gap-1" title="Insérer une image au curseur (max 1 Mo)" (click)="triggerImageUpload()">
+        <span class="material-symbols-outlined text-sm leading-none">image</span>
+      </button>
+      <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
+    }
+
+    <div class="flex-1"></div>
+
+    @if (saveStatus === 'saving') {
+      <span class="text-xs text-yellow-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Sauvegarde…</span>
+    } @else if (saveStatus === 'dirty') {
+      <button type="button"
+              (click)="forceSave()"
+              title="Cliquer pour sauvegarder maintenant"
+              class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 px-2 py-0.5 rounded border border-orange-400/30 hover:border-orange-300/50 hover:bg-orange-400/10 transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-sm">save</span> Non sauvegardé
+      </button>
+    } @else if (saveStatus === 'error') {
+      <span class="text-xs text-red-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span> Erreur</span>
+    } @else {
+      <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
+    }
+  </div>
+
+  <!-- Erreur upload image -->
+  @if (imageUploadError) {
+    <div class="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800/40 flex-shrink-0">
+      <span class="material-symbols-outlined text-sm text-red-500">error</span>
+      <span class="text-xs text-red-500">{{ imageUploadError }}</span>
+      <button class="ml-auto text-red-400 hover:text-red-600" (click)="imageUploadError = ''">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- Vide -->
+  @if (docSections.length === 0) {
+    <div class="flex-1 px-6 py-4">
+      <p class="text-sm text-light-text-muted dark:text-white/30 font-mono">
+        Commencez par créer un menu dans l'arborescence à gauche.
+      </p>
+    </div>
+  } @else {
+
+    <!-- Mode Édition : textarea + miroir overlay -->
+    @if (mode === 'edit') {
+      <div class="ed-wrap flex-1 min-h-0 relative"
+           (mousemove)="onWrapMouseMove($event)"
+           (mouseleave)="onWrapMouseLeave()">
+        <div class="ed-mirror" #mirror aria-hidden="true">
+          @for (line of mirrorLines; track $index) {
+            <div class="ed-line"
+                 [class.ed-line--hl-folder]="line.highlightKind === 'folder'"
+                 [class.ed-line--hl-file]="line.highlightKind === 'file'"
+                 [class.ed-line--image]="line.isImage">
+              @if (line.isImage) {
+                <span class="ed-img-card-wrap">
+                  <span class="ed-img-card"
+                        (mouseenter)="onImageHoverEnter(line, $event)"
+                        (mouseleave)="onImageHoverLeave()"
+                        (click)="onImageCardClick(line, $event)">
+                    <span class="ed-img-icon material-symbols-outlined">image</span>
+                    @if (renamingImageId === line.imageId) {
+                      <input class="ed-img-rename"
+                             [(ngModel)]="renameImageValue"
+                             (click)="$event.stopPropagation()"
+                             (keydown.enter)="confirmRenameImage(line)"
+                             (keydown.escape)="cancelRenameImage()"
+                             autofocus>
+                      <button class="ed-img-act ed-img-act--ok"
+                              (click)="confirmRenameImage(line); $event.stopPropagation()"
+                              title="Confirmer">
+                        <span class="material-symbols-outlined">check</span>
+                      </button>
+                      <button class="ed-img-act"
+                              (click)="cancelRenameImage(); $event.stopPropagation()"
+                              title="Annuler">
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    } @else {
+                      <span class="ed-img-name">{{ line.imageName }}</span>
+                      @if (deleteConfirmImageId === line.imageId) {
+                        <button class="ed-img-act ed-img-act--danger"
+                                (click)="confirmDeleteImage(line, $event)"
+                                title="Confirmer la suppression">
+                          <span class="material-symbols-outlined">check</span>
+                        </button>
+                        <button class="ed-img-act"
+                                (click)="cancelDeleteImage($event)"
+                                title="Annuler">
+                          <span class="material-symbols-outlined">close</span>
+                        </button>
+                      } @else {
+                        <button class="ed-img-act"
+                                (click)="startRenameImage(line, $event)"
+                                title="Renommer">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        <button class="ed-img-act ed-img-act--danger"
+                                (click)="askDeleteImage(line, $event)"
+                                title="Supprimer">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      }
+                    }
+                  </span>
+                </span>
+              } @else {
+                <span class="ed-text">{{ line.text || ' ' }}</span>
+              }
+            </div>
+          }
+        </div>
+        <textarea #textarea
+                  class="ed-textarea"
+                  spellcheck="false"
+                  wrap="off"
+                  [value]="unifiedContent"
+                  (input)="onTextareaInput($event)"
+                  (scroll)="onTextareaScroll($event)"
+                  (keyup)="onTextareaCursor($event)"
+                  (mouseup)="onTextareaCursor($event)"
+                  (blur)="onTextareaBlur()"></textarea>
+
+        <!-- Overlay (gouttière gauche + indicateur de drop pleine largeur) -->
+        <div class="ed-overlay" #overlay aria-hidden="true">
+          <div class="ed-overlay__inner">
+            @if (hoveredHandle) {
+              <div class="ed-handle"
+                   [class.ed-handle--folder]="hoveredHandle.kind === 'folder'"
+                   [class.ed-handle--file]="hoveredHandle.kind === 'file'"
+                   [class.ed-handle--image]="hoveredHandle.kind === 'image'"
+                   [style.top.px]="hoveredHandle.top + 1"
+                   (mousedown)="startHandleDrag(hoveredHandle, $event)"
+                   [title]="'Déplacer : \'' + hoveredHandle.label + '\''  ">
+                @if (hoveredHandle.kind === 'folder') {
+                  <span class="ed-handle__lvl">H{{ hoveredHandle.level }}</span>
+                } @else {
+                  <span class="ed-handle__grip material-symbols-outlined">drag_indicator</span>
+                }
+              </div>
+              <!-- Bouton "Édition" — ouvre le mode focus pour cette section/document -->
+              @if (hoveredHandle.kind !== 'image') {
+                <button class="ed-focus-btn"
+                        [class.ed-focus-btn--folder]="hoveredHandle.kind === 'folder'"
+                        [class.ed-focus-btn--file]="hoveredHandle.kind === 'file'"
+                        [style.top.px]="hoveredHandle.top + 21"
+                        (click)="enterFocusMode(hoveredHandle, $event)"
+                        title="Éditer uniquement : {{ hoveredHandle.label }}">
+                  Éd.
+                </button>
+              }
+            }
+            @if (dropIndicator) {
+              <div class="ed-drop-indicator"
+                   [class.ed-drop-indicator--inside]="dropIndicator.position === 'inside'"
+                   [style.top.px]="dropIndicator.top"
+                   [style.height.px]="dropIndicator.height"></div>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (dragGhost) {
+        <div class="ed-drag-ghost"
+             [class.ed-drag-ghost--folder]="dragGhost.kind === 'folder'"
+             [class.ed-drag-ghost--file]="dragGhost.kind === 'file'"
+             [class.ed-drag-ghost--image]="dragGhost.kind === 'image'"
+             [style.left.px]="dragGhost.x"
+             [style.top.px]="dragGhost.y">
+          <span class="material-symbols-outlined">drag_indicator</span>
+          <span>{{ dragGhost.label }}</span>
+        </div>
+      }
+    }
+
+    <!-- Aperçu image au survol -->
+    @if (hoverPreview) {
+      <div class="ed-img-preview"
+           [style.top.px]="hoverPreview.top"
+           [style.left.px]="hoverPreview.left">
+        <img [src]="hoverPreview.url" [alt]="hoverPreview.name">
+        <div class="ed-img-preview__name">{{ hoverPreview.name }}</div>
+      </div>
+    }
+
+    <!-- Mode Visu : sections éditables + toolbar sélection -->
+    @if (mode === 'visu') {
+      <div #visu
+           class="visu-wrap flex-1 min-h-0 overflow-y-auto px-8 py-6 relative"
+           (click)="onVisuContainerClick($event)">
+
+        @for (sec of visuSections; track sec.sectionId) {
+          <div class="visu-section-wrap" [class.visu-section-wrap--active]="activeVisuSectionId === sec.sectionId">
+
+            <!-- Titre de section (non éditable) -->
+            @switch (sec.level) {
+              @case (1) { <h1 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h1> }
+              @case (2) { <h2 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h2> }
+              @case (3) { <h3 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h3> }
+              @default  { <h4 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h4> }
+            }
+
+            <!-- Contenu éditable -->
+            <div #visuSectionEl
+                 class="visu-sec-content"
+                 contenteditable="true"
+                 [attr.data-section-id]="sec.sectionId"
+                 (focus)="onVisuSectionFocus(sec.sectionId)"
+                 (blur)="onVisuSectionBlur(sec.sectionId, $any($event.target))"
+                 (input)="onVisuSectionInput(sec.sectionId)"
+                 (keydown)="onVisuSectionKeydown($event)">
+            </div>
+
+            <!-- Actions d'insertion -->
+            <div class="visu-insert-row">
+              <button class="visu-insert-btn"
+                      type="button"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="showVisuInsertMenu(sec.sectionId, $event)"
+                      title="Insérer un bloc">
+                <span class="material-symbols-outlined">add</span>
+                Insérer
+              </button>
+              <button class="visu-insert-btn visu-insert-btn--img"
+                      type="button"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="triggerVisuImageUpload(sec.sectionId)"
+                      title="Ajouter une image">
+                <span class="material-symbols-outlined">image</span>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Toolbar formatage (popover sur sélection) -->
+        @if (visuToolbar) {
+          <div class="visu-format-toolbar"
+               [style.top.px]="visuToolbar.top"
+               [style.left.px]="visuToolbar.left">
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S̶</s></button>
+            <span class="visu-format-toolbar__sep"></span>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('removeFormat')" title="Effacer la mise en forme" class="visu-format-toolbar__clear">Aa</button>
+          </div>
+        }
+
+        <!-- Menu d'insertion -->
+        @if (visuInsertMenu) {
+          <div class="visu-insert-menu"
+               [style.top.px]="visuInsertMenu.top"
+               [style.left.px]="visuInsertMenu.left">
+            <button type="button" (click)="insertVisuBlock('menu', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">title</span> Titre
+            </button>
+            <button type="button" (click)="insertVisuBlock('doc', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">description</span> Document
+            </button>
+            <button type="button" (click)="insertVisuBlock('code', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">code</span> Code
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Input image caché (mode visu) -->
+      <input #visuImgInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onVisuImageSelected($event)">
+    }
+
+  }
+
+</div>

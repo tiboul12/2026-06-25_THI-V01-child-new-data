@@ -1,0 +1,252 @@
+<div class="flex h-full flex-shrink-0 select-none overflow-hidden">
+
+  <!-- Bande d'icônes -->
+  <div class="w-10 flex flex-col items-center py-3 gap-2 border-r border-light-border dark:border-white/8 bg-light-surface dark:bg-black/20">
+    <button class="p-1.5 rounded-lg text-light-primary dark:text-primary" title="Fichiers">
+      <span class="material-symbols-outlined text-base">folder_open</span>
+    </button>
+    <div class="flex-1"></div>
+    <button class="p-1.5 rounded-lg hover:bg-light-surface-hover dark:hover:bg-white/5 text-light-text-muted dark:text-white/30 transition-colors" title="Pièces jointes">
+      <span class="material-symbols-outlined text-base">attach_file</span>
+    </button>
+  </div>
+
+  <!-- Arbre du projet -->
+  <div class="w-56 h-full overflow-y-auto py-2 bg-white dark:bg-[#0f0f17]"
+       (contextmenu)="onContextMenu($event, null)">
+
+    <!-- Racine projet -->
+    <div class="flex items-center gap-1 px-2 py-0.5 rounded mx-1 cursor-pointer group transition-colors hover:bg-light-surface dark:hover:bg-white/5"
+         (contextmenu)="onContextMenu($event, null); $event.stopPropagation()">
+      <button class="w-3 h-3 flex-shrink-0 text-light-text-muted dark:text-white/30 transition-transform"
+              [class.rotate-90]="isExpanded('root')"
+              (click)="toggle('root')">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
+      </button>
+      <span class="material-symbols-outlined text-xs text-light-primary dark:text-primary">{{ isExpanded('root') ? 'folder_open' : 'folder' }}</span>
+      <span class="text-[11px] font-semibold truncate text-light-text dark:text-white/80">{{ projectTitle || 'Projet' }}</span>
+    </div>
+
+    <!-- Arbre récursif -->
+    @if (isExpanded('root')) {
+      <ng-container *ngTemplateOutlet="treeNodes; context: { nodes: files, depth: 1, parentId: null }"></ng-container>
+
+      @if (inlineInputIsFor('new-folder', null) || inlineInputIsFor('new-file', null)) {
+        <div class="flex items-center gap-1 mx-1 px-2 py-0.5 rounded bg-light-primary/5 dark:bg-primary/5" [style.padding-left.px]="8 + 10">
+          <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/40">
+            {{ inlineInput()?.type === 'new-folder' ? 'folder' : 'description' }}
+          </span>
+          <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
+                 [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom du dossier' : 'Nom du fichier'"
+                 [(ngModel)]="inlineValue"
+                 (keydown.enter)="confirmInput()"
+                 (keydown.escape)="cancelInput()"
+                 autofocus />
+        </div>
+      }
+    }
+
+  </div>
+
+</div>
+
+<!-- Template récursif -->
+<ng-template #treeNodes let-nodes="nodes" let-depth="depth" let-parentId="parentId">
+  @for (node of nodes; track node.id) {
+    @if (!(node.type === 'file' && node.name === 'contenu.md')) {
+
+    <!-- Indicateur avant -->
+    @if (isDragOver(node.id) && dragPos() === 'before') {
+      <div class="h-0.5 rounded-full bg-light-primary dark:bg-primary mx-1" [style.margin-left.px]="8 + depth * 10"></div>
+    }
+
+    <!-- Ligne noeud -->
+    @if (isRenaming(node.id)) {
+      <div class="flex items-center gap-1 mx-1 px-2 py-0.5 rounded bg-light-primary/5 dark:bg-primary/5"
+           [style.padding-left.px]="8 + depth * 10">
+        <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/40">
+          {{ node.type === 'folder' ? 'folder' : 'description' }}
+        </span>
+        <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
+               placeholder="Nouveau nom"
+               [(ngModel)]="inlineValue"
+               (keydown.enter)="confirmInput()"
+               (keydown.escape)="cancelInput()"
+               autofocus />
+      </div>
+    } @else {
+      <div class="flex items-center gap-1 px-2 py-0.5 rounded mx-1 cursor-pointer group transition-colors"
+           [class]="getNodeClasses(node)"
+           [class.opacity-40]="isDragging(node.id)"
+           [style.padding-left.px]="8 + depth * 10"
+           draggable="true"
+           (dragstart)="onDragStart($event, node, parentId)"
+           (dragover)="onDragOver($event, node)"
+           (drop)="onDrop($event, node, nodes, parentId)"
+           (dragend)="onDragEnd()"
+           (click)="selectFile(node)"
+           (contextmenu)="onContextMenu($event, node); $event.stopPropagation()">
+
+        <!-- Chevron ou espace -->
+        @if (node.type === 'folder') {
+          <button class="w-3 h-3 flex-shrink-0 text-light-text-muted dark:text-white/30 transition-transform"
+                  [class.rotate-90]="isExpanded(node.id)"
+                  (click)="toggle(node.id); $event.stopPropagation()">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
+          </button>
+        } @else {
+          <span class="w-3 flex-shrink-0"></span>
+        }
+
+        <!-- Icône -->
+        <span class="material-symbols-outlined text-xs flex-shrink-0"
+              [class]="getNodeIconClasses(node)">
+          {{ node.type === 'folder' ? (isExpanded(node.id) ? 'folder_open' : 'folder') : (isImageFile(node.name) ? 'image' : 'description') }}
+        </span>
+
+        <!-- Label -->
+        <span class="text-[11px] truncate leading-5 flex-1"
+              [class]="getNodeLabelClasses(node)">
+          {{ node.type === 'file' ? node.name.replace('.md', '') : node.name }}
+        </span>
+
+        <!-- Icône Conversation (Forum) -->
+        @if (hasConversation(node.id)) {
+          <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-light-primary dark:text-primary animate-pulse ml-1 opacity-70">
+            forum
+          </span>
+        }
+
+        <!-- Indicateur verrou -->
+        @if (isLockedByMe(node.id)) {
+          <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-green-400 ml-0.5"
+                [title]="getLockTooltip(node.id)">
+            lock
+          </span>
+        } @else if (isLockedByOther(node.id)) {
+          <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-red-400 ml-0.5"
+                [title]="getLockTooltip(node.id)">
+            lock
+          </span>
+        }
+      </div>
+    }
+
+    <!-- Indicateur après -->
+    @if (isDragOver(node.id) && dragPos() === 'after') {
+      <div class="h-0.5 rounded-full bg-light-primary dark:bg-primary mx-1" [style.margin-left.px]="8 + depth * 10"></div>
+    }
+
+    <!-- Images imbriquées dans un bloc document -->
+    @if (node.type === 'file' && !isImageFile(node.name) && getNestedImages(node.id).length > 0) {
+      @for (img of getNestedImages(node.id); track img.id) {
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded mx-1 cursor-pointer group transition-colors"
+             [class]="getNodeClasses(img)"
+             [class.opacity-40]="isDragging(img.id)"
+             [style.padding-left.px]="8 + (depth + 1) * 10"
+             (click)="selectFile(img)"
+             (contextmenu)="onContextMenu($event, img); $event.stopPropagation()">
+          <span class="w-3 flex-shrink-0"></span>
+          <span class="material-symbols-outlined text-xs flex-shrink-0" [class]="getNodeIconClasses(img)">image</span>
+          <span class="text-[11px] truncate leading-5 flex-1" [class]="getNodeLabelClasses(img)">{{ img.name }}</span>
+        </div>
+      }
+    }
+
+    <!-- Enfants récursifs -->
+    @if (node.type === 'folder' && isExpanded(node.id)) {
+      <ng-container *ngTemplateOutlet="treeNodes; context: { nodes: sortedChildren(node.children || []), depth: depth + 1, parentId: node.id }"></ng-container>
+
+      @if (inlineInputIsFor('new-folder', node.id) || inlineInputIsFor('new-file', node.id)) {
+        <div class="flex items-center gap-1 mx-1 px-2 py-0.5 rounded bg-light-primary/5 dark:bg-primary/5"
+             [style.padding-left.px]="8 + (depth + 1) * 10">
+          <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/40">
+            {{ inlineInput()?.type === 'new-folder' ? 'folder' : 'description' }}
+          </span>
+          <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
+                 [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom du dossier' : 'Nom du fichier'"
+                 [(ngModel)]="inlineValue"
+                 (keydown.enter)="confirmInput()"
+                 (keydown.escape)="cancelInput()"
+                 autofocus />
+        </div>
+      }
+    }
+
+    } <!-- /if not contenu.md -->
+  }
+</ng-template>
+
+<!-- Menu contextuel -->
+@if (contextMenu()) {
+  <div class="fixed z-50 min-w-40 bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-lg shadow-xl py-1 text-[12px]"
+       [style.left.px]="contextMenu()!.x"
+       [style.top.px]="contextMenu()!.y"
+       (click)="$event.stopPropagation()">
+
+    @if (!contextMenu()!.node || contextMenu()!.node!.type === 'folder') {
+      <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left"
+              (click)="startNewFolder(contextMenu()!.node?.id || null)">
+        <span class="material-symbols-outlined text-sm">create_new_folder</span> Nouveau dossier
+      </button>
+      <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left"
+              (click)="startNewFile(contextMenu()!.node?.id || null)">
+        <span class="material-symbols-outlined text-sm">note_add</span> Nouveau fichier
+      </button>
+    }
+
+    @if (contextMenu()!.node) {
+      @if (contextMenu()!.node!.type === 'folder') {
+        <div class="border-t border-light-border dark:border-white/10 my-1"></div>
+      }
+      <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left"
+              (click)="startRename(contextMenu()!.node!)">
+        <span class="material-symbols-outlined text-sm">edit</span> Renommer
+      </button>
+      <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 transition-colors text-left"
+              (click)="askDelete(contextMenu()!.node!)">
+        <span class="material-symbols-outlined text-sm">delete</span> Supprimer
+      </button>
+
+      <!-- Verrou collaboration -->
+      <div class="border-t border-light-border dark:border-white/10 my-1"></div>
+      @if (isLockedByOther(contextMenu()!.node!.id)) {
+        <div class="flex items-center gap-2 px-3 py-1.5 text-red-400 text-left cursor-default opacity-70">
+          <span class="material-symbols-outlined text-sm">lock</span>
+          <span>{{ getLockTooltip(contextMenu()!.node!.id) }}</span>
+        </div>
+      } @else if (isLockedByMe(contextMenu()!.node!.id)) {
+        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-green-400 transition-colors text-left"
+                (click)="toggleLock(contextMenu()!.node!)">
+          <span class="material-symbols-outlined text-sm">lock_open</span> Déverrouiller
+        </button>
+      } @else {
+        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left"
+                (click)="toggleLock(contextMenu()!.node!)">
+          <span class="material-symbols-outlined text-sm">lock</span> Verrouiller
+        </button>
+      }
+    }
+
+  </div>
+}
+
+<!-- Confirmation suppression -->
+@if (deleteConfirm()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white dark:bg-[#1a1a2e] rounded-xl shadow-2xl border border-light-border dark:border-white/10 p-6 w-80">
+      <p class="text-sm text-light-text dark:text-white/80 mb-4">
+        Supprimer <strong>{{ deleteConfirm()!.name }}</strong> ?
+        @if (deleteConfirm()!.type === 'folder') {
+          <span class="block text-xs text-red-400 mt-1">Tout le contenu sera supprimé.</span>
+        }
+      </p>
+      <div class="flex gap-2 justify-end">
+        <button class="px-3 py-1.5 text-xs rounded border border-light-border dark:border-white/10 text-light-text dark:text-white/70 hover:bg-light-surface dark:hover:bg-white/5"
+                (click)="cancelDelete()">Annuler</button>
+        <button class="px-3 py-1.5 text-xs rounded bg-red-500 hover:bg-red-600 text-white font-semibold"
+                (click)="confirmDelete()">Supprimer</button>
+      </div>
+    </div>
+  </div>
+}

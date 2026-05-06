@@ -1,0 +1,63 @@
+@if (configService.actionsEnabled()) {
+  <!-- Floating trigger button -->
+  <button
+    (click)="toggleVisible()"
+    title="Gestion des Actions"
+    class="fixed bottom-56 right-4 z-[100] w-12 h-12 rounded-full bg-light-primary dark:bg-primary hover:bg-light-primary/90 dark:hover:bg-primary/90 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+  >
+    <span class="material-symbols-outlined text-xl">{{ configService.activeTool() === 'actions' ? 'close' : 'bolt' }}</span>
+  </button>
+
+  <!-- Slide-panel -->
+  @if (configService.activeTool() === 'actions') {
+    <div class="fixed inset-0 z-[90] flex justify-end">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" (click)="close()"></div>
+      
+      <!-- Panel (Wide max-w-5xl) -->
+      <div class="relative w-full max-w-5xl bg-white dark:bg-background h-full shadow-2xl overflow-y-auto animate-slide-in-right">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-background/60 sticky top-0 z-10">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-light-primary dark:text-primary text-2xl">bolt</span>
+            <h2 class="text-xl font-bold text-light-text dark:text-white">Orchestrateur d'Actions</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button (click)="openAsModal()" title="Ouvrir en popup" class="p-2 rounded-lg hover:bg-light-surface-hover dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-colors">
+              <span class="material-symbols-outlined">open_in_full</span>
+            </button>
+            <button (click)="close()" class="p-2 rounded-lg hover:bg-light-surface-hover dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-colors">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <wo-actions></wo-actions>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Popup version -->
+  @if (showModal) {
+    <div class="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" (click)="showModal = false"></div>
+      <div class="relative w-full max-w-6xl max-h-[90vh] bg-white dark:bg-background rounded-2xl shadow-2xl border border-white/10 flex flex-col overflow-hidden animate-zoom-in">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+          <h2 class="text-xl font-bold text-light-text dark:text-white flex items-center gap-3">
+            <span class="material-symbols-outlined text-light-primary dark:text-primary">bolt</span>
+            Gestion des Actions
+          </h2>
+          <button (click)="showModal = false" class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6">
+          <wo-actions></wo-actions>
+        </div>
+      </div>
+    </div>
+  }
+}
