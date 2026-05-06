@@ -2875,6 +2875,27 @@
       "prompt": "dans la zone edition la bouton supprimé l'image supprime le fichier dans le dossier data/projet mais laisse l'encart avec image manquante, il faut supprimé le fichier et l'encart et mettre dans l'historique l'action de suppression d'image",
       "startedAt": "2026-05-06T10:10:00.000Z",
       "completedAt": "2026-05-06T10:30:00.000Z"
+    },
+    {
+      "id": "mod-122",
+      "version": "THI-0.69",
+      "date": "2026-05-06T11:00:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Auto-purge des encarts image manquante",
+      "description": "Dans recomputeMirrorLines, si un marqueur {{IMG:xxx}} ne correspond à aucune image connue dans allImages, la ligne est automatiquement retirée du unifiedContent et un saveAll() est déclenché. Le contenu est nettoyé silencieusement sans afficher l'encart.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque l'encart indique image manquante, cela doit supprimé automatiquement l'encart image. Si l'image n'existe pas, l'encart ne doit pas être affiché",
+      "startedAt": "2026-05-06T10:50:00.000Z",
+      "completedAt": "2026-05-06T11:00:00.000Z"
     }
   ]
 }

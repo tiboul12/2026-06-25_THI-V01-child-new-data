@@ -567,7 +567,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         for (let i = r.lineStart; i <= r.lineEnd; i++) fileHl.add(i);
       }
     }
-    this.mirrorLines = lines.map((line, i) => {
+    // Purge les marqueurs {{IMG:xxx}} dont l'image n'existe plus
+    const orphanIndexes = new Set<number>();
+    lines.forEach((line, i) => {
+      const m = /^\{\{IMG:([a-z0-9-]+)\}\}\s*$/i.exec(line.trim());
+      if (m && !this.allImages.find(im => im.id === m[1])) orphanIndexes.add(i);
+    });
+    if (orphanIndexes.size > 0) {
+      this.unifiedContent = lines.filter((_, i) => !orphanIndexes.has(i)).join('\n');
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = this.unifiedContent;
+      this.saveAll();
+    }
+
+    const cleanLines = this.unifiedContent.split('\n');
+    this.mirrorLines = cleanLines.map((line, i) => {
       const kind: 'folder' | 'file' | null = fileHl.has(i) ? 'file' : (folderHl.has(i) ? 'folder' : null);
       const m = /^\{\{IMG:([a-z0-9-]+)\}\}\s*$/i.exec(line.trim());
       if (m) {
@@ -576,7 +590,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           text: line,
           isImage: true,
           imageId: m[1],
-          imageName: img?.name || 'image manquante',
+          imageName: img?.name || '',
           imagePath: img?.path || '',
           highlightKind: kind,
           lineIndex: i,
