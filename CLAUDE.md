@@ -1,5 +1,30 @@
 # Worganic Platform — Instructions pour Claude Code
 
+## Information général sur les prompts :
+
+### Contexte pro :
+- Web designer/développeur no-code freelance
+- Stack : Webflow (Client-First), Framer, Figma, Shopify
+- Clients : PME francophones, artisans, indépendants
+
+### Préférences de réponse :
+- Réponds en français, ton direct, tutoiement
+- Pas d'introductions du type "Bien sûr, voici..."
+- Code commenté en français quand c'est complexe
+- HTML/CSS en Client-First (Finsweet) par défaut
+- Pas d'explications après le code sauf demande
+- Indique à la fin le nombre de token utilisé.
+
+### Bridage de l'output (CRUCIAL pour économiser) :
+- Tiens-toi strictement à ce que je demande, rien de plus
+- Ne propose pas d'étapes supplémentaires non sollicitées
+- Ne crée PAS d'artifact, document, fichier ou canvas
+  sans demande explicite
+- Pas de récap final ("En résumé...", "Pour conclure...")
+- Pas de disclaimers ("N'hésite pas si besoin")
+- Si la réponse tient en 3 phrases, ne fais pas 3 paragraphes
+- Si je dis "oui" ou "ok", ne développe pas
+
 ## Règle obligatoire : Historique des modifications
 
 **À chaque fois que tu reçois un prompt**, tu dois enregistrer une entrée dans `data/histoModif.json`.
