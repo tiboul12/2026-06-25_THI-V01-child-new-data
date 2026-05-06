@@ -2751,6 +2751,46 @@
       "prompt": "lorsque je deplace l'image d'un menu à un autre dans une zone précise entre des textes, celle ci ce deplace direct en bas du menu au lieu de ce placer à l'endroit précis indiqué. pour info si je la redeplace ensuite entre les 2 textes, cela fonctionne bien.",
       "startedAt": "2026-05-06T00:21:00Z",
       "completedAt": "2026-05-06T00:30:00Z"
+    },
+    {
+      "id": "mod-118",
+      "version": "THI-0.67",
+      "date": "2026-05-06T00:45:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:auth|admin|home",
+      "title": "Fix doublons compilation après merge base B0.43",
+      "description": "Le merge de la base B0.43 (commit e50f62b) a introduit des blocs de code dupliqués qui cassaient la compilation Angular (TS2300/TS2393). Trois doublons supprimés : (1) config.service.ts — déclaration en double du signal woActionHistoryNavEnabled (lignes 56-57) ; (2) config.component.ts — getter woActionHistoryNavEnabled et méthode toggleWoActionHistoryNav redéfinis (la version conservée intègre undoAction/redoAction, la version simpliste sans undo a été supprimée) ; (3) home.component.ts — méthode goToPrimary dupliquée à l'identique. ⚠️ Ces fichiers sont des fichiers base — la correction doit être propagée vers worganic-base pour éviter que le bug réapparaisse au prochain sync.",
+      "files": [
+        "frankenstein/src/app/core/services/config.service.ts",
+        "frankenstein/src/app/pages/user/config/config.component.ts",
+        "frankenstein/src/app/pages/user/home/home.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Application bundle generation failed. [13.395 seconds] (erreurs TS2300/TS2393 sur woActionHistoryNavEnabled, toggleWoActionHistoryNav, goToPrimary)",
+      "startedAt": "2026-05-06T00:40:00Z",
+      "completedAt": "2026-05-06T00:45:00Z"
+    },
+    {
+      "id": "mod-119",
+      "version": "THI-0.67",
+      "date": "2026-05-06T01:05:00Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Doc projet-editor : sync avec nouvelles fonctionnalités",
+      "description": "Mise à jour complète de docs/structure/projet-editor.component.md pour refléter l'état actuel du composant : ajout des signaux activeNodeId/scrollToNodeId/zone5Tab/nestedImagesMap/diffEntry, computed activeNodeInfo et activeHistoryIds, dépendance ProjetCollabService (WebSocket collab), sous-composants ProjetHistoryComponent et ProjetDiffComponent, détection de déplacements d'images via marqueurs {{IMG:id}}, gestion des fichiers additionnels (création/suppression/déplacement), synchronisation d'ordre via orderedFileIds, mutex isSaving + pendingSections, panneau à onglets Conversation/Historique avec filtrage par sélection. Scénarios de test étoffés en conséquence.",
+      "files": [
+        "docs/structure/projet-editor.component.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "met à jour le fichier @docs/structure/projet-editor.component.md  avec les nouvelles fonctionnalité et commit les modifications sur le projet child worganic/THI-V01-child",
+      "startedAt": "2026-05-06T01:00:00Z",
+      "completedAt": "2026-05-06T01:05:00Z"
     }
   ]
 }
