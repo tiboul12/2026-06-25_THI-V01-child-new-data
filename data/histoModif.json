@@ -2896,6 +2896,196 @@
       "prompt": "lorsque l'encart indique image manquante, cela doit supprimé automatiquement l'encart image. Si l'image n'existe pas, l'encart ne doit pas être affiché",
       "startedAt": "2026-05-06T10:50:00.000Z",
       "completedAt": "2026-05-06T11:00:00.000Z"
+    },
+    {
+      "id": "mod-123",
+      "version": "THI-0.71",
+      "date": "2026-05-06T11:30:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix race condition image upload/delete : mauvaise position",
+      "description": "Correction de la race condition entre saveAll() (async via sectionsChange) et refresh.emit() (qui déclenche loadFiles). Avant : loadFiles lisait un contenu.md obsolète, buildDocSections plaçait les marqueurs {{IMG:xxx}} en bas du dossier au lieu de la position du curseur, et les delete demandaient un double clic. Fix : (1) onRefresh dans projet-editor attend la fin du save en cours (isSaving + pendingSections) avant loadFiles ; (2) onImageSelected utilise saveAll() au lieu de scheduleSave() (10s) pour que isSaving soit true quand refresh.emit est appelé ; (3) ajout local immédiat à allImages pour upload, et retrait pour delete (déjà fait mod-121) ; (4) idem pour les flux visu (onVisuImageSelected, deleteVisuImage).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "cela ne marche pas corectement, lorsque je rajoute une image à un endroit précis comme entre 2 texte dans un dossier, à certain moment l'image est affiché tout en bas du dossier. Autre problème lorsque je veux effacé une image celle ci ce déplace tout seul en bas du dossier et ensuite je dois recommencer une seconde fois pour supprimer l'image. Verifi le système et corrige les problèmes",
+      "startedAt": "2026-05-06T11:05:00.000Z",
+      "completedAt": "2026-05-06T11:30:00.000Z"
+    },
+    {
+      "id": "mod-124",
+      "version": "THI-0.71",
+      "date": "2026-05-06T12:00:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix encart image absent après upload (auto-purge prématurée)",
+      "description": "Cause racine identifiée : pendant processSectionsChange côté parent, patchFileContent met à jour le signal files avec le nouveau contenu.md. Cela déclenche ngOnChanges dans la zone AVANT que loadFiles n'ait propagé la nouvelle image dans this.files. Résultat : allImages = collectAllImages(files) ne contenait pas la nouvelle image, et l'auto-purge mod-122 supprimait le marqueur fraîchement inséré comme orphelin. Fix : ajout d'un Set recentlyAddedImageIds (TTL 8s) avec les IDs des images uploadées localement. L'auto-purge orphan exclut ces IDs tant que la propagation via loadFiles n'est pas terminée.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Cela ne fonctionne pas, maintenant lorsque je rajoute une image l'encart ne s'affiche même plus.",
+      "startedAt": "2026-05-06T11:35:00.000Z",
+      "completedAt": "2026-05-06T12:00:00.000Z"
+    },
+    {
+      "id": "mod-125",
+      "version": "THI-0.71",
+      "date": "2026-05-06T12:30:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix upload image : nom manquant + mauvais dossier cible",
+      "description": "Deux corrections : (1) Nom manquant dans l'encart après upload : patchFileContent → ngOnChanges réécrivait allImages sans la nouvelle image (avant loadFiles). Fix : ajout de pendingLocalImages réinjectés dans allImages à chaque ngOnChanges tant que loadFiles n'a pas propagé le nœud. (2) Mauvais dossier cible : cliquer le bouton toolbar faisait perdre le focus au textarea → ta.selectionStart retombait à 0 → getCursorFolderId() retournait le mauvais dossier. Fix : capture du dossier cible dans triggerImageUpload() AVANT l'ouverture du file picker, stocké dans lastFolderIdForUpload.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le rajout d'image ne fonctionne pas toujours sur la capture on peux voir l'encart mais pas le nom, le fichier n'a pas été uploader dans le repertoir data/projets/...",
+      "startedAt": "2026-05-06T12:05:00.000Z",
+      "completedAt": "2026-05-06T12:30:00.000Z"
+    },
+    {
+      "id": "mod-126",
+      "version": "THI-0.71",
+      "date": "2026-05-06T13:00:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": [
+        "server"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix upload image : DELETE 404 causé par doublons dans config.json",
+      "description": "Cause : le handler upload-image pushait un nouveau nœud sans vérifier si un fichier du même nom existait déjà dans le dossier. getProjectConfig appelle cleanStructure qui déduplique par type:name — le nouveau nœud (2e occurrence) était silencieusement supprimé. Les requêtes DELETE/PUT ultérieures sur ce nouvel ID retournaient 404 (Fichier non trouvé). Fix : avant de pousser le nouveau nœud, rechercher un nœud existant avec le même nom dans parentItems et le remplacer (splice) plutôt qu'ajouter un doublon.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "{\"status\": 404, \"error\": \"Fichier non trouvé\"} — DELETE /api/file-projects/.../files/...",
+      "startedAt": "2026-05-06T12:45:00.000Z",
+      "completedAt": "2026-05-06T13:00:00.000Z"
+    },
+    {
+      "id": "mod-127",
+      "version": "THI-0.71",
+      "date": "2026-05-06T13:15:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": [
+        "server"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix : table wo_action_history manquante dans init-db.js",
+      "description": "La table wo_action_history n'était pas déclarée dans init-db.js. Le POST /api/wo-action-history retournait 500 (table inexistante en BDD). Ajout du CREATE TABLE IF NOT EXISTS correspondant au schéma utilisé par server-data.js.",
+      "files": [
+        "server/init-db.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai encore des erreurs lorsque je rajoute une image : wo-action-history.service.ts:64 POST http://localhost:3001/api/wo-action-history 500",
+      "startedAt": "2026-05-06T13:10:00.000Z",
+      "completedAt": "2026-05-06T13:15:00.000Z"
+    },
+    {
+      "id": "mod-128",
+      "version": "THI-0.71",
+      "date": "2026-05-06T23:03:35Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix DELETE 404 : updateStructure écrase config avec snapshot périmé",
+      "description": "Correction de la race condition dans processSectionsChange étape 7 : le snapshot structureSnapshot était pris depuis this.files() périmé (sans le nœud image fraîchement uploadé). Lors d'un orderNeedsUpdate déclenché par insertion d'image entre deux existantes, la PUT /structure envoyait l'ancienne structure, effaçant le nœud de config.json. Fix : si aucun loadFiles() n'a déjà eu lieu dans ce cycle de save, on recharge avant de prendre le snapshot, puis on réapplique les ordres sur la structure fraîche.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "[continuation session] DELETE 404 persistent après upload image — investigation race condition updateStructure",
+      "startedAt": "2026-05-06T00:00:00Z",
+      "completedAt": "2026-05-06T23:03:35Z"
+    },
+    {
+      "id": "mod-129",
+      "version": "THI-0.71",
+      "date": "2026-05-06T21:19:34.174Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix image visible après suppression : hoverPreview non vidé",
+      "description": "Correction : après confirmDeleteImage(), le nœud ed-img-card est retiré du DOM par recomputeMirrorLines() sans déclencher mouseleave → hoverPreview reste non-null → le prévisualiseur d'image (position:fixed, fond sombre, vraie image) reste affiché. Fix : this.hoverPreview = null ajouté dans confirmDeleteImage() juste après la suppression.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je supprime l'image, l'encart s'efface mais l'image reste affiché",
+      "startedAt": "2026-05-06T21:19:34.174Z",
+      "completedAt": "2026-05-06T21:19:34.174Z"
+    },
+    {
+      "id": "mod-130",
+      "version": "THI-0.71",
+      "date": "2026-05-06T21:24:43.294Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "server:wo-action-history",
+      "title": "Fix wo-action-history 500 : ER_DUP_ENTRY par race condition",
+      "description": "Deux appels track() simultanés exécutaient SELECT MAX() en parallèle, obtenaient le même max, et tentaient tous deux d'insérer wah-N+1. Fix : transaction avec SELECT FOR UPDATE pour sérialiser l'attribution d'ID. Ajout conn.rollback() + conn.release() dans le catch. Suppression du debug detail/code de la réponse d'erreur.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "l'ajout d'image et la suppression fonctionne, mais j'ai encore des erreurs et l'historisation des actions ne fonctionne pas — ER_DUP_ENTRY wah-370",
+      "startedAt": "2026-05-06T21:24:43.294Z",
+      "completedAt": "2026-05-06T21:24:43.294Z"
+    },
+    {
+      "id": "mod-131",
+      "version": "THI-0.71",
+      "date": "2026-05-06T21:46:52.491Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix historique image : entityId = folderId pour visibilité post-suppression",
+      "description": "activeHistoryIds est un computed() basé sur this.files(). Après suppression d'une image, son imageId disparaît du Set → les entrées Import et Suppression étaient filtrées. Fix : utiliser l'ID du dossier parent comme entityId pour les deux opérations image (upload + delete). Le folderId reste stable dans activeHistoryIds même après suppression de l'image.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "CEla fonctionne mais lorsqu'une image est rajouté une entrée est ajouté dans l'historique de section par contre quand je supprime une image, l'historique supprime l'action d'ajout et ne met pas l'action supprimé",
+      "startedAt": "2026-05-06T21:46:52.491Z",
+      "completedAt": "2026-05-06T21:46:52.491Z"
     }
   ]
 }

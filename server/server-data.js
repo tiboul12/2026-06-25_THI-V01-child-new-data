@@ -4456,9 +4456,16 @@ app.post('/api/file-projects/:name/upload-image', (req, res) => {
         if (!fullPath) return res.status(400).json({ error: 'Chemin invalide' });
         fs.mkdirSync(path.dirname(fullPath), { recursive: true });
         fs.writeFileSync(fullPath, buffer);
+        // Remplacer un éventuel nœud existant avec le même nom (évite les doublons
+        // que cleanStructure supprimerait au prochain getProjectConfig, rendant le DELETE 404).
+        const existingIdx = parentItems.findIndex(n => n.type === 'file' && n.name.toLowerCase() === safeName.toLowerCase());
         const maxOrder = parentItems.filter(n => n.type === 'file').reduce((m, n) => Math.max(m, n.order || 0), 0);
         const newNode = { id: require('crypto').randomUUID(), type: 'file', name: safeName, path: filePath, order: maxOrder + 1, fileType: 'image' };
-        parentItems.push(newNode);
+        if (existingIdx !== -1) {
+            parentItems.splice(existingIdx, 1, newNode);
+        } else {
+            parentItems.push(newNode);
+        }
         saveProjectConfig(req.params.name, config);
         res.status(201).json(newNode);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -5191,13 +5198,17 @@ app.post('/api/wo-action-history', async (req, res) => {
     if (!section || !actionType || !label) {
         return res.status(400).json({ error: 'section, actionType et label sont requis' });
     }
+    const conn = await pool.getConnection();
     try {
-        const [maxRows] = await pool.query('SELECT MAX(CAST(SUBSTRING(id, 5) AS UNSIGNED)) AS maxNum FROM wo_action_history');
-        const nextNum = ((maxRows[0].maxNum || 0) + 1).toString().padStart(3, '0');
+        await conn.beginTransaction();
+        // SELECT FOR UPDATE sérialise les insertions concurrentes et évite les doublons d'ID
+        const [maxRows] = await conn.query('SELECT MAX(CAST(SUBSTRING(id, 5) AS UNSIGNED)) AS maxNum FROM wo_action_history FOR UPDATE');
+        const maxNum = maxRows[0].maxNum || 0;
+        const nextNum = (maxNum + 1).toString().padStart(Math.max(3, String(maxNum + 1).length), '0');
         const id = `wah-${nextNum}`;
         const now = new Date();
 
-        await pool.query(
+        await conn.query(
             `INSERT INTO wo_action_history
              (id, timestamp, section, subsection, action_type, label, entity_type, entity_id, entity_label,
               before_state, after_state, user_id, username, context, undoable, undone, undo_action, meta)
@@ -5212,6 +5223,7 @@ app.post('/api/wo-action-history', async (req, res) => {
              undoAction ? JSON.stringify(undoAction) : null,
              meta       ? JSON.stringify(meta)       : null]
         );
+        await conn.commit();
 
         const entry = {
             id, timestamp: now.toISOString(), section, subsection: subsection || '',
@@ -5244,8 +5256,11 @@ app.post('/api/wo-action-history', async (req, res) => {
 
         res.status(201).json(entry);
     } catch (e) {
+        await conn.rollback().catch(() => {});
         console.error('[WO_ACTION_HISTORY] Create error:', e);
         res.status(500).json({ error: 'Erreur serveur' });
+    } finally {
+        conn.release();
     }
 });
 

@@ -190,6 +190,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   renameImageValue = '';
   deleteConfirmImageId: string | null = null;
 
+  // IDs d'images uploadées localement très récemment, mais pas encore présentes dans this.files
+  // (loadFiles pas encore terminé). Excluses de l'auto-purge des marqueurs orphelins
+  // pour éviter que patchFileContent → ngOnChanges → recomputeMirrorLines ne supprime
+  // un marqueur fraîchement inséré dont l'image est en cours de propagation.
+  private recentlyAddedImageIds = new Set<string>();
+  // Nœuds complets des images uploadées localement — pour conserver name/path dans allImages
+  // même quand ngOnChanges réécrit allImages depuis this.files (avant que loadFiles ne propage).
+  private pendingLocalImages: FileNode[] = [];
+  // Dossier cible capturé au moment du clic toolbar (avant que le file picker ne perde le focus).
+  private lastFolderIdForUpload: string | null = null;
+
   // Entités modifiées depuis le dernier flush — Map<entityId, folderId>.
   // entityId = fileId si curseur dans un bloc fichier additionnel, sinon folderId.
   // folderId est utilisé pour récupérer le snapshot de la section parente.
@@ -228,6 +239,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
       this.docSections = this.buildDocSections(this.files, 1);
       this.allImages = this.collectAllImages(this.files);
+      // Conserver les nœuds uploadés localement non encore propagés dans this.files
+      for (const local of this.pendingLocalImages) {
+        if (!this.allImages.find(im => im.id === local.id)) {
+          this.allImages = [...this.allImages, local];
+        }
+      }
       // Corriger les marqueurs d'images mal positionnés (déplacés via sidebar)
       const markersFixed = this.fixImageMarkersInSections();
 
@@ -568,10 +585,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }
     }
     // Purge les marqueurs {{IMG:xxx}} dont l'image n'existe plus
+    // Exclut les images uploadées tout récemment (pas encore propagées dans this.files)
     const orphanIndexes = new Set<number>();
     lines.forEach((line, i) => {
       const m = /^\{\{IMG:([a-z0-9-]+)\}\}\s*$/i.exec(line.trim());
-      if (m && !this.allImages.find(im => im.id === m[1])) orphanIndexes.add(i);
+      if (m && !this.allImages.find(im => im.id === m[1]) && !this.recentlyAddedImageIds.has(m[1])) {
+        orphanIndexes.add(i);
+      }
     });
     if (orphanIndexes.size > 0) {
       this.unifiedContent = lines.filter((_, i) => !orphanIndexes.has(i)).join('\n');
@@ -1220,6 +1240,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // ── Image upload ───────────────────────────────────────────
   triggerImageUpload() {
     this.imageUploadError = '';
+    // Capturer le dossier cible ICI, pendant que le textarea a encore le focus/sélection.
+    // Après l'ouverture du file picker, ta.selectionStart peut retomber à 0.
+    this.lastFolderIdForUpload = this.getCursorFolderId() || this.getActiveFolderId();
     this.imageInputRef?.nativeElement.click();
   }
 
@@ -1237,22 +1260,37 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.imageUploadError = `Fichier trop grand (${(file.size / 1024 / 1024).toFixed(1)} Mo). Max 1 Mo.`;
       return;
     }
-    const folderId = this.getCursorFolderId() || this.getActiveFolderId();
+    // Utiliser le dossier capturé au clic toolbar (avant perte de focus du textarea)
+    const folderId = this.lastFolderIdForUpload ?? this.getCursorFolderId() ?? this.getActiveFolderId();
+    this.lastFolderIdForUpload = null;
     try {
       const node = await this.svc.uploadImage(this.projectName, file, folderId);
+      // entityId = folderId (pas imageId) : si l'image est supprimée, imageId sort de
+      // activeHistoryIds et l'entrée serait filtrée. Le folderId reste stable.
       this.woHistory.track({
         section: 'projets/fichiers',
         actionType: 'upload',
         label: `Import d'image «${file.name}»`,
         entityType: 'image',
-        entityId: node.id,
+        entityId: folderId || node.id,
         entityLabel: file.name,
-        afterState: { fileName: file.name, size: file.size },
+        afterState: { fileName: file.name, size: file.size, imageId: node.id },
         context: { projectId: this.projectName },
         undoable: true,
         undoAction: { endpoint: `/api/file-projects/${this.projectName}/files/${node.id}`, method: 'DELETE' }
       }).catch(() => {});
       this.imageUploadError = '';
+      // Ajout local immédiat à allImages pour que recomputeMirrorLines résolve le marqueur
+      // sans attendre le refresh (sinon l'auto-purge mod-122 retirerait le nouveau marqueur).
+      this.allImages = [...this.allImages, node];
+      // Préserver le nœud local dans pendingLocalImages : ngOnChanges réécrit allImages
+      // depuis this.files (sans la nouvelle image avant loadFiles) → on la réinjecte.
+      this.pendingLocalImages.push(node);
+      this.recentlyAddedImageIds.add(node.id);
+      setTimeout(() => {
+        this.pendingLocalImages = this.pendingLocalImages.filter(n => n.id !== node.id);
+        this.recentlyAddedImageIds.delete(node.id);
+      }, 10000);
       const ta = this.textareaRef?.nativeElement;
       if (ta && this.mode === 'edit') {
         const pos = ta.selectionStart;
@@ -1272,7 +1310,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           ta.setSelectionRange(newPos, newPos);
         });
       }
-      this.scheduleSave();
+      // Save immédiat (pas scheduleSave 10s) pour que isSaving=true côté parent
+      // quand refresh.emit() déclenche onRefresh, qui attend la fin du save avant loadFiles.
+      this.saveAll();
       this.refresh.emit();
     } catch (e: any) {
       this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';
@@ -1389,19 +1429,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   async confirmDeleteImage(line: MirrorLine, ev: MouseEvent) {
     ev.stopPropagation();
     try {
+      // Capturer le folderId parent avant refresh (this.files est encore à jour).
+      // entityId = folderId plutôt que imageId : après deletion, imageId sort de
+      // activeHistoryIds → l'entrée Suppression serait immédiatement filtrée.
+      const parentFolder = this.findParentFolder(line.imageId, this.files);
       await this.svc.deleteFile(this.projectName, line.imageId);
       this.woHistory.track({
         section: 'projets/fichiers',
         actionType: 'delete',
         label: `Suppression d'image «${line.imageName}»`,
         entityType: 'image',
-        entityId: line.imageId,
+        entityId: parentFolder?.id || line.imageId,
         entityLabel: line.imageName,
-        beforeState: { fileName: line.imageName },
+        beforeState: { fileName: line.imageName, imageId: line.imageId },
         context: { projectId: this.projectName },
         undoable: false
       }).catch(() => {});
       this.deleteConfirmImageId = null;
+      this.hoverPreview = null;
       // Retire l'image de la liste locale immédiatement pour éviter l'affichage "manquante"
       this.allImages = this.allImages.filter(im => im.id !== line.imageId);
       // Retire la ligne du marqueur dans unifiedContent
@@ -2211,6 +2256,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         undoAction: { endpoint: `/api/file-projects/${this.projectName}/files/${node.id}`, method: 'DELETE' },
       }).catch(() => {});
 
+      // Ajout local immédiat à allImages pour résoudre le marqueur sans attendre le refresh
+      this.allImages = [...this.allImages, node];
+      this.pendingLocalImages.push(node);
+      this.recentlyAddedImageIds.add(node.id);
+      setTimeout(() => {
+        this.pendingLocalImages = this.pendingLocalImages.filter(n => n.id !== node.id);
+        this.recentlyAddedImageIds.delete(node.id);
+      }, 10000);
       // Insérer le marqueur image dans unifiedContent après la section
       const range = this.sectionRanges.find(r => r.folderId === sectionId);
       if (range) {
@@ -2220,7 +2273,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         const ta = this.textareaRef?.nativeElement;
         if (ta) ta.value = this.unifiedContent;
         this.recomputeAll();
-        this.scheduleSave();
+        // Save immédiat pour que onRefresh attende la fin du save (évite race avec loadFiles)
+        this.saveAll();
         this.refresh.emit();
         setTimeout(() => this.initVisuSectionHtml(), 80);
       }
@@ -2240,6 +2294,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         context: { projectId: this.projectName },
         undoable: false,
       }).catch(() => {});
+      // Retrait local immédiat de allImages pour éviter affichage "manquante"
+      this.allImages = this.allImages.filter(im => im.id !== imgId);
       // Retirer le marqueur de unifiedContent
       const lines = this.unifiedContent.split('\n');
       const idx = lines.findIndex(l => l.trim() === `{{IMG:${imgId}}}`);
@@ -2248,7 +2304,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const ta = this.textareaRef?.nativeElement;
       if (ta) ta.value = this.unifiedContent;
       this.recomputeAll();
-      this.scheduleSave();
+      // Save immédiat pour que onRefresh attende la fin du save (évite race avec loadFiles)
+      this.saveAll();
       this.refresh.emit();
       setTimeout(() => this.initVisuSectionHtml(), 80);
     }).catch(() => {});

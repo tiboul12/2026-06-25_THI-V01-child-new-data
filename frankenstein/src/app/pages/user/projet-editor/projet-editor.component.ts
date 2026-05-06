@@ -747,7 +747,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       }
 
       // 7. Sync file order within each folder to match text content order (orderedFileIds)
-      const structureSnapshot = JSON.parse(JSON.stringify(this.files())) as FileNode[];
+      let structureSnapshot = JSON.parse(JSON.stringify(this.files())) as FileNode[];
       let orderNeedsUpdate = false;
       for (const s of resolved) {
         if (!s.folderId || !s.orderedFileIds || s.orderedFileIds.length < 2) continue;
@@ -762,6 +762,23 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         }
       }
       if (orderNeedsUpdate) {
+        // Si aucun loadFiles() n'a eu lieu dans ce cycle de save (pas de changement structurel),
+        // on recharge avant d'envoyer le snapshot — évite d'écraser config.json avec une structure
+        // périmée qui effacerait des nœuds ajoutés depuis le dernier chargement (ex : image
+        // fraîchement uploadée présente dans config.json mais absente de this.files()).
+        if (!hasStructural && !anyAdditionalFileCreated && !additionalFileOrphanDeleted) {
+          await this.loadFiles().catch(() => {});
+          structureSnapshot = JSON.parse(JSON.stringify(this.files())) as FileNode[];
+          for (const s of resolved) {
+            if (!s.folderId || !s.orderedFileIds || s.orderedFileIds.length < 2) continue;
+            const folder = this.findFolderById(s.folderId, structureSnapshot);
+            if (!folder || !folder.children) continue;
+            for (let i = 0; i < s.orderedFileIds.length; i++) {
+              const child = folder.children.find(c => c.id === s.orderedFileIds[i]);
+              if (child) child.order = i + 1;
+            }
+          }
+        }
         await this.projectFilesService.updateStructure(this.projectFolderName, structureSnapshot).catch(e => console.error('[EDITOR] Order sync failed:', e));
         await this.loadFiles().catch(() => {});
       }
@@ -949,6 +966,15 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   async onRefresh() {
+    // Race condition fix : si un save est en cours (déclenché par saveAll() juste avant
+    // refresh.emit() côté zone, par ex. après upload/delete d'image), attendre sa fin
+    // avant de relire le serveur — sinon loadFiles() lit un contenu.md obsolète et
+    // buildDocSections place les marqueurs {{IMG:xxx}} au mauvais endroit.
+    let waited = 0;
+    while ((this.isSaving || this.pendingSections) && waited < 5000) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      waited += 50;
+    }
     await this.loadFiles();
   }
 
