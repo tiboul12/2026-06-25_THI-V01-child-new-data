@@ -30,7 +30,11 @@
       "Bash(git config *)",
       "Bash(git diff *)",
       "Read(//e/www/projet creat projet 2026-01/--projets--/**)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(powershell *)",
+      "Bash(node *)",
+      "Bash(python -c \"import sys,json; mods=json.load\\(sys.stdin\\)['modifications']; print\\(mods[-1]['id'] if mods else 'none'\\)\")",
+      "Bash(python -c ' *)"
     ]
   }
 }

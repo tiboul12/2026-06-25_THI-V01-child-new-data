@@ -761,12 +761,8 @@ app.post('/api/config/keys', async (req, res) => {
             if (ticketsEnabled !== undefined) globalConf.ticketsEnabled = ticketsEnabled;
             if (recetteWidgetEnabled !== undefined) globalConf.recetteWidgetEnabled = recetteWidgetEnabled;
             if (headerIaVisible !== undefined) globalConf.headerIaVisible = Boolean(headerIaVisible);
-            if (enabledTabs !== undefined && typeof enabledTabs === 'object') {
-                globalConf.enabledTabs = { ...(globalConf.enabledTabs || {}), ...enabledTabs };
-            }
-            if (navItems !== undefined && typeof navItems === 'object') {
-                globalConf.navItems = { ...(globalConf.navItems || {}), ...navItems };
-            }
+            if (enabledTabs !== undefined) globalConf.enabledTabs = enabledTabs;
+            if (navItems !== undefined) globalConf.navItems = { ...(globalConf.navItems || {}), ...navItems };
             globalConf.lastUpdated = new Date().toISOString();
             fs.writeFileSync(CONFIG_FILE, JSON.stringify(globalConf, null, 2), 'utf8');
         }
@@ -2600,215 +2596,6 @@ app.put('/api/history/:id', async (req, res) => {
 });
 
 // ============================================================
-// WO Action History
-// ============================================================
-
-app.get('/api/wo-action-history', async (req, res) => {
-    try {
-        const { section, userId, entityType, entityId, contextKey, contextValue, undoableOnly, limit, offset } = req.query;
-        let sql = 'SELECT * FROM wo_action_history WHERE 1=1';
-        const params = [];
-
-        if (section)      { sql += ' AND section = ?';      params.push(section); }
-        if (userId)       { sql += ' AND user_id = ?';      params.push(userId); }
-        if (entityType)   { sql += ' AND entity_type = ?';  params.push(entityType); }
-        if (entityId)     { sql += ' AND entity_id = ?';    params.push(entityId); }
-        if (contextKey && contextValue) {
-            sql += ` AND JSON_EXTRACT(context, '$.${contextKey}') = ?`;
-            params.push(contextValue);
-        }
-        if (undoableOnly === 'true') { sql += ' AND undoable = 1'; }
-
-        sql += ' ORDER BY timestamp DESC';
-        sql += ` LIMIT ${Math.min(parseInt(limit) || 300, 1000)}`;
-        if (offset) sql += ` OFFSET ${parseInt(offset) || 0}`;
-
-        const [rows] = await pool.query(sql, params);
-        const entries = rows.map(r => ({
-            id: r.id,
-            timestamp: r.timestamp,
-            section: r.section,
-            subsection: r.subsection || undefined,
-            actionType: r.action_type,
-            label: r.label,
-            entityType: r.entity_type || undefined,
-            entityId: r.entity_id || undefined,
-            entityLabel: r.entity_label || undefined,
-            beforeState: r.before_state || undefined,
-            afterState: r.after_state || undefined,
-            userId: r.user_id || undefined,
-            username: r.username || undefined,
-            context: r.context || undefined,
-            undoable: !!r.undoable,
-            undone: !!r.undone,
-            undoneAt: r.undone_at || undefined,
-            undoneBy: r.undone_by || undefined,
-            undoAction: r.undo_action || undefined,
-            redoAction: r.redo_action || undefined,
-            meta: r.meta || undefined
-        }));
-        res.json(entries);
-    } catch (e) {
-        console.error('[WO_ACTION_HISTORY] Get error:', e);
-        res.status(500).json({ error: 'Erreur serveur' });
-    }
-});
-
-app.post('/api/wo-action-history', async (req, res) => {
-    const { section, subsection, actionType, label, entityType, entityId, entityLabel,
-            beforeState, afterState, userId, username, context, undoable, undoAction, redoAction, meta } = req.body;
-    if (!section || !actionType || !label) {
-        return res.status(400).json({ error: 'section, actionType et label sont requis' });
-    }
-    try {
-        const [countRows] = await pool.query('SELECT COUNT(*) AS cnt FROM wo_action_history');
-        const nextNum = (Number(countRows[0].cnt) + 1).toString().padStart(3, '0');
-        const id = `wah-${nextNum}`;
-        const now = new Date();
-
-        await pool.query(
-            `INSERT INTO wo_action_history
-             (id, timestamp, section, subsection, action_type, label, entity_type, entity_id, entity_label,
-              before_state, after_state, user_id, username, context, undoable, undone, undo_action, redo_action, meta)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)`,
-            [id, now, section, subsection || '', actionType, label,
-             entityType || '', entityId || '', entityLabel || '',
-             beforeState ? JSON.stringify(beforeState) : null,
-             afterState  ? JSON.stringify(afterState)  : null,
-             userId || null, username || '',
-             context ? JSON.stringify(context) : null,
-             undoable ? 1 : 0,
-             undoAction ? JSON.stringify(undoAction) : null,
-             redoAction ? JSON.stringify(redoAction) : null,
-             meta ? JSON.stringify(meta) : null]
-        );
-
-        const entry = {
-            id, timestamp: now.toISOString(), section, subsection, actionType, label,
-            entityType, entityId, entityLabel, beforeState, afterState,
-            userId, username, context, undoable: !!undoable, undone: false, undoAction, redoAction, meta
-        };
-        console.log(`[WO_ACTION_HISTORY] Tracked: ${id} — ${label} (${section})`);
-        res.json(entry);
-    } catch (e) {
-        console.error('[WO_ACTION_HISTORY] Create error:', e);
-        res.status(500).json({ error: 'Erreur serveur' });
-    }
-});
-
-app.post('/api/wo-action-history/:id/undo', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM wo_action_history WHERE id = ?', [req.params.id]);
-        if (!rows[0]) return res.status(404).json({ error: 'Action introuvable' });
-
-        const entry = rows[0];
-        if (!entry.undoable)  return res.status(400).json({ error: "Cette action n'est pas réversible" });
-        if (entry.undone)     return res.status(400).json({ error: 'Cette action a déjà été annulée' });
-
-        const undoAction = typeof entry.undo_action === 'string'
-            ? JSON.parse(entry.undo_action)
-            : entry.undo_action;
-
-        if (!undoAction?.endpoint || !undoAction?.method) {
-            return res.status(400).json({ error: "Aucune action d'annulation définie" });
-        }
-
-        const port = process.env.PORT || 3001;
-        const selfUrl = `http://localhost:${port}${undoAction.endpoint}`;
-        const fetchOptions = {
-            method: undoAction.method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
-                ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {})
-            }
-        };
-        if (undoAction.payload && ['PUT', 'POST', 'PATCH'].includes(undoAction.method)) {
-            fetchOptions.body = JSON.stringify(undoAction.payload);
-        }
-
-        const undoRes = await fetch(selfUrl, fetchOptions);
-        if (!undoRes.ok && undoRes.status !== 404) {
-            const errData = await undoRes.json().catch(() => ({}));
-            return res.status(undoRes.status).json({ error: errData.error || "Erreur lors de l'annulation" });
-        }
-
-        const undoneAt = new Date();
-        const undoneBy = req.body?.undoneBy || '';
-        await pool.query(
-            'UPDATE wo_action_history SET undone = 1, undone_at = ?, undone_by = ? WHERE id = ?',
-            [undoneAt, undoneBy, req.params.id]
-        );
-
-        console.log(`[WO_ACTION_HISTORY] Undo: ${req.params.id} — ${entry.label} by ${undoneBy}`);
-        res.json({ success: true, undoneAt: undoneAt.toISOString(), undoneBy });
-    } catch (e) {
-        console.error('[WO_ACTION_HISTORY] Undo error:', e);
-        res.status(500).json({ error: "Erreur lors de l'annulation" });
-    }
-});
-
-app.post('/api/wo-action-history/:id/redo', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM wo_action_history WHERE id = ?', [req.params.id]);
-        if (!rows[0]) return res.status(404).json({ error: 'Action introuvable' });
-
-        const entry = rows[0];
-        if (!entry.undone) return res.status(400).json({ error: "Cette action n'a pas été annulée" });
-
-        const redoAction = typeof entry.redo_action === 'string'
-            ? JSON.parse(entry.redo_action)
-            : entry.redo_action;
-
-        if (!redoAction?.endpoint || !redoAction?.method) {
-            return res.status(400).json({ error: "Aucune action de rétablissement définie" });
-        }
-
-        const port = process.env.PORT || 3001;
-        const selfUrl = `http://localhost:${port}${redoAction.endpoint}`;
-        const fetchOptions = {
-            method: redoAction.method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
-                ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {})
-            }
-        };
-        if (redoAction.payload && ['PUT', 'POST', 'PATCH'].includes(redoAction.method)) {
-            fetchOptions.body = JSON.stringify(redoAction.payload);
-        }
-
-        const redoRes = await fetch(selfUrl, fetchOptions);
-        if (!redoRes.ok && redoRes.status !== 404) {
-            const errData = await redoRes.json().catch(() => ({}));
-            return res.status(redoRes.status).json({ error: errData.error || "Erreur lors du rétablissement" });
-        }
-
-        await pool.query(
-            'UPDATE wo_action_history SET undone = 0, undone_at = NULL, undone_by = ? WHERE id = ?',
-            [req.body?.redoneBy || '', req.params.id]
-        );
-
-        console.log(`[WO_ACTION_HISTORY] Redo: ${req.params.id} — ${entry.label}`);
-        res.json({ success: true });
-    } catch (e) {
-        console.error('[WO_ACTION_HISTORY] Redo error:', e);
-        res.status(500).json({ error: "Erreur lors du rétablissement" });
-    }
-});
-
-app.delete('/api/wo-action-history', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM wo_action_history');
-        console.log('[WO_ACTION_HISTORY] History cleared');
-        res.json({ success: true });
-    } catch (e) {
-        console.error('[WO_ACTION_HISTORY] Clear error:', e);
-        res.status(500).json({ error: 'Erreur serveur' });
-    }
-});
-
-// ============================================================
 // Tickets
 // ============================================================
 
@@ -3046,19 +2833,13 @@ async function loadUsersFromDB() {
         const [rows] = await pool.query(
             'SELECT id, username, email, password_hash, role, created_at, last_login, config FROM users'
         );
-        _usersCache = rows.map(r => {
-            let cfg = r.config || {};
-            if (typeof cfg === 'string') {
-                try { cfg = JSON.parse(cfg); } catch { cfg = {}; }
-            }
-            return {
-                id: r.id, username: r.username, email: r.email,
-                password: r.password_hash, role: r.role,
-                createdAt: r.created_at ? r.created_at.toISOString() : null,
-                lastLogin: r.last_login ? r.last_login.toISOString() : null,
-                config: cfg
-            };
-        });
+        _usersCache = rows.map(r => ({
+            id: r.id, username: r.username, email: r.email,
+            password: r.password_hash, role: r.role,
+            createdAt: r.created_at ? r.created_at.toISOString() : null,
+            lastLogin: r.last_login ? r.last_login.toISOString() : null,
+            config: r.config || {}
+        }));
         return _usersCache;
     } catch (e) {
         console.error('[AUTH] Error loading users from DB:', e.message);
@@ -5444,10 +5225,20 @@ app.post('/api/wo-action-history', async (req, res) => {
         const projectId = context?.projectId;
         if (projectId && section && section.startsWith('projets/')) {
             broadcastToProject(projectId, 'history', {
-                id: entry.id, timestamp: entry.timestamp, section: entry.section,
-                actionType: entry.actionType, label: entry.label,
-                entityType: entry.entityType, entityId: entry.entityId, entityLabel: entry.entityLabel,
-                userId: entry.userId, username: entry.username, undone: false
+                id: entry.id,
+                timestamp: entry.timestamp,
+                section: entry.section,
+                actionType: entry.actionType,
+                label: entry.label,
+                entityType: entry.entityType,
+                entityId: entry.entityId,
+                entityLabel: entry.entityLabel,
+                userId: entry.userId,
+                username: entry.username,
+                undone: false,
+                beforeState: entry.beforeState,
+                afterState: entry.afterState,
+                context: entry.context
             });
         }
 
@@ -5783,7 +5574,6 @@ app.listen(PORT, async () => {
             undone_at     DATETIME      NULL,
             undone_by     VARCHAR(255)  DEFAULT '',
             undo_action   JSON          DEFAULT NULL,
-            redo_action   JSON          DEFAULT NULL,
             meta          JSON          DEFAULT NULL,
             INDEX idx_wah_section  (section),
             INDEX idx_wah_user     (user_id),
@@ -5791,20 +5581,17 @@ app.listen(PORT, async () => {
         )
     `).catch(e => console.error('[DB] wo_action_history init error:', e.message));
 
-    // Migration : ajout de redo_action sur les DBs créées avant B0.38
-    try {
-        const [colRows] = await pool.query(`
-            SELECT COUNT(*) AS exists_col
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME   = 'wo_action_history'
-              AND COLUMN_NAME  = 'redo_action'
-        `);
-        if (colRows[0].exists_col === 0) {
-            await pool.query(`ALTER TABLE wo_action_history ADD COLUMN redo_action JSON DEFAULT NULL AFTER undo_action`);
-            console.log('[DB] wo_action_history: colonne redo_action ajoutée (migration B0.38)');
-        }
-    } catch (e) { console.error('[DB] wo_action_history migration redo_action error:', e.message); }
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS projet_section_lock (
+            node_id        VARCHAR(64)   NOT NULL,
+            projet_id      VARCHAR(128)  NOT NULL,
+            locked_by_id   VARCHAR(128)  NOT NULL,
+            locked_by_name VARCHAR(128)  NOT NULL DEFAULT '',
+            locked_at      DATETIME      DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (node_id),
+            INDEX idx_psl_projet (projet_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] projet_section_lock init error:', e.message));
 
     console.log(`
 +==========================================+

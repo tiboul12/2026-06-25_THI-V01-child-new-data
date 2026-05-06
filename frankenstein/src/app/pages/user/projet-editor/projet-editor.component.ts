@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService, Project } from '../../../core/services/project.service';
@@ -7,12 +7,15 @@ import { ConfigService } from '../../../core/services/config.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { LayoutService } from '../../../core/services/layout.service';
 import { WoActionHistoryService } from '../../../core/services/wo-action-history.service';
+import { ProjetCollabService, CollabHistoryEntry } from '../../../core/services/projet-collab.service';
 
 import { ProjetToolbarComponent } from './components/projet-toolbar/projet-toolbar.component';
 import { ProjetSidebarComponent, DragDropEvent } from './components/projet-sidebar/projet-sidebar.component';
 import { ProjetEditorZoneComponent, FileSaveEvent, SectionInfo } from './components/projet-editor-zone/projet-editor-zone.component';
 import { ProjetConversationComponent } from './components/projet-conversation/projet-conversation.component';
 import { ProjetStatusbarComponent } from './components/projet-statusbar/projet-statusbar.component';
+import { ProjetHistoryComponent } from './components/projet-history/projet-history.component';
+import { ProjetDiffComponent } from './components/projet-diff/projet-diff.component';
 
 @Component({
   selector: 'app-projet-editor',
@@ -24,6 +27,8 @@ import { ProjetStatusbarComponent } from './components/projet-statusbar/projet-s
     ProjetEditorZoneComponent,
     ProjetConversationComponent,
     ProjetStatusbarComponent,
+    ProjetHistoryComponent,
+    ProjetDiffComponent,
   ],
   templateUrl: './projet-editor.component.html',
   styleUrl: './projet-editor.component.scss'
@@ -34,9 +39,89 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   project = signal<Project | null>(null);
   files = signal<FileNode[]>([]);
   loading = signal(true);
-  saveStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  saveStatus = signal<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
   activeNodeId = signal<string | null>(null);
   scrollToNodeId = signal<string | null>(null);
+  zone5Tab = signal<'conversation' | 'history'>('conversation');
+  // Map fileId -> imageIds[] pour les images imbriquées dans un bloc document
+  nestedImagesMap = signal<Record<string, string[]>>({});
+  diffEntry = signal<CollabHistoryEntry | null>(null);
+
+  // Nom + icône du noeud actuellement sélectionné, affichés sous les onglets de la zone 5b
+  readonly activeNodeInfo = computed<{ name: string; icon: string } | null>(() => {
+    const id = this.activeNodeId();
+    if (!id) return null;
+    const folder = this.findFolderById(id, this.files());
+    if (folder) return { name: folder.name, icon: 'folder' };
+    const file = this.findFileById(id, this.files());
+    if (!file) return null;
+    if (this.projectFilesService.isImageFile(file.name)) return { name: file.name, icon: 'image' };
+    return { name: file.name, icon: 'description' };
+  });
+
+  // Set d'entityIds à afficher dans l'historique selon la sélection courante.
+  // - Dossier sélectionné → folder + tous ses descendants (sous-dossiers, fichiers)
+  // - contenu.md sélectionné → traité comme le dossier parent (tout le sous-arbre)
+  // - Fichier additionnel sélectionné → uniquement lui-même
+  readonly activeHistoryIds = computed<Set<string> | null>(() => {
+    const id = this.activeNodeId();
+    if (!id) return null;
+    const folder = this.findFolderById(id, this.files());
+    if (folder) return this.collectDescendantIds(folder);
+    const fileNode = this.findFileById(id, this.files());
+    if (fileNode?.name === 'contenu.md') {
+      const parent = this.findParentFolder(id, this.files());
+      if (parent) return this.collectDescendantIds(parent);
+    }
+    return new Set<string>([id]);
+  });
+
+  private collectDescendantIds(node: FileNode): Set<string> {
+    const ids = new Set<string>();
+    const walk = (n: FileNode) => {
+      ids.add(n.id);
+      for (const c of (n.children || [])) walk(c);
+    };
+    walk(node);
+    return ids;
+  }
+
+  // Met à jour le contenu d'un fichier dans le signal `files` sans recharger depuis le serveur.
+  // Cela garde le signal synchronisé avec ce qui est sur disque, pour que si l'éditeur est
+  // démonté/remonté (ex: ouverture du diff), il reconstruise depuis le contenu à jour.
+  private patchFileContent(fileId: string, content: string) {
+    const patch = (nodes: FileNode[]): { changed: boolean; nodes: FileNode[] } => {
+      let changed = false;
+      const out = nodes.map(n => {
+        if (n.id === fileId && n.type === 'file') {
+          changed = true;
+          return { ...n, content };
+        }
+        if (n.children) {
+          const sub = patch(n.children);
+          if (sub.changed) {
+            changed = true;
+            return { ...n, children: sub.nodes };
+          }
+        }
+        return n;
+      });
+      return { changed, nodes: out };
+    };
+    const result = patch(this.files());
+    if (result.changed) this.files.set(result.nodes);
+  }
+
+  private findFileById(id: string, nodes: FileNode[]): FileNode | null {
+    for (const node of nodes) {
+      if (node.type === 'file' && node.id === id) return node;
+      if (node.children) {
+        const f = this.findFileById(id, node.children);
+        if (f) return f;
+      }
+    }
+    return null;
+  }
 
   private projectFolderName = '';
   private savedStatusTimer: any;
@@ -44,6 +129,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   private isSaving = false;
   private pendingSections: SectionInfo[] | null = null;
   private history = inject(WoActionHistoryService);
+  private collab = inject(ProjetCollabService);
 
   constructor(
     private route: ActivatedRoute,
@@ -72,12 +158,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     }
     await this.ensureProjectFolder(this.project()!);
     await this.loadFiles();
+    this.collab.connect(this.projectFolderName);
   }
 
   ngOnDestroy() {
     this.layoutService.editorMode.set(false);
     this.configService.setCurrentProjectId(null);
     clearTimeout(this.savedStatusTimer);
+    this.collab.disconnect();
   }
 
   private async ensureProjectFolder(proj: Project) {
@@ -120,6 +208,25 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     }
   }
 
+  onDirtyChange(dirty: boolean) {
+    if (dirty) {
+      // ne pas écraser un état actif (saving/error)
+      const s = this.saveStatus();
+      if (s === 'idle' || s === 'saved') this.saveStatus.set('dirty');
+    } else {
+      // Reset vers idle/saved sera géré par processSectionsChange après save serveur
+      // Mais si pas de changement réel, on revient à idle.
+      if (this.saveStatus() === 'dirty') this.saveStatus.set('idle');
+    }
+  }
+
+  // Affiche immédiatement 'Sauvegarde…' dès que la zone éditeur déclenche un save
+  // (avant l'analyse asynchrone de processSectionsChange).
+  onSaveStarting() {
+    clearTimeout(this.savedStatusTimer);
+    this.saveStatus.set('saving');
+  }
+
   async onFolderCreated(info: { name: string; parentId: string | null }) {
     await this.loadFiles();
     if (!info.parentId) {
@@ -134,6 +241,17 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   async onSectionsChange(sections: SectionInfo[]) {
+    // Recalculer la map des images imbriquées dans des blocs documents
+    const newMap: Record<string, string[]> = {};
+    for (const s of sections) {
+      for (const af of s.additionalFiles || []) {
+        if (af.fileId && af.orderedChildIds && af.orderedChildIds.length > 0) {
+          newMap[af.fileId] = af.orderedChildIds;
+        }
+      }
+    }
+    this.nestedImagesMap.set(newMap);
+
     if (this.isSaving) {
       this.pendingSections = sections;
       return;
@@ -401,6 +519,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
     // Détection de déplacement de fichiers additionnels
     const filesToMove: { fileId: string, targetFolderId: string }[] = [];
+    const movedFileIds = new Set<string>();
     for (const s of resolved) {
       if (!s.folderId) continue;
       s.additionalFiles?.forEach(af => {
@@ -409,9 +528,27 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
           if (existingFolder && existingFolder.id !== s.folderId) {
             console.log(`[EDITOR] File move detected for ${af.name}: ${existingFolder.name} -> ${s.folderName}`);
             filesToMove.push({ fileId: af.fileId as string, targetFolderId: s.folderId as string });
+            movedFileIds.add(af.fileId);
           }
         }
       });
+    }
+
+    // Détection de déplacement d'images : un marqueur {{IMG:id}} apparaît dans le contenu
+    // d'une section dont le folderId diffère du parent réel du fichier image dans l'arborescence.
+    for (const s of resolved) {
+      if (!s.folderId) continue;
+      for (const fileId of s.orderedFileIds || []) {
+        if (movedFileIds.has(fileId)) continue;
+        const fileNode = this.findFileById(fileId, currentFiles);
+        if (!fileNode || !this.projectFilesService.isImageFile(fileNode.name)) continue;
+        const existingFolder = this.findParentFolder(fileId, currentFiles);
+        if (existingFolder && existingFolder.id !== s.folderId) {
+          console.log(`[EDITOR] Image move detected for ${fileNode.name}: ${existingFolder.name} -> ${s.folderName}`);
+          filesToMove.push({ fileId, targetFolderId: s.folderId as string });
+          movedFileIds.add(fileId);
+        }
+      }
     }
 
     const toCreate = resolved
@@ -433,7 +570,16 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     const hasStructural = renameOps.length > 0 || toDelete.length > 0 || toCreate.length > 0 || needsFile.length > 0 || additionalFileDeleted || filesToMove.length > 0;
     const sectionsWithFile = resolved.filter(s => s.fileId || s.folderId); // Tous ceux qui ont potentiellement du contenu à sauver
 
-    if (!hasStructural && sectionsWithFile.length === 0 && !resolved.some(s => s.additionalFiles?.some(af => !af.fileId))) return;
+    if (!hasStructural && sectionsWithFile.length === 0 && !resolved.some(s => s.additionalFiles?.some(af => !af.fileId))) {
+      // Aucun changement à propager. Sortir de l'état 'saving' éventuellement
+      // déclenché par onSaveStarting et marquer comme sauvegardé pour purger les pending.
+      if (this.saveStatus() === 'saving') {
+        this.saveStatus.set('saved');
+        this.collab.clearAllPending();
+        this.savedStatusTimer = setTimeout(() => this.saveStatus.set('idle'), 2000);
+      }
+      return;
+    }
 
     this.saveStatus.set('saving');
     clearTimeout(this.savedStatusTimer);
@@ -512,29 +658,16 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
              console.error('Create content file failed:', e);
           }
         }
-
-        // Rafraîchir l'arborescence dès que la structure est prête
-        await this.loadFiles().catch(() => {});
-        currentFiles = this.files();
-
-        // On remet à jour les IDs de fichiers dans resolved pour la sauvegarde finale
-        for (const s of resolved) {
-          const path = [...s.parentPath, s.folderName].map(p => this.slugify(p)).join('/');
-          const freshFolder = this.findFolderByPath(path, currentFiles);
-          if (freshFolder) {
-            s.folderId = freshFolder.id;
-            const contentFile = (freshFolder.children || []).find(c => c.type === 'file');
-            if (contentFile) s.fileId = contentFile.id;
-          }
-        }
       }
 
-      // 5. Save content (main content and additional files)
+      // 5. Save content (main content and additional files) MUST be done BEFORE loadFiles()
+      // to ensure the server has the latest text when ngOnChanges rebuilds the document.
       for (const s of resolved) {
         if (s.fileId) {
           const oldContent = oldContentMap.get(s.fileId) ?? '';
           if (oldContent !== s.content) {
             await this.projectFilesService.updateFile(this.projectFolderName, s.fileId, s.content);
+            this.patchFileContent(s.fileId, s.content);
             const fileNode = { id: s.fileId, name: 'contenu.md', type: 'file' as const, path: '', order: 0 };
             this.trackContentUpdate(fileNode, s.folderName, oldContent, s.content);
           }
@@ -547,6 +680,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
               const oldContent = oldContentMap.get(af.fileId) ?? '';
               if (oldContent !== af.content) {
                 await this.projectFilesService.updateFile(this.projectFolderName, af.fileId, af.content);
+                this.patchFileContent(af.fileId, af.content);
                 const fileNode = { id: af.fileId, name: af.name, type: 'file' as const, path: '', order: 0 };
                 this.trackContentUpdate(fileNode, `${s.folderName} › ${af.name}`, oldContent, af.content);
               }
@@ -564,6 +698,23 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
                 console.error(`Failed to create additional file ${af.name}:`, e);
               }
             }
+          }
+        }
+      }
+
+      if (hasStructural) {
+        // Rafraîchir l'arborescence dès que la structure est prête
+        await this.loadFiles().catch(() => {});
+        currentFiles = this.files();
+
+        // On remet à jour les IDs de fichiers dans resolved pour la sauvegarde finale
+        for (const s of resolved) {
+          const path = [...s.parentPath, s.folderName].map(p => this.slugify(p)).join('/');
+          const freshFolder = this.findFolderByPath(path, currentFiles);
+          if (freshFolder) {
+            s.folderId = freshFolder.id;
+            const contentFile = (freshFolder.children || []).find(c => c.type === 'file');
+            if (contentFile) s.fileId = contentFile.id;
           }
         }
       }
@@ -595,6 +746,25 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         await this.loadFiles().catch(() => {});
       }
 
+      // 7. Sync file order within each folder to match text content order (orderedFileIds)
+      const structureSnapshot = JSON.parse(JSON.stringify(this.files())) as FileNode[];
+      let orderNeedsUpdate = false;
+      for (const s of resolved) {
+        if (!s.folderId || !s.orderedFileIds || s.orderedFileIds.length < 2) continue;
+        const folder = this.findFolderById(s.folderId, structureSnapshot);
+        if (!folder || !folder.children) continue;
+        for (let i = 0; i < s.orderedFileIds.length; i++) {
+          const child = folder.children.find(c => c.id === s.orderedFileIds[i]);
+          if (child && child.order !== i + 1) {
+            child.order = i + 1;
+            orderNeedsUpdate = true;
+          }
+        }
+      }
+      if (orderNeedsUpdate) {
+        await this.projectFilesService.updateStructure(this.projectFolderName, structureSnapshot).catch(e => console.error('[EDITOR] Order sync failed:', e));
+        await this.loadFiles().catch(() => {});
+      }
 
       if (!hasError) {
         this.saveStatus.set('saved');
@@ -657,6 +827,15 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   async onDragDrop(event: DragDropEvent) {
+    // Pause pour garantir que le saveAll() de la zone 4 a bien émis sectionsChange et passé isSaving à true
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Attendre la fin des sauvegardes en cours (ex: le texte de la zone 4 vient d'être sauvegardé)
+    // pour éviter un rechargement avec du vieux texte qui corromprait la position des images.
+    while (this.isSaving) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
     const { draggedNode, draggedParentId, targetNode, targetParentId, position, targetSiblings } = event;
     try {
       if (draggedNode.type === 'folder') {
@@ -686,22 +865,16 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         }
       } else {
         // Fichier (document additionnel ou image) : il doit TOUJOURS rester dans un dossier.
-        // On ne le laisse jamais retomber à la racine du projet (sinon il devient invisible
-        // dans l'éditeur car les sections markdown ne listent que des dossiers).
         let targetFolderId: string | null = null;
 
         if (position === 'inside' && targetNode.type === 'folder') {
           targetFolderId = targetNode.id;
         } else if (targetNode.type === 'folder') {
-          // 'before'/'after' un dossier : on dépose le document DANS ce dossier
-          // (au début pour 'before', à la fin pour 'after').
           targetFolderId = targetNode.id;
         } else {
-          // Cible = fichier/image → même dossier que la cible
           targetFolderId = targetParentId;
         }
 
-        // Garde-fou : ne jamais retomber à la racine (file orphelin = invisible)
         if (!targetFolderId) {
           targetFolderId = draggedParentId;
         }
@@ -709,14 +882,15 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         // 1) Déplacement physique si le dossier change
         const folderChanged = !!targetFolderId && targetFolderId !== draggedParentId;
         if (folderChanged) {
+          // Sauvegarde d'abord le texte avec la bonne position (avant que le loadFiles n'écrase tout)
+          if (this.editorZone) {
+            this.editorZone.flushContentModifications();
+          }
           await this.projectFilesService.moveFile(this.projectFolderName, draggedNode.id, targetFolderId!);
-          await this.loadFiles();
         }
 
         // 2) Réordonnancement dans le dossier cible quand on dépose
         //    avant/après un fichier frère (Doc1 ↔ Doc2 ↔ Doc3).
-        //    C'est le cas que ne couvrait PAS le code précédent : aucun moveFile
-        //    n'était nécessaire (même dossier) donc rien ne se passait.
         if (position !== 'inside' && targetNode.type === 'file' && targetFolderId) {
           const currentFiles = this.files();
           const targetFolder = this.findFolderById(targetFolderId, currentFiles);
@@ -730,9 +904,6 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
             const targetNewIdx = toIdx > fromIdx ? toIdx - 1 : toIdx;
             const insertAt = position === 'before' ? targetNewIdx : targetNewIdx + 1;
             newOrder.splice(insertAt, 0, item);
-            // Convention : fichiers d'abord, puis sous-dossiers (cohérent avec
-            // la reconstruction markdown de la zone 4 qui place les blocs
-            // 'fichier' entre le contenu principal et les sous-sections).
             const folderSiblings = siblings.filter(n => n.type === 'folder');
             const allOrdered = [...newOrder, ...folderSiblings];
             const structure: FileNode[] = JSON.parse(JSON.stringify(currentFiles));
@@ -743,7 +914,6 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
         // 3) Pour un drop 'inside' : placer les fichiers avant les sous-dossiers
         if (position === 'inside' && targetNode.type === 'folder') {
-          if (!folderChanged) await this.loadFiles();
           const targetFolder = this.findFolderById(targetNode.id, this.files());
           if (targetFolder?.children) {
             const childFiles = targetFolder.children.filter(c => c.type === 'file');
@@ -760,8 +930,6 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       this.onNodeActive(draggedNode.id);
     } catch (e: any) {
       console.error('DragDrop failed:', e);
-      const msg = e?.error?.error || e?.message || 'Erreur inconnue';
-      console.error(`[DragDrop] Détail: ${msg}`);
     }
   }
 
@@ -818,6 +986,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       }
     }
     return null;
+  }
+
+  onHistoryEntryClick(entry: CollabHistoryEntry) {
+    this.diffEntry.set(entry);
+  }
+
+  closeDiff() {
+    this.diffEntry.set(null);
   }
 
   get statusLabel(): string {

@@ -2,13 +2,14 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, signa
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConversationService, Message } from '../../../../../core/services/conversation.service';
+import { WoActionHistoryService } from '../../../../../core/services/wo-action-history.service';
 
 @Component({
   selector: 'app-projet-conversation',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './projet-conversation.component.html',
-  host: { class: 'flex flex-col min-h-0 w-80 flex-shrink-0' },
+  host: { class: 'flex flex-col min-h-0 flex-1 overflow-hidden' },
 })
 export class ProjetConversationComponent implements OnChanges, AfterViewChecked {
   @Input() sectionId: string | null = null;
@@ -16,7 +17,10 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked 
   @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
   
   private convService = inject(ConversationService);
-  
+  private woHistory = inject(WoActionHistoryService);
+
+  @Input() projectId: string | null = null;
+
   inputMessage = '';
   expanded = signal(true);
   loading = signal(false);
@@ -83,6 +87,16 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked 
         this.messages = [...this.messages, msg];
         this.shouldScroll = true;
         this.conversationAdded.emit(this.sectionId!);
+        this.woHistory.track({
+          section: 'projets/conversation',
+          actionType: 'create',
+          label: `Message envoyé dans la section «${this.sectionId}»`,
+          entityType: 'message',
+          entityId: this.sectionId ?? undefined,
+          afterState: { text: text.substring(0, 200) },
+          context: { projectId: this.projectId, sectionId: this.sectionId },
+          undoable: false
+        }).catch(() => {});
       },
       error: (err) => {
         console.error('ProjetConversation: Send message error', err);

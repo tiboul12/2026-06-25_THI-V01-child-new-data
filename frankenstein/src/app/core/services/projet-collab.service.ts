@@ -28,6 +28,7 @@ export interface CollabHistoryEntry {
   undone: boolean;
   beforeState?: { content?: string } | null;
   afterState?: { content?: string } | null;
+  context?: Record<string, any>;
 }
 
 export interface PendingHistoryEntry {
@@ -82,8 +83,9 @@ export class ProjetCollabService {
     });
   }
 
-  clearPending(entityId: string): void {
-    this.pending.update(list => list.filter(e => e.entityId !== entityId));
+  clearPending(entityId: string | number): void {
+    const idStr = String(entityId).trim();
+    this.pending.update(list => list.filter(e => String(e.entityId).trim() !== idStr));
   }
 
   clearAllPending(): void {
@@ -130,9 +132,16 @@ export class ProjetCollabService {
       });
 
       this.eventSource.addEventListener('history', (e: MessageEvent) => {
-        const entry: CollabHistoryEntry = JSON.parse(e.data);
-        this.history.update(list => [entry, ...list.slice(0, 199)]);
-        if (entry.entityId) this.clearPending(entry.entityId);
+        try {
+          const entry: CollabHistoryEntry = JSON.parse(e.data);
+          console.log('[Collab] SSE History event received:', entry);
+          this.history.update(list => [entry, ...list.slice(0, 199)]);
+          if (entry.entityId) {
+            this.clearPending(entry.entityId);
+          }
+        } catch (err) {
+          console.warn('[Collab] SSE history parse error:', err);
+        }
       });
 
       this.eventSource.addEventListener('lock', (e: MessageEvent) => {

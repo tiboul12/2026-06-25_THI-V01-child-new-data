@@ -20,21 +20,15 @@
     <div class="inline-flex rounded border border-light-border dark:border-white/10 overflow-hidden mr-2">
       <button type="button"
               class="px-3 py-1 text-xs font-semibold transition-colors"
-              [class.bg-light-primary]="mode === 'edit'"
-              [class.dark:bg-primary]="mode === 'edit'"
-              [class.text-white]="mode === 'edit'"
-              [class.text-light-text]="mode !== 'edit'"
-              [class.dark:text-white]="mode !== 'edit'"
-              [class.opacity-60]="mode !== 'edit'"
+              [ngClass]="mode === 'edit'
+                ? 'bg-primary/20 text-primary'
+                : 'text-white/40 hover:text-white/70'"
               (click)="setMode('edit')">Édition</button>
       <button type="button"
               class="px-3 py-1 text-xs font-semibold transition-colors"
-              [class.bg-light-primary]="mode === 'visu'"
-              [class.dark:bg-primary]="mode === 'visu'"
-              [class.text-white]="mode === 'visu'"
-              [class.text-light-text]="mode !== 'visu'"
-              [class.dark:text-white]="mode !== 'visu'"
-              [class.opacity-60]="mode !== 'visu'"
+              [ngClass]="mode === 'visu'
+                ? 'bg-primary/20 text-primary'
+                : 'text-white/40 hover:text-white/70'"
               (click)="setMode('visu')">Visu</button>
     </div>
 
@@ -60,10 +54,17 @@
 
     @if (saveStatus === 'saving') {
       <span class="text-xs text-yellow-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Sauvegarde…</span>
-    } @else if (saveStatus === 'saved') {
-      <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
+    } @else if (saveStatus === 'dirty') {
+      <button type="button"
+              (click)="forceSave()"
+              title="Cliquer pour sauvegarder maintenant"
+              class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 px-2 py-0.5 rounded border border-orange-400/30 hover:border-orange-300/50 hover:bg-orange-400/10 transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-sm">save</span> Non sauvegardé
+      </button>
     } @else if (saveStatus === 'error') {
       <span class="text-xs text-red-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span> Erreur</span>
+    } @else {
+      <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
     }
   </div>
 
@@ -229,12 +230,89 @@
       </div>
     }
 
-    <!-- Mode Visu : markdown rendu -->
+    <!-- Mode Visu : sections éditables + toolbar sélection -->
     @if (mode === 'visu') {
       <div #visu
-           class="visu-wrap flex-1 min-h-0 overflow-y-auto px-8 py-6"
-           (click)="onVisuClick($event)"
-           [innerHTML]="renderedHtml"></div>
+           class="visu-wrap flex-1 min-h-0 overflow-y-auto px-8 py-6 relative"
+           (click)="onVisuContainerClick($event)">
+
+        @for (sec of visuSections; track sec.sectionId) {
+          <div class="visu-section-wrap" [class.visu-section-wrap--active]="activeVisuSectionId === sec.sectionId">
+
+            <!-- Titre de section (non éditable) -->
+            @switch (sec.level) {
+              @case (1) { <h1 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h1> }
+              @case (2) { <h2 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h2> }
+              @case (3) { <h3 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h3> }
+              @default  { <h4 class="visu-sec-heading" [class.visu-section--hl]="highlightedFolderIds.has(sec.sectionId)" [attr.data-section-id]="sec.sectionId" (click)="nodeActive.emit(sec.sectionId)">{{ sec.folderName }}</h4> }
+            }
+
+            <!-- Contenu éditable -->
+            <div #visuSectionEl
+                 class="visu-sec-content"
+                 contenteditable="true"
+                 [attr.data-section-id]="sec.sectionId"
+                 (focus)="onVisuSectionFocus(sec.sectionId)"
+                 (blur)="onVisuSectionBlur(sec.sectionId, $any($event.target))"
+                 (input)="onVisuSectionInput(sec.sectionId)"
+                 (keydown)="onVisuSectionKeydown($event)">
+            </div>
+
+            <!-- Actions d'insertion -->
+            <div class="visu-insert-row">
+              <button class="visu-insert-btn"
+                      type="button"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="showVisuInsertMenu(sec.sectionId, $event)"
+                      title="Insérer un bloc">
+                <span class="material-symbols-outlined">add</span>
+                Insérer
+              </button>
+              <button class="visu-insert-btn visu-insert-btn--img"
+                      type="button"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="triggerVisuImageUpload(sec.sectionId)"
+                      title="Ajouter une image">
+                <span class="material-symbols-outlined">image</span>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Toolbar formatage (popover sur sélection) -->
+        @if (visuToolbar) {
+          <div class="visu-format-toolbar"
+               [style.top.px]="visuToolbar.top"
+               [style.left.px]="visuToolbar.left">
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S̶</s></button>
+            <span class="visu-format-toolbar__sep"></span>
+            <button type="button" (mousedown)="$event.preventDefault(); applyVisuFormat('removeFormat')" title="Effacer la mise en forme" class="visu-format-toolbar__clear">Aa</button>
+          </div>
+        }
+
+        <!-- Menu d'insertion -->
+        @if (visuInsertMenu) {
+          <div class="visu-insert-menu"
+               [style.top.px]="visuInsertMenu.top"
+               [style.left.px]="visuInsertMenu.left">
+            <button type="button" (click)="insertVisuBlock('menu', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">title</span> Titre
+            </button>
+            <button type="button" (click)="insertVisuBlock('doc', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">description</span> Document
+            </button>
+            <button type="button" (click)="insertVisuBlock('code', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">code</span> Code
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Input image caché (mode visu) -->
+      <input #visuImgInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onVisuImageSelected($event)">
     }
 
   }

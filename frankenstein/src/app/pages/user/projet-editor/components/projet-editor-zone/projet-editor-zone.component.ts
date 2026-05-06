@@ -1,9 +1,12 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChild, ElementRef, inject, NgZone, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FileNode, ProjectFilesService } from '../../../../../core/services/project-files.service';
 import { marked } from 'marked';
+import { WoActionHistoryService } from '../../../../../core/services/wo-action-history.service';
+import { ProjetCollabService } from '../../../../../core/services/projet-collab.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 export interface FileSaveEvent {
   fileId: string;
@@ -14,6 +17,7 @@ export interface AdditionalFile {
   name: string;
   content: string;
   fileId: string | null;
+  orderedChildIds?: string[];
 }
 
 export interface SectionInfo {
@@ -25,6 +29,7 @@ export interface SectionInfo {
   fileId: string | null;
   content: string;
   additionalFiles: AdditionalFile[];
+  orderedFileIds: string[];
 }
 
 interface DocSection {
@@ -92,6 +97,14 @@ interface DropIndicator {
   position: 'before' | 'after' | 'inside';
 }
 
+interface VisuSectionState {
+  sectionId: string;
+  folderName: string;
+  level: number;
+  contentHtml: string;
+  markdownBefore: string;
+}
+
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
@@ -100,10 +113,10 @@ interface DropIndicator {
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
 })
-export class ProjetEditorZoneComponent implements OnChanges {
+export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Input() files: FileNode[] = [];
   @Input() scrollToNodeId: string | null = null;
-  @Input() saveStatus: 'idle' | 'saving' | 'saved' | 'error' = 'idle';
+  @Input() saveStatus: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' = 'idle';
   @Input() projectName = '';
   @Input() activeNodeId: string | null = null;
 
@@ -112,16 +125,24 @@ export class ProjetEditorZoneComponent implements OnChanges {
   @Output() nodeActive = new EventEmitter<string>();
   @Output() refresh = new EventEmitter<void>();
   @Output() dragDrop = new EventEmitter<DragDropEvent>();
+  @Output() dirtyChange = new EventEmitter<boolean>();
+  @Output() saveStarting = new EventEmitter<void>();
+  private localDirty = false;
 
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('textarea') textareaRef?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('mirror') mirrorRef?: ElementRef<HTMLDivElement>;
   @ViewChild('overlay') overlayRef?: ElementRef<HTMLDivElement>;
   @ViewChild('visu') visuRef?: ElementRef<HTMLDivElement>;
+  @ViewChildren('visuSectionEl') visuSectionEls!: QueryList<ElementRef<HTMLElement>>;
+  @ViewChild('visuImgInput') visuImgInputRef?: ElementRef<HTMLInputElement>;
 
   private sanitizer = inject(DomSanitizer);
   private zone = inject(NgZone);
   private cdr = inject(ChangeDetectorRef);
+  private woHistory = inject(WoActionHistoryService);
+  private collab = inject(ProjetCollabService);
+  private authSvc = inject(AuthService);
 
   // Mode (toggle Edition / Visu)
   mode: 'edit' | 'visu' = 'edit';
@@ -149,8 +170,17 @@ export class ProjetEditorZoneComponent implements OnChanges {
   private fileRanges: FileRange[] = [];
 
   // Highlights
-  private highlightedFolderIds = new Set<string>();
+  highlightedFolderIds = new Set<string>();
   private highlightedFileIds = new Set<string>();
+
+  // ── Visu edit mode ─────────────────────────────────────────
+  visuSections: VisuSectionState[] = [];
+  visuToolbar: { top: number; left: number } | null = null;
+  visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
+  activeVisuSectionId: string | null = null;
+  private dirtyVisuSectionIds = new Set<string>();
+  private visuSelectionListener: (() => void) | null = null;
+  visuImageSectionId: string | null = null;
   mirrorLines: MirrorLine[] = [];
   renderedHtml: SafeHtml = '';
 
@@ -159,6 +189,17 @@ export class ProjetEditorZoneComponent implements OnChanges {
   renamingImageId: string | null = null;
   renameImageValue = '';
   deleteConfirmImageId: string | null = null;
+
+  // Entités modifiées depuis le dernier flush — Map<entityId, folderId>.
+  // entityId = fileId si curseur dans un bloc fichier additionnel, sinon folderId.
+  // folderId est utilisé pour récupérer le snapshot de la section parente.
+  private modifiedEntities = new Map<string, string>();
+  // Snapshot fichier (contenu.md) par section — utilisé pour l'action undo
+  private sectionFileSnapshot = new Map<string, { fileId: string; content: string }>();
+  // Snapshot texte complet de la section dans unifiedContent — utilisé pour le diff (inclut en-tête + fichiers additionnels)
+  private sectionFullTextSnapshot = new Map<string, string>();
+  // Snapshot du bloc de chaque fichier additionnel ('Nom\n...content...\n') depuis unifiedContent — pour diff par fichier
+  private fileBlockSnapshot = new Map<string, string>();
 
   // Drag & drop (style Notion : une seule poignée dans la gouttière gauche,
   // visible uniquement sur la ligne survolée)
@@ -173,8 +214,8 @@ export class ProjetEditorZoneComponent implements OnChanges {
   private dragUpListener: ((e: MouseEvent) => void) | null = null;
   private dragAutoScrollRaf: number | null = null;
   private dragLastClientY = 0;
-  private currentDropTarget: { handle: DragHandle; position: 'before' | 'after' | 'inside' } | null = null;
-  private suppressScrollOnNextActiveChange = false;
+  private currentDropTarget: { handle?: DragHandle; targetLine?: number; position: 'before' | 'after' | 'inside' } | null = null;
+  suppressScrollOnNextActiveChange = false;
 
   constructor(private svc: ProjectFilesService) {}
 
@@ -187,8 +228,10 @@ export class ProjetEditorZoneComponent implements OnChanges {
 
       this.docSections = this.buildDocSections(this.files, 1);
       this.allImages = this.collectAllImages(this.files);
+      // Corriger les marqueurs d'images mal positionnés (déplacés via sidebar)
+      const markersFixed = this.fixImageMarkersInSections();
 
-      if (!this.hasLoaded || hasStructuralChange) {
+      if (!this.hasLoaded || hasStructuralChange || markersFixed) {
         const newFullContent = this.reconstructFromSections();
 
         if (hasStructuralChange && this.focusedHandle) {
@@ -239,14 +282,17 @@ export class ProjetEditorZoneComponent implements OnChanges {
       }
       this.hasLoaded = true;
       this.recomputeAll();
+      this.updateSnapshotFromFiles();
+
+      // Si on a corrigé des marqueurs déplacés, persister immédiatement au serveur
+      // pour que les contenu.md sources soient mis à jour (sinon le bug réapparaît au reload).
+      if (markersFixed && !this.focusedHandle) {
+        setTimeout(() => this.saveAll(), 0);
+      }
     }
 
     if (changes['activeNodeId']) {
       this.recomputeHighlights();
-      if (this.activeNodeId && !this.suppressScrollOnNextActiveChange) {
-        setTimeout(() => this.scrollToActive(), 50);
-      }
-      this.suppressScrollOnNextActiveChange = false;
     }
 
     if (changes['scrollToNodeId'] && this.scrollToNodeId) {
@@ -262,19 +308,47 @@ export class ProjetEditorZoneComponent implements OnChanges {
       if (node.type !== 'folder') continue;
       const level = Math.min(depth, 4);
       const heading = '#'.repeat(level) + ' ' + node.name;
-      const nodeChildren = node.children || [];
+      const nodeChildren = [...(node.children || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+
       const mainFile = nodeChildren.find(c => c.type === 'file' && c.name === 'contenu.md')
                     || nodeChildren.find(c => c.type === 'file' && !this.isImageFile(c.name));
-      const mainContent = mainFile?.content ?? '';
-      const images = nodeChildren.filter(c => c.type === 'file' && this.isImageFile(c.name));
-      const additionalFiles = nodeChildren.filter(c => c.type === 'file' && c !== mainFile && !this.isImageFile(c.name));
+
+      // 1. Identifier toutes les images déjà référencées dans n'importe quel fichier texte
+      //    de cette section (contenu.md inclus) pour ne pas créer de doublon.
+      const imageIdsInSectionText = new Set<string>();
+      for (const child of nodeChildren) {
+        if (child.type === 'file' && !this.isImageFile(child.name) && child.content) {
+          const matches = child.content.matchAll(/\{\{IMG:([a-z0-9-]+)\}\}/gi);
+          for (const m of matches) {
+            imageIdsInSectionText.add(m[1]);
+          }
+        }
+      }
 
       let textContent = heading + '\n';
-      if (mainContent.trim()) textContent += mainContent.trimEnd() + '\n';
-      if (additionalFiles.length > 0) {
-        const blocks = additionalFiles.map(c => `'${c.name.replace(/\.md$/, '')}\n${c.content || ''}\n'`).join('\n\n');
-        textContent += '\n' + blocks + '\n';
+      const images: FileNode[] = [];
+
+      // 2. Parcourir les enfants dans l'ordre de leur propriété 'order'
+      for (const child of nodeChildren) {
+        if (child.type !== 'file') continue;
+
+        if (this.isImageFile(child.name)) {
+          images.push(child);
+          // On insère l'image comme un bloc autonome UNIQUEMENT si elle n'est pas déjà
+          // référencée dans un fichier texte de cette section (évite les doublons).
+          if (!imageIdsInSectionText.has(child.id)) {
+            textContent += `\n{{IMG:${child.id}}}\n`;
+          }
+        } else if (child === mainFile) {
+          if (child.content?.trim()) {
+            textContent += child.content.trimEnd() + '\n';
+          }
+        } else {
+          // Document additionnel
+          textContent += `\n'${child.name.replace(/\.md$/, '')}\n${child.content || ''}\n'\n`;
+        }
       }
+
       textContent = textContent.trimEnd();
 
       result.push({
@@ -318,6 +392,7 @@ export class ProjetEditorZoneComponent implements OnChanges {
     this.recomputeHighlights();
     this.recomputeHandles();
     this.recomputeRenderedHtml();
+    if (this.mode === 'visu') this.buildVisuSections();
   }
 
   private recomputeHandles() {
@@ -570,8 +645,15 @@ export class ProjetEditorZoneComponent implements OnChanges {
   // ── Mode toggle ─────────────────────────────────────────────
   setMode(m: 'edit' | 'visu') {
     if (this.mode === m) return;
+    if (this.mode === 'visu') {
+      this.flushVisuSections();
+      this.teardownVisuSelectionListener();
+      this.visuToolbar = null;
+      this.visuInsertMenu = null;
+    }
     if (this.mode === 'edit') {
-      if (this.focusedHandle) this.exitFocusMode(); // sortie focus avant de passer en visu
+      this.flushContentModifications();
+      if (this.focusedHandle) this.exitFocusMode();
       else this.saveAll();
     }
     this.mode = m;
@@ -579,6 +661,14 @@ export class ProjetEditorZoneComponent implements OnChanges {
     if (this.activeNodeId) {
       setTimeout(() => this.scrollToActive(), 80);
     }
+    if (m === 'visu') {
+      this.setupVisuSelectionListener();
+      setTimeout(() => this.initVisuSectionHtml(), 50);
+    }
+  }
+
+  ngOnDestroy() {
+    this.teardownVisuSelectionListener();
   }
 
   // ── Mode focus : édition d'une seule section / document ─────
@@ -614,6 +704,7 @@ export class ProjetEditorZoneComponent implements OnChanges {
   }
 
   exitFocusMode() {
+    this.flushContentModifications();
     this.exitFocusModeSync();
     setTimeout(() => {
       const ta = this.textareaRef?.nativeElement;
@@ -646,6 +737,23 @@ export class ProjetEditorZoneComponent implements OnChanges {
     this.recomputeMirrorLines();
     this.recomputeHandles();
     this.scheduleSave();
+    if (!this.localDirty) {
+      this.localDirty = true;
+      this.dirtyChange.emit(true);
+    }
+    const entity = this.getCursorEntity();
+    if (entity) {
+      this.modifiedEntities.set(entity.id, entity.folderId);
+      // Affichage live grisé dans le panneau historique tant que le save n'est pas fait
+      const node = this.findNode(entity.id, this.files);
+      this.collab.upsertPending({
+        entityId: entity.id,
+        label: `Modification de texte — «${node?.name || entity.id}»`,
+        username: this.authSvc.currentUser()?.username || 'Vous',
+        timestamp: new Date().toISOString(),
+        state: 'editing'
+      });
+    }
   }
 
   onTextareaScroll(event: Event) {
@@ -737,16 +845,164 @@ export class ProjetEditorZoneComponent implements OnChanges {
 
   onTextareaBlur() {
     this.saveAll();
+    this.flushContentModifications();
+  }
+
+  // Force une sauvegarde immédiate (bouton "Non sauvegardé" cliqué)
+  forceSave() {
+    clearTimeout(this.saveTimeout);
+    this.saveAll();
+    this.flushContentModifications();
+  }
+
+  private updateSnapshotFromFiles() {
+    const pendingFolderIds = new Set(this.modifiedEntities.values());
+    const pendingEntityIds = new Set(this.modifiedEntities.keys());
+    for (const section of this.docSections) {
+      if (!section.mainFileId) continue;
+      if (pendingFolderIds.has(section.folderId)) continue;
+      const folder = this.findNode(section.folderId, this.files);
+      if (!folder) continue;
+      const mainFile = (folder.children || []).find(c => c.type === 'file' && c.name === 'contenu.md')
+                    || (folder.children || []).find(c => c.type === 'file' && !this.isImageFile(c.name));
+      if (mainFile) {
+        this.sectionFileSnapshot.set(section.folderId, {
+          fileId: section.mainFileId,
+          content: mainFile.content ?? ''
+        });
+      }
+      const range = this.sectionRanges.find(r => r.folderId === section.folderId);
+      if (range && this.unifiedContent) {
+        const lines = this.unifiedContent.split('\n');
+        this.sectionFullTextSnapshot.set(section.folderId,
+          lines.slice(range.lineStart, range.lineEnd + 1).join('\n'));
+      }
+    }
+    // Snapshot des blocs fichiers additionnels (entités fileId)
+    if (this.unifiedContent) {
+      const lines = this.unifiedContent.split('\n');
+      for (const fr of this.fileRanges) {
+        if (pendingEntityIds.has(fr.fileId)) continue;
+        this.fileBlockSnapshot.set(fr.fileId, lines.slice(fr.lineStart, fr.lineEnd + 1).join('\n'));
+      }
+    }
+  }
+
+  public flushContentModifications() {
+    if (this.modifiedEntities.size === 0) return;
+    const currentSections = this.parseContent();
+    const lines = this.unifiedContent.split('\n');
+    const updatedFolderIds = new Set<string>();
+    for (const [entityId, folderId] of this.modifiedEntities) {
+      const isFile = entityId !== folderId;
+      const node = this.findNode(entityId, this.files);
+      const snapshotBefore = this.sectionFileSnapshot.get(folderId);
+
+      let textBefore: string | undefined;
+      let textAfter: string | null = null;
+      if (isFile) {
+        textBefore = this.fileBlockSnapshot.get(entityId);
+        const fr = this.fileRanges.find(r => r.fileId === entityId);
+        if (fr) textAfter = lines.slice(fr.lineStart, fr.lineEnd + 1).join('\n');
+      } else {
+        textBefore = this.sectionFullTextSnapshot.get(folderId);
+        const range = this.sectionRanges.find(r => r.folderId === folderId);
+        if (range) textAfter = lines.slice(range.lineStart, range.lineEnd + 1).join('\n');
+      }
+
+      this.woHistory.track({
+        section: 'projets/contenu',
+        actionType: 'update',
+        label: `Modification de texte — «${node?.name || entityId}»`,
+        entityType: 'content',
+        entityId: entityId,
+        beforeState: textBefore != null ? { content: textBefore } : undefined,
+        afterState: textAfter != null ? { content: textAfter } : undefined,
+        context: { projectId: this.projectName },
+        undoable: !!snapshotBefore?.fileId,
+        undoAction: snapshotBefore?.fileId ? {
+          endpoint: `/api/file-projects/${this.projectName}/files/${snapshotBefore.fileId}`,
+          method: 'PUT',
+          payload: { content: snapshotBefore.content }
+        } : undefined
+      }).catch(() => {});
+
+      if (textAfter != null) {
+        if (isFile) this.fileBlockSnapshot.set(entityId, textAfter);
+        else this.sectionFullTextSnapshot.set(folderId, textAfter);
+      }
+      updatedFolderIds.add(folderId);
+    }
+    for (const folderId of updatedFolderIds) {
+      const after = currentSections.find(s => s.folderId === folderId);
+      if (after?.fileId) {
+        this.sectionFileSnapshot.set(folderId, { fileId: after.fileId, content: after.content });
+      }
+    }
+    this.modifiedEntities.clear();
+  }
+
+  // Retourne l'entité modifiée selon la position du curseur :
+  // - bloc fichier additionnel → fileId + folderId parent
+  // - sinon section → folderId + folderId
+  private getCursorEntity(): { id: string; folderId: string } | null {
+    const ta = this.textareaRef?.nativeElement;
+    if (!ta) return null;
+    const lineIdx = ta.value.substring(0, ta.selectionStart).split('\n').length - 1;
+    for (const fr of this.fileRanges) {
+      if (lineIdx >= fr.lineStart && lineIdx <= fr.lineEnd) {
+        const parent = this.findParentFolder(fr.fileId, this.files);
+        if (parent) return { id: fr.fileId, folderId: parent.id };
+      }
+    }
+    for (let i = this.sectionRanges.length - 1; i >= 0; i--) {
+      const r = this.sectionRanges[i];
+      if (lineIdx >= r.lineStart && lineIdx <= r.lineEnd) {
+        return { id: r.folderId, folderId: r.folderId };
+      }
+    }
+    return null;
+  }
+
+  private getFormatLabel(before: string, after: string): string | null {
+    if (before === '**' && after === '**') return 'Mise en forme : Gras';
+    if (before === '*' && after === '*') return 'Mise en forme : Italique';
+    if (before === '~~' && after === '~~') return 'Mise en forme : Barré';
+    if (before === '`' && after === '`') return 'Insertion : Code inline';
+    if (before.includes('```')) return 'Insertion : Bloc de code';
+    if (before.trimStart().startsWith('### ')) return 'Insertion : Titre H3';
+    if (before.trimStart().startsWith('## ')) return 'Insertion : Titre H2';
+    if (before.trimStart().startsWith('# ')) return 'Insertion : Titre H1';
+    if (before === '- ') return 'Insertion : Liste';
+    return null;
   }
 
   private scheduleSave() {
     clearTimeout(this.saveTimeout);
-    this.saveTimeout = setTimeout(() => this.saveAll(), 800);
+    // Save automatique après 10 s d'inactivité ; le save immédiat reste assuré par
+    // onTextareaBlur (clic en dehors), exitFocusMode et setMode.
+    this.saveTimeout = setTimeout(() => this.saveAll(), 10000);
   }
 
   private saveAll() {
-    if (this.unifiedContent === this.lastSavedContent) return;
+    // Bascule toutes les entrées 'editing' du panneau historique en 'saving' (clignote)
+    this.collab.markAllPendingSaving();
+    if (this.unifiedContent === this.lastSavedContent) {
+      // Pas de changement de contenu, mais on flush pour que l'historique remonte sans attendre le blur
+      this.flushContentModifications();
+      if (this.localDirty) {
+        this.localDirty = false;
+        this.dirtyChange.emit(false);
+      }
+      return;
+    }
     this.lastSavedContent = this.unifiedContent;
+    // Signale au parent qu'une sauvegarde démarre (pour afficher 'Sauvegarde…' immédiatement)
+    this.saveStarting.emit();
+    if (this.localDirty) {
+      this.localDirty = false;
+      this.dirtyChange.emit(false);
+    }
 
     let contentToParse: string;
     if (this.focusedHandle) {
@@ -769,6 +1025,8 @@ export class ProjetEditorZoneComponent implements OnChanges {
     const sections = this.parseContent();
     this.unifiedContent = saved;
     this.sectionsChange.emit(sections);
+    // Flush historique en même temps que la sauvegarde (évite d'attendre le blur)
+    this.flushContentModifications();
   }
 
   // ── Content parsing (compat existant) ──────────────────────
@@ -786,12 +1044,7 @@ export class ProjetEditorZoneComponent implements OnChanges {
       const current = matches[i];
       const contentEnd = i + 1 < matches.length ? matches[i + 1].index : text.length;
       let rawContent = text.substring(current.contentStart, contentEnd).trimEnd();
-      const additionalFiles: AdditionalFile[] = [];
-      const blockRegex = /^(['`^])([^\n]+)(?:\n([\s\S]*?))?\n?\1/gm;
-      const mainContent = rawContent.replace(blockRegex, (_match, _delimiter, title, content) => {
-        additionalFiles.push({ name: (title as string).trim(), content: ((content as string) || '').trimEnd(), fileId: null });
-        return '';
-      }).trim();
+      
       const parentPath: string[] = [];
       let targetLevel = current.level - 1;
       for (let k = i - 1; k >= 0 && targetLevel > 0; k--) {
@@ -802,14 +1055,73 @@ export class ProjetEditorZoneComponent implements OnChanges {
       const info = folderMap.get(fullPath);
       const parentInfo = parentKey ? folderMap.get(parentKey) : null;
       const mainFile = info?.files.find(f => f.name === 'contenu.md') || info?.files.find(f => !this.isImageFile(f.name));
-      additionalFiles.forEach(af => {
+
+      const additionalFiles: AdditionalFile[] = [];
+      const elements: { id: string; index: number }[] = [];
+      const nestedImageIds = new Set<string>();
+      
+      const blockRegex = /^(['`^])([^\n]+)(?:\n([\s\S]*?))?\n?\1/gm;
+      
+      // On remplace les blocs par des espaces pour conserver les offsets des images autonomes
+      let spacedContent = rawContent.replace(blockRegex, (match, _delimiter, title, content, offset) => {
+        const afName = (title as string).trim();
+        const afContent = (content as string) || '';
+        const af: AdditionalFile = { name: afName, content: afContent.trimEnd(), fileId: null, orderedChildIds: [] };
+        
+        const imgRegex = /\{\{IMG:([a-zA-Z0-9._-]+)\}\}/gi;
+        let imM;
+        while ((imM = imgRegex.exec(afContent)) !== null) {
+           af.orderedChildIds!.push(imM[1]);
+           nestedImageIds.add(imM[1]);
+        }
+
         const found = info?.files.find(f => this.slugify(f.name.replace(/\.md$/, '')) === this.slugify(af.name));
-        if (found) af.fileId = found.id;
+        if (found) {
+          af.fileId = found.id;
+          elements.push({ id: found.id, index: offset });
+        }
+        additionalFiles.push(af);
+        return ' '.repeat(match.length);
       });
+
+      // Extraire les images autonomes
+      const imageRegex = /\{\{IMG:([a-zA-Z0-9._-]+)\}\}/gi;
+      let imgM: RegExpExecArray | null;
+      while ((imgM = imageRegex.exec(spacedContent)) !== null) {
+        if (!nestedImageIds.has(imgM[1])) {
+          elements.push({ id: imgM[1], index: imgM.index });
+        }
+      }
+
+      // Le contenu principal est le rawContent sans les blocs
+      // Les marqueurs {{IMG:id}} autonomes (hors blocs doc) sont conservés inline dans mainContent
+      // pour préserver leur position exacte dans le texte (ex: entre deux paragraphes)
+      let mainContent = rawContent.replace(blockRegex, '').trim();
+
+      // Déterminer la position du mainFile (contenu.md)
+      if (mainFile) {
+        let mainFileIndex = -1;
+        if (mainContent) {
+          const firstNonSpace = /\S/.exec(mainContent);
+          if (firstNonSpace) {
+            mainFileIndex = rawContent.indexOf(mainContent.substring(firstNonSpace.index, firstNonSpace.index + 10));
+          }
+        }
+        elements.push({ id: mainFile.id, index: mainFileIndex });
+      }
+
+      elements.sort((a, b) => a.index - b.index);
+      
+      const orderedFileIds: string[] = [];
+      elements.forEach(e => {
+        if (!orderedFileIds.includes(e.id)) orderedFileIds.push(e.id);
+      });
+
       sections.push({
         level: current.level, folderName: current.name, parentPath,
         folderId: info?.folder.id ?? null, parentFolderId: parentInfo?.folder.id ?? null,
-        fileId: mainFile?.id ?? null, content: mainContent, additionalFiles
+        fileId: mainFile?.id ?? null, content: mainContent, additionalFiles,
+        orderedFileIds
       });
     }
     return sections;
@@ -844,12 +1156,47 @@ export class ProjetEditorZoneComponent implements OnChanges {
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
     const selected = ta.value.substring(start, end);
+
+    // Capturer snapshot AVANT l'insertion pour le undo
+    const formatLabel = this.getFormatLabel(before, after);
+    const entity = formatLabel ? this.getCursorEntity() : null;
+    const sectionId = entity?.folderId ?? null;
+    const entityId = entity?.id ?? null;
+    const beforeSnapshot = sectionId ? this.sectionFileSnapshot.get(sectionId) : undefined;
+
     const newVal = ta.value.substring(0, start) + before + selected + after + ta.value.substring(end);
     this.unifiedContent = newVal;
     ta.value = newVal;
     this.recomputeRanges();
     this.recomputeMirrorLines();
     this.scheduleSave();
+
+    if (formatLabel) {
+      const node = entityId ? this.findNode(entityId, this.files) : null;
+      this.woHistory.track({
+        section: 'projets/contenu',
+        actionType: 'update',
+        label: node ? `${formatLabel} — «${node.name}»` : formatLabel,
+        entityType: 'content',
+        entityId: entityId ?? undefined,
+        beforeState: beforeSnapshot ? { content: beforeSnapshot.content } : undefined,
+        context: { projectId: this.projectName },
+        undoable: !!beforeSnapshot?.fileId,
+        undoAction: beforeSnapshot?.fileId ? {
+          endpoint: `/api/file-projects/${this.projectName}/files/${beforeSnapshot.fileId}`,
+          method: 'PUT',
+          payload: { content: beforeSnapshot.content }
+        } : undefined
+      }).catch(() => {});
+      // Mettre à jour le snapshot avec le contenu post-insertion
+      if (sectionId) {
+        const sections = this.parseContent();
+        const updated = sections.find(s => s.folderId === sectionId);
+        if (updated?.fileId) {
+          this.sectionFileSnapshot.set(sectionId, { fileId: updated.fileId, content: updated.content });
+        }
+      }
+    }
     setTimeout(() => {
       ta.focus();
       ta.setSelectionRange(start + before.length, start + before.length + selected.length);
@@ -879,6 +1226,18 @@ export class ProjetEditorZoneComponent implements OnChanges {
     const folderId = this.getCursorFolderId() || this.getActiveFolderId();
     try {
       const node = await this.svc.uploadImage(this.projectName, file, folderId);
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'upload',
+        label: `Import d'image «${file.name}»`,
+        entityType: 'image',
+        entityId: node.id,
+        entityLabel: file.name,
+        afterState: { fileName: file.name, size: file.size },
+        context: { projectId: this.projectName },
+        undoable: true,
+        undoAction: { endpoint: `/api/file-projects/${this.projectName}/files/${node.id}`, method: 'DELETE' }
+      }).catch(() => {});
       this.imageUploadError = '';
       const ta = this.textareaRef?.nativeElement;
       if (ta && this.mode === 'edit') {
@@ -975,6 +1334,19 @@ export class ProjetEditorZoneComponent implements OnChanges {
     if (newName === line.imageName) { this.cancelRenameImage(); return; }
     try {
       await this.svc.renameFile(this.projectName, line.imageId, newName);
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'update',
+        label: `Renommage d'image «${line.imageName}» → «${newName}»`,
+        entityType: 'image',
+        entityId: line.imageId,
+        entityLabel: newName,
+        beforeState: { fileName: line.imageName },
+        afterState: { fileName: newName },
+        context: { projectId: this.projectName },
+        undoable: true,
+        undoAction: { endpoint: `/api/file-projects/${this.projectName}/files/${line.imageId}`, method: 'PATCH', payload: { name: line.imageName } }
+      }).catch(() => {});
       this.renamingImageId = null;
       this.renameImageValue = '';
       this.refresh.emit();
@@ -1004,6 +1376,17 @@ export class ProjetEditorZoneComponent implements OnChanges {
     ev.stopPropagation();
     try {
       await this.svc.deleteFile(this.projectName, line.imageId);
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'delete',
+        label: `Suppression d'image «${line.imageName}»`,
+        entityType: 'image',
+        entityId: line.imageId,
+        entityLabel: line.imageName,
+        beforeState: { fileName: line.imageName },
+        context: { projectId: this.projectName },
+        undoable: false
+      }).catch(() => {});
       this.deleteConfirmImageId = null;
       // Retire la ligne du marqueur dans unifiedContent
       const lines = this.unifiedContent.split('\n');
@@ -1152,6 +1535,20 @@ export class ProjetEditorZoneComponent implements OnChanges {
     const rect = mirrorEl.getBoundingClientRect();
     const contentY = clientY - rect.top + mirrorEl.scrollTop;
 
+    if (this.draggingHandle.kind === 'image' || this.draggingHandle.kind === 'file') {
+      const lines = this.unifiedContent.split('\n');
+      let targetLine = Math.floor((contentY - this.PADDING_TOP_PX) / this.LINE_HEIGHT_PX);
+      
+      // Garde-fou : si on est à la toute fin, ramener d'une ligne pour éviter 
+      // de sortir de la dernière section active.
+      if (targetLine >= lines.length && lines.length > 0) targetLine = lines.length - 1;
+      targetLine = Math.max(0, targetLine);
+
+      this.currentDropTarget = { targetLine, position: 'before' };
+      this.dropIndicator = { top: this.PADDING_TOP_PX + targetLine * this.LINE_HEIGHT_PX - 1, height: 2, position: 'before' };
+      return;
+    }
+
     const draggedNode = this.findNode(this.draggingHandle.id, this.files);
     const isDragFolder = this.draggingHandle.kind === 'folder';
 
@@ -1246,49 +1643,98 @@ export class ProjetEditorZoneComponent implements OnChanges {
     const target = this.currentDropTarget;
     this.cleanupDrag();
     if (!dragged || !target) return;
-    if (dragged.id === target.handle.id) return;
 
-    // Images: déplacer le marqueur {{IMG:id}} dans le contenu (pas le fichier physique)
-    if (dragged.kind === 'image') {
-      this.moveImageMarker(dragged.lineStart, target.handle.lineStart, target.position);
-      return;
+    // Détermination de l'entité cible pour le déplacement physique (images et fichiers)
+    const draggedNode = this.findNode(dragged.id, this.files);
+    let targetNode: FileNode | null = null;
+    let position: 'before' | 'after' | 'inside' = 'inside';
+
+    if (dragged.kind === 'image' || dragged.kind === 'file') {
+      if (target.targetLine !== undefined) {
+        // Trouver le dossier qui correspond à cette ligne pour le déplacement physique
+        for (let i = this.sectionRanges.length - 1; i >= 0; i--) {
+          const r = this.sectionRanges[i];
+          if (target.targetLine >= r.lineStart && target.targetLine <= r.lineEnd) {
+            targetNode = this.findNode(r.folderId, this.files);
+            position = 'inside';
+            break;
+          }
+        }
+      }
+    } else {
+      if (target.handle) {
+        targetNode = this.findNode(target.handle.id, this.files);
+        position = target.position;
+      }
     }
 
-    const draggedNode = this.findNode(dragged.id, this.files);
-    const targetNode = this.findNode(target.handle.id, this.files);
     if (!draggedNode || !targetNode) return;
 
     const draggedParent = this.findParentFolder(dragged.id, this.files);
-    const targetParent = this.findParentFolder(target.handle.id, this.files);
+    const targetParent = this.findParentFolder(targetNode.id, this.files);
     const targetParentId = targetParent?.id || null;
     const targetSiblings = targetParent ? (targetParent.children || []) : this.files;
 
+    // Déplacement visuel (texte) en premier
+    if (dragged.kind === 'image' && target.targetLine !== undefined) {
+      this.moveImageMarkerToLine(dragged.lineStart, target.targetLine);
+    } else if (dragged.kind === 'file' && target.targetLine !== undefined) {
+      this.moveFileBlockToLine(dragged.lineStart, dragged.lineEnd, target.targetLine);
+    }
+
+    // Émission pour déplacement physique
     this.dragDrop.emit({
       draggedNode,
       draggedParentId: draggedParent?.id || null,
       targetNode,
       targetParentId,
-      position: target.position,
+      position,
       targetSiblings,
     });
   }
 
-  private moveImageMarker(srcLine: number, targetLine: number, position: 'before' | 'after' | 'inside') {
+  private moveImageMarkerToLine(srcLine: number, targetLine: number) {
     const lines = this.unifiedContent.split('\n');
     if (srcLine < 0 || srcLine >= lines.length) return;
     const marker = lines[srcLine];
-    if (!/^\{\{IMG:[a-z0-9-]+\}\}/i.test(marker.trim())) return;
+    if (!/^\{\{IMG:[a-zA-Z0-9._-]+\}\}/i.test(marker.trim())) return;
 
     lines.splice(srcLine, 1);
-    const adjusted = targetLine > srcLine ? targetLine - 1 : targetLine;
-    const insertAt = Math.max(0, Math.min(position === 'before' ? adjusted : adjusted + 1, lines.length));
+    
+    let insertAt = targetLine;
+    if (targetLine > srcLine) insertAt = targetLine - 1;
+    
+    insertAt = Math.max(0, Math.min(insertAt, lines.length));
     lines.splice(insertAt, 0, marker);
 
     this.unifiedContent = lines.join('\n');
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = this.unifiedContent;
     this.recomputeAll();
-    this.scheduleSave();
+    // Sauvegarde immédiate sur drag pour sync live avec la sidebar (pas de debounce 10s)
+    this.localDirty = true;
+    this.saveAll();
+  }
+
+  private moveFileBlockToLine(srcStart: number, srcEnd: number, targetLine: number) {
+    const lines = this.unifiedContent.split('\n');
+    if (srcStart < 0 || srcEnd >= lines.length || srcStart > srcEnd) return;
+
+    const blockLines = lines.splice(srcStart, srcEnd - srcStart + 1);
+
+    let insertAt = targetLine;
+    if (targetLine > srcEnd) insertAt = targetLine - blockLines.length;
+    insertAt = Math.max(0, Math.min(insertAt, lines.length));
+
+    lines.splice(insertAt, 0, ...blockLines);
+
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+    // Sauvegarde immédiate sur drag pour sync live avec la sidebar (pas de debounce 10s)
+    this.localDirty = true;
+    this.saveAll();
   }
 
   private cleanupDrag() {
@@ -1307,6 +1753,47 @@ export class ProjetEditorZoneComponent implements OnChanges {
     document.body.style.userSelect = '';
   }
 
+  // ── Correction de position des marqueurs image ──────────────
+  // Après buildDocSections, s'assurer que chaque {{IMG:id}} se trouve dans la
+  // section qui correspond au dossier parent réel du fichier image dans l'arborescence.
+  // Corrige les cas où le fichier a été déplacé via la sidebar sans que le marqueur suive.
+  // Retourne true si au moins une modification a été effectuée.
+  private fixImageMarkersInSections(): boolean {
+    let changed = false;
+    const imgCorrectParent = new Map<string, string>();
+    const walkImages = (nodes: FileNode[], parentId: string) => {
+      for (const n of nodes) {
+        if (n.type === 'file' && this.isImageFile(n.name)) imgCorrectParent.set(n.id, parentId);
+        if (n.children) walkImages(n.children, n.id);
+      }
+    };
+    walkImages(this.files, 'root');
+
+    for (const [imgId, correctParentId] of imgCorrectParent) {
+      const marker = `{{IMG:${imgId}}}`;
+      const wrongSections = this.docSections.filter(
+        s => s.folderId !== correctParentId && s.textContent.includes(marker)
+      );
+      const correctSection = this.docSections.find(s => s.folderId === correctParentId);
+      const alreadyCorrect = !!correctSection?.textContent.includes(marker);
+
+      if (wrongSections.length === 0 && alreadyCorrect) continue;
+
+      const escaped = imgId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`\\n?\\{\\{IMG:${escaped}\\}\\}\\n?`, 'gi');
+      for (const sec of wrongSections) {
+        const before = sec.textContent;
+        sec.textContent = sec.textContent.replace(re, '\n');
+        if (sec.textContent !== before) changed = true;
+      }
+      if (correctSection && !alreadyCorrect) {
+        correctSection.textContent = correctSection.textContent.trimEnd() + `\n${marker}\n`;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   private getFileStructureKey(nodes: FileNode[], parentId: string = 'root'): string {
     let key = '';
     for (const node of nodes) {
@@ -1317,5 +1804,436 @@ export class ProjetEditorZoneComponent implements OnChanges {
       }
     }
     return key;
+  }
+
+  // ── Visu edit : construction du HTML par section ────────────
+  private buildVisuSections() {
+    this.visuSections = this.docSections.map(sec => {
+      const existing = this.visuSections.find(vs => vs.sectionId === sec.folderId);
+      const isDirty = this.dirtyVisuSectionIds.has(sec.folderId);
+
+      const range = this.sectionRanges.find(r => r.folderId === sec.folderId);
+      const lines = this.unifiedContent.split('\n');
+      const markdownBefore = range
+        ? lines.slice(range.lineStart + 1, range.lineEnd + 1).join('\n').trim()
+        : '';
+
+      return {
+        sectionId: sec.folderId,
+        folderName: sec.folderName,
+        level: sec.level,
+        contentHtml: isDirty && existing ? existing.contentHtml : this.buildVisuSectionHtml(sec),
+        markdownBefore: isDirty && existing ? existing.markdownBefore : markdownBefore,
+      };
+    });
+  }
+
+  private buildVisuSectionHtml(sec: DocSection): string {
+    const lines = sec.textContent.split('\n');
+    let contentMd = lines.slice(1).join('\n');
+
+    // Extraire les blocs fichier avant marked (placeholders)
+    const fileBlocks: { token: string; html: string; md: string }[] = [];
+    contentMd = contentMd.replace(/^(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_m, _d, name, content) => {
+      const trimmed = (name as string).trim();
+      const mdSource = `'${trimmed}\n${((content as string) || '').trimEnd()}\n'`;
+      const inner = marked.parse((content as string) || '', { async: false }) as string;
+      const token = `@@FB${fileBlocks.length}@@`;
+      const encoded = btoa(unescape(encodeURIComponent(mdSource)));
+      fileBlocks.push({
+        token,
+        html: `<div class="visu-file" contenteditable="false" data-block-md="${encoded}"><div class="visu-file__title">${this.escapeHtml(trimmed)}</div>${inner}</div>`,
+        md: mdSource,
+      });
+      return `\n\n${token}\n\n`;
+    });
+
+    // Remplacer les images (placeholders)
+    const imgTokens: { token: string; html: string }[] = [];
+    contentMd = contentMd.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (_, id) => {
+      const img = this.allImages.find(im => im.id === id);
+      const token = `@@IM${imgTokens.length}@@`;
+      if (img) {
+        const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
+        const url = this.svc.getImageUrl(this.projectName, encodedPath);
+        imgTokens.push({
+          token,
+          html: `<div class="visu-img-wrap" contenteditable="false" data-img-id="${id}"><img src="${url}" alt="${this.escapeHtml(img.name)}"><div class="visu-img-bar"><span class="visu-img-name">${this.escapeHtml(img.name)}</span><button class="visu-img-del" data-img-id="${id}" type="button"><span class="material-symbols-outlined">delete</span></button></div></div>`,
+        });
+      } else {
+        imgTokens.push({ token, html: `<span class="text-red-400 text-xs">[image manquante: ${id}]</span>` });
+      }
+      return `\n\n${token}\n\n`;
+    });
+
+    let html = marked.parse(contentMd, { async: false }) as string;
+
+    for (const fb of fileBlocks) {
+      html = html.replace(new RegExp(`<p>\\s*${fb.token}\\s*</p>`, 'g'), fb.html).replace(fb.token, fb.html);
+    }
+    for (const im of imgTokens) {
+      html = html.replace(new RegExp(`<p>\\s*${im.token}\\s*</p>`, 'g'), im.html).replace(im.token, im.html);
+    }
+    return html;
+  }
+
+  // ── Visu edit : init/refresh du innerHTML des contenteditable ──
+  initVisuSectionHtml() {
+    this.visuSectionEls.forEach((ref, i) => {
+      const el = ref.nativeElement;
+      const sec = this.visuSections[i];
+      if (sec && !this.dirtyVisuSectionIds.has(sec.sectionId)) {
+        el.innerHTML = sec.contentHtml;
+      }
+    });
+  }
+
+  private flushVisuSections() {
+    if (this.mode !== 'visu') return;
+    this.visuSectionEls.forEach((ref, i) => {
+      const el = ref.nativeElement;
+      const sec = this.visuSections[i];
+      if (sec && this.dirtyVisuSectionIds.has(sec.sectionId)) {
+        const md = this.htmlSectionToMarkdown(el);
+        this.saveVisuSection(sec.sectionId, md, sec.markdownBefore);
+        this.dirtyVisuSectionIds.delete(sec.sectionId);
+      }
+    });
+  }
+
+  // ── Visu edit : événements section ─────────────────────────
+  onVisuSectionFocus(sectionId: string) {
+    this.activeVisuSectionId = sectionId;
+    this.suppressScrollOnNextActiveChange = true;
+    this.nodeActive.emit(sectionId);
+  }
+
+  onVisuSectionBlur(sectionId: string, el: HTMLElement) {
+    if (!this.dirtyVisuSectionIds.has(sectionId)) return;
+    const md = this.htmlSectionToMarkdown(el);
+    const sec = this.visuSections.find(vs => vs.sectionId === sectionId);
+    this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
+    this.dirtyVisuSectionIds.delete(sectionId);
+  }
+
+  onVisuSectionInput(sectionId: string) {
+    this.dirtyVisuSectionIds.add(sectionId);
+    if (!this.localDirty) {
+      this.localDirty = true;
+      this.dirtyChange.emit(true);
+    }
+  }
+
+  onVisuSectionKeydown(ev: KeyboardEvent) {
+    // Fermer le menu d'insertion sur Escape
+    if (ev.key === 'Escape') this.visuInsertMenu = null;
+  }
+
+  // ── Visu edit : sauvegarde d'une section ────────────────────
+  private saveVisuSection(sectionId: string, newMd: string, mdBefore: string) {
+    const range = this.sectionRanges.find(r => r.folderId === sectionId);
+    if (!range) return;
+
+    const lines = this.unifiedContent.split('\n');
+    const headingLine = lines[range.lineStart];
+    const before = lines.slice(0, range.lineStart);
+    const after = lines.slice(range.lineEnd + 1);
+
+    const newContentLines = newMd.trim() ? newMd.trim().split('\n') : [];
+    const newLines = [...before, headingLine, ...newContentLines, ...after];
+    const newContent = newLines.join('\n');
+
+    if (newContent === this.unifiedContent) return;
+
+    const node = this.findNode(sectionId, this.files);
+    const snapshot = this.sectionFileSnapshot.get(sectionId);
+    this.woHistory.track({
+      section: 'projets/contenu',
+      actionType: 'update',
+      label: `Modification visu — «${node?.name || sectionId}»`,
+      entityType: 'content',
+      entityId: sectionId,
+      beforeState: { content: mdBefore },
+      afterState: { content: newMd },
+      context: { projectId: this.projectName },
+      undoable: !!snapshot?.fileId,
+      undoAction: snapshot?.fileId ? {
+        endpoint: `/api/file-projects/${this.projectName}/files/${snapshot.fileId}`,
+        method: 'PUT',
+        payload: { content: snapshot.content },
+      } : undefined,
+    }).catch(() => {});
+
+    // Mettre à jour markdownBefore dans visuSections
+    const vs = this.visuSections.find(s => s.sectionId === sectionId);
+    if (vs) vs.markdownBefore = newMd;
+
+    this.unifiedContent = newContent;
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = newContent;
+    this.recomputeRanges();
+    this.recomputeMirrorLines();
+    this.scheduleSave();
+  }
+
+  // ── Visu edit : HTML → Markdown ─────────────────────────────
+  private htmlSectionToMarkdown(el: HTMLElement): string {
+    return this.nodesToMd(Array.from(el.childNodes)).replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  private nodesToMd(nodes: Node[]): string {
+    return nodes.map(n => this.nodeToMd(n)).join('');
+  }
+
+  private nodeToMd(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    // Blocs non-éditables : restaurer depuis data-block-md ou data-img-id
+    if (el.getAttribute('contenteditable') === 'false') {
+      if (el.hasAttribute('data-block-md')) {
+        try { return '\n' + decodeURIComponent(escape(atob(el.getAttribute('data-block-md')!))) + '\n'; } catch { return ''; }
+      }
+      if (el.hasAttribute('data-img-id')) {
+        return `\n{{IMG:${el.getAttribute('data-img-id')}}}\n`;
+      }
+      return '';
+    }
+
+    const inner = () => this.nodesToMd(Array.from(el.childNodes));
+
+    switch (tag) {
+      case 'h1': return `\n# ${inner().trim()}\n`;
+      case 'h2': return `\n## ${inner().trim()}\n`;
+      case 'h3': return `\n### ${inner().trim()}\n`;
+      case 'h4': return `\n#### ${inner().trim()}\n`;
+      case 'p': { const t = inner(); return t.trim() ? `\n${t.trim()}\n` : ''; }
+      case 'br': return '\n';
+      case 'strong': case 'b': return `**${inner()}**`;
+      case 'em': case 'i': return `*${inner()}*`;
+      case 'del': case 's': return `~~${inner()}~~`;
+      case 'u': return `<u>${inner()}</u>`;
+      case 'code': {
+        if (el.parentElement?.tagName.toLowerCase() === 'pre') return el.textContent || '';
+        return `\`${inner()}\``;
+      }
+      case 'pre': {
+        const codeEl = el.querySelector('code');
+        const lang = Array.from(codeEl?.classList || []).find(c => c.startsWith('language-'))?.replace('language-', '') || '';
+        return `\n\`\`\`${lang}\n${codeEl?.textContent || ''}\n\`\`\`\n`;
+      }
+      case 'ul': {
+        const items = Array.from(el.children).map(li => `- ${this.nodesToMd(Array.from(li.childNodes)).trim()}`);
+        return '\n' + items.join('\n') + '\n';
+      }
+      case 'ol': {
+        const items = Array.from(el.children).map((li, i) => `${i + 1}. ${this.nodesToMd(Array.from(li.childNodes)).trim()}`);
+        return '\n' + items.join('\n') + '\n';
+      }
+      case 'li': return inner();
+      case 'blockquote': return `\n> ${inner().trim()}\n`;
+      case 'hr': return '\n---\n';
+      case 'img': return '';
+      default: return inner();
+    }
+  }
+
+  // ── Visu edit : toolbar formatage ───────────────────────────
+  private setupVisuSelectionListener() {
+    this.visuSelectionListener = () => this.zone.run(() => this.onVisuSelectionChange());
+    document.addEventListener('selectionchange', this.visuSelectionListener);
+  }
+
+  private teardownVisuSelectionListener() {
+    if (this.visuSelectionListener) {
+      document.removeEventListener('selectionchange', this.visuSelectionListener);
+      this.visuSelectionListener = null;
+    }
+  }
+
+  onVisuSelectionChange() {
+    if (this.mode !== 'visu') return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      this.visuToolbar = null;
+      this.cdr.detectChanges();
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const visuEl = this.visuRef?.nativeElement;
+    if (!visuEl?.contains(range.commonAncestorContainer)) {
+      this.visuToolbar = null;
+      this.cdr.detectChanges();
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    const visuRect = visuEl.getBoundingClientRect();
+    const toolbarW = 200;
+    let left = rect.left - visuRect.left + rect.width / 2 - toolbarW / 2;
+    left = Math.max(4, Math.min(left, visuRect.width - toolbarW - 4));
+    this.visuToolbar = { top: rect.top - visuRect.top - 44, left };
+    this.cdr.detectChanges();
+  }
+
+  applyVisuFormat(command: string) {
+    document.execCommand(command, false);
+    const activeId = this.getActiveVisuSectionId();
+    if (activeId) this.dirtyVisuSectionIds.add(activeId);
+    this.visuToolbar = null;
+  }
+
+  private getActiveVisuSectionId(): string | null {
+    const sel = window.getSelection();
+    if (sel?.focusNode) {
+      let el: Node | null = sel.focusNode;
+      while (el && (el as HTMLElement).tagName !== 'BODY') {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.hasAttribute?.('data-section-id') && htmlEl.getAttribute('contenteditable') === 'true') {
+          return htmlEl.getAttribute('data-section-id');
+        }
+        el = htmlEl.parentElement;
+      }
+    }
+    return this.activeVisuSectionId;
+  }
+
+  // ── Visu edit : menu d'insertion ───────────────────────────
+  showVisuInsertMenu(sectionId: string, ev: MouseEvent) {
+    ev.stopPropagation();
+    const btn = ev.currentTarget as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    const visuEl = this.visuRef?.nativeElement;
+    const visuRect = visuEl?.getBoundingClientRect() ?? { top: 0, left: 0 };
+    this.visuInsertMenu = {
+      sectionId,
+      top: rect.bottom - visuRect.top + 4,
+      left: rect.left - visuRect.left,
+    };
+  }
+
+  insertVisuBlock(type: 'menu' | 'doc' | 'code', sectionId: string) {
+    this.visuInsertMenu = null;
+    const range = this.sectionRanges.find(r => r.folderId === sectionId);
+    if (!range) return;
+
+    const lines = this.unifiedContent.split('\n');
+    let insertion = '';
+    if (type === 'menu')  insertion = '\n## Nouveau titre\n';
+    if (type === 'doc')   insertion = "\n'Nouveau document\n\n'\n";
+    if (type === 'code')  insertion = '\n```\ncode ici\n```\n';
+
+    lines.splice(range.lineEnd + 1, 0, ...insertion.split('\n'));
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+    this.scheduleSave();
+
+    const sec = this.visuSections.find(vs => vs.sectionId === sectionId);
+    if (sec) {
+      const node = this.findNode(sectionId, this.files);
+      this.woHistory.track({
+        section: 'projets/contenu',
+        actionType: 'update',
+        label: `Insertion ${type} — «${node?.name || sectionId}»`,
+        entityType: 'content',
+        entityId: sectionId,
+        context: { projectId: this.projectName },
+        undoable: false,
+      }).catch(() => {});
+    }
+
+    setTimeout(() => this.initVisuSectionHtml(), 50);
+  }
+
+  onVisuContainerClick(ev: MouseEvent) {
+    const target = ev.target as HTMLElement;
+    // Fermer le menu d'insertion si clic en dehors
+    if (this.visuInsertMenu && !target.closest('.visu-insert-menu') && !target.closest('.visu-insert-btn')) {
+      this.visuInsertMenu = null;
+    }
+    // Bouton suppression image
+    const delBtn = target.closest('.visu-img-del') as HTMLElement | null;
+    if (delBtn) {
+      const imgId = delBtn.getAttribute('data-img-id');
+      if (imgId) this.deleteVisuImage(imgId);
+    }
+  }
+
+  // ── Visu edit : gestion images ──────────────────────────────
+  triggerVisuImageUpload(sectionId: string) {
+    this.visuImageSectionId = sectionId;
+    this.visuImgInputRef?.nativeElement.click();
+  }
+
+  async onVisuImageSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !this.visuImageSectionId) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp'];
+    if (!allowed.includes(file.type)) { this.imageUploadError = 'Type non autorisé.'; return; }
+    if (file.size > 1024 * 1024) { this.imageUploadError = `Fichier trop grand (max 1 Mo).`; return; }
+
+    const sectionId = this.visuImageSectionId;
+    this.visuImageSectionId = null;
+    try {
+      const node = await this.svc.uploadImage(this.projectName, file, sectionId);
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'upload',
+        label: `Import image visu «${file.name}»`,
+        entityType: 'image',
+        entityId: node.id,
+        entityLabel: file.name,
+        afterState: { fileName: file.name, size: file.size },
+        context: { projectId: this.projectName },
+        undoable: true,
+        undoAction: { endpoint: `/api/file-projects/${this.projectName}/files/${node.id}`, method: 'DELETE' },
+      }).catch(() => {});
+
+      // Insérer le marqueur image dans unifiedContent après la section
+      const range = this.sectionRanges.find(r => r.folderId === sectionId);
+      if (range) {
+        const lines = this.unifiedContent.split('\n');
+        lines.splice(range.lineEnd + 1, 0, '', `{{IMG:${node.id}}}`, '');
+        this.unifiedContent = lines.join('\n');
+        const ta = this.textareaRef?.nativeElement;
+        if (ta) ta.value = this.unifiedContent;
+        this.recomputeAll();
+        this.scheduleSave();
+        this.refresh.emit();
+        setTimeout(() => this.initVisuSectionHtml(), 80);
+      }
+    } catch (e: any) {
+      this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';
+    }
+  }
+
+  private deleteVisuImage(imgId: string) {
+    this.svc.deleteFile(this.projectName, imgId).then(() => {
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'delete',
+        label: `Suppression image visu`,
+        entityType: 'image',
+        entityId: imgId,
+        context: { projectId: this.projectName },
+        undoable: false,
+      }).catch(() => {});
+      // Retirer le marqueur de unifiedContent
+      const lines = this.unifiedContent.split('\n');
+      const idx = lines.findIndex(l => l.trim() === `{{IMG:${imgId}}}`);
+      if (idx !== -1) lines.splice(idx, 1);
+      this.unifiedContent = lines.join('\n');
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = this.unifiedContent;
+      this.recomputeAll();
+      this.scheduleSave();
+      this.refresh.emit();
+      setTimeout(() => this.initVisuSectionHtml(), 80);
+    }).catch(() => {});
   }
 }

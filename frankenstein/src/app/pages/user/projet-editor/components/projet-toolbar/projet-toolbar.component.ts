@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../../core/services/auth.service';
 
@@ -14,8 +14,9 @@ export class ProjetToolbarComponent {
   @Input() isDirty = false;
   @Output() save = new EventEmitter<void>();
 
-  constructor(private router: Router, private auth: AuthService) {}
+  constructor(private router: Router, private auth: AuthService, private location: Location) {}
 
+  goBack() { this.location.back(); }
   goHome() { this.router.navigate(['/home']); }
   goProjets() { this.router.navigate(['/projets']); }
 

@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 
 const API = environment.apiDataUrl;
 
-export type WoActionType = 'create' | 'update' | 'delete' | 'toggle' | 'upload' | 'navigate';
+export type WoActionType = 'create' | 'update' | 'delete' | 'toggle' | 'upload' | 'navigate' | 'undo' | 'redo';
 
 export interface WoUndoAction {
   endpoint: string;
@@ -76,10 +76,10 @@ export class WoActionHistoryService {
     }
   }
 
-  async undo(actionId: string): Promise<void> {
+  async undo(actionId: string): Promise<{ trackedActionId?: string }> {
     const user = this.auth.currentUser();
-    await firstValueFrom(
-      this.http.post(`${API}/api/wo-action-history/${actionId}/undo`, {
+    const res = await firstValueFrom(
+      this.http.post<{ success: boolean; trackedActionId?: string }>(`${API}/api/wo-action-history/${actionId}/undo`, {
         undoneBy: user?.username
       })
     );
@@ -89,12 +89,13 @@ export class WoActionHistoryService {
         : e
       )
     );
+    return { trackedActionId: res?.trackedActionId };
   }
 
-  async redo(actionId: string): Promise<void> {
+  async redo(actionId: string): Promise<{ trackedActionId?: string }> {
     const user = this.auth.currentUser();
-    await firstValueFrom(
-      this.http.post(`${API}/api/wo-action-history/${actionId}/redo`, {
+    const res = await firstValueFrom(
+      this.http.post<{ success: boolean; trackedActionId?: string }>(`${API}/api/wo-action-history/${actionId}/redo`, {
         redoneBy: user?.username
       })
     );
@@ -104,6 +105,7 @@ export class WoActionHistoryService {
         : e
       )
     );
+    return { trackedActionId: res?.trackedActionId };
   }
 
   async load(filters: WoActionHistoryFilters = {}): Promise<WoActionEntry[]> {

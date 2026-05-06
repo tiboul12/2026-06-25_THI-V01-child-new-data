@@ -53,9 +53,6 @@ export class ConfigService {
       .subscribe({ error: () => console.warn('[ConfigService] Failed to save headerIaVisible') });
   }
 
-  // Visibilité du menu Historique des actions dans la nav principale
-  woActionHistoryNavEnabled = signal<boolean>(false);
-
   // Visibilité des onglets dans le volet Outils Externes
   tchatTabEnabled   = signal<boolean>(true);
   recetteTabEnabled = signal<boolean>(true);

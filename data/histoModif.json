@@ -2671,14 +2671,16 @@
       "version": "THI-0.66",
       "completedAt": "2026-05-05T21:26:26Z",
       "features": "frankenstein:projet-editor"
-    }
-  ,{
+    },
+    {
       "id": "mod-114",
       "version": "THI-0.66",
       "date": "2026-05-06T00:00:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Fix ordre fichier sidebar : sync order depuis orderedFileIds",
       "description": "La sidebar (zone 3) affichait les fichiers dans l'ordre de leur propriété 'order' JSON, qui ne reflétait pas leur ordre dans le texte. Une image uploadée reçoit toujours order=maxOrder+1 (dernière position), même si dans le contenu elle précède un bloc document. Ajout d'une étape 7 dans processSectionsChange : après tous les saves, on deep-clone la structure courante, on réassigne les 'order' des fichiers de chaque dossier selon orderedFileIds, et si un écart est détecté on appelle updateStructure puis loadFiles.",
@@ -2690,14 +2692,16 @@
       "prompt": "il y a un soucis avec l'ordre d'affichage dans le menu fichier (zone 3), dans la capture on peux voir que l'image est avant la section doc 1 (section document/code dans la zone edition) et dans la zone 3 : menu fichier elle est après. corrige l'ordre dans le menu fichier",
       "startedAt": "2026-05-06T00:00:00Z",
       "completedAt": "2026-05-06T00:05:00Z"
-    }
-  ,{
+    },
+    {
       "id": "mod-115",
       "version": "THI-0.66",
       "date": "2026-05-06T00:10:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Fix sidebar : fichiers avant sous-dossiers dans l'arbre",
       "description": "Dans l'éditeur, le contenu fichier d'un dossier (images, docs) est toujours rendu AVANT ses sous-dossiers (qui créent de nouvelles sections). La sidebar triant les enfants par 'order' en mélangeant fichiers et dossiers, un sous-dossier avec order bas pouvait apparaître avant un fichier image. Fix : ajout de sortedChildren() dans le composant sidebar qui place les fichiers (triés par order) avant les sous-dossiers (triés par order), alignant ainsi l'arbre de fichiers avec la structure de l'éditeur.",
@@ -2710,14 +2714,16 @@
       "prompt": "il y a un soucis d'ordre dans le menu fichier zone 3, l'image est placé dans le menu 1-2 avant le menu 1-2-1 dans l'affichage du mode edition zone 4 et dans le menu fichier zone 3 il est affiché après le menu 1-2-1, il faut que l'ordre soi identique et donc l'image doit être placé avant le menu 1-2-1 dans le menu des fichiers",
       "startedAt": "2026-05-06T00:06:00Z",
       "completedAt": "2026-05-06T00:10:00Z"
-    }
-  ,{
+    },
+    {
       "id": "mod-116",
       "version": "THI-0.66",
       "date": "2026-05-06T00:20:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Sidebar : image imbriquée dans doc affichée comme enfant",
       "description": "Quand une image est placée dans un bloc document/code dans l'éditeur, elle doit apparaître dans la sidebar sous ce document, indentée d'un niveau. Implémentation : (1) onSectionsChange extrait la map fileId->imageIds[] depuis orderedChildIds des AdditionalFile et la stocke dans nestedImagesMap signal. (2) Le signal est passé en @Input à la sidebar. (3) sortedChildren() exclut les images imbriquées de la liste directe du dossier pour éviter les doublons. (4) Le template sidebar affiche les images imbriquées juste après leur document parent, avec un niveau d'indentation supplémentaire.",
@@ -2732,14 +2738,16 @@
       "prompt": "lorsque je deplace l'image dans une section document/code dans la zone 4 edition il faut que dans le menu fichier zone 3 celui ci apparaisse après le document/code et un niveau en dessous pour bien montré qu'il apparatient au document",
       "startedAt": "2026-05-06T00:11:00Z",
       "completedAt": "2026-05-06T00:20:00Z"
-    }
-  ,{
+    },
+    {
       "id": "mod-117",
       "version": "THI-0.66",
       "date": "2026-05-06T00:30:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Fix position image drag inter-section : conserver marqueur inline",
       "description": "Lors du drag d'une image vers une position précise dans une autre section, l'image atterrissait en bas de la section cible au lieu de la position indiquée. Cause : parseUnifiedContent retirait les marqueurs {{IMG:id}} du mainContent avant sauvegarde dans contenu.md. Au rechargement des fichiers, buildDocSections réinsérait le marqueur à la FIN de la section (basé sur order), perdant la position exacte. Fix : conserver les marqueurs {{IMG:id}} autonomes inline dans mainContent. Ainsi contenu.md stocke la position exacte, et buildDocSections détecte le marker via imageIdsInSectionText et ne l'ajoute pas en double à la fin.",
@@ -2758,7 +2766,9 @@
       "date": "2026-05-06T00:45:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:auth|admin|home",
       "title": "Fix doublons compilation après merge base B0.43",
       "description": "Le merge de la base B0.43 (commit e50f62b) a introduit des blocs de code dupliqués qui cassaient la compilation Angular (TS2300/TS2393). Trois doublons supprimés : (1) config.service.ts — déclaration en double du signal woActionHistoryNavEnabled (lignes 56-57) ; (2) config.component.ts — getter woActionHistoryNavEnabled et méthode toggleWoActionHistoryNav redéfinis (la version conservée intègre undoAction/redoAction, la version simpliste sans undo a été supprimée) ; (3) home.component.ts — méthode goToPrimary dupliquée à l'identique. ⚠️ Ces fichiers sont des fichiers base — la correction doit être propagée vers worganic-base pour éviter que le bug réapparaisse au prochain sync.",
@@ -2779,7 +2789,9 @@
       "date": "2026-05-06T01:05:00Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Doc projet-editor : sync avec nouvelles fonctionnalités",
       "description": "Mise à jour complète de docs/structure/projet-editor.component.md pour refléter l'état actuel du composant : ajout des signaux activeNodeId/scrollToNodeId/zone5Tab/nestedImagesMap/diffEntry, computed activeNodeInfo et activeHistoryIds, dépendance ProjetCollabService (WebSocket collab), sous-composants ProjetHistoryComponent et ProjetDiffComponent, détection de déplacements d'images via marqueurs {{IMG:id}}, gestion des fichiers additionnels (création/suppression/déplacement), synchronisation d'ordre via orderedFileIds, mutex isSaving + pendingSections, panneau à onglets Conversation/Historique avec filtrage par sélection. Scénarios de test étoffés en conséquence.",
@@ -2791,6 +2803,57 @@
       "prompt": "met à jour le fichier @docs/structure/projet-editor.component.md  avec les nouvelles fonctionnalité et commit les modifications sur le projet child worganic/THI-V01-child",
       "startedAt": "2026-05-06T01:00:00Z",
       "completedAt": "2026-05-06T01:05:00Z"
+    },
+    {
+      "id": "mod-120",
+      "version": "THI-0.68",
+      "date": "2026-05-06T10:00:00.000Z",
+      "type": "config",
+      "commitType": "MERGE",
+      "scope": [
+        "frankenstein",
+        "server",
+        "data",
+        "system"
+      ],
+      "features": "frankenstein:projet-editor|admin|config|home|landing,server:data,system:workflow",
+      "title": "Sync base B0.43 dans THI-V01 - commit des fichiers non committés",
+      "description": "Commit de tous les fichiers modifiés suite à la synchronisation depuis la base B0.43. Inclut les mises à jour des services core, des composants projet-editor, des pages admin, config, home, landing, et des fichiers server.",
+      "files": [
+        ".claude/settings.local.json",
+        "data/base-propagation.json",
+        "frankenstein/src/app/core/services/config.service.ts",
+        "frankenstein/src/app/core/services/projet-collab.service.ts",
+        "frankenstein/src/app/core/services/wo-action-history.service.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.html",
+        "frankenstein/src/app/pages/admin/tabs/admin-help/admin-help.component.html",
+        "frankenstein/src/app/pages/public/landing/landing.component.html",
+        "frankenstein/src/app/pages/user/config/config.component.ts",
+        "frankenstein/src/app/pages/user/home/home.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/tools/wo/wo-actions/wo-actions-widget.component.html",
+        "frankenstein/src/app/tools/wo/wo-actions/wo-actions.component.html",
+        "frankenstein/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component.ts",
+        "frankenstein/src/environments/environment.prod.ts",
+        "server/init-db.js",
+        "server/server-data.js",
+        "docs/structure/projets.component.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "oui je veux commiter tous le child worganic/THI-V01-child",
+      "startedAt": "2026-05-06T09:55:00.000Z",
+      "completedAt": "2026-05-06T10:00:00.000Z"
     }
   ]
 }
