@@ -25,6 +25,28 @@
 - Si la réponse tient en 3 phrases, ne fais pas 3 paragraphes
 - Si je dis "oui" ou "ok", ne développe pas
 
+## Règle obligatoire : Vérification de compilation Angular
+
+**Après toute modification d'un fichier Angular** (`.html`, `.component.ts`, `.service.ts`, `.module.ts`), vérifier que l'application compile sans erreur avant de déclarer la tâche terminée.
+
+### Commande de vérification
+```bash
+cd frankenstein && npx ng build --no-progress 2>&1 | grep -E "(ERROR|✘|error TS)" | grep -v "budget"
+```
+Si la commande retourne des lignes → corriger avant de continuer. Si aucune ligne → compilation OK.
+
+### Pourquoi `tsc --noEmit` est insuffisant
+`tsc --noEmit` ne détecte pas les erreurs de template Angular (NG5xxx, NG8xxx). Seul `ng build` valide la compilation complète des templates.
+
+### Piège fréquent : classes Tailwind avec `/`
+Angular `[class.xxx]` **ne supporte pas** les `/` dans les noms de classe (ex: `indigo-500/40`).
+- ❌ `[class.border-indigo-500/40]="condition"` — NG5002 : tag non terminé
+- ✅ `[ngClass]="condition ? 'border-indigo-500/40' : 'autre-classe'"` — correct
+
+Toujours utiliser `[ngClass]` quand une classe Tailwind contient `/`.
+
+---
+
 ## Règle obligatoire : Historique des modifications
 
 **À chaque fois que tu reçois un prompt**, tu dois enregistrer une entrée dans `data/histoModif.json`.
@@ -139,15 +161,10 @@ Question 3 : "Titre du commit ?"
 ### Mise à jour de version.json
 Après décision de l'utilisateur, mettre à jour le champ `child` dans `version.json` :
 ```json
-{
-  "childId": "THI-V01",
-  "child": "THI-X.XX",
-  "baseSynced": "BX.XX"
-}
+{ "base": "BX.XX" }
 ```
-Le préfixe `THI-` identifie la version comme appartenant au child THI-V01. Exemples : `THI-0.01` → `THI-0.02` / `THI-0.99` → `THI-1.00`.
-Le champ `baseSynced` n'est mis à jour **que lors d'une synchronisation avec la base** (commit de type MERGE).
-Le nouveau numéro de version child (ex: `THI-0.02`) est ensuite inclus dans le champ `version` de l'entrée histoModif.json.
+Le préfixe `B` identifie la version comme appartenant à la base. Exemples : `B0.01` → `B0.02` / `B0.99` → `B1.00`.
+Le nouveau numéro de version (ex: `B0.02`) est ensuite inclus dans le champ `version` de l'entrée histoModif.json.
 
 ---
 
@@ -172,7 +189,7 @@ Le titre doit refléter **l'ensemble des prompts depuis le dernier git**, pas se
 
 1. Mettre à jour `version.json` avec le nouveau numéro
 2. `git add` des fichiers modifiés (ne pas utiliser `git add .` — lister les fichiers explicitement)
-3. `git commit -m "THI-X.XX - YYYYMMDD - [TYPE] - Titre choisi"`
+3. `git commit -m "BASE-BX.XX - YYYYMMDD - [TYPE] - Titre choisi"`
    - Format de date : YYYYMMDD (ex: 20260321)
 4. `git push`
 5. **Enregistrer le déploiement en BDD** via le script `server/deploy-log.js` :
@@ -181,7 +198,7 @@ Le titre doit refléter **l'ensemble des prompts depuis le dernier git**, pas se
    - `--files` : union de tous les fichiers modifiés depuis le dernier commit
 ```bash
 node server/deploy-log.js \
-  --version "THI-X.XX" \
+  --version "BX.XX" \
   --commit "vX.XX - YYYYMMDD - [TYPE] - Titre choisi" \
   --description "Description consolidée de TOUS les prompts depuis le dernier git" \
   --ai "Claude Code" \
@@ -196,28 +213,93 @@ node server/deploy-log.js \
 
 ---
 
-## Règle obligatoire : Synchronisation avec la base (worganic-base)
+## Règle obligatoire : Propagation vers les children
 
-### Vérification au début de chaque session
-Lire `version.json` et afficher :
+### Fichiers "core" — propagation automatique requise
+Toute modification d'un fichier dans les chemins suivants implique `propagationRequired: true` :
+- `server/` (sauf `server/server-data.js` si modification purement locale)
+- `electron/`
+- `CLAUDE.md`
+- `data/config/`
+- `server/deploy-log.js`
+
+### Question de propagation en fin de prompt
+Après la question de commit (Oui/Non), si la modification touche des fichiers "core", poser :
 ```
-Child THI-V01 — version child : THI-X.XX | base syncée : BX.XX
+Question : "Cette modification doit-elle être propagée aux children ?"
+Options  : Oui — propagation requise | Non — base uniquement
 ```
-Si l'utilisateur mentionne une mise à jour de la base ou un `baseSynced` inférieur à la version base connue, afficher l'avertissement :
-> ⚠️ La base a été mise à jour. Pensez à intégrer les changements avant de committer (Admin → Propagations).
 
-### Workflow de synchronisation base → child
-Quand l'utilisateur intègre des modifications de la base :
-1. Appliquer les fichiers listés dans `propagationScope` de l'entrée `base-propagation.json` concernée
-2. Mettre à jour `baseSynced` dans `version.json` avec la version base intégrée
-3. Committer avec le type `MERGE` et le format :
-   ```
-   THI-X.XX - YYYYMMDD - [MERGE] - Sync base BX.XX
-   ```
-4. Informer l'utilisateur qu'il peut marquer la propagation comme traitée dans l'admin de la base
+### Si propagation requise → ajouter une entrée dans `data/base-propagation.json`
+```json
+{
+  "baseVersion": "BX.XX",
+  "date": "<ISO 8601>",
+  "modRef": "mod-XXX",
+  "title": "Titre court de la modification",
+  "propagationRequired": true,
+  "propagationScope": ["chemin/fichier1", "chemin/fichier2"],
+  "propagationNote": "Ce qu'il faut faire dans chaque child"
+}
+```
+Ajouter l'entrée dans le tableau `entries` de `data/base-propagation.json`.
 
-### Champs `version` dans histoModif.json
-Le champ `version` d'une entrée histoModif utilise toujours la version **child** (`THI-X.XX`), pas la version base.
+### Fichiers et dossiers JAMAIS inclus dans propagationScope
+Les chemins suivants appartiennent exclusivement au child. Ne jamais les ajouter à `propagationScope` :
+- `data/child/**` — configs branding, thème, nav, landing, home
+- `frankenstein/src/app/child/**` — routes child, onglets admin child, pages child
+- `frankenstein/src/environments/environment.ts` — URLs spécifiques au child
+- `frankenstein/src/app/pages/child/**` — pages exclusives au child
+
+### Marquer une propagation comme traitée
+Quand l'utilisateur confirme qu'un child a intégré la modification, mettre `propagationRequired: false` sur l'entrée correspondante et ajouter `"syncedBy": ["THI-V01"]`.
+
+---
+
+## Règle obligatoire : Propagation documentée à chaque commit base
+
+**À chaque commit base**, si des fichiers "core" ont été modifiés, il est **obligatoire** d'ajouter une entrée dans `data/base-propagation.json` **avant** de committer. Sans cette entrée, les children ne sauront jamais quoi mettre à jour.
+
+### Pourquoi cette règle est critique
+Le champ `baseSynced` dans `version.json` d'un child indique la version base référencée, **pas** que les fichiers ont été copiés. Sans entrée dans `base-propagation.json`, le child est marqué "à jour" alors que des fichiers manquent. C'est exactement ce bug qui s'est produit sur B0.26-B0.33.
+
+### Procédure obligatoire avant tout commit base
+
+**Étape 1 — Lister les fichiers modifiés** (automatique depuis les `files` de l'entrée histoModif)
+
+**Étape 2 — Identifier les fichiers "core"** (ceux listés dans la section "Fichiers core — propagation automatique requise" ci-dessus)
+
+**Étape 3 — Créer l'entrée dans `data/base-propagation.json`** si au moins un fichier core est modifié :
+```json
+{
+  "baseVersion": "BX.XX",
+  "date": "<ISO 8601>",
+  "modRef": "mod-XXX",
+  "title": "Titre court de la modification",
+  "propagationRequired": true,
+  "propagationScope": ["liste des fichiers core modifiés"],
+  "propagationNote": "Instructions précises : que copier, que modifier, que créer dans chaque child"
+}
+```
+
+**Étape 4 — Inclure `data/base-propagation.json` dans le `git add`** de ce commit.
+
+### Checklist de vérification propagation (à exécuter en début de session child)
+
+Quand un child est ouvert avec un `baseSynced` inférieur à la version base courante, vérifier pour chaque entrée `propagationRequired: true` dans `base-propagation.json` que chaque fichier du `propagationScope` est bien à jour dans le child en le comparant à la base :
+
+```bash
+# Vérifier qu'un fichier est identique entre base et child
+diff "worganic-base/chemin/fichier" "child--THI-V01/chemin/fichier"
+```
+
+Si une différence est détectée → appliquer le fichier depuis la base avant de continuer.
+
+### Règle du `propagationNote` — être précis
+La note doit permettre à un développeur (ou à une IA) d'appliquer la modification sans lire le diff git. Elle doit mentionner :
+- Les nouveaux fichiers à créer
+- Les sections à ajouter dans les fichiers existants (avec contexte : "après la ligne X", "dans la méthode Y")
+- Les remplacements de patterns (ex: "remplacer `text-white` par `dark:text-btn-text` sur tous les boutons `bg-primary`")
 
 ---
 
@@ -314,6 +396,60 @@ frankenstein/src/app/components/
 - ❌ Copier-coller le même bloc HTML dans `dashboard.component.html` ET `framework-diagram.component.html`
 - ❌ Gérer la logique d'un popup directement dans un composant page (`dashboard.component.ts`)
 - ❌ Dupliquer des méthodes identiques (`openRoleInfo`, `closeRoleInfo`, `getRoleCategoryBgColor`…) dans plusieurs composants pages
+
+---
+
+## Règle obligatoire : Documentation des composants
+
+Le dossier `docs/structure/` contient la spécification fonctionnelle de chaque composant Angular.
+Convention de nommage : `<nom-du-composant>.component.md`.
+
+### À chaque prompt touchant un composant Angular
+
+**Étape 1 — Lire le doc** : avant toute modification, lire le fichier correspondant dans `docs/structure/`.
+Si le fichier n'existe pas → le créer à la fin avec la structure ci-dessous.
+
+**Étape 2 — Signaler un conflit éventuel** : si la modification prévue change le comportement documenté
+(Inputs/Outputs, règles métier, dépendances), le signaler **avant** de coder :
+> "⚠️ Cette modification affecte [section X] du doc. Je vais mettre à jour la doc après le code."
+
+**Étape 3 — Mettre à jour le doc** : après modification du composant, mettre à jour le fichier `.md`
+correspondant si l'une de ces sections a changé :
+- **Fonctionnement Général** : comportement global modifié
+- **Entrées / Sorties** : `@Input()` ou `@Output()` ajoutés, supprimés ou renommés
+- **Dépendances** : service injecté ajouté ou retiré
+- **Règles Métier** : logique métier ajoutée, modifiée ou supprimée
+- **Scénarios de Test** : nouveau cas de test ou régression couverte
+
+Ne pas mettre à jour si la modification est purement cosmétique (style, mise en page) ou un fix interne
+sans impact sur l'interface publique du composant.
+
+### Structure d'un fichier doc (à respecter à la création)
+
+```markdown
+# Documentation : NomDuComposant
+
+## Fonctionnement Général
+[Description du rôle du composant]
+
+## Entrées (Inputs) / Sorties (Outputs)
+- `@Input() xxx` : [description]
+- `@Output() yyy` : [description]
+
+## Dépendances
+- `NomService` : [rôle dans ce composant]
+
+## Règles Métier
+- [Règle 1]
+- [Règle 2]
+
+## Scénarios de Test Fonctionnel (Anti-Régression)
+1. [Scénario 1]
+2. [Scénario 2]
+```
+
+### Fichiers doc à inclure dans `git add`
+Si un fichier `docs/structure/*.md` a été modifié ou créé, l'inclure dans le commit associé.
 
 ---
 

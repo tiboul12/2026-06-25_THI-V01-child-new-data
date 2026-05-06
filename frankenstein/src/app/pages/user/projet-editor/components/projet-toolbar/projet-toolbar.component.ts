@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../../core/services/auth.service';
@@ -11,6 +11,8 @@ import { AuthService } from '../../../../../core/services/auth.service';
 })
 export class ProjetToolbarComponent {
   @Input() projectTitle = '';
+  @Input() isDirty = false;
+  @Output() save = new EventEmitter<void>();
 
   constructor(private router: Router, private auth: AuthService) {}
 

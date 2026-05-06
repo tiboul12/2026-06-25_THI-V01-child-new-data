@@ -1,11 +1,8 @@
 import { Component, Input, Output, EventEmitter, signal, OnChanges, SimpleChanges, HostListener, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { FileNode, ProjectFilesService } from '../../../../../core/services/project-files.service';
 import { ConversationService } from '../../../../../core/services/conversation.service';
-import { WoActionHistoryService } from '../../../../../core/services/wo-action-history.service';
-import { ProjetCollabService, LockInfo } from '../../../../../core/services/projet-collab.service';
 
 interface ContextMenu { x: number; y: number; node: FileNode | null; }
 interface InlineInput { type: 'rename' | 'new-file' | 'new-folder'; nodeId: string | null; parentId: string | null; }
@@ -31,8 +28,6 @@ export class ProjetSidebarComponent implements OnChanges {
   @Input() projectTitle = '';
   @Input() files: FileNode[] = [];
   @Input() activeFileId: string | null = null;
-  @Input() projetId = '';
-  @Input() nestedImagesMap: Record<string, string[]> = {};
   @Output() fileSelect = new EventEmitter<FileNode>();
   @Output() folderCreated = new EventEmitter<{ name: string; parentId: string | null }>();
   @Output() refresh = new EventEmitter<void>();
@@ -53,40 +48,8 @@ export class ProjetSidebarComponent implements OnChanges {
   @Output() dragDrop = new EventEmitter<DragDropEvent>();
 
   private convSvc = inject(ConversationService);
-  private woHistory = inject(WoActionHistoryService);
-  readonly collab = inject(ProjetCollabService);
 
-  constructor(private svc: ProjectFilesService, private elRef: ElementRef, private router: Router) {}
-
-  // ── Verrous collaboration ──────────────────────────────────
-
-  isLockedByMe(nodeId: string): boolean { return this.collab.isLockedByMe(nodeId); }
-  isLockedByOther(nodeId: string): boolean { return this.collab.isLockedByOther(nodeId); }
-  getLockInfo(nodeId: string): LockInfo | undefined { return this.collab.getLock(nodeId); }
-
-  getLockTooltip(nodeId: string): string {
-    const lock = this.collab.getLock(nodeId);
-    if (!lock) return '';
-    if (this.collab.isLockedByMe(nodeId)) return 'Verrouillé par moi';
-    const dt = new Date(lock.lockedAt);
-    const hhmm = dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `Verrouillé par ${lock.lockedByName} depuis ${hhmm}`;
-  }
-
-  async toggleLock(node: FileNode) {
-    this.closeContextMenu();
-    if (!this.projetId) return;
-    try {
-      if (this.collab.isLockedByMe(node.id)) {
-        await this.collab.unlockNode(this.projetId, node.id);
-      } else if (!this.collab.isLockedByOther(node.id)) {
-        await this.collab.lockNode(this.projetId, node.id);
-      }
-    } catch (e: any) {
-      const msg = e?.error?.error || 'Erreur lors du verrouillage';
-      console.warn('[Sidebar] lock error:', msg);
-    }
-  }
+  constructor(private svc: ProjectFilesService, private elRef: ElementRef) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['files']) {
@@ -200,69 +163,17 @@ export class ProjetSidebarComponent implements OnChanges {
     const val = this.inlineValue.trim();
     try {
       if (inp.type === 'new-folder') {
-        const folder = await this.svc.createFolder(this.projectName, { name: val, parentId: inp.parentId || undefined });
-        this.woHistory.track({
-          section: 'projets/sections',
-          actionType: 'create',
-          label: `Création de menu «${val}»`,
-          entityType: 'section',
-          entityId: folder.id,
-          entityLabel: val,
-          afterState: { folderName: val, parentId: inp.parentId || null },
-          context: { projectId: this.projectName, projectTitle: this.projectTitle },
-          undoable: true,
-          undoAction: {
-            endpoint: `/api/file-projects/${this.projectName}/folders/${folder.id}`,
-            method: 'DELETE'
-          }
-        }).catch(() => {});
+        await this.svc.createFolder(this.projectName, { name: val, parentId: inp.parentId || undefined });
         if (inp.parentId) this.expandNode(inp.parentId);
         this.folderCreated.emit({ name: val, parentId: inp.parentId || null });
       } else if (inp.type === 'new-file') {
         const created = await this.svc.createFile(this.projectName, { name: val, parentId: inp.parentId || undefined });
-        this.woHistory.track({
-          section: 'projets/fichiers',
-          actionType: 'create',
-          label: `Création de document «${val}»`,
-          entityType: 'file',
-          entityId: created.id,
-          entityLabel: val,
-          afterState: { fileName: val, parentId: inp.parentId || null },
-          context: { projectId: this.projectName, projectTitle: this.projectTitle },
-          undoable: true,
-          undoAction: {
-            endpoint: `/api/file-projects/${this.projectName}/files/${created.id}`,
-            method: 'DELETE'
-          }
-        }).catch(() => {});
         if (inp.parentId) this.expandNode(inp.parentId);
         this.fileSelect.emit(created);
       } else if (inp.type === 'rename' && inp.nodeId) {
         const node = this.findNode(inp.nodeId);
-        const oldName = node?.type === 'file' ? node.name.replace(/\.md$/, '') : node?.name;
-        if (node?.type === 'file') {
-          await this.svc.renameFile(this.projectName, inp.nodeId, val);
-          this.woHistory.track({
-            section: 'projets/fichiers',
-            actionType: 'update',
-            label: `Renommage de document «${oldName}» → «${val}»`,
-            entityType: 'file',
-            entityId: inp.nodeId,
-            entityLabel: val,
-            beforeState: oldName ? { fileName: oldName } : undefined,
-            afterState: { fileName: val },
-            context: { projectId: this.projectName, projectTitle: this.projectTitle },
-            undoable: !!oldName,
-            undoAction: oldName ? {
-              endpoint: `/api/file-projects/${this.projectName}/files/${inp.nodeId}`,
-              method: 'PATCH',
-              payload: { name: oldName }
-            } : undefined
-          }).catch(() => {});
-        } else if (node?.type === 'folder') {
-          await this.svc.renameFolder(this.projectName, inp.nodeId, val);
-          // Folder renames are also tracked in processSectionsChange via the editor
-        }
+        if (node?.type === 'file') await this.svc.renameFile(this.projectName, inp.nodeId, val);
+        else if (node?.type === 'folder') await this.svc.renameFolder(this.projectName, inp.nodeId, val);
       }
       this.refresh.emit();
     } catch (e) { console.error(e); }
@@ -277,23 +188,8 @@ export class ProjetSidebarComponent implements OnChanges {
     const node = this.deleteConfirm();
     if (!node) return;
     try {
-      if (node.type === 'file') {
-        await this.svc.deleteFile(this.projectName, node.id);
-        this.woHistory.track({
-          section: 'projets/fichiers',
-          actionType: 'delete',
-          label: `Suppression de document «${node.name.replace(/\.md$/, '')}»`,
-          entityType: 'file',
-          entityId: node.id,
-          entityLabel: node.name.replace(/\.md$/, ''),
-          beforeState: { fileName: node.name.replace(/\.md$/, '') },
-          context: { projectId: this.projectName, projectTitle: this.projectTitle },
-          undoable: false
-        }).catch(() => {});
-      } else {
-        await this.svc.deleteFolder(this.projectName, node.id);
-        // Folder deletions are also tracked in processSectionsChange via the editor
-      }
+      if (node.type === 'file') await this.svc.deleteFile(this.projectName, node.id);
+      else await this.svc.deleteFolder(this.projectName, node.id);
       this.refresh.emit();
     } catch (e) { console.error(e); }
     this.deleteConfirm.set(null);
@@ -416,22 +312,6 @@ export class ProjetSidebarComponent implements OnChanges {
 
   isImageFile(name: string): boolean {
     return this.svc.isImageFile(name);
-  }
-
-  // Trie les enfants : fichiers (par order) avant sous-dossiers (par order)
-  // Exclut les images imbriquées dans un doc (elles sont affichées sous leur doc parent)
-  sortedChildren(nodes: FileNode[]): FileNode[] {
-    const nestedImageIds = new Set(Object.values(this.nestedImagesMap).flat());
-    const files = nodes.filter(n => n.type === 'file' && !nestedImageIds.has(n.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
-    const folders = nodes.filter(n => n.type === 'folder').sort((a, b) => (a.order || 0) - (b.order || 0));
-    return [...files, ...folders];
-  }
-
-  // Retourne les FileNode images imbriquées dans un bloc document (via nestedImagesMap)
-  getNestedImages(fileId: string): FileNode[] {
-    const ids = this.nestedImagesMap[fileId];
-    if (!ids || ids.length === 0) return [];
-    return ids.map(id => this.findNode(id)).filter((n): n is FileNode => n !== null);
   }
 
   @HostListener('document:click', ['$event'])

@@ -27,7 +27,36 @@ export class ConfigComponent implements OnInit, OnDestroy {
   currentTheme: 'dark' | 'light' | 'pink' = 'dark';
 
   get headerIaVisible(): boolean { return this.configService.headerIaVisible(); }
-  toggleHeaderIa() { this.configService.saveHeaderIaVisible(!this.headerIaVisible); }
+  toggleHeaderIa() {
+    const before = this.headerIaVisible;
+    const after = !before;
+    this.configService.saveHeaderIaVisible(after);
+    this.woHistory.track({
+      section: 'admin/config', actionType: 'toggle',
+      label: `${after ? 'Activation' : 'Désactivation'} de l'affichage IA dans le header`,
+      entityType: 'setting', entityId: 'headerIaVisible', entityLabel: 'Header IA',
+      beforeState: { headerIaVisible: before }, afterState: { headerIaVisible: after },
+      undoable: true,
+      undoAction: { endpoint: '/api/config/keys', method: 'POST', payload: { headerIaVisible: before } },
+      redoAction: { endpoint: '/api/config/keys', method: 'POST', payload: { headerIaVisible: after } }
+    }).catch(() => {});
+  }
+
+  get woActionHistoryNavEnabled(): boolean { return this.configService.woActionHistoryNavEnabled(); }
+  toggleWoActionHistoryNav() {
+    const before = this.woActionHistoryNavEnabled;
+    const after = !before;
+    this.configService.saveNavItems({ woActionHistory: after });
+    this.woHistory.track({
+      section: 'admin/config', actionType: 'toggle',
+      label: `${after ? 'Activation' : 'Désactivation'} du lien Historique d'actions dans la nav`,
+      entityType: 'setting', entityId: 'woActionHistoryNav', entityLabel: 'Nav : Historique actions',
+      beforeState: { enabled: before }, afterState: { enabled: after },
+      undoable: true,
+      undoAction: { endpoint: '/api/config/keys', method: 'POST', payload: { navItems: { woActionHistory: before } } },
+      redoAction: { endpoint: '/api/config/keys', method: 'POST', payload: { navItems: { woActionHistory: after } } }
+    }).catch(() => {});
+  }
 
   get woActionHistoryNavEnabled(): boolean { return this.configService.woActionHistoryNavEnabled(); }
   toggleWoActionHistoryNav() {
@@ -292,20 +321,43 @@ export class ConfigComponent implements OnInit, OnDestroy {
 
   toggleProvider(provider: string) {
     if (!this.cliStatus[provider as 'claude' | 'gemini'].installed) return;
-    
+    const wasActive = this.isProviderActive(provider);
+    const beforeProviders = [...this.activeProviders];
+    const beforeEnabledModels = {
+      claude: [...this.enabledModels.claude],
+      gemini: [...this.enabledModels.gemini]
+    };
     const idx = this.activeProviders.indexOf(provider);
     if (idx === -1) {
       this.activeProviders.push(provider);
-      // Activer tous les modèles par défaut lors de l'activation du provider
       const models = this.cliStatus[provider as 'claude' | 'gemini'].models;
       this.enabledModels[provider as 'claude' | 'gemini'] = models.map(m => m.value);
     } else {
       this.activeProviders.splice(idx, 1);
-      // Décocher tous les modèles si on désactive le provider
       this.enabledModels[provider as 'claude' | 'gemini'] = [];
     }
-    // Sauvegarde immédiate
+    const afterProviders = [...this.activeProviders];
+    const afterEnabledModels = {
+      claude: [...this.enabledModels.claude],
+      gemini: [...this.enabledModels.gemini]
+    };
     this.saveKeys(true);
+    this.woHistory.track({
+      section: 'admin/config', actionType: 'toggle',
+      label: `${!wasActive ? 'Activation' : 'Désactivation'} du provider ${provider}`,
+      entityType: 'provider', entityId: provider,
+      entityLabel: provider.charAt(0).toUpperCase() + provider.slice(1),
+      beforeState: { active: wasActive }, afterState: { active: !wasActive },
+      undoable: true,
+      undoAction: {
+        endpoint: '/api/config/keys', method: 'POST',
+        payload: { cliConfig: { activeProviders: beforeProviders, enabledModels: beforeEnabledModels } }
+      },
+      redoAction: {
+        endpoint: '/api/config/keys', method: 'POST',
+        payload: { cliConfig: { activeProviders: afterProviders, enabledModels: afterEnabledModels } }
+      }
+    }).catch(() => {});
   }
 
   // ── Checkboxes modèles ─────────────────────────────────────────────────
@@ -316,16 +368,35 @@ export class ConfigComponent implements OnInit, OnDestroy {
 
   toggleModel(provider: 'claude' | 'gemini', modelValue: string) {
     if (!this.cliStatus[provider].installed || !this.activeProviders.includes(provider)) return;
-
+    const wasEnabled = this.enabledModels[provider].includes(modelValue);
+    const beforeEnabledModels = {
+      claude: [...this.enabledModels.claude],
+      gemini: [...this.enabledModels.gemini]
+    };
     const list = this.enabledModels[provider];
     const idx = list.indexOf(modelValue);
-    if (idx === -1) {
-      list.push(modelValue);
-    } else {
-      list.splice(idx, 1);
-    }
-    // Sauvegarde immédiate
+    if (idx === -1) { list.push(modelValue); } else { list.splice(idx, 1); }
+    const afterEnabledModels = {
+      claude: [...this.enabledModels.claude],
+      gemini: [...this.enabledModels.gemini]
+    };
     this.saveKeys(true);
+    this.woHistory.track({
+      section: 'admin/config', actionType: 'toggle',
+      label: `${!wasEnabled ? 'Activation' : 'Désactivation'} du modèle ${modelValue} (${provider})`,
+      entityType: 'model', entityId: modelValue, entityLabel: modelValue,
+      context: { provider },
+      beforeState: { enabled: wasEnabled }, afterState: { enabled: !wasEnabled },
+      undoable: true,
+      undoAction: {
+        endpoint: '/api/config/keys', method: 'POST',
+        payload: { cliConfig: { activeProviders: [...this.activeProviders], enabledModels: beforeEnabledModels } }
+      },
+      redoAction: {
+        endpoint: '/api/config/keys', method: 'POST',
+        payload: { cliConfig: { activeProviders: [...this.activeProviders], enabledModels: afterEnabledModels } }
+      }
+    }).catch(() => {});
   }
 
   // ── Mise à jour des coûts ──────────────────────────────────────────────
@@ -362,6 +433,15 @@ export class ConfigComponent implements OnInit, OnDestroy {
   onTicketsToggle(val: boolean) {
     this.ticketsEnabled = val;
     this.configService.saveEnabledTools({ tickets: val });
+    this.woHistory.track({
+      section: 'admin/config', actionType: 'toggle',
+      label: `${val ? 'Activation' : 'Désactivation'} du module Tickets`,
+      entityType: 'tool', entityId: 'tickets', entityLabel: 'Tickets',
+      beforeState: { enabled: !val }, afterState: { enabled: val },
+      undoable: true,
+      undoAction: { endpoint: '/api/config/keys', method: 'POST', payload: { enabledTools: { tickets: !val } } },
+      redoAction: { endpoint: '/api/config/keys', method: 'POST', payload: { enabledTools: { tickets: val } } }
+    }).catch(() => {});
   }
 
   // ── Recette widget toggle ───────────────────────────────────────────────
@@ -369,6 +449,15 @@ export class ConfigComponent implements OnInit, OnDestroy {
   onRecetteWidgetToggle(val: boolean) {
     this.recetteWidgetEnabled = val;
     this.configService.saveEnabledTools({ recette: val });
+    this.woHistory.track({
+      section: 'admin/config', actionType: 'toggle',
+      label: `${val ? 'Activation' : 'Désactivation'} du widget Recette`,
+      entityType: 'tool', entityId: 'recette', entityLabel: 'Widget Recette',
+      beforeState: { enabled: !val }, afterState: { enabled: val },
+      undoable: true,
+      undoAction: { endpoint: '/api/config/keys', method: 'POST', payload: { enabledTools: { recette: !val } } },
+      redoAction: { endpoint: '/api/config/keys', method: 'POST', payload: { enabledTools: { recette: val } } }
+    }).catch(() => {});
   }
 
   // ── Sauvegarde ─────────────────────────────────────────────────────────
@@ -412,6 +501,17 @@ export class ConfigComponent implements OnInit, OnDestroy {
           this.saveStatus = 'success';
           this.saveMessage = res.message || 'Configuration sauvegardée';
           setTimeout(() => { this.saveStatus = 'idle'; }, 3000);
+          this.woHistory.track({
+            section: 'admin/config', actionType: 'update',
+            label: 'Sauvegarde de la configuration API',
+            entityType: 'apiConfig', entityId: 'keys', entityLabel: 'Clés API',
+            afterState: {
+              geminiActive: this.geminiKeyActive,
+              claudeActive: this.claudeKeyActive,
+              appVersion: this.appVersion
+            },
+            undoable: false
+          }).catch(() => {});
         }
       },
       error: () => {

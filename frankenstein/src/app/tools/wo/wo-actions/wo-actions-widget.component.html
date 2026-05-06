@@ -3,7 +3,7 @@
   <button
     (click)="toggleVisible()"
     title="Gestion des Actions"
-    class="fixed bottom-56 right-4 z-[100] w-12 h-12 rounded-full bg-light-primary dark:bg-primary hover:bg-light-primary/90 dark:hover:bg-primary/90 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+    class="fixed bottom-56 right-4 z-[100] w-12 h-12 rounded-full bg-light-primary dark:bg-primary hover:bg-light-primary/90 dark:hover:bg-primary/90 text-white dark:text-btn-text shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
   >
     <span class="material-symbols-outlined text-xl">{{ configService.activeTool() === 'actions' ? 'close' : 'bolt' }}</span>
   </button>

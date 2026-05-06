@@ -128,6 +128,32 @@ const SCHEMA_STATEMENTS = [
         model          VARCHAR(100)  DEFAULT '',
         mod_ids        VARCHAR(500)  DEFAULT ''
     )`,
+
+    `CREATE TABLE IF NOT EXISTS wo_action_history (
+        id            VARCHAR(50)   PRIMARY KEY,
+        timestamp     DATETIME      DEFAULT CURRENT_TIMESTAMP,
+        section       VARCHAR(100)  NOT NULL,
+        subsection    VARCHAR(100)  DEFAULT '',
+        action_type   VARCHAR(50)   NOT NULL,
+        label         VARCHAR(500)  NOT NULL,
+        entity_type   VARCHAR(100)  DEFAULT '',
+        entity_id     VARCHAR(100)  DEFAULT '',
+        entity_label  VARCHAR(255)  DEFAULT '',
+        before_state  JSON          DEFAULT NULL,
+        after_state   JSON          DEFAULT NULL,
+        user_id       CHAR(36)      NULL,
+        username      VARCHAR(255)  DEFAULT '',
+        context       JSON          DEFAULT NULL,
+        undoable      BOOLEAN       DEFAULT FALSE,
+        undone        BOOLEAN       DEFAULT FALSE,
+        undone_at     DATETIME      NULL,
+        undone_by     VARCHAR(255)  DEFAULT '',
+        undo_action   JSON          DEFAULT NULL,
+        meta          JSON          DEFAULT NULL,
+        INDEX idx_wah_section  (section),
+        INDEX idx_wah_user     (user_id),
+        INDEX idx_wah_entity   (entity_type, entity_id)
+    )`,
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────

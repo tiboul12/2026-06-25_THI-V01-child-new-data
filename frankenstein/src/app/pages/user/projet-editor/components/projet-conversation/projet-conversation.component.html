@@ -1,4 +1,4 @@
-<div class="h-full flex flex-col bg-white dark:bg-[#0f0f17]">
+<div class="h-full flex flex-col border-l border-light-border dark:border-white/8 bg-white dark:bg-[#0f0f17]">
 
   <!-- Header conversation -->
   <div class="flex items-center justify-between px-4 py-2 border-b border-light-border dark:border-white/8 flex-shrink-0">
@@ -97,7 +97,7 @@
           </div>
           <button (click)="send()"
                   [disabled]="!inputMessage.trim() || !sectionId"
-                  class="p-1 rounded-lg bg-light-primary dark:bg-primary text-white hover:opacity-80 transition-opacity disabled:opacity-50">
+                  class="p-1 rounded-lg bg-light-primary dark:bg-primary text-white dark:text-btn-text hover:opacity-80 transition-opacity disabled:opacity-50">
             <span class="material-symbols-outlined text-sm">arrow_upward</span>
           </button>
         </div>

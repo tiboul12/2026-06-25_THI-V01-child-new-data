@@ -341,7 +341,7 @@
       <!-- Action Buttons -->
       <div class="col-span-1 md:col-span-2 flex items-center gap-3 pt-2">
         <button type="submit" [disabled]="!actionForm.name?.trim()"
-                class="px-6 py-2.5 bg-light-primary dark:bg-primary text-white text-sm font-bold rounded-lg hover:bg-light-primary/90 dark:hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                class="px-6 py-2.5 bg-light-primary dark:bg-primary text-white dark:text-btn-text text-sm font-bold rounded-lg hover:bg-light-primary/90 dark:hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
           <span class="material-symbols-outlined text-sm">{{editingActionId ? 'save' : 'add'}}</span>
           {{editingActionId ? 'Enregistrer' : 'Créer l\'action'}}
         </button>
@@ -388,7 +388,7 @@
   </div>
 
   <div class="flex justify-end mb-4">
-    <button *ngIf="selectedActionIds.length > 0" (click)="showPromptsPopup = true" class="px-4 py-2 bg-light-primary dark:bg-primary text-white text-sm font-bold rounded-lg flex items-center gap-2 hover:bg-light-primary/90 dark:hover:bg-primary/90 transition-colors shadow-lg">
+    <button *ngIf="selectedActionIds.length > 0" (click)="showPromptsPopup = true" class="px-4 py-2 bg-light-primary dark:bg-primary text-white dark:text-btn-text text-sm font-bold rounded-lg flex items-center gap-2 hover:bg-light-primary/90 dark:hover:bg-primary/90 transition-colors shadow-lg">
       <span class="material-symbols-outlined text-[18px]">visibility</span>
       Voir les prompts sélectionnés ({{selectedActionIds.length}})
     </button>
@@ -548,7 +548,7 @@
           <span class="text-sm text-light-text dark:text-white/80 flex-grow">Mode Git</span>
           <div class="flex rounded-lg overflow-hidden border border-light-border dark:border-white/15 text-xs font-medium">
             <button (click)="useGit = true"
-                    [ngClass]="useGit ? 'bg-light-primary dark:bg-primary text-white' : 'bg-light-surface-hover dark:bg-white/5 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70'"
+                    [ngClass]="useGit ? 'bg-light-primary dark:bg-primary text-white dark:text-btn-text' : 'bg-light-surface-hover dark:bg-white/5 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70'"
                     class="px-3 py-1.5 transition-colors flex items-center gap-1">
               <span class="material-symbols-outlined text-[13px]">merge</span>
               Branche + Commit + Push
@@ -601,7 +601,7 @@
             </button>
             <button (click)="launchAgent()"
                     [disabled]="agentLaunching || agentIsRunning || !agentAvailable || selectedActionIds.length === 0"
-                    class="px-5 py-2 bg-light-primary dark:bg-primary text-white text-sm font-bold rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
+                    class="px-5 py-2 bg-light-primary dark:bg-primary text-white dark:text-btn-text text-sm font-bold rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
               <span *ngIf="!agentLaunching" class="material-symbols-outlined text-[18px]">rocket_launch</span>
               <span *ngIf="agentLaunching" class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
               {{ agentLaunching ? 'Lancement...' : (agentIsRunning ? 'Run en cours...' : 'Lancer les prompts') }}

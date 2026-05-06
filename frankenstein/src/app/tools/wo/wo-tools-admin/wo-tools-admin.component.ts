@@ -74,4 +74,5 @@ export class WoToolsAdminComponent {
       case 'actions': this.configService.saveEnabledTools({ actions: val }); break;
     }
   }
+
 }

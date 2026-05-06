@@ -18,6 +18,11 @@ export class HomeComponent {
     this.router.navigate([route]);
   }
 
+  goToPrimary(): void {
+    const route = this.appConfig.homeConfig().primaryButtonRoute || '/projets';
+    this.router.navigate([route]);
+  }
+
   goToAdmin(): void {
     this.router.navigate(['/admin']);
   }

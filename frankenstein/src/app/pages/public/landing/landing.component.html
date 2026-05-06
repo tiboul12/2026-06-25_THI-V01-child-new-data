@@ -23,7 +23,7 @@
     <div class="header-inner">
       <div class="logo">
         <div class="logo-icon">
-          <span class="material-symbols-outlined">rocket_launch</span>
+          <span class="material-symbols-outlined">{{ appConfig.logoIcon() }}</span>
         </div>
         <span class="logo-text">{{ appName }}</span>
       </div>
@@ -44,7 +44,7 @@
   <section class="hero">
     <div class="hero-badge">
       <span class="material-symbols-outlined">auto_awesome</span>
-      Propulsé par IA · Claude &amp; Gemini
+      {{ lc.heroBadge || 'Propulsé par IA · Claude &amp; Gemini' }}
     </div>
 
     <!-- Bannière erreur BDD -->
@@ -62,14 +62,13 @@
     </div>
 
     <h1 class="hero-title">
-      Automatisez vos<br>
-      <span class="gradient-text">workflows créatifs</span><br>
-      avec l'intelligence artificielle
+      {{ lc.heroTitleLine1 || 'Automatisez vos' }}<br>
+      <span class="gradient-text">{{ lc.heroTitleHighlight || 'workflows créatifs' }}</span><br>
+      {{ lc.heroTitleLine2 || "avec l'intelligence artificielle" }}
     </h1>
 
     <p class="hero-subtitle">
-      Frankenstein Junior orchestre vos projets, génère du contenu IA à la demande
-      et pilote chaque étape de votre pipeline de création.
+      {{ lc.heroSubtitle || "Frankenstein Junior orchestre vos projets, génère du contenu IA à la demande et pilote chaque étape de votre pipeline de création." }}
     </p>
 
     <div class="hero-cta">
@@ -205,8 +204,8 @@
   <section class="cta-section">
     <div class="cta-card">
       <div class="cta-glow"></div>
-      <h2>Prêt à automatiser vos workflows ?</h2>
-      <p>Rejoignez la plateforme et laissez l'IA travailler pour vous</p>
+      <h2>{{ lc.ctaTitle || 'Prêt à automatiser vos workflows ?' }}</h2>
+      <p>{{ lc.ctaSubtitle || "Rejoignez la plateforme et laissez l'IA travailler pour vous" }}</p>
       <div class="cta-buttons">
         <button class="cta-primary-lg" (click)="openRegister()" [disabled]="dbError">
           <span class="material-symbols-outlined">rocket_launch</span>

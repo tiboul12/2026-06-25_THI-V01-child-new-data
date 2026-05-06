@@ -116,19 +116,6 @@
             forum
           </span>
         }
-
-        <!-- Indicateur verrou -->
-        @if (isLockedByMe(node.id)) {
-          <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-green-400 ml-0.5"
-                [title]="getLockTooltip(node.id)">
-            lock
-          </span>
-        } @else if (isLockedByOther(node.id)) {
-          <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-red-400 ml-0.5"
-                [title]="getLockTooltip(node.id)">
-            lock
-          </span>
-        }
       </div>
     }
 
@@ -137,25 +124,9 @@
       <div class="h-0.5 rounded-full bg-light-primary dark:bg-primary mx-1" [style.margin-left.px]="8 + depth * 10"></div>
     }
 
-    <!-- Images imbriquées dans un bloc document -->
-    @if (node.type === 'file' && !isImageFile(node.name) && getNestedImages(node.id).length > 0) {
-      @for (img of getNestedImages(node.id); track img.id) {
-        <div class="flex items-center gap-1 px-2 py-0.5 rounded mx-1 cursor-pointer group transition-colors"
-             [class]="getNodeClasses(img)"
-             [class.opacity-40]="isDragging(img.id)"
-             [style.padding-left.px]="8 + (depth + 1) * 10"
-             (click)="selectFile(img)"
-             (contextmenu)="onContextMenu($event, img); $event.stopPropagation()">
-          <span class="w-3 flex-shrink-0"></span>
-          <span class="material-symbols-outlined text-xs flex-shrink-0" [class]="getNodeIconClasses(img)">image</span>
-          <span class="text-[11px] truncate leading-5 flex-1" [class]="getNodeLabelClasses(img)">{{ img.name }}</span>
-        </div>
-      }
-    }
-
     <!-- Enfants récursifs -->
     @if (node.type === 'folder' && isExpanded(node.id)) {
-      <ng-container *ngTemplateOutlet="treeNodes; context: { nodes: sortedChildren(node.children || []), depth: depth + 1, parentId: node.id }"></ng-container>
+      <ng-container *ngTemplateOutlet="treeNodes; context: { nodes: node.children || [], depth: depth + 1, parentId: node.id }"></ng-container>
 
       @if (inlineInputIsFor('new-folder', node.id) || inlineInputIsFor('new-file', node.id)) {
         <div class="flex items-center gap-1 mx-1 px-2 py-0.5 rounded bg-light-primary/5 dark:bg-primary/5"
@@ -207,25 +178,6 @@
               (click)="askDelete(contextMenu()!.node!)">
         <span class="material-symbols-outlined text-sm">delete</span> Supprimer
       </button>
-
-      <!-- Verrou collaboration -->
-      <div class="border-t border-light-border dark:border-white/10 my-1"></div>
-      @if (isLockedByOther(contextMenu()!.node!.id)) {
-        <div class="flex items-center gap-2 px-3 py-1.5 text-red-400 text-left cursor-default opacity-70">
-          <span class="material-symbols-outlined text-sm">lock</span>
-          <span>{{ getLockTooltip(contextMenu()!.node!.id) }}</span>
-        </div>
-      } @else if (isLockedByMe(contextMenu()!.node!.id)) {
-        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-green-400 transition-colors text-left"
-                (click)="toggleLock(contextMenu()!.node!)">
-          <span class="material-symbols-outlined text-sm">lock_open</span> Déverrouiller
-        </button>
-      } @else {
-        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left"
-                (click)="toggleLock(contextMenu()!.node!)">
-          <span class="material-symbols-outlined text-sm">lock</span> Verrouiller
-        </button>
-      }
     }
 
   </div>
