@@ -32,6 +32,7 @@ export class ProjetSidebarComponent implements OnChanges {
   @Input() files: FileNode[] = [];
   @Input() activeFileId: string | null = null;
   @Input() projetId = '';
+  @Input() nestedImagesMap: Record<string, string[]> = {};
   @Output() fileSelect = new EventEmitter<FileNode>();
   @Output() folderCreated = new EventEmitter<{ name: string; parentId: string | null }>();
   @Output() refresh = new EventEmitter<void>();
@@ -86,8 +87,6 @@ export class ProjetSidebarComponent implements OnChanges {
       console.warn('[Sidebar] lock error:', msg);
     }
   }
-
-  goBack() { this.router.navigate(['/projets']); }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['files']) {
@@ -417,6 +416,22 @@ export class ProjetSidebarComponent implements OnChanges {
 
   isImageFile(name: string): boolean {
     return this.svc.isImageFile(name);
+  }
+
+  // Trie les enfants : fichiers (par order) avant sous-dossiers (par order)
+  // Exclut les images imbriquées dans un doc (elles sont affichées sous leur doc parent)
+  sortedChildren(nodes: FileNode[]): FileNode[] {
+    const nestedImageIds = new Set(Object.values(this.nestedImagesMap).flat());
+    const files = nodes.filter(n => n.type === 'file' && !nestedImageIds.has(n.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const folders = nodes.filter(n => n.type === 'folder').sort((a, b) => (a.order || 0) - (b.order || 0));
+    return [...files, ...folders];
+  }
+
+  // Retourne les FileNode images imbriquées dans un bloc document (via nestedImagesMap)
+  getNestedImages(fileId: string): FileNode[] {
+    const ids = this.nestedImagesMap[fileId];
+    if (!ids || ids.length === 0) return [];
+    return ids.map(id => this.findNode(id)).filter((n): n is FileNode => n !== null);
   }
 
   @HostListener('document:click', ['$event'])

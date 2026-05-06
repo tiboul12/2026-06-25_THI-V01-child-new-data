@@ -228,8 +228,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
       this.docSections = this.buildDocSections(this.files, 1);
       this.allImages = this.collectAllImages(this.files);
+      // Corriger les marqueurs d'images mal positionnés (déplacés via sidebar)
+      const markersFixed = this.fixImageMarkersInSections();
 
-      if (!this.hasLoaded || hasStructuralChange) {
+      if (!this.hasLoaded || hasStructuralChange || markersFixed) {
         const newFullContent = this.reconstructFromSections();
 
         if (hasStructuralChange && this.focusedHandle) {
@@ -281,6 +283,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.hasLoaded = true;
       this.recomputeAll();
       this.updateSnapshotFromFiles();
+
+      // Si on a corrigé des marqueurs déplacés, persister immédiatement au serveur
+      // pour que les contenu.md sources soient mis à jour (sinon le bug réapparaît au reload).
+      if (markersFixed && !this.focusedHandle) {
+        setTimeout(() => this.saveAll(), 0);
+      }
     }
 
     if (changes['activeNodeId']) {
@@ -305,14 +313,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const mainFile = nodeChildren.find(c => c.type === 'file' && c.name === 'contenu.md')
                     || nodeChildren.find(c => c.type === 'file' && !this.isImageFile(c.name));
 
-      // 1. Identifier toutes les images déjà référencées dans les documents additionnels (pour ne pas les remettre en doublon)
-      //    Les images qui ne sont pas dans les documents additionnels doivent être sorties en tant que "standalone" selon leur ordre.
-      const imageIdsInAdditionalDocs = new Set<string>();
+      // 1. Identifier toutes les images déjà référencées dans n'importe quel fichier texte
+      //    de cette section (contenu.md inclus) pour ne pas créer de doublon.
+      const imageIdsInSectionText = new Set<string>();
       for (const child of nodeChildren) {
-        if (child.type === 'file' && child !== mainFile && child.content) {
+        if (child.type === 'file' && !this.isImageFile(child.name) && child.content) {
           const matches = child.content.matchAll(/\{\{IMG:([a-z0-9-]+)\}\}/gi);
           for (const m of matches) {
-            imageIdsInAdditionalDocs.add(m[1]);
+            imageIdsInSectionText.add(m[1]);
           }
         }
       }
@@ -326,8 +334,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
         if (this.isImageFile(child.name)) {
           images.push(child);
-          // On insère l'image comme un bloc autonome UNIQUEMENT si elle n'est pas "capturée" à l'intérieur d'un document additionnel.
-          if (!imageIdsInAdditionalDocs.has(child.id)) {
+          // On insère l'image comme un bloc autonome UNIQUEMENT si elle n'est pas déjà
+          // référencée dans un fichier texte de cette section (évite les doublons).
+          if (!imageIdsInSectionText.has(child.id)) {
             textContent += `\n{{IMG:${child.id}}}\n`;
           }
         } else if (child === mainFile) {
@@ -1084,10 +1093,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         }
       }
 
-      // Le contenu principal est le rawContent sans les blocs ni les images autonomes
-      // On utilise deux regex séparées car remplace avec string nécessite une passe après l'autre
-      let mainContent = rawContent.replace(blockRegex, '');
-      mainContent = mainContent.replace(imageRegex, (match, id) => nestedImageIds.has(id) ? match : '').trim();
+      // Le contenu principal est le rawContent sans les blocs
+      // Les marqueurs {{IMG:id}} autonomes (hors blocs doc) sont conservés inline dans mainContent
+      // pour préserver leur position exacte dans le texte (ex: entre deux paragraphes)
+      let mainContent = rawContent.replace(blockRegex, '').trim();
 
       // Déterminer la position du mainFile (contenu.md)
       if (mainFile) {
@@ -1686,7 +1695,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = this.unifiedContent;
     this.recomputeAll();
-    this.scheduleSave();
+    // Sauvegarde immédiate sur drag pour sync live avec la sidebar (pas de debounce 10s)
+    this.saveAll();
   }
 
   private moveFileBlockToLine(srcStart: number, srcEnd: number, targetLine: number) {
@@ -1705,7 +1715,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = this.unifiedContent;
     this.recomputeAll();
-    this.scheduleSave();
+    // Sauvegarde immédiate sur drag pour sync live avec la sidebar (pas de debounce 10s)
+    this.saveAll();
   }
 
   private cleanupDrag() {
@@ -1722,6 +1733,47 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.hoveredHandle = null;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
+  }
+
+  // ── Correction de position des marqueurs image ──────────────
+  // Après buildDocSections, s'assurer que chaque {{IMG:id}} se trouve dans la
+  // section qui correspond au dossier parent réel du fichier image dans l'arborescence.
+  // Corrige les cas où le fichier a été déplacé via la sidebar sans que le marqueur suive.
+  // Retourne true si au moins une modification a été effectuée.
+  private fixImageMarkersInSections(): boolean {
+    let changed = false;
+    const imgCorrectParent = new Map<string, string>();
+    const walkImages = (nodes: FileNode[], parentId: string) => {
+      for (const n of nodes) {
+        if (n.type === 'file' && this.isImageFile(n.name)) imgCorrectParent.set(n.id, parentId);
+        if (n.children) walkImages(n.children, n.id);
+      }
+    };
+    walkImages(this.files, 'root');
+
+    for (const [imgId, correctParentId] of imgCorrectParent) {
+      const marker = `{{IMG:${imgId}}}`;
+      const wrongSections = this.docSections.filter(
+        s => s.folderId !== correctParentId && s.textContent.includes(marker)
+      );
+      const correctSection = this.docSections.find(s => s.folderId === correctParentId);
+      const alreadyCorrect = !!correctSection?.textContent.includes(marker);
+
+      if (wrongSections.length === 0 && alreadyCorrect) continue;
+
+      const escaped = imgId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`\\n?\\{\\{IMG:${escaped}\\}\\}\\n?`, 'gi');
+      for (const sec of wrongSections) {
+        const before = sec.textContent;
+        sec.textContent = sec.textContent.replace(re, '\n');
+        if (sec.textContent !== before) changed = true;
+      }
+      if (correctSection && !alreadyCorrect) {
+        correctSection.textContent = correctSection.textContent.trimEnd() + `\n${marker}\n`;
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   private getFileStructureKey(nodes: FileNode[], parentId: string = 'root'): string {

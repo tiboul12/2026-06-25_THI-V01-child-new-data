@@ -43,6 +43,8 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   activeNodeId = signal<string | null>(null);
   scrollToNodeId = signal<string | null>(null);
   zone5Tab = signal<'conversation' | 'history'>('conversation');
+  // Map fileId -> imageIds[] pour les images imbriquées dans un bloc document
+  nestedImagesMap = signal<Record<string, string[]>>({});
   diffEntry = signal<CollabHistoryEntry | null>(null);
 
   // Nom + icône du noeud actuellement sélectionné, affichés sous les onglets de la zone 5b
@@ -239,6 +241,17 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   async onSectionsChange(sections: SectionInfo[]) {
+    // Recalculer la map des images imbriquées dans des blocs documents
+    const newMap: Record<string, string[]> = {};
+    for (const s of sections) {
+      for (const af of s.additionalFiles || []) {
+        if (af.fileId && af.orderedChildIds && af.orderedChildIds.length > 0) {
+          newMap[af.fileId] = af.orderedChildIds;
+        }
+      }
+    }
+    this.nestedImagesMap.set(newMap);
+
     if (this.isSaving) {
       this.pendingSections = sections;
       return;
@@ -506,6 +519,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
     // Détection de déplacement de fichiers additionnels
     const filesToMove: { fileId: string, targetFolderId: string }[] = [];
+    const movedFileIds = new Set<string>();
     for (const s of resolved) {
       if (!s.folderId) continue;
       s.additionalFiles?.forEach(af => {
@@ -514,9 +528,27 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
           if (existingFolder && existingFolder.id !== s.folderId) {
             console.log(`[EDITOR] File move detected for ${af.name}: ${existingFolder.name} -> ${s.folderName}`);
             filesToMove.push({ fileId: af.fileId as string, targetFolderId: s.folderId as string });
+            movedFileIds.add(af.fileId);
           }
         }
       });
+    }
+
+    // Détection de déplacement d'images : un marqueur {{IMG:id}} apparaît dans le contenu
+    // d'une section dont le folderId diffère du parent réel du fichier image dans l'arborescence.
+    for (const s of resolved) {
+      if (!s.folderId) continue;
+      for (const fileId of s.orderedFileIds || []) {
+        if (movedFileIds.has(fileId)) continue;
+        const fileNode = this.findFileById(fileId, currentFiles);
+        if (!fileNode || !this.projectFilesService.isImageFile(fileNode.name)) continue;
+        const existingFolder = this.findParentFolder(fileId, currentFiles);
+        if (existingFolder && existingFolder.id !== s.folderId) {
+          console.log(`[EDITOR] Image move detected for ${fileNode.name}: ${existingFolder.name} -> ${s.folderName}`);
+          filesToMove.push({ fileId, targetFolderId: s.folderId as string });
+          movedFileIds.add(fileId);
+        }
+      }
     }
 
     const toCreate = resolved
@@ -708,6 +740,26 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       }
 
       if (anyAdditionalFileCreated || additionalFileOrphanDeleted) {
+        await this.loadFiles().catch(() => {});
+      }
+
+      // 7. Sync file order within each folder to match text content order (orderedFileIds)
+      const structureSnapshot = JSON.parse(JSON.stringify(this.files())) as FileNode[];
+      let orderNeedsUpdate = false;
+      for (const s of resolved) {
+        if (!s.folderId || !s.orderedFileIds || s.orderedFileIds.length < 2) continue;
+        const folder = this.findFolderById(s.folderId, structureSnapshot);
+        if (!folder || !folder.children) continue;
+        for (let i = 0; i < s.orderedFileIds.length; i++) {
+          const child = folder.children.find(c => c.id === s.orderedFileIds[i]);
+          if (child && child.order !== i + 1) {
+            child.order = i + 1;
+            orderNeedsUpdate = true;
+          }
+        }
+      }
+      if (orderNeedsUpdate) {
+        await this.projectFilesService.updateStructure(this.projectFolderName, structureSnapshot).catch(e => console.error('[EDITOR] Order sync failed:', e));
         await this.loadFiles().catch(() => {});
       }
 

@@ -18,6 +18,7 @@
         [files]="files()"
         [activeFileId]="activeNodeId()"
         [projetId]="project()?.id || ''"
+        [nestedImagesMap]="nestedImagesMap()"
         (fileSelect)="onNodeSelect($event)"
         (folderCreated)="onFolderCreated($event)"
         (dragDrop)="onDragDrop($event)"
