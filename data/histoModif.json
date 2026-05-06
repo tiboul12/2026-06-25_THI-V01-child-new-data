@@ -2854,6 +2854,27 @@
       "prompt": "oui je veux commiter tous le child worganic/THI-V01-child",
       "startedAt": "2026-05-06T09:55:00.000Z",
       "completedAt": "2026-05-06T10:00:00.000Z"
+    },
+    {
+      "id": "mod-121",
+      "version": "THI-0.68",
+      "date": "2026-05-06T10:30:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix suppression image : encart persistant après delete",
+      "description": "Correction de la race condition lors de la suppression d'une image : l'encart restait affiché avec \"image manquante\" car refresh.emit() déclenchait loadFiles() avant que scheduleSave() (10s) n'ait sauvegardé le contenu. Fix : filtrage immédiat de allImages après delete + saveAll() immédiat au lieu de scheduleSave(). Entrée historique déjà présente via woHistory.track.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans la zone edition la bouton supprimé l'image supprime le fichier dans le dossier data/projet mais laisse l'encart avec image manquante, il faut supprimé le fichier et l'encart et mettre dans l'historique l'action de suppression d'image",
+      "startedAt": "2026-05-06T10:10:00.000Z",
+      "completedAt": "2026-05-06T10:30:00.000Z"
     }
   ]
 }

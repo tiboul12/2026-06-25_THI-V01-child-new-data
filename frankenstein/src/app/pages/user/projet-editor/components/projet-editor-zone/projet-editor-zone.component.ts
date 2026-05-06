@@ -1388,6 +1388,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         undoable: false
       }).catch(() => {});
       this.deleteConfirmImageId = null;
+      // Retire l'image de la liste locale immédiatement pour éviter l'affichage "manquante"
+      this.allImages = this.allImages.filter(im => im.id !== line.imageId);
       // Retire la ligne du marqueur dans unifiedContent
       const lines = this.unifiedContent.split('\n');
       lines.splice(line.lineIndex, 1);
@@ -1396,7 +1398,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (ta) ta.value = this.unifiedContent;
       this.recomputeRanges();
       this.recomputeMirrorLines();
-      this.scheduleSave();
+      // Sauvegarde immédiate (pas scheduleSave) pour éviter la race avec refresh
+      this.saveAll();
       this.refresh.emit();
     } catch (e: any) {
       console.error('[Zone4] delete image failed', e);
