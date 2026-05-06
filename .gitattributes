@@ -1,0 +1,29 @@
+# ============================================================
+#  Stratégie de merge pour la synchronisation base -> child
+# ============================================================
+#  merge=ours signifie : lors d'un merge depuis le remote `base`,
+#  toujours conserver la version locale (du child).
+#  Pré-requis : `git config merge.ours.driver true` (déjà fait).
+# ============================================================
+
+# --- Configuration child (jamais propagée depuis la base) ---
+data/child/**                                   merge=ours
+data/histoModif.json                            merge=ours
+data/config/**                                  merge=ours
+version.json                                    merge=ours
+
+# --- Environnement et code spécifique child ---
+frankenstein/src/environments/environment.ts    merge=ours
+frankenstein/src/app/child/**                   merge=ours
+frankenstein/src/app/pages/child/**             merge=ours
+
+# --- Outils de dev locaux ---
+.claude/settings.local.json                     merge=ours
+
+# ============================================================
+#  Fichiers où un conflit est ATTENDU et doit être résolu
+#  manuellement (mix de contenu base + child) :
+#    - CLAUDE.md
+#    - README.md
+#  -> ne pas mettre merge=ours sur ces fichiers.
+# ============================================================

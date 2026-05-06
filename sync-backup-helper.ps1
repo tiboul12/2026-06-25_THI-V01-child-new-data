@@ -1,0 +1,166 @@
+# ============================================================
+#  sync-backup-helper.ps1
+#  ----------------------
+#  Helper appele par sync-from-base.bat dans un repo child.
+#  Detecte tous les fichiers tracks qui different entre HEAD
+#  (child) et base/main, exclut ceux marques merge=ours dans
+#  .gitattributes, sauvegarde la version child sous
+#  <basename>-old-YYYYMMDD.<ext>, et logge l'operation dans
+#  docs/infos-synchro.md.
+#
+#  L'idee : quand on lance le merge ensuite avec -X theirs,
+#  les fichiers de la base ecrasent les versions child, mais
+#  l'ancienne version reste accessible via le backup horodate.
+# ============================================================
+
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$BaseVersion
+)
+
+$ErrorActionPreference = "Stop"
+
+# Tag de date pour les backups (YYYYMMDD)
+$dateTag = Get-Date -Format "yyyyMMdd"
+$dateIso = Get-Date -Format "yyyy-MM-dd HH:mm"
+
+# Liste des fichiers qui different entre HEAD et base/main
+$diffFiles = @(git diff --name-only HEAD base/main 2>$null) | Where-Object { $_ }
+
+if ($diffFiles.Count -eq 0) {
+    Write-Host "  Aucun fichier divergent entre HEAD et base/main."
+    exit 0
+}
+
+$backedUp = @()
+$newFromBase = @()
+$skippedOurs = @()
+
+foreach ($file in $diffFiles) {
+
+    # 1. Verifier si le fichier est marque merge=ours dans .gitattributes
+    $attrLine = git check-attr merge -- "$file" 2>$null
+    if ($attrLine -match "merge:\s*ours") {
+        $skippedOurs += $file
+        continue
+    }
+
+    # 2. Le fichier existe-t-il dans HEAD ? Sinon c'est un nouveau fichier base
+    git cat-file -e "HEAD:$file" 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        $newFromBase += $file
+        continue
+    }
+
+    # 3. Construire le chemin du backup : <basename>-old-YYYYMMDD.<ext>
+    $dir       = [System.IO.Path]::GetDirectoryName($file)
+    $name      = [System.IO.Path]::GetFileNameWithoutExtension($file)
+    $ext       = [System.IO.Path]::GetExtension($file)
+    $backupRel = if ($dir) { "$dir/$name-old-$dateTag$ext" } else { "$name-old-$dateTag$ext" }
+    $backupAbs = Join-Path (Get-Location) $backupRel
+
+    # 4. Recuperer le contenu HEAD (version child) et l'ecrire dans le backup
+    #    Utilise git show pour preserver le contenu exact (gere binaires via -p)
+    $tmpFile = [System.IO.Path]::GetTempFileName()
+    try {
+        cmd /c "git show ""HEAD:$file"" > ""$tmpFile""" 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "  Impossible de recuperer HEAD:$file - skip"
+            continue
+        }
+        # S'assurer que le dossier de destination existe
+        $backupDir = [System.IO.Path]::GetDirectoryName($backupAbs)
+        if ($backupDir -and -not (Test-Path $backupDir)) {
+            New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+        }
+        Move-Item -Path $tmpFile -Destination $backupAbs -Force
+    } finally {
+        if (Test-Path $tmpFile) { Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+    }
+
+    # 5. Stage le backup
+    git add -- "$backupRel" 2>$null
+
+    Write-Host ("  [B] " + $file + "  ->  " + $backupRel)
+    $backedUp += @{ File = $file; Backup = $backupRel }
+}
+
+# Affichage recapitulatif
+Write-Host ""
+if ($newFromBase.Count -gt 0) {
+    Write-Host "  Nouveaux fichiers ajoutes par la base (pas de backup necessaire) :"
+    $newFromBase | ForEach-Object { Write-Host ("    [+] " + $_) }
+}
+if ($skippedOurs.Count -gt 0) {
+    Write-Host "  Fichiers child preserves (merge=ours) :"
+    $skippedOurs | ForEach-Object { Write-Host ("    [=] " + $_) }
+}
+
+# 6. Mise a jour de docs/infos-synchro.md (creation si absent)
+$logFile = "docs/infos-synchro.md"
+$logDir  = [System.IO.Path]::GetDirectoryName($logFile)
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+
+$bt = [char]0x60   # backtick literal pour le markdown
+$nl = "`r`n"
+
+$entry  = "## Sync base $BaseVersion - $dateIso" + $nl + $nl
+
+if ($backedUp.Count -gt 0) {
+    $entry += "### Fichiers issus de la base remplaces" + $nl + $nl
+    $entry += "Les versions child precedentes ont ete sauvegardees :" + $nl + $nl
+    foreach ($b in $backedUp) {
+        $entry += "- " + $bt + $b.File + $bt + "  ->  backup : " + $bt + $b.Backup + $bt + $nl
+    }
+    $entry += $nl
+}
+
+if ($newFromBase.Count -gt 0) {
+    $entry += "### Nouveaux fichiers ajoutes par la base" + $nl + $nl
+    foreach ($f in $newFromBase) {
+        $entry += "- " + $bt + $f + $bt + $nl
+    }
+    $entry += $nl
+}
+
+if ($skippedOurs.Count -gt 0) {
+    $entry += "### Fichiers child preserves (merge=ours)" + $nl + $nl
+    foreach ($f in $skippedOurs) {
+        $entry += "- " + $bt + $f + $bt + $nl
+    }
+    $entry += $nl
+}
+
+$entry += "---" + $nl + $nl
+
+# Construction du contenu : entete + nouvelle entree (en haut) + ancien contenu
+$header  = "# Historique des synchronisations base -> child" + $nl + $nl
+$header += "Log des sync worganic-base -> ce child : fichiers mis a jour, fichiers renommes en backup, dates." + $nl + $nl
+
+if (Test-Path $logFile) {
+    $existing = [System.IO.File]::ReadAllText($logFile)
+    # Detacher l'entete existante en cherchant la premiere entree (## ...)
+    $idx = $existing.IndexOf("## ")
+    if ($idx -ge 0) {
+        $existingEntries = $existing.Substring($idx)
+    } else {
+        $existingEntries = ""
+    }
+    $newContent = $header + $entry + $existingEntries
+} else {
+    $newContent = $header + $entry
+}
+
+[System.IO.File]::WriteAllText($logFile, $newContent, [System.Text.UTF8Encoding]::new($false))
+git add -- "$logFile" 2>$null
+
+# 7. Commit du backup + log AVANT de lancer le merge
+if ($backedUp.Count -gt 0 -or $newFromBase.Count -gt 0) {
+    git commit -m "Backup avant sync base $BaseVersion ($dateTag)" 2>&1 | Out-Null
+    Write-Host ""
+    Write-Host "  [OK] $($backedUp.Count) backup(s) cree(s) + log dans $logFile"
+}
+
+exit 0
