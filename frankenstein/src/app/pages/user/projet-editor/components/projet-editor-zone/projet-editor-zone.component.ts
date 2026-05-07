@@ -54,6 +54,13 @@ interface FileRange {
   lineEnd: number;
 }
 
+interface InlineBlockRange {
+  id: string;
+  kind: 'block-table' | 'block-quote' | 'block-fence' | 'block-list';
+  lineStart: number;
+  lineEnd: number;
+}
+
 interface MirrorLine {
   text: string;
   safeHtml: string;
@@ -66,6 +73,8 @@ interface MirrorLine {
   isFold: boolean;
   foldSectionId: string;
   foldLineCount: number;
+  inlineBlockId: string | null;
+  inlineBlockKind: 'block-table' | 'block-quote' | 'block-fence' | 'block-list' | null;
 }
 
 interface HoverPreview {
@@ -77,7 +86,7 @@ interface HoverPreview {
 
 interface DragHandle {
   id: string;
-  kind: 'folder' | 'file' | 'image';
+  kind: 'folder' | 'file' | 'image' | 'block-table' | 'block-quote' | 'block-fence' | 'block-list';
   level: number;
   lineStart: number;
   lineEnd: number;
@@ -190,6 +199,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // Fold/collapse par section (mode Code)
   foldedContent = new Map<string, string>(); // sectionId → body content replaced
   sectionChevrons: { folderId: string; top: number; level: number }[] = [];
+  // Blocs inline détectés (tableau, citation, code fence, liste)
+  private inlineBlockRanges: InlineBlockRange[] = [];
 
   // Image card interactions (edit mode)
   hoverPreview: HoverPreview | null = null;
@@ -415,6 +426,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // ── Recompute pipeline ─────────────────────────────────────
   private recomputeAll() {
     this.recomputeRanges();
+    this.recomputeInlineBlocks();
     this.recomputeHighlights();
     this.recomputeHandles();
     this.recomputeRenderedHtml();
@@ -467,6 +479,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         label: ml.imageName,
       });
     }
+    // Blocs inline (tableau, citation, code fence, liste)
+    const blockLabels: Record<string, string> = {
+      'block-table': 'Tableau', 'block-quote': 'Citation',
+      'block-fence': 'Bloc code', 'block-list': 'Liste',
+    };
+    for (const r of this.inlineBlockRanges) {
+      list.push({
+        id: r.id,
+        kind: r.kind,
+        level: 0,
+        lineStart: r.lineStart,
+        lineEnd: r.lineEnd,
+        top: this.PADDING_TOP_PX + r.lineStart * this.LINE_HEIGHT_PX,
+        height: Math.max((r.lineEnd - r.lineStart + 1) * this.LINE_HEIGHT_PX, this.LINE_HEIGHT_PX),
+        label: blockLabels[r.kind] || r.kind,
+      });
+    }
+
     list.sort((a, b) => a.top - b.top);
     this.handles = list;
 
@@ -556,6 +586,90 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
   }
 
+  // ── Détection des blocs inline (tableau, citation, code fence, liste) ──
+  private recomputeInlineBlocks() {
+    const lines = this.unifiedContent.split('\n');
+    this.inlineBlockRanges = [];
+
+    // Pré-calcul des ranges à ignorer (blocs fichiers + fold markers)
+    const skipRanges: [number, number][] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].trim();
+      if (/^(['`^]).+$/.test(t)) {
+        const delim = t[0];
+        const s = i; i++;
+        while (i < lines.length && lines[i].trim() !== delim) i++;
+        skipRanges.push([s, i]);
+      } else if (/^\{\{FOLD:/.test(t) || /^\{\{IMG:/.test(t)) {
+        skipRanges.push([i, i]);
+      }
+    }
+    const inSkip = (n: number) => skipRanges.some(([s, e]) => n >= s && n <= e);
+
+    let i = 0;
+    while (i < lines.length) {
+      if (inSkip(i)) { i++; continue; }
+      const t = lines[i].trimStart();
+      if (!t || /^#{1,4} /.test(t)) { i++; continue; }
+
+      // Code fence
+      if (t.startsWith('```') || t.startsWith('~~~')) {
+        const fence = t.startsWith('```') ? '```' : '~~~';
+        const start = i; i++;
+        while (i < lines.length && !lines[i].trimStart().startsWith(fence) && !inSkip(i)) i++;
+        const end = Math.min(i, lines.length - 1);
+        if (end > start) {
+          this.inlineBlockRanges.push({ id: `iblock-fence-${start}`, kind: 'block-fence', lineStart: start, lineEnd: end });
+        }
+        i = end + 1; continue;
+      }
+
+      // Table
+      if (t.startsWith('|')) {
+        const start = i;
+        while (i < lines.length && !inSkip(i) && lines[i].trimStart().startsWith('|')) i++;
+        const end = i - 1;
+        if (end >= start) {
+          this.inlineBlockRanges.push({ id: `iblock-table-${start}`, kind: 'block-table', lineStart: start, lineEnd: end });
+        }
+        continue;
+      }
+
+      // Blockquote
+      if (t.startsWith('>')) {
+        const start = i;
+        while (i < lines.length && !inSkip(i) && lines[i].trimStart().startsWith('>')) i++;
+        const end = i - 1;
+        this.inlineBlockRanges.push({ id: `iblock-quote-${start}`, kind: 'block-quote', lineStart: start, lineEnd: end });
+        continue;
+      }
+
+      // Liste
+      if (/^([-*+] |\d+\. )/.test(t)) {
+        const start = i; i++;
+        while (i < lines.length && !inSkip(i)) {
+          const cur = lines[i]; const curT = cur.trimStart();
+          if (!curT) {
+            // Ligne vide : inclure si la suivante est encore un item de liste
+            let j = i + 1;
+            while (j < lines.length && !lines[j].trim()) j++;
+            if (j < lines.length && /^([-*+] |\d+\. )/.test(lines[j].trimStart()) && !inSkip(j)) { i++; }
+            else break;
+          } else if (/^([-*+] |\d+\. )/.test(curT) || /^\s+\S/.test(cur)) { i++; }
+          else break;
+        }
+        let end = i - 1;
+        while (end > start && !lines[end].trim()) end--;
+        if (end >= start) {
+          this.inlineBlockRanges.push({ id: `iblock-list-${start}`, kind: 'block-list', lineStart: start, lineEnd: end });
+        }
+        continue;
+      }
+
+      i++;
+    }
+  }
+
   private recomputeHighlights() {
     this.computeHighlights();
     this.recomputeMirrorLines();
@@ -618,25 +732,27 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.saveAll();
     }
 
+    // Map ligne → bloc inline
+    const inlineBlockMap = new Map<number, InlineBlockRange>();
+    for (const r of this.inlineBlockRanges) {
+      for (let li = r.lineStart; li <= r.lineEnd; li++) inlineBlockMap.set(li, r);
+    }
+
     const cleanLines = this.unifiedContent.split('\n');
     this.mirrorLines = cleanLines.map((line, i) => {
       const kind: 'folder' | 'file' | null = fileHl.has(i) ? 'file' : (folderHl.has(i) ? 'folder' : null);
+      const ib = inlineBlockMap.get(i) || null;
       const m = /^\{\{IMG:([a-z0-9-]+)\}\}\s*$/i.exec(line.trim());
       if (m) {
         const img = this.allImages.find(im => im.id === m[1]);
         return {
-          text: line,
-          safeHtml: '',
-          isImage: true,
-          imageId: m[1],
-          imageName: img?.name || '',
-          imagePath: img?.path || '',
-          highlightKind: kind,
-          lineIndex: i,
+          text: line, safeHtml: '', isImage: true,
+          imageId: m[1], imageName: img?.name || '', imagePath: img?.path || '',
+          highlightKind: kind, lineIndex: i,
           isFold: false, foldSectionId: '', foldLineCount: 0,
+          inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
         };
       }
-      // Fold marker
       const fm = /^\{\{FOLD:([a-zA-Z0-9-]+):(\d+)\}\}$/.exec(line.trim());
       if (fm) {
         return {
@@ -644,9 +760,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           imageId: '', imageName: '', imagePath: '',
           highlightKind: kind, lineIndex: i,
           isFold: true, foldSectionId: fm[1], foldLineCount: parseInt(fm[2], 10),
+          inlineBlockId: null, inlineBlockKind: null,
         };
       }
-      return { text: line, safeHtml: this.syntaxHighlight(line), isImage: false, imageId: '', imageName: '', imagePath: '', highlightKind: kind, lineIndex: i, isFold: false, foldSectionId: '', foldLineCount: 0 };
+      return {
+        text: line, safeHtml: this.syntaxHighlight(line), isImage: false,
+        imageId: '', imageName: '', imagePath: '',
+        highlightKind: kind, lineIndex: i,
+        isFold: false, foldSectionId: '', foldLineCount: 0,
+        inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
+      };
     });
   }
 
@@ -929,6 +1052,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const ta = event.target as HTMLTextAreaElement;
     this.unifiedContent = ta.value;
     this.recomputeRanges();
+    this.recomputeInlineBlocks();
     this.recomputeMirrorLines();
     this.recomputeHandles();
     this.scheduleSave();
@@ -988,14 +1112,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         if (h) { this.setHoveredHandle(h); return; }
       }
     }
-    // 2) Document (bloc 'name ... ')
+    // 2) Bloc inline (tableau, citation, code, liste) — avant document pour être plus précis
+    for (const r of this.inlineBlockRanges) {
+      if (lineIdx >= r.lineStart && lineIdx <= r.lineEnd) {
+        const h = this.handles.find(x => x.id === r.id);
+        if (h) { this.setHoveredHandle(h); return; }
+      }
+    }
+    // 3) Document (bloc 'name ... ')
     for (const fr of this.fileRanges) {
       if (lineIdx >= fr.lineStart && lineIdx <= fr.lineEnd) {
         const h = this.handles.find(x => x.kind === 'file' && x.id === fr.fileId);
         if (h) { this.setHoveredHandle(h); return; }
       }
     }
-    // 3) Dossier (le plus profond contenant la ligne)
+    // 4) Dossier (le plus profond contenant la ligne)
     let best: SectionRange | null = null;
     for (const r of this.sectionRanges) {
       if (lineIdx >= r.lineStart && lineIdx <= r.lineEnd) {
@@ -1759,7 +1890,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const rect = mirrorEl.getBoundingClientRect();
     const contentY = clientY - rect.top + mirrorEl.scrollTop;
 
-    if (this.draggingHandle.kind === 'image' || this.draggingHandle.kind === 'file') {
+    if (this.draggingHandle.kind === 'image' || this.draggingHandle.kind === 'file' ||
+        this.draggingHandle.kind === 'block-table' || this.draggingHandle.kind === 'block-quote' ||
+        this.draggingHandle.kind === 'block-fence' || this.draggingHandle.kind === 'block-list') {
       const lines = this.unifiedContent.split('\n');
       let targetLine = Math.floor((contentY - this.PADDING_TOP_PX) / this.LINE_HEIGHT_PX);
       
@@ -1867,6 +2000,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const target = this.currentDropTarget;
     this.cleanupDrag();
     if (!dragged || !target) return;
+
+    // Blocs inline : déplacement purement textuel, pas d'appel backend
+    if ((dragged.kind === 'block-table' || dragged.kind === 'block-quote' ||
+         dragged.kind === 'block-fence' || dragged.kind === 'block-list') &&
+        target.targetLine !== undefined) {
+      this.moveFileBlockToLine(dragged.lineStart, dragged.lineEnd, target.targetLine);
+      return;
+    }
 
     // Détermination de l'entité cible pour le déplacement physique (images et fichiers)
     const draggedNode = this.findNode(dragged.id, this.files);

@@ -3174,6 +3174,29 @@
       "prompt": "il faut ecrater le texte et la liste des lignes pour laisser la place au bouton, les bouton passe sur le texte. ecarte le texte vers la droite",
       "startedAt": "2026-05-07T00:00:00.000Z",
       "completedAt": "2026-05-07T10:41:20.987Z"
+    },
+    {
+      "id": "mod-136",
+      "version": "THI-0.76",
+      "date": "2026-05-07T10:56:48.788Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Blocs inline (tableau, citation, code, liste) comme sections deplaçables",
+      "description": "Ajout de la detection des blocs inline dans lediteur Code. Chaque bloc (tableau, citation, code fence, liste) est traite comme une section avec handle de deplacement (orange) et bouton Ed. pour le mode focus. Deplacement purement textuel sans appel backend. Highlight orange au survol. Badge specifique en mode focus.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que chaque partie lie au format comme les tableaux, les citations, bloc de codes, liste etc soi assimile a des sections. Le but est de pouvoir les selectionner pour les editer a part ou les deplacer via le bouton deplacement.",
+      "startedAt": "2026-05-07T00:00:00.000Z",
+      "completedAt": "2026-05-07T10:56:48.788Z"
     }
   ]
 }

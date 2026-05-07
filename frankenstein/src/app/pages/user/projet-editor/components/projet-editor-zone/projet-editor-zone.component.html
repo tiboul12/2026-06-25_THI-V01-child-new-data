@@ -10,7 +10,13 @@
         Vue complète
       </button>
       <div class="ed-focus-label">
-        <span class="ed-focus-label__badge">{{ focusedHandle.kind === 'folder' ? 'H' + focusedHandle.level : 'Doc' }}</span>
+        <span class="ed-focus-label__badge">{{
+          focusedHandle.kind === 'folder' ? 'H' + focusedHandle.level :
+          focusedHandle.kind === 'block-table' ? 'Tab.' :
+          focusedHandle.kind === 'block-quote' ? 'Cit.' :
+          focusedHandle.kind === 'block-fence' ? 'Code' :
+          focusedHandle.kind === 'block-list' ? 'List.' : 'Doc'
+        }}</span>
         {{ focusedHandle.label }}
       </div>
       <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
@@ -110,6 +116,7 @@
             <div class="ed-line"
                  [class.ed-line--hl-folder]="line.highlightKind === 'folder'"
                  [class.ed-line--hl-file]="line.highlightKind === 'file'"
+                 [class.ed-line--hl-block]="line.inlineBlockId && hoveredHandle?.id === line.inlineBlockId"
                  [class.ed-line--image]="line.isImage"
                  [class.ed-line--fold]="line.isFold">
               <!-- Numéro de ligne -->
@@ -209,20 +216,30 @@
                    [class.ed-handle--folder]="hoveredHandle.kind === 'folder'"
                    [class.ed-handle--file]="hoveredHandle.kind === 'file'"
                    [class.ed-handle--image]="hoveredHandle.kind === 'image'"
+                   [class.ed-handle--block]="hoveredHandle.kind === 'block-table' || hoveredHandle.kind === 'block-quote' || hoveredHandle.kind === 'block-fence' || hoveredHandle.kind === 'block-list'"
                    [style.top.px]="hoveredHandle.top + 1"
                    (mousedown)="startHandleDrag(hoveredHandle, $event)"
-                   [title]="'Déplacer : \'' + hoveredHandle.label + '\''  ">
+                   [title]="'Déplacer : ' + hoveredHandle.label">
                 @if (hoveredHandle.kind === 'folder') {
                   <span class="ed-handle__lvl">H{{ hoveredHandle.level }}</span>
+                } @else if (hoveredHandle.kind === 'block-table') {
+                  <span class="ed-handle__blk">Tab</span>
+                } @else if (hoveredHandle.kind === 'block-quote') {
+                  <span class="ed-handle__blk">Cit</span>
+                } @else if (hoveredHandle.kind === 'block-fence') {
+                  <span class="ed-handle__blk">```</span>
+                } @else if (hoveredHandle.kind === 'block-list') {
+                  <span class="ed-handle__blk">List</span>
                 } @else {
                   <span class="ed-handle__grip material-symbols-outlined">drag_indicator</span>
                 }
               </div>
-              <!-- Bouton "Édition" — ouvre le mode focus pour cette section/document -->
+              <!-- Bouton "Édition" — ouvre le mode focus pour cette section/document/bloc -->
               @if (hoveredHandle.kind !== 'image') {
                 <button class="ed-focus-btn"
                         [class.ed-focus-btn--folder]="hoveredHandle.kind === 'folder'"
                         [class.ed-focus-btn--file]="hoveredHandle.kind === 'file'"
+                        [class.ed-focus-btn--block]="hoveredHandle.kind === 'block-table' || hoveredHandle.kind === 'block-quote' || hoveredHandle.kind === 'block-fence' || hoveredHandle.kind === 'block-list'"
                         [style.top.px]="hoveredHandle.top + 21"
                         (click)="enterFocusMode(hoveredHandle, $event)"
                         title="Éditer uniquement : {{ hoveredHandle.label }}">
