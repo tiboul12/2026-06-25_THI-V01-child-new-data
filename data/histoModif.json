@@ -3282,6 +3282,51 @@
       "prompt": "Met à jour les fichiers docs @docs/structure/projet-editor.component.md et @docs/structure/projet-conversation.component.md avec les modifications que tu viens de faire.",
       "startedAt": "2026-05-07T10:20:00Z",
       "completedAt": "2026-05-07T10:30:00Z"
+    },
+    {
+      "id": "mod-141",
+      "version": "THI-0.80",
+      "date": "2026-05-07T11:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Mode Preview WYSIWYG : template, TS et SCSS connectés",
+      "description": "Reconnexion du mode visu éditable : remplacement du bloc preview read-only par le template WYSIWYG complet (sections contenteditable, toolbar flottante fixed, menu d'insertion fixed, input image caché). Mise à jour de 5 méthodes TS : setMode (flush + lifecycle selection listener), buildVisuSections (setTimeout initVisuSectionHtml), onVisuSectionBlur (suppression param el, lookup via QueryList), onVisuSelectionChange et showVisuInsertMenu (coordonnées fixed viewport). SCSS : position fixed + z-index 200 pour .visu-format-toolbar et .visu-insert-menu, ajout .visu-content-wrap et règles de taille h1-h4.visu-sec-heading.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "I need you to make coordinated changes to 3 files to implement a WYSIWYG editable preview mode. The infrastructure already exists in the TypeScript but was disconnected from the template. Do NOT run any build or git commands — just make the file edits.",
+      "startedAt": "2026-05-07T10:30:00Z",
+      "completedAt": "2026-05-07T11:00:00Z"
+    },
+    {
+      "id": "mod-142",
+      "version": "THI-0.81",
+      "date": "2026-05-07T12:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix tables et images dans blocs doc (mode visu)",
+      "description": "Deux corrections dans buildVisuSectionHtml : (1) les marqueurs {{IMG:...}} à l intérieur des blocs fichier (délimiteurs quotes) sont maintenant traités avant marked.parse, (2) les tableaux générés par marked sont wrappés dans <div contenteditable=\"false\" class=\"visu-table-wrap\"> pour éviter la corruption du DOM contenteditable. Ajout de tableToMarkdown() pour sérialiser les tables en markdown pipe lors de la sauvegarde. Ajout CSS .visu-table-wrap + dark mode dans .visu-sec-content ::ng-deep.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "ta modification à cassé l affichage des tableaux et l image dans un document, corrige tous ça",
+      "startedAt": "2026-05-07T11:45:00Z",
+      "completedAt": "2026-05-07T12:00:00Z"
     }
   ]
 }

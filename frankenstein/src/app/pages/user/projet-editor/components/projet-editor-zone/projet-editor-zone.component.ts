@@ -991,13 +991,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   setMode(m: 'edit' | 'visu') {
     if (this.mode === m) return;
     if (this.mode === 'edit') {
-      this.unfoldAll(); // expand all sections before leaving Code mode
+      this.unfoldAll();
       this.flushContentModifications();
       if (this.focusedHandle) this.exitFocusMode();
       else this.saveAll();
+    } else if (this.mode === 'visu') {
+      this.flushVisuSections();
+      this.teardownVisuSelectionListener();
     }
     this.mode = m;
     this.recomputeAll();
+    if (m === 'visu') {
+      this.setupVisuSelectionListener();
+    }
     if (this.activeNodeId) {
       setTimeout(() => this.scrollToActive(), 80);
     }
@@ -2275,6 +2281,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         markdownBefore: isDirty && existing ? existing.markdownBefore : markdownBefore,
       };
     });
+    // Initialiser le innerHTML des contenteditable après le rendu Angular
+    setTimeout(() => this.initVisuSectionHtml(), 0);
   }
 
   private buildVisuSectionHtml(sec: DocSection): string {
@@ -2285,8 +2293,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const fileBlocks: { token: string; html: string; md: string }[] = [];
     contentMd = contentMd.replace(/^(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_m, _d, name, content) => {
       const trimmed = (name as string).trim();
-      const mdSource = `'${trimmed}\n${((content as string) || '').trimEnd()}\n'`;
-      const inner = marked.parse((content as string) || '', { async: false }) as string;
+      const rawContent = (content as string) || '';
+      const mdSource = `'${trimmed}\n${rawContent.trimEnd()}\n'`;
+      // Traiter les {{IMG:...}} à l'intérieur du bloc avant marked.parse
+      let processedContent = rawContent.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (__, id) => {
+        const img = this.allImages.find(im => im.id === id);
+        if (!img) return `*[image manquante: ${id}]*`;
+        const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
+        const url = this.svc.getImageUrl(this.projectName, encodedPath);
+        return `\n\n![${this.escapeAlt(img.name)}](${url})\n\n`;
+      });
+      const inner = marked.parse(processedContent, { async: false }) as string;
       const token = `@@FB${fileBlocks.length}@@`;
       const encoded = btoa(unescape(encodeURIComponent(mdSource)));
       fileBlocks.push({
@@ -2316,6 +2333,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     });
 
     let html = marked.parse(contentMd, { async: false }) as string;
+
+    // Les tables dans un contenteditable se corrompent — on les isole en non-éditable
+    html = html.replace(/<table>([\s\S]*?)<\/table>/gi,
+      '<div class="visu-table-wrap" contenteditable="false"><table>$1</table></div>');
 
     for (const fb of fileBlocks) {
       html = html.replace(new RegExp(`<p>\\s*${fb.token}\\s*</p>`, 'g'), fb.html).replace(fb.token, fb.html);
@@ -2357,10 +2378,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.nodeActive.emit(sectionId);
   }
 
-  onVisuSectionBlur(sectionId: string, el: HTMLElement) {
+  onVisuSectionBlur(sectionId: string) {
     if (!this.dirtyVisuSectionIds.has(sectionId)) return;
+    const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+    const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+    if (!el) return;
     const md = this.htmlSectionToMarkdown(el);
-    const sec = this.visuSections.find(vs => vs.sectionId === sectionId);
+    const sec = this.visuSections[idx];
     this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
     this.dirtyVisuSectionIds.delete(sectionId);
   }
@@ -2426,6 +2450,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // ── Visu edit : HTML → Markdown ─────────────────────────────
+  private tableToMarkdown(table: HTMLTableElement | null): string {
+    if (!table) return '';
+    const rows: string[][] = [];
+    const thead = table.querySelector('thead');
+    if (thead) {
+      const cells = Array.from(thead.querySelectorAll('th, td')).map(c => c.textContent?.replace(/\|/g, '\\|').trim() || '');
+      rows.push(cells);
+      rows.push(cells.map(() => '---'));
+    }
+    const tbody = table.querySelector('tbody');
+    if (tbody) {
+      for (const tr of Array.from(tbody.querySelectorAll('tr'))) {
+        rows.push(Array.from(tr.querySelectorAll('td, th')).map(c => c.textContent?.replace(/\|/g, '\\|').trim() || ''));
+      }
+    }
+    if (rows.length === 0) return '';
+    return '\n' + rows.map(r => '| ' + r.join(' | ') + ' |').join('\n') + '\n';
+  }
+
   private htmlSectionToMarkdown(el: HTMLElement): string {
     return this.nodesToMd(Array.from(el.childNodes)).replace(/\n{3,}/g, '\n\n').trim();
   }
@@ -2440,13 +2483,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
 
-    // Blocs non-éditables : restaurer depuis data-block-md ou data-img-id
+    // Blocs non-éditables : restaurer depuis data-block-md, data-img-id ou table
     if (el.getAttribute('contenteditable') === 'false') {
       if (el.hasAttribute('data-block-md')) {
         try { return '\n' + decodeURIComponent(escape(atob(el.getAttribute('data-block-md')!))) + '\n'; } catch { return ''; }
       }
       if (el.hasAttribute('data-img-id')) {
         return `\n{{IMG:${el.getAttribute('data-img-id')}}}\n`;
+      }
+      if (el.classList.contains('visu-table-wrap')) {
+        return this.tableToMarkdown(el.querySelector('table'));
       }
       return '';
     }
@@ -2518,11 +2564,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return;
     }
     const rect = range.getBoundingClientRect();
-    const visuRect = visuEl.getBoundingClientRect();
-    const toolbarW = 200;
-    let left = rect.left - visuRect.left + rect.width / 2 - toolbarW / 2;
-    left = Math.max(4, Math.min(left, visuRect.width - toolbarW - 4));
-    this.visuToolbar = { top: rect.top - visuRect.top - 44, left };
+    const toolbarW = 220;
+    const left = Math.max(4, Math.min(
+      rect.left + rect.width / 2 - toolbarW / 2,
+      window.innerWidth - toolbarW - 4
+    ));
+    this.visuToolbar = { top: rect.top - 48, left };
     this.cdr.detectChanges();
   }
 
@@ -2553,12 +2600,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     ev.stopPropagation();
     const btn = ev.currentTarget as HTMLElement;
     const rect = btn.getBoundingClientRect();
-    const visuEl = this.visuRef?.nativeElement;
-    const visuRect = visuEl?.getBoundingClientRect() ?? { top: 0, left: 0 };
     this.visuInsertMenu = {
       sectionId,
-      top: rect.bottom - visuRect.top + 4,
-      left: rect.left - visuRect.left,
+      top: rect.bottom + 4,
+      left: rect.left,
     };
   }
 
