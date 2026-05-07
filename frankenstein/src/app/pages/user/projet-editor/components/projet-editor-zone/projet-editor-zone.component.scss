@@ -13,7 +13,7 @@
   position: absolute;
   inset: 0;
   margin: 0;
-  padding: 1rem 1.5rem 1rem 5rem; // ↙ 5rem : lnum (2.5rem) + chevron (0.5rem) + handle+btn (~2rem) = 80px
+  padding: 1rem 1.5rem 1rem 5.75rem; // lnum(~40px) + chevron(18px) + handle(26px) + Éd.(28px) = 92px
   box-sizing: border-box;
   font-family: 'Fira Code', 'Consolas', 'Menlo', monospace;
   font-size: 13px;
@@ -189,7 +189,7 @@
 
 .ed-handle {
   position: absolute;
-  left: 2.75rem; // décalé pour laisser la place aux numéros de ligne
+  left: 3.5rem; // après le chevron de repli (2.25rem+18px) → 56px, avant le texte (92px)
   width: 26px;
   height: 18px;
   display: flex;
@@ -236,7 +236,7 @@
 // Apparaît à droite de la poignée de drag sur la ligne survolée.
 .ed-focus-btn {
   position: absolute;
-  left: 2.75rem; // aligné avec la poignée de drag
+  left: 3.5rem; // aligné avec la poignée de drag
   height: 14px;
   padding: 0 5px;
   border: 0;
@@ -340,7 +340,7 @@
 // ── Indicateur de drop : barre horizontale traversant la zone ──
 .ed-drop-indicator {
   position: absolute;
-  left: 4.75rem;  // s'aligne sur la zone de texte (après gouttière étendue)
+  left: 5.5rem;   // s'aligne sur la zone de texte (après gouttière étendue)
   right: 1.25rem;
   background: rgb(59, 130, 246);
   border-radius: 1px;
@@ -907,7 +907,7 @@
 // ── Numéros de ligne ─────────────────────────────────────────────
 .ed-lnum {
   position: absolute;
-  left: -4.75rem;  // depuis le bord gauche de ed-line, colle au bord physique de la gouttière
+  left: -5.5rem;   // depuis le bord gauche de ed-line, colle au bord physique de la gouttière
   width: 2.5rem;
   text-align: right;
   padding-right: 0.6rem;
@@ -927,7 +927,7 @@
 // ── Chevrons de repli (fold) ──────────────────────────────────────
 .ed-chevron {
   position: absolute;
-  left: 2.5rem; // entre les numéros de ligne et le drag handle
+  left: 2.25rem; // entre les numéros de ligne et le drag handle
   width: 18px;
   height: 18px;
   display: flex;
@@ -937,7 +937,7 @@
   border-radius: 3px;
   background: transparent;
   color: transparent; // invisible par défaut, visible au hover de la ligne
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   pointer-events: auto;
@@ -947,7 +947,7 @@
   // Afficher le chevron v (bas) par défaut pour les sections non repliées
   &::after {
     content: '▾';
-    font-size: 10px;
+    font-size: 14px;
   }
 
   &:hover {

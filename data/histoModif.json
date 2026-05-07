@@ -3197,6 +3197,48 @@
       "prompt": "je voudrais que chaque partie lie au format comme les tableaux, les citations, bloc de codes, liste etc soi assimile a des sections. Le but est de pouvoir les selectionner pour les editer a part ou les deplacer via le bouton deplacement.",
       "startedAt": "2026-05-07T00:00:00.000Z",
       "completedAt": "2026-05-07T10:56:48.788Z"
+    },
+    {
+      "id": "mod-137",
+      "version": "THI-0.77",
+      "date": "2026-05-07T11:06:16.756Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix gouttiere : chevron repli masque par handle deplacement",
+      "description": "Le chevron de repli et le handle de deplacement se chevauchaient horizontalement (tous deux autour de 40-58px). Correction par decalage du handle et du bouton Ed. vers la droite (2.75rem->3.5rem), augmentation du padding-left (5rem->5.75rem=92px), repositionnement du chevron (2.5->2.25rem), lnum (-4.75->-5.5rem) et drop-indicator (4.75->5.5rem).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il faut ecarte vers la droite les boutons deplacement et le texte pour laisse la place a l icone de reduction des sections, on ne vois pas l icone reduction qui passe en dessous des bouton deplacement/Edition",
+      "startedAt": "2026-05-07T00:00:00.000Z",
+      "completedAt": "2026-05-07T11:06:16.756Z"
+    },
+    {
+      "id": "mod-138",
+      "version": "THI-0.78",
+      "date": "2026-05-07T11:45:01.970Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Agrandissement icone chevron de repli",
+      "description": "Augmentation du font-size du chevron de repli de 10px a 14px (::after) et de 9px a 11px (element). La fleche vers le bas est maintenant de taille comparable aux numeros de ligne (11px).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "l icone fleche vers la bas est trop petit, grossi cette icone de la meme taille que les chiffres de gauche",
+      "startedAt": "2026-05-07T00:00:00.000Z",
+      "completedAt": "2026-05-07T11:45:01.970Z"
     }
   ]
 }
