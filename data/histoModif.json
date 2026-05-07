@@ -3327,6 +3327,27 @@
       "prompt": "ta modification à cassé l affichage des tableaux et l image dans un document, corrige tous ça",
       "startedAt": "2026-05-07T11:45:00Z",
       "completedAt": "2026-05-07T12:00:00Z"
+    },
+    {
+      "id": "mod-143",
+      "version": "THI-0.82",
+      "date": "2026-05-07T12:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix sauvegarde visu : sous-sections préservées",
+      "description": "Bug critique dans saveVisuSection : range.lineEnd inclut toutes les sous-sections de la section éditée. Lors du remplacement du contenu, les sous-sections étaient écrasées. Fix : calcul d un directEnd en cherchant la première ligne heading (#{1,4}) après lineStart, pour limiter le remplacement au contenu direct de la section uniquement.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai ajouté un texte dans Menu 1 et cela à effacé tous le texte qui suit peux tu vérifié pourquoi et corrige le problème",
+      "startedAt": "2026-05-07T12:15:00Z",
+      "completedAt": "2026-05-07T12:30:00Z"
     }
   ]
 }

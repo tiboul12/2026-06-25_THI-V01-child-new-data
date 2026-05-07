@@ -2410,7 +2410,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const lines = this.unifiedContent.split('\n');
     const headingLine = lines[range.lineStart];
     const before = lines.slice(0, range.lineStart);
-    const after = lines.slice(range.lineEnd + 1);
+
+    // Limiter au contenu DIRECT : s'arrêter juste avant la première sous-section.
+    // range.lineEnd inclut les sous-sections ; on cherche la première ligne #heading
+    // qui suit le heading courant pour ne pas les écraser.
+    let directEnd = range.lineEnd;
+    for (let j = range.lineStart + 1; j <= range.lineEnd; j++) {
+      if (/^#{1,4} /.test(lines[j])) {
+        directEnd = j - 1;
+        break;
+      }
+    }
+    const after = lines.slice(directEnd + 1);
 
     const newContentLines = newMd.trim() ? newMd.trim().split('\n') : [];
     const newLines = [...before, headingLine, ...newContentLines, ...after];
