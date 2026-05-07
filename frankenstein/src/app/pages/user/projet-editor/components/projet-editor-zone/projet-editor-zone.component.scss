@@ -13,7 +13,7 @@
   position: absolute;
   inset: 0;
   margin: 0;
-  padding: 1rem 1.5rem 1rem 2.75rem; // ↙ marge gauche réservée pour la gouttière de drag
+  padding: 1rem 1.5rem 1rem 3.75rem; // ↙ 3.75rem : numéros de ligne (2.5rem) + gouttière drag (1.25rem)
   box-sizing: border-box;
   font-family: 'Fira Code', 'Consolas', 'Menlo', monospace;
   font-size: 13px;
@@ -49,6 +49,7 @@
 }
 
 .ed-line {
+  position: relative; // pour positionner ed-lnum en absolu
   min-height: 1.6em;
   padding: 0 0.25rem;
   margin: 0 -0.25rem;
@@ -183,7 +184,7 @@
 
 .ed-handle {
   position: absolute;
-  left: 6px;
+  left: 2.75rem; // décalé pour laisser la place aux numéros de ligne
   width: 26px;
   height: 18px;
   display: flex;
@@ -227,7 +228,7 @@
 // Apparaît à droite de la poignée de drag sur la ligne survolée.
 .ed-focus-btn {
   position: absolute;
-  left: 6px;    // aligné avec la poignée de drag (sous elle, pas à côté)
+  left: 2.75rem; // aligné avec la poignée de drag
   height: 14px;
   padding: 0 5px;
   border: 0;
@@ -324,7 +325,7 @@
 // ── Indicateur de drop : barre horizontale traversant la zone ──
 .ed-drop-indicator {
   position: absolute;
-  left: 2.25rem;   // s'aligne sur la zone de texte (après la gouttière)
+  left: 3.5rem;   // s'aligne sur la zone de texte (après gouttière étendue)
   right: 1.25rem;
   background: rgb(59, 130, 246);
   border-radius: 1px;
@@ -885,6 +886,127 @@
     color: rgba(255, 255, 255, 0.85);
     .material-symbols-outlined { color: rgba(255, 255, 255, 0.4); }
     &:hover { background: rgba(255, 255, 255, 0.06); }
+  }
+}
+
+// ── Numéros de ligne ─────────────────────────────────────────────
+.ed-lnum {
+  position: absolute;
+  left: -3.5rem;   // depuis le bord gauche de ed-line, dans la gouttière
+  width: 2.5rem;
+  text-align: right;
+  padding-right: 0.6rem;
+  height: 1.6em;
+  line-height: 1.6em;
+  font-family: 'Fira Code', 'Consolas', 'Menlo', monospace;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.25);
+  user-select: none;
+  pointer-events: none;
+}
+
+:host-context(.dark) .ed-lnum {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+// ── Chevrons de repli (fold) ──────────────────────────────────────
+.ed-chevron {
+  position: absolute;
+  left: 2.5rem; // entre les numéros de ligne et le drag handle
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: transparent; // invisible par défaut, visible au hover de la ligne
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.1s, background-color 0.1s;
+  z-index: 5;
+
+  // Afficher le chevron v (bas) par défaut pour les sections non repliées
+  &::after {
+    content: '▾';
+    font-size: 10px;
+  }
+
+  &:hover {
+    color: rgba(0, 0, 0, 0.55);
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  &--folded {
+    color: rgba(59, 130, 246, 0.75) !important;
+    &::after { content: '▸'; }
+    &:hover { background: rgba(59, 130, 246, 0.1); }
+  }
+}
+
+// Rendre le chevron visible au survol de la zone d'édition
+.ed-wrap:hover .ed-chevron:not(.ed-chevron--folded) {
+  color: rgba(0, 0, 0, 0.28);
+}
+
+:host-context(.dark) .ed-chevron {
+  &:hover { color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.07); }
+  &--folded { color: rgba(88, 166, 255, 0.85) !important; &:hover { background: rgba(88, 166, 255, 0.1); } }
+}
+
+:host-context(.dark) .ed-wrap:hover .ed-chevron:not(.ed-chevron--folded) {
+  color: rgba(255, 255, 255, 0.22);
+}
+
+// ── Fold placeholder (section repliée dans le miroir) ─────────────
+.ed-line--fold {
+  cursor: pointer;
+}
+
+.ed-fold-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 8px 0 4px;
+  height: 1.4em;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+  vertical-align: middle;
+  transition: background-color 0.1s, border-color 0.1s, color 0.1s;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: rgb(59, 130, 246);
+  }
+}
+
+.ed-fold-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+:host-context(.dark) {
+  .ed-fold-placeholder {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.38);
+
+    &:hover {
+      background: rgba(88, 166, 255, 0.1);
+      border-color: rgba(88, 166, 255, 0.35);
+      color: rgb(88, 166, 255);
+    }
   }
 }
 

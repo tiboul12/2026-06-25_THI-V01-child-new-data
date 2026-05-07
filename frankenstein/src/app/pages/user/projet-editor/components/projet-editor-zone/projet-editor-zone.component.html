@@ -30,8 +30,8 @@
 
     @if (mode === 'edit') {
       <!-- Formatage inline -->
-      <button type="button" class="ed-tb-btn" title="Gras (Ctrl+B)" (click)="insertAt('**', '**')"><strong>B</strong></button>
-      <button type="button" class="ed-tb-btn" title="Italique (Ctrl+I)" (click)="insertAt('*', '*')"><em>I</em></button>
+      <button type="button" class="ed-tb-btn" title="Gras" (click)="insertAt('**', '**')"><strong>B</strong></button>
+      <button type="button" class="ed-tb-btn" title="Italique" (click)="insertAt('*', '*')"><em>I</em></button>
       <button type="button" class="ed-tb-btn" title="Barré" (click)="insertAt('~~', '~~')"><s>S</s></button>
       <div class="ed-tb-sep"></div>
       <!-- Titres -->
@@ -56,7 +56,7 @@
       </button>
       <div class="ed-tb-sep"></div>
       <!-- Image -->
-      <button type="button" class="ed-tb-btn flex items-center gap-1" title="Insérer une image au curseur (max 1 Mo)" (click)="triggerImageUpload()">
+      <button type="button" class="ed-tb-btn flex items-center gap-1" title="Insérer une image" (click)="triggerImageUpload()">
         <span class="material-symbols-outlined text-sm leading-none">image</span>
       </button>
       <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
@@ -110,8 +110,17 @@
             <div class="ed-line"
                  [class.ed-line--hl-folder]="line.highlightKind === 'folder'"
                  [class.ed-line--hl-file]="line.highlightKind === 'file'"
-                 [class.ed-line--image]="line.isImage">
-              @if (line.isImage) {
+                 [class.ed-line--image]="line.isImage"
+                 [class.ed-line--fold]="line.isFold">
+              <!-- Numéro de ligne -->
+              <span class="ed-lnum">{{ $index + 1 }}</span>
+              @if (line.isFold) {
+                <!-- Placeholder section repliée -->
+                <span class="ed-fold-placeholder" (click)="toggleFold(line.foldSectionId)">
+                  <span class="ed-fold-icon material-symbols-outlined">chevron_right</span>
+                  ⋯ {{ line.foldLineCount }} ligne{{ line.foldLineCount > 1 ? 's' : '' }} masquée{{ line.foldLineCount > 1 ? 's' : '' }}
+                </span>
+              } @else if (line.isImage) {
                 <span class="ed-img-card-wrap">
                   <span class="ed-img-card"
                         (mouseenter)="onImageHoverEnter(line, $event)"
@@ -180,9 +189,21 @@
                   (mouseup)="onTextareaCursor($event)"
                   (blur)="onTextareaBlur()"></textarea>
 
-        <!-- Overlay (gouttière gauche + indicateur de drop pleine largeur) -->
+        <!-- Overlay (chevrons fold + gouttière drag + indicateur drop) -->
         <div class="ed-overlay" #overlay aria-hidden="true">
           <div class="ed-overlay__inner">
+
+            <!-- Chevrons de repli pour chaque section -->
+            @for (chev of sectionChevrons; track chev.folderId) {
+              <button class="ed-chevron"
+                      [class.ed-chevron--folded]="foldedContent.has(chev.folderId)"
+                      [style.top.px]="chev.top + 2"
+                      (click)="toggleFold(chev.folderId)"
+                      [title]="foldedContent.has(chev.folderId) ? 'Développer la section' : 'Réduire la section'"
+                      aria-hidden="false">
+              </button>
+            }
+
             @if (hoveredHandle) {
               <div class="ed-handle"
                    [class.ed-handle--folder]="hoveredHandle.kind === 'folder'"

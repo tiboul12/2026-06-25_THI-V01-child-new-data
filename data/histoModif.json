@@ -3130,6 +3130,29 @@
       "prompt": "Amelioration editeur Code/Preview GitHub-style avec syntax highlighting et preview read-only",
       "startedAt": "2026-05-07T09:00:00Z",
       "completedAt": "2026-05-07T10:30:00Z"
+    },
+    {
+      "id": "mod-134",
+      "version": "THI-0.74",
+      "date": "2026-05-07T11:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:site",
+      "title": "Editeur Code : numéros de ligne + fold/collapse de sections",
+      "description": "Ajout de deux fonctionnalités au mode Code de projet-editor-zone. (1) Numéros de ligne : chaque ligne du miroir affiche son numéro en gouttière gauche (absolu, police monospace, couleur discrète). La gouttière passe de 2.75rem à 3.75rem pour accommoder les numéros. Les handles, focus buttons et drop indicator sont repositionnés en conséquence. (2) Fold/collapse par section : chevron (v/>) visible au hover dans la gouttière pour chaque section ayant du contenu. Clic chevron replie le body de la section (remplace les lignes par un marker {{FOLD:id:N}}) et stocke le contenu dans foldedContent Map. Clic sur le placeholder dereplie. Auto-save pausé tant que des sections sont repliées. unfoldAll() appelé avant setMode (switch preview), forceSave, et changement structurel.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il manque les numéros de ligne et les options pour minimisé les zones par section",
+      "startedAt": "2026-05-07T10:45:00.000Z",
+      "completedAt": "2026-05-07T11:30:00.000Z"
     }
   ]
 }

@@ -63,6 +63,9 @@ interface MirrorLine {
   imagePath: string;
   highlightKind: 'folder' | 'file' | null;
   lineIndex: number;
+  isFold: boolean;
+  foldSectionId: string;
+  foldLineCount: number;
 }
 
 interface HoverPreview {
@@ -184,6 +187,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   visuImageSectionId: string | null = null;
   mirrorLines: MirrorLine[] = [];
   renderedHtml: SafeHtml = '';
+  // Fold/collapse par section (mode Code)
+  foldedContent = new Map<string, string>(); // sectionId → body content replaced
+  sectionChevrons: { folderId: string; top: number; level: number }[] = [];
 
   // Image card interactions (edit mode)
   hoverPreview: HoverPreview | null = null;
@@ -237,6 +243,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const currentStructure = this.getFileStructureKey(this.files);
       const hasStructuralChange = this.lastStructureKey !== null && this.lastStructureKey !== currentStructure;
       this.lastStructureKey = currentStructure;
+      // Nettoyer les replis au rechargement structurel (structure a changé)
+      if (hasStructuralChange && this.foldedContent.size > 0) this.unfoldAll();
 
       this.docSections = this.buildDocSections(this.files, 1);
       this.allImages = this.collectAllImages(this.files);
@@ -461,6 +469,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     list.sort((a, b) => a.top - b.top);
     this.handles = list;
+
+    // Chevrons de repli pour chaque section ayant du contenu repliable
+    this.sectionChevrons = this.sectionRanges
+      .filter(r => r.lineEnd > r.lineStart) // ignorer les sections vides
+      .map(r => ({
+        folderId: r.folderId,
+        top: this.PADDING_TOP_PX + r.lineStart * this.LINE_HEIGHT_PX,
+        level: r.level,
+      }));
   }
 
   private recomputeRanges() {
@@ -616,9 +633,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           imagePath: img?.path || '',
           highlightKind: kind,
           lineIndex: i,
+          isFold: false, foldSectionId: '', foldLineCount: 0,
         };
       }
-      return { text: line, safeHtml: this.syntaxHighlight(line), isImage: false, imageId: '', imageName: '', imagePath: '', highlightKind: kind, lineIndex: i };
+      // Fold marker
+      const fm = /^\{\{FOLD:([a-zA-Z0-9-]+):(\d+)\}\}$/.exec(line.trim());
+      if (fm) {
+        return {
+          text: line, safeHtml: '', isImage: false,
+          imageId: '', imageName: '', imagePath: '',
+          highlightKind: kind, lineIndex: i,
+          isFold: true, foldSectionId: fm[1], foldLineCount: parseInt(fm[2], 10),
+        };
+      }
+      return { text: line, safeHtml: this.syntaxHighlight(line), isImage: false, imageId: '', imageName: '', imagePath: '', highlightKind: kind, lineIndex: i, isFold: false, foldSectionId: '', foldLineCount: 0 };
     });
   }
 
@@ -748,10 +776,72 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.insertAt('\n| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n| ', ' |       |       |\n');
   }
 
+  // ── Fold / collapse par section ──────────────────────────────
+  private getUnfoldedContent(): string {
+    if (this.foldedContent.size === 0) return this.unifiedContent;
+    let c = this.unifiedContent;
+    for (const [id, body] of this.foldedContent) {
+      c = c.replace(new RegExp(`\\{\\{FOLD:${id}:[0-9]+\\}\\}`, 'g'), body);
+    }
+    return c;
+  }
+
+  private unfoldAll() {
+    if (this.foldedContent.size === 0) return;
+    for (const [id] of [...this.foldedContent]) {
+      this.unfoldSection(id);
+    }
+  }
+
+  toggleFold(sectionId: string, ev?: MouseEvent) {
+    ev?.preventDefault();
+    ev?.stopPropagation();
+    if (this.foldedContent.has(sectionId)) {
+      this.unfoldSection(sectionId);
+    } else {
+      this.foldSection(sectionId);
+    }
+  }
+
+  private foldSection(sectionId: string) {
+    const range = this.sectionRanges.find(r => r.folderId === sectionId);
+    if (!range) return;
+    const lines = this.unifiedContent.split('\n');
+    const bodyLines = lines.slice(range.lineStart + 1, range.lineEnd + 1);
+    if (bodyLines.filter(l => l.trim()).length === 0) return; // nothing to fold
+    const body = bodyLines.join('\n');
+    this.foldedContent.set(sectionId, body);
+    const marker = `{{FOLD:${sectionId}:${bodyLines.length}}}`;
+    const newLines = [
+      ...lines.slice(0, range.lineStart + 1),
+      marker,
+      ...lines.slice(range.lineEnd + 1),
+    ];
+    this.unifiedContent = newLines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+    this.scheduleSave();
+  }
+
+  private unfoldSection(sectionId: string) {
+    const body = this.foldedContent.get(sectionId);
+    if (body === undefined) return;
+    this.foldedContent.delete(sectionId);
+    this.unifiedContent = this.unifiedContent.replace(
+      new RegExp(`\\{\\{FOLD:${sectionId}:[0-9]+\\}\\}`, 'g'),
+      body
+    );
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+  }
+
   // ── Mode toggle ─────────────────────────────────────────────
   setMode(m: 'edit' | 'visu') {
     if (this.mode === m) return;
     if (this.mode === 'edit') {
+      this.unfoldAll(); // expand all sections before leaving Code mode
       this.flushContentModifications();
       if (this.focusedHandle) this.exitFocusMode();
       else this.saveAll();
@@ -956,6 +1046,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // Force une sauvegarde immédiate (bouton "Non sauvegardé" cliqué)
   forceSave() {
     clearTimeout(this.saveTimeout);
+    this.unfoldAll(); // dépli obligatoire avant sauvegarde manuelle
     this.saveAll();
     this.flushContentModifications();
   }
@@ -1084,8 +1175,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   private scheduleSave() {
     clearTimeout(this.saveTimeout);
-    // Save automatique après 10 s d'inactivité ; le save immédiat reste assuré par
-    // onTextareaBlur (clic en dehors), exitFocusMode et setMode.
+    // Pas d'auto-save si des sections sont repliées (pour ne pas forcer le dépli)
+    if (this.foldedContent.size > 0) return;
     this.saveTimeout = setTimeout(() => this.saveAll(), 10000);
   }
 
