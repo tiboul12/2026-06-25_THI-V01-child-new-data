@@ -59,6 +59,7 @@ interface InlineBlockRange {
   kind: 'block-table' | 'block-quote' | 'block-fence' | 'block-list';
   lineStart: number;
   lineEnd: number;
+  parentFolderId: string | null;
 }
 
 interface MirrorLine {
@@ -201,6 +202,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   sectionChevrons: { folderId: string; top: number; level: number }[] = [];
   // Blocs inline détectés (tableau, citation, code fence, liste)
   private inlineBlockRanges: InlineBlockRange[] = [];
+  // Snapshot de texte des blocs inline avant modification (pour diff historique)
+  private inlineBlockTextSnapshot = new Map<string, string>();
 
   // Image card interactions (edit mode)
   hoverPreview: HoverPreview | null = null;
@@ -606,6 +609,26 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     const inSkip = (n: number) => skipRanges.some(([s, e]) => n >= s && n <= e);
 
+    // Résolution du dossier parent d'une ligne (section la plus profonde contenant la ligne)
+    const getParentFolderId = (lineStart: number): string | null => {
+      let best: SectionRange | null = null;
+      for (const r of this.sectionRanges) {
+        if (lineStart >= r.lineStart && lineStart <= r.lineEnd) {
+          if (!best || r.level > best.level) best = r;
+        }
+      }
+      return best?.folderId ?? null;
+    };
+
+    // Compteurs par (parentFolderId + kind) pour générer des IDs stables dans la section
+    const kindCounters = new Map<string, number>();
+    const nextId = (parentFolderId: string | null, kind: string): string => {
+      const key = `${parentFolderId ?? 'root'}##${kind}`;
+      const n = kindCounters.get(key) ?? 0;
+      kindCounters.set(key, n + 1);
+      return `${key}##${n}`;
+    };
+
     let i = 0;
     while (i < lines.length) {
       if (inSkip(i)) { i++; continue; }
@@ -619,7 +642,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         while (i < lines.length && !lines[i].trimStart().startsWith(fence) && !inSkip(i)) i++;
         const end = Math.min(i, lines.length - 1);
         if (end > start) {
-          this.inlineBlockRanges.push({ id: `iblock-fence-${start}`, kind: 'block-fence', lineStart: start, lineEnd: end });
+          const parentFolderId = getParentFolderId(start);
+          this.inlineBlockRanges.push({ id: nextId(parentFolderId, 'block-fence'), kind: 'block-fence', lineStart: start, lineEnd: end, parentFolderId });
         }
         i = end + 1; continue;
       }
@@ -630,7 +654,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         while (i < lines.length && !inSkip(i) && lines[i].trimStart().startsWith('|')) i++;
         const end = i - 1;
         if (end >= start) {
-          this.inlineBlockRanges.push({ id: `iblock-table-${start}`, kind: 'block-table', lineStart: start, lineEnd: end });
+          const parentFolderId = getParentFolderId(start);
+          this.inlineBlockRanges.push({ id: nextId(parentFolderId, 'block-table'), kind: 'block-table', lineStart: start, lineEnd: end, parentFolderId });
         }
         continue;
       }
@@ -640,7 +665,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         const start = i;
         while (i < lines.length && !inSkip(i) && lines[i].trimStart().startsWith('>')) i++;
         const end = i - 1;
-        this.inlineBlockRanges.push({ id: `iblock-quote-${start}`, kind: 'block-quote', lineStart: start, lineEnd: end });
+        const parentFolderId = getParentFolderId(start);
+        this.inlineBlockRanges.push({ id: nextId(parentFolderId, 'block-quote'), kind: 'block-quote', lineStart: start, lineEnd: end, parentFolderId });
         continue;
       }
 
@@ -661,7 +687,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         let end = i - 1;
         while (end > start && !lines[end].trim()) end--;
         if (end >= start) {
-          this.inlineBlockRanges.push({ id: `iblock-list-${start}`, kind: 'block-list', lineStart: start, lineEnd: end });
+          const parentFolderId = getParentFolderId(start);
+          this.inlineBlockRanges.push({ id: nextId(parentFolderId, 'block-list'), kind: 'block-list', lineStart: start, lineEnd: end, parentFolderId });
         }
         continue;
       }
@@ -1064,10 +1091,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (entity) {
       this.modifiedEntities.set(entity.id, entity.folderId);
       // Affichage live grisé dans le panneau historique tant que le save n'est pas fait
-      const node = this.findNode(entity.id, this.files);
+      const isBlock = entity.id.includes('##');
+      const node = isBlock ? null : this.findNode(entity.id, this.files);
+      const label = isBlock
+        ? `Modification — ${this.blockKindLabel(entity.id)}`
+        : `Modification de texte — «${node?.name || entity.id}»`;
       this.collab.upsertPending({
         entityId: entity.id,
-        label: `Modification de texte — «${node?.name || entity.id}»`,
+        label,
         username: this.authSvc.currentUser()?.username || 'Vous',
         timestamp: new Date().toISOString(),
         state: 'editing'
@@ -1151,7 +1182,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   onTextareaCursor(event: Event) {
     const ta = event.target as HTMLTextAreaElement;
     const lineIdx = ta.value.substring(0, ta.selectionStart).split('\n').length - 1;
-    // Priorité : si dans un bloc fichier additionnel → emit fileId
+    // Priorité 1 : bloc fichier additionnel → emit fileId
     for (const fr of this.fileRanges) {
       if (lineIdx >= fr.lineStart && lineIdx <= fr.lineEnd) {
         this.suppressScrollOnNextActiveChange = true;
@@ -1159,6 +1190,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         return;
       }
     }
+    // Priorité 2 : bloc inline (tableau, citation, code, liste) → emit blockId virtuel
+    for (const r of this.inlineBlockRanges) {
+      if (lineIdx >= r.lineStart && lineIdx <= r.lineEnd) {
+        this.suppressScrollOnNextActiveChange = true;
+        this.nodeActive.emit(r.id);
+        return;
+      }
+    }
+    // Priorité 3 : section/dossier
     for (let i = this.sectionRanges.length - 1; i >= 0; i--) {
       const r = this.sectionRanges[i];
       if (lineIdx >= r.lineStart && lineIdx <= r.lineEnd) {
@@ -1212,6 +1252,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         if (pendingEntityIds.has(fr.fileId)) continue;
         this.fileBlockSnapshot.set(fr.fileId, lines.slice(fr.lineStart, fr.lineEnd + 1).join('\n'));
       }
+      // Snapshot des blocs inline
+      for (const r of this.inlineBlockRanges) {
+        if (pendingEntityIds.has(r.id)) continue;
+        this.inlineBlockTextSnapshot.set(r.id, lines.slice(r.lineStart, r.lineEnd + 1).join('\n'));
+      }
     }
   }
 
@@ -1221,13 +1266,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const lines = this.unifiedContent.split('\n');
     const updatedFolderIds = new Set<string>();
     for (const [entityId, folderId] of this.modifiedEntities) {
-      const isFile = entityId !== folderId;
-      const node = this.findNode(entityId, this.files);
+      const isBlock = entityId.includes('##');
+      const isFile = !isBlock && entityId !== folderId;
+      const node = isBlock ? null : this.findNode(entityId, this.files);
       const snapshotBefore = this.sectionFileSnapshot.get(folderId);
+      const label = isBlock
+        ? `Modification — ${this.blockKindLabel(entityId)}`
+        : `Modification de texte — «${node?.name || entityId}»`;
 
       let textBefore: string | undefined;
       let textAfter: string | null = null;
-      if (isFile) {
+      if (isBlock) {
+        textBefore = this.inlineBlockTextSnapshot.get(entityId);
+        const blockRange = this.inlineBlockRanges.find(r => r.id === entityId);
+        if (blockRange) textAfter = lines.slice(blockRange.lineStart, blockRange.lineEnd + 1).join('\n');
+      } else if (isFile) {
         textBefore = this.fileBlockSnapshot.get(entityId);
         const fr = this.fileRanges.find(r => r.fileId === entityId);
         if (fr) textAfter = lines.slice(fr.lineStart, fr.lineEnd + 1).join('\n');
@@ -1240,14 +1293,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.woHistory.track({
         section: 'projets/contenu',
         actionType: 'update',
-        label: `Modification de texte — «${node?.name || entityId}»`,
+        label,
         entityType: 'content',
         entityId: entityId,
         beforeState: textBefore != null ? { content: textBefore } : undefined,
         afterState: textAfter != null ? { content: textAfter } : undefined,
         context: { projectId: this.projectName },
-        undoable: !!snapshotBefore?.fileId,
-        undoAction: snapshotBefore?.fileId ? {
+        undoable: !isBlock && !!snapshotBefore?.fileId,
+        undoAction: !isBlock && snapshotBefore?.fileId ? {
           endpoint: `/api/file-projects/${this.projectName}/files/${snapshotBefore.fileId}`,
           method: 'PUT',
           payload: { content: snapshotBefore.content }
@@ -1255,7 +1308,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }).catch(() => {});
 
       if (textAfter != null) {
-        if (isFile) this.fileBlockSnapshot.set(entityId, textAfter);
+        if (isBlock) this.inlineBlockTextSnapshot.set(entityId, textAfter);
+        else if (isFile) this.fileBlockSnapshot.set(entityId, textAfter);
         else this.sectionFullTextSnapshot.set(folderId, textAfter);
       }
       updatedFolderIds.add(folderId);
@@ -1269,8 +1323,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.modifiedEntities.clear();
   }
 
+  private blockKindLabel(blockId: string): string {
+    const kind = blockId.split('##')[1] ?? '';
+    const labels: Record<string, string> = {
+      'block-table': 'Tableau', 'block-quote': 'Citation',
+      'block-fence': 'Bloc de code', 'block-list': 'Liste',
+    };
+    return labels[kind] || 'Bloc';
+  }
+
   // Retourne l'entité modifiée selon la position du curseur :
   // - bloc fichier additionnel → fileId + folderId parent
+  // - bloc inline (table, citation, code, liste) → blockId + parentFolderId
   // - sinon section → folderId + folderId
   private getCursorEntity(): { id: string; folderId: string } | null {
     const ta = this.textareaRef?.nativeElement;
@@ -1280,6 +1344,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (lineIdx >= fr.lineStart && lineIdx <= fr.lineEnd) {
         const parent = this.findParentFolder(fr.fileId, this.files);
         if (parent) return { id: fr.fileId, folderId: parent.id };
+      }
+    }
+    for (const r of this.inlineBlockRanges) {
+      if (lineIdx >= r.lineStart && lineIdx <= r.lineEnd) {
+        return { id: r.id, folderId: r.parentFolderId ?? '' };
       }
     }
     for (let i = this.sectionRanges.length - 1; i >= 0; i--) {
@@ -2005,6 +2074,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if ((dragged.kind === 'block-table' || dragged.kind === 'block-quote' ||
          dragged.kind === 'block-fence' || dragged.kind === 'block-list') &&
         target.targetLine !== undefined) {
+      const blockKindStr: Record<string, string> = {
+        'block-table': 'Tableau', 'block-quote': 'Citation',
+        'block-fence': 'Bloc de code', 'block-list': 'Liste',
+      };
+      this.woHistory.track({
+        section: 'projets/contenu',
+        actionType: 'update',
+        label: `Déplacement — ${blockKindStr[dragged.kind] ?? 'Bloc'}`,
+        entityType: 'content',
+        entityId: dragged.id,
+        beforeState: { lineStart: dragged.lineStart, lineEnd: dragged.lineEnd },
+        afterState: { targetLine: target.targetLine },
+        context: { projectId: this.projectName },
+        undoable: false
+      }).catch(() => {});
       this.moveFileBlockToLine(dragged.lineStart, dragged.lineEnd, target.targetLine);
       return;
     }

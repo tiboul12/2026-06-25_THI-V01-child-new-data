@@ -51,6 +51,15 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   readonly activeNodeInfo = computed<{ name: string; icon: string } | null>(() => {
     const id = this.activeNodeId();
     if (!id) return null;
+    // ID virtuel de bloc inline (format: folderId##kind##index)
+    if (id.includes('##')) {
+      const kind = id.split('##')[1] ?? '';
+      const blockLabels: Record<string, string> = {
+        'block-table': 'Tableau', 'block-quote': 'Citation',
+        'block-fence': 'Bloc de code', 'block-list': 'Liste',
+      };
+      return { name: blockLabels[kind] || 'Bloc', icon: 'widgets' };
+    }
     const folder = this.findFolderById(id, this.files());
     if (folder) return { name: folder.name, icon: 'folder' };
     const file = this.findFileById(id, this.files());
@@ -60,18 +69,42 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   });
 
   // Set d'entityIds à afficher dans l'historique selon la sélection courante.
-  // - Dossier sélectionné → folder + tous ses descendants (sous-dossiers, fichiers)
-  // - contenu.md sélectionné → traité comme le dossier parent (tout le sous-arbre)
-  // - Fichier additionnel sélectionné → uniquement lui-même
+  // - ID virtuel de bloc (contient ##) → uniquement ce bloc
+  // - Dossier sélectionné → folder + descendants + blocs inline appartenant à ces folders
+  // - contenu.md sélectionné → traité comme le dossier parent
+  // - Fichier additionnel → uniquement lui-même
   readonly activeHistoryIds = computed<Set<string> | null>(() => {
     const id = this.activeNodeId();
     if (!id) return null;
+    // ID virtuel de bloc inline → filtre uniquement ce bloc
+    if (id.includes('##')) return new Set<string>([id]);
     const folder = this.findFolderById(id, this.files());
-    if (folder) return this.collectDescendantIds(folder);
+    if (folder) {
+      const baseSet = this.collectDescendantIds(folder);
+      // Inclure les blocs inline dont le parentFolderId est dans cet arbre
+      for (const entry of this.history.entries()) {
+        const eid = String(entry.entityId ?? '');
+        if (eid.includes('##')) {
+          const parentId = eid.split('##')[0];
+          if (baseSet.has(parentId)) baseSet.add(eid);
+        }
+      }
+      return baseSet;
+    }
     const fileNode = this.findFileById(id, this.files());
     if (fileNode?.name === 'contenu.md') {
       const parent = this.findParentFolder(id, this.files());
-      if (parent) return this.collectDescendantIds(parent);
+      if (parent) {
+        const baseSet = this.collectDescendantIds(parent);
+        for (const entry of this.history.entries()) {
+          const eid = String(entry.entityId ?? '');
+          if (eid.includes('##')) {
+            const parentId = eid.split('##')[0];
+            if (baseSet.has(parentId)) baseSet.add(eid);
+          }
+        }
+        return baseSet;
+      }
     }
     return new Set<string>([id]);
   });
