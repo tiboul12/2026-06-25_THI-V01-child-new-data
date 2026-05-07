@@ -2807,7 +2807,7 @@
     {
       "id": "mod-120",
       "version": "THI-0.68",
-      "date": "2026-05-06T10:00:00.000Z",
+      "date": "2026-05-06T10:00:00Z",
       "type": "config",
       "commitType": "MERGE",
       "scope": [
@@ -2852,13 +2852,13 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "oui je veux commiter tous le child worganic/THI-V01-child",
-      "startedAt": "2026-05-06T09:55:00.000Z",
-      "completedAt": "2026-05-06T10:00:00.000Z"
+      "startedAt": "2026-05-06T09:55:00Z",
+      "completedAt": "2026-05-06T10:00:00Z"
     },
     {
       "id": "mod-121",
       "version": "THI-0.68",
-      "date": "2026-05-06T10:30:00.000Z",
+      "date": "2026-05-06T10:30:00Z",
       "type": "fix",
       "commitType": "",
       "scope": [
@@ -2873,13 +2873,13 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "dans la zone edition la bouton supprimé l'image supprime le fichier dans le dossier data/projet mais laisse l'encart avec image manquante, il faut supprimé le fichier et l'encart et mettre dans l'historique l'action de suppression d'image",
-      "startedAt": "2026-05-06T10:10:00.000Z",
-      "completedAt": "2026-05-06T10:30:00.000Z"
+      "startedAt": "2026-05-06T10:10:00Z",
+      "completedAt": "2026-05-06T10:30:00Z"
     },
     {
       "id": "mod-122",
       "version": "THI-0.69",
-      "date": "2026-05-06T11:00:00.000Z",
+      "date": "2026-05-06T11:00:00Z",
       "type": "fix",
       "commitType": "",
       "scope": [
@@ -2894,13 +2894,13 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "lorsque l'encart indique image manquante, cela doit supprimé automatiquement l'encart image. Si l'image n'existe pas, l'encart ne doit pas être affiché",
-      "startedAt": "2026-05-06T10:50:00.000Z",
-      "completedAt": "2026-05-06T11:00:00.000Z"
+      "startedAt": "2026-05-06T10:50:00Z",
+      "completedAt": "2026-05-06T11:00:00Z"
     },
     {
       "id": "mod-123",
       "version": "THI-0.71",
-      "date": "2026-05-06T11:30:00.000Z",
+      "date": "2026-05-06T11:30:00Z",
       "type": "fix",
       "commitType": "",
       "scope": [
@@ -2916,13 +2916,13 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "cela ne marche pas corectement, lorsque je rajoute une image à un endroit précis comme entre 2 texte dans un dossier, à certain moment l'image est affiché tout en bas du dossier. Autre problème lorsque je veux effacé une image celle ci ce déplace tout seul en bas du dossier et ensuite je dois recommencer une seconde fois pour supprimer l'image. Verifi le système et corrige les problèmes",
-      "startedAt": "2026-05-06T11:05:00.000Z",
-      "completedAt": "2026-05-06T11:30:00.000Z"
+      "startedAt": "2026-05-06T11:05:00Z",
+      "completedAt": "2026-05-06T11:30:00Z"
     },
     {
       "id": "mod-124",
       "version": "THI-0.71",
-      "date": "2026-05-06T12:00:00.000Z",
+      "date": "2026-05-06T12:00:00Z",
       "type": "fix",
       "commitType": "",
       "scope": [
@@ -2937,13 +2937,13 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "Cela ne fonctionne pas, maintenant lorsque je rajoute une image l'encart ne s'affiche même plus.",
-      "startedAt": "2026-05-06T11:35:00.000Z",
-      "completedAt": "2026-05-06T12:00:00.000Z"
+      "startedAt": "2026-05-06T11:35:00Z",
+      "completedAt": "2026-05-06T12:00:00Z"
     },
     {
       "id": "mod-125",
       "version": "THI-0.71",
-      "date": "2026-05-06T12:30:00.000Z",
+      "date": "2026-05-06T12:30:00Z",
       "type": "fix",
       "commitType": "",
       "scope": [
@@ -2958,13 +2958,13 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "le rajout d'image ne fonctionne pas toujours sur la capture on peux voir l'encart mais pas le nom, le fichier n'a pas été uploader dans le repertoir data/projets/...",
-      "startedAt": "2026-05-06T12:05:00.000Z",
-      "completedAt": "2026-05-06T12:30:00.000Z"
+      "startedAt": "2026-05-06T12:05:00Z",
+      "completedAt": "2026-05-06T12:30:00Z"
     },
     {
       "id": "mod-126",
       "version": "THI-0.71",
-      "date": "2026-05-06T13:00:00.000Z",
+      "date": "2026-05-06T13:00:00Z",
       "type": "fix",
       "commitType": "",
       "scope": [
@@ -2979,13 +2979,13 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "{\"status\": 404, \"error\": \"Fichier non trouvé\"} — DELETE /api/file-projects/.../files/...",
-      "startedAt": "2026-05-06T12:45:00.000Z",
-      "completedAt": "2026-05-06T13:00:00.000Z"
+      "startedAt": "2026-05-06T12:45:00Z",
+      "completedAt": "2026-05-06T13:00:00Z"
     },
     {
       "id": "mod-127",
       "version": "THI-0.71",
-      "date": "2026-05-06T13:15:00.000Z",
+      "date": "2026-05-06T13:15:00Z",
       "type": "fix",
       "commitType": "",
       "scope": [
@@ -3000,8 +3000,8 @@
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "j'ai encore des erreurs lorsque je rajoute une image : wo-action-history.service.ts:64 POST http://localhost:3001/api/wo-action-history 500",
-      "startedAt": "2026-05-06T13:10:00.000Z",
-      "completedAt": "2026-05-06T13:15:00.000Z"
+      "startedAt": "2026-05-06T13:10:00Z",
+      "completedAt": "2026-05-06T13:15:00Z"
     },
     {
       "id": "mod-128",
@@ -3086,6 +3086,50 @@
       "prompt": "CEla fonctionne mais lorsqu'une image est rajouté une entrée est ajouté dans l'historique de section par contre quand je supprime une image, l'historique supprime l'action d'ajout et ne met pas l'action supprimé",
       "startedAt": "2026-05-06T21:46:52.491Z",
       "completedAt": "2026-05-06T21:46:52.491Z"
+    },
+    {
+      "id": "mod-132",
+      "version": "THI-0.72",
+      "date": "2026-05-06T22:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "system"
+      ],
+      "features": "system:workflow",
+      "title": "Doc projet-editor : sync fixes image, historique entityId, ordre snapshot",
+      "description": "Mise à jour de docs/structure/projet-editor.component.md pour documenter trois corrections apportées lors de la session : (1) la garde anti-snapshot-périmé avant updateStructure dans la synchronisation d'ordre, (2) la politique entityId=folderId pour les actions image afin que les entrées historique restent visibles après suppression, (3) les deux nouveaux scénarios de test anti-régression correspondants.",
+      "files": [
+        "docs/structure/projet-editor.component.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Met à jour @docs/structure/projet-editor.component.md avec les fonctionnalités modifié dans le projet editor",
+      "startedAt": "2026-05-06T21:55:00Z",
+      "completedAt": "2026-05-06T22:00:00Z"
+    },
+    {
+      "id": "mod-133",
+      "version": "THI-0.73",
+      "date": "2026-05-07T10:30:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:site",
+      "title": "Editeur : tabs Code/Preview GitHub-style + syntax highlighting + preview clean",
+      "description": "Refonte edition/visualisation projet-editor-zone. Tabs Code/Preview style GitHub. Mode Code : syntax highlighting miroir (H1-H6 colores, gras, italique, code, tables, blockquotes, listes, HR), nouveaux boutons toolbar (code block, table, blockquote, HR, H4). Mode Preview : rendu read-only via marked avec typographie clean (max-width 800px, tables, dark mode complet). setMode simplifie sans appels flush/selectionListener.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Amelioration editeur Code/Preview GitHub-style avec syntax highlighting et preview read-only",
+      "startedAt": "2026-05-07T09:00:00Z",
+      "completedAt": "2026-05-07T10:30:00Z"
     }
   ]
 }

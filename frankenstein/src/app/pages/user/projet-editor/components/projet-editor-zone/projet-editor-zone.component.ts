@@ -56,6 +56,7 @@ interface FileRange {
 
 interface MirrorLine {
   text: string;
+  safeHtml: string;
   isImage: boolean;
   imageId: string;
   imageName: string;
@@ -608,6 +609,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         const img = this.allImages.find(im => im.id === m[1]);
         return {
           text: line,
+          safeHtml: '',
           isImage: true,
           imageId: m[1],
           imageName: img?.name || '',
@@ -616,7 +618,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           lineIndex: i,
         };
       }
-      return { text: line, isImage: false, imageId: '', imageName: '', imagePath: '', highlightKind: kind, lineIndex: i };
+      return { text: line, safeHtml: this.syntaxHighlight(line), isImage: false, imageId: '', imageName: '', imagePath: '', highlightKind: kind, lineIndex: i };
     });
   }
 
@@ -676,15 +678,79 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // ── Syntax highlighting pour le miroir Code ──────────────────
+  private syntaxHighlight(text: string): string {
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const trimmed = text.trimStart();
+    if (!trimmed) return ' ';
+
+    // Headings
+    const hm = /^(#{1,6})\s/.exec(trimmed);
+    if (hm) {
+      const lvl = Math.min(hm[1].length, 6);
+      return `<span class="syn-h${lvl}">${esc(text)}</span>`;
+    }
+
+    // Code fence (``` or ~~~)
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+      return `<span class="syn-fence">${esc(text)}</span>`;
+    }
+
+    // Table row
+    if (trimmed.startsWith('|')) {
+      return `<span class="syn-table">${esc(text)}</span>`;
+    }
+
+    // Blockquote
+    if (trimmed.startsWith('>')) {
+      return `<span class="syn-blockquote">${esc(text)}</span>`;
+    }
+
+    // Unordered list
+    const ulm = /^([-*+] )(.*)$/.exec(trimmed);
+    if (ulm) {
+      const indent = text.length - trimmed.length;
+      const pad = indent > 0 ? esc(text.substring(0, indent)) : '';
+      return `${pad}<span class="syn-bullet">${esc(ulm[1])}</span>${esc(ulm[2])}`;
+    }
+
+    // Ordered list
+    const olm = /^(\d+\. )(.*)$/.exec(trimmed);
+    if (olm) {
+      const indent = text.length - trimmed.length;
+      const pad = indent > 0 ? esc(text.substring(0, indent)) : '';
+      return `${pad}<span class="syn-bullet">${esc(olm[1])}</span>${esc(olm[2])}`;
+    }
+
+    // Horizontal rule
+    if (/^(---+|\*\*\*+|___+)\s*$/.test(trimmed)) {
+      return `<span class="syn-hr">${esc(text)}</span>`;
+    }
+
+    // Normal text — inline tokens
+    let result = esc(text);
+    result = result.replace(/(`[^`\n]+`)/g, '<span class="syn-inline-code">$1</span>');
+    result = result.replace(/\*\*([^*\n]+?)\*\*/g, '<span class="syn-bold">**$1**</span>');
+    result = result.replace(/__([^_\n]+?)__/g, '<span class="syn-bold">__$1__</span>');
+    result = result.replace(/\*([^*\n]+?)\*/g, '<span class="syn-italic">*$1*</span>');
+    result = result.replace(/_([^_\n]+?)_/g, '<span class="syn-italic">_$1_</span>');
+    result = result.replace(/~~([^~\n]+?)~~/g, '<span class="syn-strike">~~$1~~</span>');
+    return result;
+  }
+
+  insertCodeBlock() {
+    this.insertAt('```\n', '\n```');
+  }
+
+  insertTable() {
+    this.insertAt('\n| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n| ', ' |       |       |\n');
+  }
+
   // ── Mode toggle ─────────────────────────────────────────────
   setMode(m: 'edit' | 'visu') {
     if (this.mode === m) return;
-    if (this.mode === 'visu') {
-      this.flushVisuSections();
-      this.teardownVisuSelectionListener();
-      this.visuToolbar = null;
-      this.visuInsertMenu = null;
-    }
     if (this.mode === 'edit') {
       this.flushContentModifications();
       if (this.focusedHandle) this.exitFocusMode();
@@ -695,9 +761,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.activeNodeId) {
       setTimeout(() => this.scrollToActive(), 80);
     }
-    if (m === 'visu') {
-      this.setupVisuSelectionListener();
-      setTimeout(() => this.initVisuSectionHtml(), 50);
+  }
+
+  onPreviewClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const heading = target.closest('[data-section-id]');
+    if (heading) {
+      const sectionId = heading.getAttribute('data-section-id');
+      if (sectionId) this.nodeActive.emit(sectionId);
     }
   }
 
