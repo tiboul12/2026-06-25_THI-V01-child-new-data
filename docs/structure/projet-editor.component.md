@@ -14,8 +14,12 @@ Il orchestre plusieurs sous-composants : la barre d'outils (`projet-toolbar`), l
   - `nestedImagesMap` — map `fileId → imageIds[]` pour les images imbriquées dans un bloc document
   - `diffEntry` — entrée d'historique en cours de visualisation (active la vue diff)
 - Computed signaux exposés au template :
-  - `activeNodeInfo` — `{ name, icon }` du nœud sélectionné (folder / image / description)
-  - `activeHistoryIds` — `Set<string>` d'entityIds à filtrer dans l'historique selon la sélection (un dossier remonte tout son sous-arbre, un `contenu.md` remonte le dossier parent, un fichier additionnel reste seul)
+  - `activeNodeInfo` — `{ name, icon }` du nœud sélectionné (folder / image / description / bloc inline avec icône `widgets`)
+  - `activeHistoryIds` — `Set<string>` d'entityIds à filtrer dans l'historique selon la sélection :
+    - ID virtuel de bloc inline (contient `##`) → uniquement ce bloc
+    - Dossier → tout son sous-arbre **+ blocs inline** dont le `parentFolderId` appartient au sous-arbre
+    - `contenu.md` → équivalent au dossier parent (idem + blocs)
+    - Fichier additionnel → uniquement lui-même
 
 ## Dépendances
 - `ActivatedRoute`, `Router` : extraction de l'ID du projet et redirections.
@@ -70,6 +74,7 @@ La zone centrale (`projet-editor-zone`) propose deux modes accessibles via des *
 - **Statut de sauvegarde :** Cycle `idle → dirty → saving → saved → idle` (timer de 2 s sur `saved`, 3 s sur `error`). `onSaveStarting` permet à la zone éditeur d'afficher immédiatement « Sauvegarde… » sans attendre l'analyse asynchrone.
 - **Historique & Diff :** Cliquer une entrée dans l'onglet Historique (`onHistoryEntryClick`) bascule la zone centrale en mode `projet-diff` (`diffEntry()` non nul). `closeDiff()` revient à l'éditeur.
 - **entityId des actions image :** Les actions `upload` et `delete` d'image sont tracées avec l'ID du **dossier parent** (`folderId`) comme `entityId`, et non l'ID de l'image elle-même. En effet, `activeHistoryIds` est un `computed()` dérivé de `this.files()` : une fois l'image supprimée, son nœud quitte `files()` et son ID disparaît du Set — filtrant toutes les entrées d'historique qui le référençaient. Le `folderId` reste lui toujours présent tant que la section existe, ce qui garantit que les entrées « Import d'image » et « Suppression d'image » restent visibles dans le panneau historique après la suppression.
+- **Historique des blocs inline :** Les blocs de format (tableau, citation, code fence, liste) sont identifiés par un ID virtuel au format `${parentFolderId}##${kind}##${index}` (ex : `abc123##block-table##0`). Ces IDs sont stables tant que l'ordre des blocs dans la section ne change pas. Quand le curseur se positionne dans un bloc → `nodeActive` émet l'ID virtuel → `activeHistoryIds` retourne `Set([blockId])`. Quand un dossier est sélectionné → `activeHistoryIds` scanne `this.history.entries()` pour inclure tous les blocs dont le `parentFolderId` est dans le sous-arbre. Le computed est réactif aux deux signaux (`activeNodeId` et `history.entries()`).
 - **Patch local après save :** `patchFileContent` met à jour le signal `files` après update serveur sans recharger, garantissant qu'un démontage/remontage de l'éditeur (ex : ouverture du diff) reconstruit depuis le contenu à jour.
 - **Création de section depuis la sidebar :** `onFolderCreated` appelle `appendSection` (racine) ou `insertSectionInParent` (sous-dossier) sur la zone éditeur pour synchroniser le texte du `contenu.md`.
 
@@ -89,6 +94,12 @@ La zone centrale (`projet-editor-zone`) propose deux modes accessibles via des *
    - Supprimer un fichier additionnel via le texte et vérifier la suppression côté serveur.
 4. **Ordre des fichiers (`orderedFileIds`) :** modifier l'ordre des blocs document dans le texte et vérifier que `updateStructure` ré-aligne `order` côté serveur. Insérer une image entre deux images existantes puis sauvegarder : vérifier que l'image n'est **pas supprimée** du serveur (le snapshot `updateStructure` doit inclure le nouveau nœud image).
 4b. **Historique image après suppression :** uploader une image dans une section, vérifier qu'une entrée « Import d'image » apparaît dans le panneau Historique, puis supprimer cette image et vérifier que (a) l'entrée « Import d'image » reste visible, (b) une entrée « Suppression d'image » apparaît, et (c) aucune image fantôme n'est affichée à l'écran après la suppression.
+4c. **Historique blocs inline :**
+   - Cliquer dans un tableau dans l'éditeur : l'historique doit se filtrer sur ce tableau uniquement (label « Modification — Tableau »).
+   - Modifier du texte dans le tableau puis sauvegarder : une entrée « Modification — Tableau » doit apparaître.
+   - Déplacer un tableau par drag & drop : une entrée « Déplacement — Tableau » doit apparaître.
+   - Sélectionner le dossier parent : l'historique doit inclure les entrées du dossier ET les entrées du tableau.
+   - Même test avec Citation, Bloc de code, Liste.
 5. **Sauvegarde de fichier (`onFileSave`) :** statut `saving → saved → idle`, communication avec le backend.
 6. **Concurrence :** déclencher deux `sectionsChange` rapprochés et vérifier qu'aucun batch n'est perdu (le second passe par `pendingSections`).
 7. **Panneau zone 5 — onglets :**

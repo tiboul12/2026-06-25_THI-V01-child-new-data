@@ -3261,6 +3261,27 @@
       "prompt": "Chaque section doit avoir son propre historique d action, ainsi si on clique sur un section de tableau on doit avoir l historique de ce tableau uniquement, si on clique sur le dossier ou il y a le tableau, on doit avoir l historique du tableau mais aussi l historique du dossier et tous ce qu il y a dans le dossier. Ajoute toutes les sections tableau document code citation etc dans l historique. Dans l historique on doit retrouve : ajout, suppression modification des texts, ajout/suppression/deplacement des sections etc",
       "startedAt": "2026-05-07T09:00:00Z",
       "completedAt": "2026-05-07T10:00:00Z"
+    },
+    {
+      "id": "mod-140",
+      "version": "THI-0.80",
+      "date": "2026-05-07T10:30:00Z",
+      "type": "config",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "system"
+      ],
+      "features": "system:workflow",
+      "title": "Doc projet-editor : historique blocs inline",
+      "description": "Mise à jour de docs/structure/projet-editor.component.md : activeHistoryIds étendu aux IDs virtuels de blocs inline, règle métier sur le format ##, scénario de test anti-régression 4c.",
+      "files": [
+        "docs/structure/projet-editor.component.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Met à jour les fichiers docs @docs/structure/projet-editor.component.md et @docs/structure/projet-conversation.component.md avec les modifications que tu viens de faire.",
+      "startedAt": "2026-05-07T10:20:00Z",
+      "completedAt": "2026-05-07T10:30:00Z"
     }
   ]
 }
