@@ -3153,6 +3153,27 @@
       "prompt": "il manque les numéros de ligne et les options pour minimisé les zones par section",
       "startedAt": "2026-05-07T10:45:00.000Z",
       "completedAt": "2026-05-07T11:30:00.000Z"
+    },
+    {
+      "id": "mod-135",
+      "version": "THI-0.75",
+      "date": "2026-05-07T10:41:20.987Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix gouttière : écarter texte/boutons pour éviter chevauchement",
+      "description": "Correction du chevauchement des boutons drag handle (H3, Ed.) sur le texte dans l editeur Code. Augmentation du padding-left de 3.75rem a 5rem sur .ed-mirror et .ed-textarea. Ajustement de ed-drop-indicator (left 3.5rem -> 4.75rem) et ed-lnum (left -3.5rem -> -4.75rem) pour s aligner avec la nouvelle gouttiere.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il faut ecrater le texte et la liste des lignes pour laisser la place au bouton, les bouton passe sur le texte. ecarte le texte vers la droite",
+      "startedAt": "2026-05-07T00:00:00.000Z",
+      "completedAt": "2026-05-07T10:41:20.987Z"
     }
   ]
 }

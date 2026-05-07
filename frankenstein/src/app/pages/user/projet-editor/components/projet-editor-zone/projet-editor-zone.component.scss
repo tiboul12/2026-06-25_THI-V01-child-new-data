@@ -13,7 +13,7 @@
   position: absolute;
   inset: 0;
   margin: 0;
-  padding: 1rem 1.5rem 1rem 3.75rem; // ↙ 3.75rem : numéros de ligne (2.5rem) + gouttière drag (1.25rem)
+  padding: 1rem 1.5rem 1rem 5rem; // ↙ 5rem : lnum (2.5rem) + chevron (0.5rem) + handle+btn (~2rem) = 80px
   box-sizing: border-box;
   font-family: 'Fira Code', 'Consolas', 'Menlo', monospace;
   font-size: 13px;
@@ -325,7 +325,7 @@
 // ── Indicateur de drop : barre horizontale traversant la zone ──
 .ed-drop-indicator {
   position: absolute;
-  left: 3.5rem;   // s'aligne sur la zone de texte (après gouttière étendue)
+  left: 4.75rem;  // s'aligne sur la zone de texte (après gouttière étendue)
   right: 1.25rem;
   background: rgb(59, 130, 246);
   border-radius: 1px;
@@ -892,7 +892,7 @@
 // ── Numéros de ligne ─────────────────────────────────────────────
 .ed-lnum {
   position: absolute;
-  left: -3.5rem;   // depuis le bord gauche de ed-line, dans la gouttière
+  left: -4.75rem;  // depuis le bord gauche de ed-line, colle au bord physique de la gouttière
   width: 2.5rem;
   text-align: right;
   padding-right: 0.6rem;
