@@ -343,7 +343,15 @@
                 }
               }
 
-              <!-- Badge de verrou (visible si section verrouillée par un autre user) -->
+              <!-- Badge "édité par moi" (bleu) -->
+              @if (editingVisuSectionId === sec.sectionId) {
+                <div class="visu-my-lock-badge">
+                  <span class="material-symbols-outlined">edit</span>
+                  Vous éditez cette section
+                </div>
+              }
+
+              <!-- Badge de verrou par un autre user (rouge) -->
               @if (collab.isLockedByOther(sec.sectionId)) {
                 <div class="visu-lock-badge">
                   <span class="material-symbols-outlined">lock</span>
@@ -360,6 +368,19 @@
                    (blur)="onVisuSectionBlur(sec.sectionId)"
                    (input)="onVisuSectionInput(sec.sectionId)">
               </div>
+
+              <!-- Boutons Annuler / Partager (visibles quand je suis en train d'éditer) -->
+              @if (editingVisuSectionId === sec.sectionId) {
+                <div class="visu-publish-bar">
+                  <button class="visu-publish-bar__cancel" (mousedown)="$event.preventDefault(); cancelVisuEdit(sec.sectionId)">
+                    Annuler
+                  </button>
+                  <button class="visu-publish-bar__publish" (mousedown)="$event.preventDefault(); publishVisuSection(sec.sectionId)">
+                    <span class="material-symbols-outlined">check</span>
+                    Partager mes modifications
+                  </button>
+                </div>
+              }
 
               <!-- Ligne d'insertion (visible au hover) -->
               <div class="visu-insert-row">

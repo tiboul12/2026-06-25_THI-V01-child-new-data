@@ -4237,18 +4237,30 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         if (!full) return res.status(400).json({ error: 'Chemin invalide' });
         fs.mkdirSync(path.dirname(full), { recursive: true });
         const content = req.body.content ?? '';
+        const folderId = req.body.folderId || null;
+        const publish = req.body.publish === true;
         fs.writeFileSync(full, content, 'utf8');
         saveProjectConfig(req.params.name, config);
 
-        // Broadcast SSE content_update aux autres clients connectés
-        broadcastToProject(req.params.name, 'content_update', {
-            nodeId: req.params.id,
-            folderId: req.body.folderId || null,
-            content,
-            updatedBy: user.id,
-            updatedByName: user.username || user.email || 'Utilisateur',
-            timestamp: new Date().toISOString()
-        });
+        // Broadcast SSE content_update seulement si publication explicite
+        if (publish) {
+            broadcastToProject(req.params.name, 'content_update', {
+                nodeId: req.params.id,
+                folderId,
+                content,
+                updatedBy: user.id,
+                updatedByName: user.username || user.email || 'Utilisateur',
+                timestamp: new Date().toISOString()
+            });
+            // Libérer le lock automatiquement au moment de la publication
+            const unlockId = folderId || req.params.id;
+            try {
+                await pool.query('DELETE FROM projet_section_lock WHERE node_id = ? AND projet_id = ?', [unlockId, req.params.name]);
+                broadcastToProject(req.params.name, 'unlock', { nodeId: unlockId, projetId: req.params.name });
+            } catch (e2) {
+                console.error('[LOCK] unlock on publish error:', e2.message);
+            }
+        }
 
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }

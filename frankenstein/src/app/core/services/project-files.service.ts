@@ -50,8 +50,8 @@ export class ProjectFilesService {
     return firstValueFrom(this.http.post<FileNode>(`${API}/api/file-projects/${projectName}/files`, data, { headers: this.h() }));
   }
 
-  updateFile(projectName: string, fileId: string, content: string, folderId?: string): Promise<any> {
-    return firstValueFrom(this.http.put(`${API}/api/file-projects/${projectName}/files/${fileId}`, { content, folderId: folderId ?? null }, { headers: this.h() }));
+  updateFile(projectName: string, fileId: string, content: string, folderId?: string, publish = false): Promise<any> {
+    return firstValueFrom(this.http.put(`${API}/api/file-projects/${projectName}/files/${fileId}`, { content, folderId: folderId ?? null, publish }, { headers: this.h() }));
   }
 
   renameFile(projectName: string, fileId: string, name: string): Promise<FileNode> {

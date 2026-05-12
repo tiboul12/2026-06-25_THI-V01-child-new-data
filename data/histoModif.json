@@ -3350,6 +3350,29 @@
       "completedAt": "2026-05-07T12:30:00Z"
     },
     {
+      "id": "mod-146",
+      "version": "THI-0.84",
+      "date": "2026-05-12T15:30:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:projet-editor,server:collab",
+      "title": "Collab visu : badge édition + boutons Annuler/Partager explicite",
+      "description": "Ajout du flux UX complet pour le partage explicite des modifications. (1) Badge bleu 'Vous éditez cette section' visible uniquement pour l'auteur du lock, badge rouge 'Édité par [user]' pour les autres users. (2) Boutons [Annuler] et [✔ Partager mes modifications] apparaissent sous la section quand l'utilisateur a le lock. (3) Annuler : restaure le contenu HTML original (snapshot capturé à l'acquisition du lock), libère le lock sans publier. (4) Partager : met à jour unifiedContent, annule le debounce, appelle updateFile(publish=true) qui diffuse content_update SSE et libère le lock côté serveur en une seule requête. (5) onVisuSectionBlur conserve le lock (save local sans publish). (6) Backend PUT files/:id : broadcast SSE et unlock DB uniquement si publish=true dans le body. (7) updateFile() expose le param publish=false par défaut.",
+      "files": [
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/project-files.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Comment je sais qu'une section est verouillé pour les autres user et pour moi même et comment je fais pour validé mes modifs et que je partage mon travail ?",
+      "startedAt": "2026-05-12T14:45:00Z",
+      "completedAt": "2026-05-12T15:30:00Z"
+    },
+    {
       "id": "mod-145",
       "version": "THI-0.83",
       "date": "2026-05-12T14:30:00Z",

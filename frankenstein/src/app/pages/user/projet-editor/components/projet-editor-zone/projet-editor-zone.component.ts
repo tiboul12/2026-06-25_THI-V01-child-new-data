@@ -192,7 +192,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   visuToolbar: { top: number; left: number } | null = null;
   visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
   activeVisuSectionId: string | null = null;
+  editingVisuSectionId: string | null = null;
   private dirtyVisuSectionIds = new Set<string>();
+  private visuSectionLockSnapshot = new Map<string, string>();
   private visuSelectionListener: (() => void) | null = null;
   visuImageSectionId: string | null = null;
   mirrorLines: MirrorLine[] = [];
@@ -2383,28 +2385,95 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.activeVisuSectionId = sectionId;
     this.suppressScrollOnNextActiveChange = true;
     this.nodeActive.emit(sectionId);
-    // Acquérir le lock pour cette section
-    if (this.projectName) {
+    // Acquérir le lock et noter qu'on édite cette section
+    if (this.projectName && this.editingVisuSectionId !== sectionId) {
+      // Capturer le contenu original avant modification
+      const vs = this.visuSections.find(v => v.sectionId === sectionId);
+      if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+      this.editingVisuSectionId = sectionId;
       this.collab.lockNode(this.projectName, sectionId).catch(() => {});
     }
   }
 
   onVisuSectionBlur(sectionId: string) {
-    const isDirty = this.dirtyVisuSectionIds.has(sectionId);
-    if (isDirty) {
+    // Sauvegarder localement (sans publier) mais conserver le lock
+    if (this.dirtyVisuSectionIds.has(sectionId)) {
       const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
       const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
       if (el) {
         const md = this.htmlSectionToMarkdown(el);
         const sec = this.visuSections[idx];
         this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
+        this.dirtyVisuSectionIds.delete(sectionId);
       }
-      this.dirtyVisuSectionIds.delete(sectionId);
     }
-    // Libérer le lock après avoir quitté la section
-    if (this.projectName && this.collab.isLockedByMe(sectionId)) {
-      this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+    // NE PAS libérer le lock ici — l'utilisateur doit cliquer Partager ou Annuler
+  }
+
+  async publishVisuSection(sectionId: string): Promise<void> {
+    const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+    const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+    const snapshot = this.sectionFileSnapshot.get(sectionId);
+
+    const sec = this.visuSections[idx];
+    const newMd = el ? this.htmlSectionToMarkdown(el) : (sec?.markdownBefore ?? '');
+    const mdBefore = this.visuSectionLockSnapshot.get(sectionId) ?? '';
+
+    // Mettre à jour unifiedContent puis annuler le debounce
+    this.saveVisuSection(sectionId, newMd, mdBefore);
+    clearTimeout(this.saveTimeout);
+    this.lastSavedContent = this.unifiedContent;
+
+    // Publier : POST avec publish=true → SSE broadcast + unlock côté serveur
+    if (snapshot?.fileId && this.projectName) {
+      try {
+        await this.svc.updateFile(this.projectName, snapshot.fileId, newMd, sectionId, true);
+      } catch (e: any) {
+        console.warn('[Publish] erreur lors de la publication:', e);
+        return;
+      }
+    } else if (this.projectName) {
+      await this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
     }
+
+    this.dirtyVisuSectionIds.delete(sectionId);
+    this.visuSectionLockSnapshot.delete(sectionId);
+    this.editingVisuSectionId = null;
+    this.localDirty = false;
+    this.dirtyChange.emit(false);
+  }
+
+  async cancelVisuEdit(sectionId: string): Promise<void> {
+    const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+    const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+    const originalMd = this.visuSectionLockSnapshot.get(sectionId) ?? '';
+
+    // Restaurer le contenu HTML original dans le contenteditable
+    if (el) {
+      el.innerHTML = await Promise.resolve(marked(originalMd) as string);
+    }
+
+    // Restaurer unifiedContent à la version d'avant édition
+    if (originalMd !== undefined) {
+      const sec = this.visuSections[idx];
+      const currentMd = sec?.markdownBefore ?? '';
+      if (currentMd !== originalMd) {
+        this.saveVisuSection(sectionId, originalMd, currentMd);
+        clearTimeout(this.saveTimeout);
+        this.lastSavedContent = this.unifiedContent;
+      }
+    }
+
+    // Libérer le lock (pas de publication)
+    if (this.projectName) {
+      await this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+    }
+
+    this.dirtyVisuSectionIds.delete(sectionId);
+    this.visuSectionLockSnapshot.delete(sectionId);
+    this.editingVisuSectionId = null;
+    this.localDirty = false;
+    this.dirtyChange.emit(false);
   }
 
   onVisuSectionInput(sectionId: string) {
