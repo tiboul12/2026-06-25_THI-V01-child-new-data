@@ -1,6 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -39,6 +39,21 @@ export interface PendingHistoryEntry {
   state: 'editing' | 'saving';
 }
 
+export interface ContentUpdateEvent {
+  nodeId: string;
+  folderId: string | null;
+  content: string;
+  updatedBy: string;
+  updatedByName: string;
+  timestamp: string;
+}
+
+export interface StructureUpdateEvent {
+  operation: 'create_folder' | 'rename_folder' | 'delete_folder' | 'rename_file' | 'delete_file' | 'reorder';
+  payload: any;
+  updatedBy: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProjetCollabService {
   private http = inject(HttpClient);
@@ -48,6 +63,9 @@ export class ProjetCollabService {
   readonly pending = signal<PendingHistoryEntry[]>([]);
   readonly locks = signal<Map<string, LockInfo>>(new Map());
   readonly connected = signal(false);
+
+  readonly contentUpdate$ = new Subject<ContentUpdateEvent>();
+  readonly structureUpdate$ = new Subject<StructureUpdateEvent>();
 
   private eventSource: EventSource | null = null;
   private currentProjetId: string | null = null;
@@ -152,6 +170,26 @@ export class ProjetCollabService {
       this.eventSource.addEventListener('unlock', (e: MessageEvent) => {
         const { nodeId } = JSON.parse(e.data);
         this.locks.update(map => { const m = new Map(map); m.delete(nodeId); return m; });
+      });
+
+      this.eventSource.addEventListener('content_update', (e: MessageEvent) => {
+        try {
+          const update: ContentUpdateEvent = JSON.parse(e.data);
+          const me = this.auth.currentUser();
+          if (update.updatedBy !== me?.id) this.contentUpdate$.next(update);
+        } catch (err) {
+          console.warn('[Collab] SSE content_update parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('structure_update', (e: MessageEvent) => {
+        try {
+          const update: StructureUpdateEvent = JSON.parse(e.data);
+          const me = this.auth.currentUser();
+          if (update.updatedBy !== me?.id) this.structureUpdate$.next(update);
+        } catch (err) {
+          console.warn('[Collab] SSE structure_update parse error:', err);
+        }
       });
 
       this.eventSource.onerror = () => {

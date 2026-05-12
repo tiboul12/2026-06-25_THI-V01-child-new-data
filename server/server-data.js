@@ -4202,19 +4202,54 @@ app.post('/api/file-projects/:name/files', (req, res) => {
 });
 
 // PUT /api/projects/:name/files/:id
-app.put('/api/file-projects/:name/files/:id', (req, res) => {
+app.put('/api/file-projects/:name/files/:id', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const config = getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const item = findNodeById(config.structure, req.params.id);
     if (!item || item.type !== 'file') return res.status(404).json({ error: 'Fichier non trouvé' });
+
+    // Vérification du lock : si la section est verrouillée par un autre user → 423
+    try {
+        const lockNodeIds = [req.params.id];
+        if (req.body.folderId) lockNodeIds.push(req.body.folderId);
+        const placeholders = lockNodeIds.map(() => '?').join(',');
+        const [locks] = await pool.query(
+            `SELECT * FROM projet_section_lock WHERE node_id IN (${placeholders}) AND projet_id = ?`,
+            [...lockNodeIds, req.params.name]
+        );
+        const blockedLock = locks.find(l => l.locked_by_id !== user.id);
+        if (blockedLock) {
+            return res.status(423).json({
+                error: 'Section verrouillée',
+                lockedBy: blockedLock.locked_by_name,
+                lockedAt: blockedLock.locked_at
+            });
+        }
+    } catch (e) {
+        console.error('[LOCK] check error on file update:', e.message);
+        // Fail open : on laisse passer en cas d'erreur DB
+    }
+
     try {
         const full = safeProjectPath(req.params.name, item.path);
         if (!full) return res.status(400).json({ error: 'Chemin invalide' });
         fs.mkdirSync(path.dirname(full), { recursive: true });
-        fs.writeFileSync(full, req.body.content ?? '', 'utf8');
+        const content = req.body.content ?? '';
+        fs.writeFileSync(full, content, 'utf8');
         saveProjectConfig(req.params.name, config);
+
+        // Broadcast SSE content_update aux autres clients connectés
+        broadcastToProject(req.params.name, 'content_update', {
+            nodeId: req.params.id,
+            folderId: req.body.folderId || null,
+            content,
+            updatedBy: user.id,
+            updatedByName: user.username || user.email || 'Utilisateur',
+            timestamp: new Date().toISOString()
+        });
+
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4251,6 +4286,7 @@ app.patch('/api/file-projects/:name/files/:id', (req, res) => {
         if (fs.existsSync(oldFull)) fs.renameSync(oldFull, newFull);
         item.name = newName; item.path = newPath;
         saveProjectConfig(req.params.name, config);
+        broadcastToProject(req.params.name, 'structure_update', { operation: 'rename_file', payload: item, updatedBy: user.id });
         res.json(item);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4268,6 +4304,7 @@ app.delete('/api/file-projects/:name/files/:id', (req, res) => {
         if (full && fs.existsSync(full)) fs.unlinkSync(full);
         removeNodeById(config.structure, req.params.id);
         saveProjectConfig(req.params.name, config);
+        broadcastToProject(req.params.name, 'structure_update', { operation: 'delete_file', payload: { id: req.params.id }, updatedBy: user.id });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4310,8 +4347,9 @@ app.post('/api/file-projects/:name/folders', (req, res) => {
             children: [{ id: crypto.randomUUID(), type: 'file', name: 'contenu.md', path: contentPath, order: 1 }]
         };
         parentItems.push(newFolder);
-        
+
         saveProjectConfig(req.params.name, config);
+        broadcastToProject(req.params.name, 'structure_update', { operation: 'create_folder', payload: { ...newFolder, parentId: parentId || null }, updatedBy: user.id });
         res.status(201).json(newFolder);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4349,6 +4387,7 @@ app.patch('/api/file-projects/:name/folders/:id', (req, res) => {
         updateNodePaths(item, oldPath, newPath);
         item.name = name;
         saveProjectConfig(req.params.name, config);
+        broadcastToProject(req.params.name, 'structure_update', { operation: 'rename_folder', payload: { id: req.params.id, name, oldPath, newPath }, updatedBy: user.id });
         res.json(item);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4366,6 +4405,7 @@ app.delete('/api/file-projects/:name/folders/:id', (req, res) => {
         if (full && fs.existsSync(full)) fs.rmSync(full, { recursive: true, force: true });
         removeNodeById(config.structure, req.params.id);
         saveProjectConfig(req.params.name, config);
+        broadcastToProject(req.params.name, 'structure_update', { operation: 'delete_folder', payload: { id: req.params.id }, updatedBy: user.id });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4379,6 +4419,7 @@ app.put('/api/file-projects/:name/structure', (req, res) => {
     try {
         config.structure = req.body.structure;
         saveProjectConfig(req.params.name, config);
+        broadcastToProject(req.params.name, 'structure_update', { operation: 'reorder', payload: { structure: req.body.structure }, updatedBy: user.id });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

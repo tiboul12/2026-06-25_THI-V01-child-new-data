@@ -280,11 +280,110 @@
       </div>
     }
 
-    <!-- Mode Preview : rendu markdown read-only -->
+    <!-- Mode Preview : éditable par section (contenteditable + toolbar flottante) -->
     @if (mode === 'visu') {
-      <div class="preview-wrap flex-1 min-h-0 overflow-y-auto"
-           (click)="onPreviewClick($event)">
-        <div class="preview-content" [innerHTML]="renderedHtml"></div>
+      <div class="preview-wrap flex-1 min-h-0 overflow-y-auto" #visu
+           (click)="onVisuContainerClick($event)"
+           (keydown)="onVisuSectionKeydown($event)">
+
+        <!-- Toolbar de formatage flottante (apparaît sur sélection de texte) -->
+        @if (visuToolbar) {
+          <div class="visu-format-toolbar"
+               [style.top.px]="visuToolbar.top"
+               [style.left.px]="visuToolbar.left">
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S</s></button>
+            <div class="visu-format-toolbar__sep"></div>
+            <button class="visu-format-toolbar__clear"
+                    (mousedown)="$event.preventDefault(); applyVisuFormat('removeFormat')"
+                    title="Effacer la mise en forme">
+              <span class="material-symbols-outlined" style="font-size:13px;line-height:1">format_clear</span>
+            </button>
+          </div>
+        }
+
+        <!-- Menu d'insertion de bloc -->
+        @if (visuInsertMenu) {
+          <div class="visu-insert-menu"
+               [style.top.px]="visuInsertMenu.top"
+               [style.left.px]="visuInsertMenu.left">
+            <button (click)="insertVisuBlock('menu', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">title</span>Nouveau titre
+            </button>
+            <button (click)="insertVisuBlock('doc', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">description</span>Nouveau document
+            </button>
+            <button (click)="insertVisuBlock('code', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">code</span>Bloc de code
+            </button>
+          </div>
+        }
+
+        <!-- Sections éditables -->
+        <div class="visu-content-wrap">
+          @for (sec of visuSections; track sec.sectionId) {
+            <div class="visu-section-wrap"
+                 [class.visu-section-wrap--active]="activeVisuSectionId === sec.sectionId"
+                 [class.visu-section-wrap--locked]="collab.isLockedByOther(sec.sectionId)">
+
+              <!-- En-tête non éditable (nom du dossier) -->
+              @switch (sec.level) {
+                @case (1) {
+                  <h1 class="visu-sec-heading" [attr.data-section-id]="sec.sectionId" (click)="onPreviewClick($event)">{{ sec.folderName }}</h1>
+                }
+                @case (2) {
+                  <h2 class="visu-sec-heading" [attr.data-section-id]="sec.sectionId" (click)="onPreviewClick($event)">{{ sec.folderName }}</h2>
+                }
+                @case (3) {
+                  <h3 class="visu-sec-heading" [attr.data-section-id]="sec.sectionId" (click)="onPreviewClick($event)">{{ sec.folderName }}</h3>
+                }
+                @default {
+                  <h4 class="visu-sec-heading" [attr.data-section-id]="sec.sectionId" (click)="onPreviewClick($event)">{{ sec.folderName }}</h4>
+                }
+              }
+
+              <!-- Badge de verrou (visible si section verrouillée par un autre user) -->
+              @if (collab.isLockedByOther(sec.sectionId)) {
+                <div class="visu-lock-badge">
+                  <span class="material-symbols-outlined">lock</span>
+                  Édité par {{ collab.getLock(sec.sectionId)?.lockedByName }}
+                </div>
+              }
+
+              <!-- Corps éditable (contenteditable) -->
+              <div #visuSectionEl
+                   class="visu-sec-content"
+                   [attr.contenteditable]="collab.isLockedByOther(sec.sectionId) ? 'false' : 'true'"
+                   [attr.data-section-id]="sec.sectionId"
+                   (focus)="onVisuSectionFocus(sec.sectionId)"
+                   (blur)="onVisuSectionBlur(sec.sectionId)"
+                   (input)="onVisuSectionInput(sec.sectionId)">
+              </div>
+
+              <!-- Ligne d'insertion (visible au hover) -->
+              <div class="visu-insert-row">
+                <button class="visu-insert-btn"
+                        (click)="showVisuInsertMenu(sec.sectionId, $event)"
+                        title="Insérer un bloc">
+                  <span class="material-symbols-outlined">add</span>
+                  Ajouter un bloc
+                </button>
+                <button class="visu-insert-btn visu-insert-btn--img"
+                        (click)="triggerVisuImageUpload(sec.sectionId)"
+                        title="Insérer une image">
+                  <span class="material-symbols-outlined">add_photo_alternate</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Input caché pour upload image en mode visu -->
+        <input #visuImgInput type="file"
+               accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp"
+               class="hidden"
+               (change)="onVisuImageSelected($event)">
       </div>
     }
 

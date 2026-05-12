@@ -3348,6 +3348,52 @@
       "prompt": "j'ai ajouté un texte dans Menu 1 et cela à effacé tous le texte qui suit peux tu vérifié pourquoi et corrige le problème",
       "startedAt": "2026-05-07T12:15:00Z",
       "completedAt": "2026-05-07T12:30:00Z"
+    },
+    {
+      "id": "mod-145",
+      "version": "THI-0.83",
+      "date": "2026-05-12T14:30:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:projet-editor,server:collab",
+      "title": "Collaboration temps réel : hard lock, content_update SSE, structure_update SSE",
+      "description": "Implémentation de la collaboration locale avec partage sélectif. (1) Backend : vérification hard lock (HTTP 423) dans PUT /api/file-projects/:name/files/:id — la modification est refusée si la section est verrouillée par un autre user ; broadcast SSE content_update après sauvegarde réussie (contenu + auteur) ; broadcast SSE structure_update sur toutes les opérations de structure (create/rename/delete dossier et fichier, reorder). (2) Service collab : ajout des interfaces ContentUpdateEvent et StructureUpdateEvent, Subject content_update$ et structureUpdate$, handlers SSE correspondants (self-filter : les événements émis par le user courant sont ignorés). (3) Composant éditeur : abonnement aux Subjects — content_update patche le signal files sans rechargement, structure_update déclenche un loadFiles() complet. (4) Zone éditeur visu : lock automatique de la section au focus (folderId comme nodeId), refus de focus si section verrouillée par autre user (contenteditable=false + reblur), unlock automatique au blur ; badge visuel rouge 'Édité par [user]' sur les sections verrouillées. (5) ProjectFilesService.updateFile() : paramètre folderId optionnel transmis au backend pour vérification combinée fileId+folderId.",
+      "files": [
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/projet-collab.service.ts",
+        "frankenstein/src/app/core/services/project-files.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "J'ai un problème et je voudrais que tu étudie mon système pour me proposé des solutions. Je voudrais que mes projets soi géré en local (sans connexion) mais qu'a un moment donné les projets (menu + documents + contenu) puisse être partagé avec d'autre user qui bosse aussi sur le projet. Je voudrais ainsi que les menu projet (nom des dossiers, documents) soi partagé en direct. Mais que les documents eux soi disponible puis bloqué par un user pour faire une edition de la section (alors impossible à edité pendant l'edition par d'autre user) puis ensuite partagé pour être récupéré par les autres user. Fait une étude propose moi des solutions et si besoin pose moi des questions",
+      "startedAt": "2026-05-12T12:00:00Z",
+      "completedAt": "2026-05-12T14:30:00Z"
+    },
+    {
+      "id": "mod-144",
+      "version": "THI-0.83",
+      "date": "2026-05-07T14:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix visu : bloc code, tables et séparateurs HR",
+      "description": "3 corrections dans le mode visu : (1) insertVisuBlock insère désormais au directEnd+1 (avant les sous-sections) au lieu du lineEnd+1 (après), ce qui évite que le code fence soit attribué à la mauvaise section et corrompe le document ; (2) nodeToMd vérifie data-block-md/data-img-id/visu-table-wrap par attribut/classe AVANT de vérifier contenteditable (plus robuste contre la normalisation navigateur), et ajoute un case table direct en fallback ; tableToMarkdown utilise nodesToMd (préservation du formatage inline : backticks, gras…) ; (3) case hr retourne désormais \n\n---\n\n pour éviter l interprétation setext-heading.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Il y a un problème lorsque je rajoute une section de code, des que je fait enregistré le document complet change et le tableau en dessous est totalement cassé. Il y a aussi des problèmes lorsqu il y a plusieurs Séparateurs horizontal --- Verifi tous le système et corrige les problèmes",
+      "startedAt": "2026-05-07T13:00:00Z",
+      "completedAt": "2026-05-07T14:00:00Z"
     }
   ]
 }

@@ -155,7 +155,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private zone = inject(NgZone);
   private cdr = inject(ChangeDetectorRef);
   private woHistory = inject(WoActionHistoryService);
-  private collab = inject(ProjetCollabService);
+  collab = inject(ProjetCollabService);
   private authSvc = inject(AuthService);
 
   // Mode (toggle Edition / Visu)
@@ -2373,20 +2373,38 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // ── Visu edit : événements section ─────────────────────────
   onVisuSectionFocus(sectionId: string) {
+    // Refuser le focus si la section est verrouillée par un autre user
+    if (this.collab.isLockedByOther(sectionId)) {
+      const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+      const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+      el?.blur();
+      return;
+    }
     this.activeVisuSectionId = sectionId;
     this.suppressScrollOnNextActiveChange = true;
     this.nodeActive.emit(sectionId);
+    // Acquérir le lock pour cette section
+    if (this.projectName) {
+      this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+    }
   }
 
   onVisuSectionBlur(sectionId: string) {
-    if (!this.dirtyVisuSectionIds.has(sectionId)) return;
-    const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
-    const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
-    if (!el) return;
-    const md = this.htmlSectionToMarkdown(el);
-    const sec = this.visuSections[idx];
-    this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
-    this.dirtyVisuSectionIds.delete(sectionId);
+    const isDirty = this.dirtyVisuSectionIds.has(sectionId);
+    if (isDirty) {
+      const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+      const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+      if (el) {
+        const md = this.htmlSectionToMarkdown(el);
+        const sec = this.visuSections[idx];
+        this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
+      }
+      this.dirtyVisuSectionIds.delete(sectionId);
+    }
+    // Libérer le lock après avoir quitté la section
+    if (this.projectName && this.collab.isLockedByMe(sectionId)) {
+      this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+    }
   }
 
   onVisuSectionInput(sectionId: string) {
@@ -2463,17 +2481,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // ── Visu edit : HTML → Markdown ─────────────────────────────
   private tableToMarkdown(table: HTMLTableElement | null): string {
     if (!table) return '';
+    const cellMd = (c: Element) => this.nodesToMd(Array.from(c.childNodes)).replace(/\|/g, '\\|').replace(/\n/g, ' ').trim();
     const rows: string[][] = [];
     const thead = table.querySelector('thead');
     if (thead) {
-      const cells = Array.from(thead.querySelectorAll('th, td')).map(c => c.textContent?.replace(/\|/g, '\\|').trim() || '');
+      const cells = Array.from(thead.querySelectorAll('th, td')).map(cellMd);
       rows.push(cells);
       rows.push(cells.map(() => '---'));
     }
     const tbody = table.querySelector('tbody');
     if (tbody) {
       for (const tr of Array.from(tbody.querySelectorAll('tr'))) {
-        rows.push(Array.from(tr.querySelectorAll('td, th')).map(c => c.textContent?.replace(/\|/g, '\\|').trim() || ''));
+        rows.push(Array.from(tr.querySelectorAll('td, th')).map(cellMd));
       }
     }
     if (rows.length === 0) return '';
@@ -2494,19 +2513,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
 
-    // Blocs non-éditables : restaurer depuis data-block-md, data-img-id ou table
-    if (el.getAttribute('contenteditable') === 'false') {
-      if (el.hasAttribute('data-block-md')) {
-        try { return '\n' + decodeURIComponent(escape(atob(el.getAttribute('data-block-md')!))) + '\n'; } catch { return ''; }
-      }
-      if (el.hasAttribute('data-img-id')) {
-        return `\n{{IMG:${el.getAttribute('data-img-id')}}}\n`;
-      }
-      if (el.classList.contains('visu-table-wrap')) {
-        return this.tableToMarkdown(el.querySelector('table'));
-      }
-      return '';
+    // ── Vérifications par attribut data- ou classe (robuste même si contenteditable est normalisé)
+    if (el.hasAttribute('data-block-md')) {
+      try { return '\n' + decodeURIComponent(escape(atob(el.getAttribute('data-block-md')!))) + '\n'; } catch { return ''; }
     }
+    if (el.hasAttribute('data-img-id')) {
+      return `\n{{IMG:${el.getAttribute('data-img-id')}}}\n`;
+    }
+    // Table : via wrapper .visu-table-wrap OU balise <table> directe
+    if (el.classList.contains('visu-table-wrap')) {
+      return this.tableToMarkdown(el.querySelector('table'));
+    }
+    if (tag === 'table') {
+      return this.tableToMarkdown(el as HTMLTableElement);
+    }
+
+    // Éléments génériquement non-éditables sans attribut connu → ignorer
+    if (el.getAttribute('contenteditable') === 'false') return '';
 
     const inner = () => this.nodesToMd(Array.from(el.childNodes));
 
@@ -2540,7 +2563,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }
       case 'li': return inner();
       case 'blockquote': return `\n> ${inner().trim()}\n`;
-      case 'hr': return '\n---\n';
+      // Lignes vides encadrantes obligatoires pour éviter l'interprétation setext-heading
+      case 'hr': return '\n\n---\n\n';
       case 'img': return '';
       default: return inner();
     }
@@ -2629,7 +2653,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (type === 'doc')   insertion = "\n'Nouveau document\n\n'\n";
     if (type === 'code')  insertion = '\n```\ncode ici\n```\n';
 
-    lines.splice(range.lineEnd + 1, 0, ...insertion.split('\n'));
+    // Insérer dans le contenu DIRECT de la section (avant la première sous-section).
+    // range.lineEnd englobe les sous-sections ; on cherche la première ligne heading enfant.
+    let directEnd = range.lineEnd;
+    for (let j = range.lineStart + 1; j <= range.lineEnd; j++) {
+      if (/^#{1,4} /.test(lines[j])) { directEnd = j - 1; break; }
+    }
+    lines.splice(directEnd + 1, 0, ...insertion.split('\n'));
     this.unifiedContent = lines.join('\n');
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = this.unifiedContent;

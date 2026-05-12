@@ -580,6 +580,30 @@
   transition: background-color 0.15s;
 
   &--active { background: rgba(59, 130, 246, 0.04); }
+
+  &--locked {
+    background: rgba(239, 68, 68, 0.03);
+    border-left: 2px solid rgba(239, 68, 68, 0.3);
+    padding-left: 8px;
+
+    .visu-sec-content { cursor: not-allowed; opacity: 0.6; }
+  }
+}
+
+.visu-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin: 2px 0 6px;
+  user-select: none;
+
+  .material-symbols-outlined { font-size: 13px; }
 }
 
 .visu-sec-heading {

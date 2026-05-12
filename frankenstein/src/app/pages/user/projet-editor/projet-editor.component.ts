@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ProjectService, Project } from '../../../core/services/project.service';
 import { ProjectFilesService, FileNode } from '../../../core/services/project-files.service';
 import { ConfigService } from '../../../core/services/config.service';
@@ -163,6 +164,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   private pendingSections: SectionInfo[] | null = null;
   private history = inject(WoActionHistoryService);
   private collab = inject(ProjetCollabService);
+  private collabSubs: Subscription[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -192,6 +194,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     await this.ensureProjectFolder(this.project()!);
     await this.loadFiles();
     this.collab.connect(this.projectFolderName);
+    this.subscribeToCollabEvents();
   }
 
   ngOnDestroy() {
@@ -199,6 +202,26 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     this.configService.setCurrentProjectId(null);
     clearTimeout(this.savedStatusTimer);
     this.collab.disconnect();
+    this.collabSubs.forEach(s => s.unsubscribe());
+  }
+
+  private subscribeToCollabEvents(): void {
+    this.collabSubs.push(
+      this.collab.contentUpdate$.subscribe(event => {
+        this.files.update(nodes => this.patchNodeContent(nodes, event.nodeId, event.content));
+      }),
+      this.collab.structureUpdate$.subscribe(() => {
+        this.loadFiles();
+      })
+    );
+  }
+
+  private patchNodeContent(nodes: FileNode[], nodeId: string, content: string): FileNode[] {
+    return nodes.map(node => {
+      if (node.id === nodeId) return { ...node, content };
+      if (node.children?.length) return { ...node, children: this.patchNodeContent(node.children, nodeId, content) };
+      return node;
+    });
   }
 
   private async ensureProjectFolder(proj: Project) {
@@ -699,7 +722,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         if (s.fileId) {
           const oldContent = oldContentMap.get(s.fileId) ?? '';
           if (oldContent !== s.content) {
-            await this.projectFilesService.updateFile(this.projectFolderName, s.fileId, s.content);
+            await this.projectFilesService.updateFile(this.projectFolderName, s.fileId, s.content, s.folderId ?? undefined);
             this.patchFileContent(s.fileId, s.content);
             const fileNode = { id: s.fileId, name: 'contenu.md', type: 'file' as const, path: '', order: 0 };
             this.trackContentUpdate(fileNode, s.folderName, oldContent, s.content);
