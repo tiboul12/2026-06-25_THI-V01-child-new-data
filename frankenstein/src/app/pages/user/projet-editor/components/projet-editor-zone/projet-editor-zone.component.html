@@ -87,7 +87,7 @@
   }
 
   <!-- Barre Annuler/Partager mode Code -->
-  @if (mode === 'edit' && codeEditPending()) {
+  @if (mode === 'edit' && focusedHandle && collab.localPendingSections().has(focusedHandle.id)) {
     <div class="code-publish-bar">
       <span class="code-publish-bar__info">
         <span class="material-symbols-outlined">edit</span>

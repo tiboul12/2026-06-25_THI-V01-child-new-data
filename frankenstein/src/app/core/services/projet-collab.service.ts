@@ -65,6 +65,28 @@ export class ProjetCollabService {
   readonly locks = signal<Map<string, LockInfo>>(new Map());
   readonly connected = signal(false);
 
+  // Sections avec modifications locales non encore partagées (publish)
+  // Persiste à travers les navigations entre sections via le menu zone 3
+  readonly localPendingSections = signal<Set<string>>(new Set());
+
+  addLocalPending(sectionId: string): void {
+    if (this.localPendingSections().has(sectionId)) return;
+    const next = new Set(this.localPendingSections());
+    next.add(sectionId);
+    this.localPendingSections.set(next);
+  }
+
+  removeLocalPending(sectionId: string): void {
+    if (!this.localPendingSections().has(sectionId)) return;
+    const next = new Set(this.localPendingSections());
+    next.delete(sectionId);
+    this.localPendingSections.set(next);
+  }
+
+  isLocalPending(sectionId: string): boolean {
+    return this.localPendingSections().has(sectionId);
+  }
+
   readonly contentUpdate$ = new Subject<ContentUpdateEvent>();
   readonly structureUpdate$ = new Subject<StructureUpdateEvent>();
 
@@ -88,6 +110,7 @@ export class ProjetCollabService {
     this.history.set([]);
     this.pending.set([]);
     this.locks.set(new Map());
+    this.localPendingSections.set(new Set());
   }
 
   upsertPending(entry: PendingHistoryEntry): void {

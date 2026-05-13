@@ -3669,6 +3669,28 @@
       "prompt": "Dans la zone 4 mode edition lorsqu'on clique sur une image, seul l'image doit être affiché.",
       "startedAt": "2026-05-13T21:40:00.000Z",
       "completedAt": "2026-05-13T21:45:00.000Z"
+    },
+    {
+      "id": "mod-159",
+      "version": "THI-0.89",
+      "date": "2026-05-13T22:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Modifications en attente par section : menu rouge + cadena + bar",
+      "description": "Système de tracking per-section des modifications non encore partagées. ProjetCollabService.localPendingSections (Set<sectionId>) partagé entre éditeur et sidebar. À la première modification d'une section : snapshot capturé, ajout au pending set, verrou acquis. Dans le menu zone 3 : nom en rouge + cadena rouge. Bar 'Modifications en cours' visible uniquement si section focusée est dans pending. Persistance à travers les navigations entre sections. Annuler : restore snapshot + save sans publish + unlock. Partager : updateFile avec publish=true + unlock + remove pending. Remplace l'ancien codeEditPending (signal global) par codeSectionSnapshots Map per-section.",
+      "files": [
+        "frankenstein/src/app/core/services/projet-collab.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "lorsque je modifi une section il faut que le cadena s'affiche à droite du nom de la section dans le menu et que le nom soi surligné en rouge. Elle restera en rouge tans que la section ne sera pas sauvegardé et partagé. si on change de section (via le menu) la nouvelle section n'est pas affiché comme modification en cours et avec les boutons, seul si on est sur une section modifié et fermé (non partagé) l'information Modification en cours doit s'affiché. Le menu doit resté rouge tans que la section n'est pas enregistré.",
+      "startedAt": "2026-05-13T22:00:00.000Z",
+      "completedAt": "2026-05-13T22:30:00.000Z"
     }
   ]
 }

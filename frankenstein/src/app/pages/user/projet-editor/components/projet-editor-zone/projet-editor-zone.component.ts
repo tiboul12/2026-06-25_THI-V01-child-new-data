@@ -194,8 +194,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   activeVisuSectionId: string | null = null;
   editingVisuSectionId = signal<string | null>(null);
   publishToastVisible = signal<boolean>(false);
-  codeEditPending = signal<boolean>(false);
-  private codeEditSnapshot = '';
+  // Snapshots du contenu original par section (clé = sectionId / focusedHandle.id)
+  // Permet de restaurer le contenu original via "Annuler" même après navigation entre sections
+  private codeSectionSnapshots = new Map<string, string>();
   private dirtyVisuSectionIds = new Set<string>();
   private visuSectionLockSnapshot = new Map<string, string>();
   private visuSelectionListener: (() => void) | null = null;
@@ -1006,8 +1007,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.flushContentModifications();
       if (this.focusedHandle) this.exitFocusMode();
       else this.saveAll();
-      this.codeEditPending.set(false);
-      this.codeEditSnapshot = '';
     } else if (this.mode === 'visu') {
       this.flushVisuSections();
       this.teardownVisuSelectionListener();
@@ -1253,9 +1252,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.localDirty = true;
       this.dirtyChange.emit(true);
     }
-    if (!this.codeEditPending()) {
-      this.codeEditSnapshot = this.lastSavedContent;
-      this.codeEditPending.set(true);
+    // Marquer la section focusée comme "modifications locales en attente" + capturer snapshot original
+    // Le snapshot persiste à travers les navigations pour permettre Annuler après changement de section
+    if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
+      this.codeSectionSnapshots.set(this.focusedHandle.id, this.lastSavedContent);
+      this.collab.addLocalPending(this.focusedHandle.id);
+      // Verrouiller la section (les autres users la verront en rouge dans leur menu)
+      if (this.projectName) {
+        this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
+      }
     }
     const entity = this.getCursorEntity();
     if (entity) {
@@ -2646,8 +2651,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // ── Mode Code : Annuler / Partager ──────────────────────────
-  cancelCodeEdit(): void {
-    const snapshot = this.codeEditSnapshot || this.lastSavedContent;
+  async cancelCodeEdit(): Promise<void> {
+    if (!this.focusedHandle) return;
+    const sectionId = this.focusedHandle.id;
+    const snapshot = this.codeSectionSnapshots.get(sectionId) ?? this.lastSavedContent;
+
+    // Restaurer le contenu original dans la vue focusée
     this.unifiedContent = snapshot;
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = snapshot;
@@ -2656,12 +2665,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.recomputeAll();
     this.localDirty = false;
     this.dirtyChange.emit(false);
-    this.codeEditPending.set(false);
-    this.codeEditSnapshot = '';
+
+    // Sauvegarder le contenu restauré (sans publish) pour annuler tout auto-save sur le disque
+    this.saveAll();
+
+    // Nettoyer le state pending
+    this.codeSectionSnapshots.delete(sectionId);
+    this.collab.removeLocalPending(sectionId);
+    if (this.projectName) {
+      this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+    }
   }
 
   async publishCodeEdit(): Promise<void> {
-    if (!this.projectName) return;
+    if (!this.projectName || !this.focusedHandle) return;
+    const sectionId = this.focusedHandle.id;
     clearTimeout(this.saveTimeout);
     this.unfoldAll();
     const sections = this.parseContent();
@@ -2674,8 +2692,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.lastSavedContent = this.unifiedContent;
       this.localDirty = false;
       this.dirtyChange.emit(false);
-      this.codeEditPending.set(false);
-      this.codeEditSnapshot = '';
+
+      // Section partagée : retirer du pending + libérer le verrou
+      this.codeSectionSnapshots.delete(sectionId);
+      this.collab.removeLocalPending(sectionId);
+      if (this.projectName) {
+        this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+      }
       this.showPublishToast();
     } catch (e) {
       console.warn('[PublishCode] erreur:', e);

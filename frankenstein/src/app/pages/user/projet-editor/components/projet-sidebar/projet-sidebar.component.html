@@ -107,7 +107,8 @@
 
         <!-- Label -->
         <span class="text-[11px] truncate leading-5 flex-1"
-              [class]="getNodeLabelClasses(node)">
+              [class]="getNodeLabelClasses(node)"
+              [class.!text-red-400]="collab.isLocalPending(node.id)">
           {{ node.type === 'file' ? node.name.replace('.md', '') : node.name }}
         </span>
 
@@ -118,8 +119,13 @@
           </span>
         }
 
-        <!-- Indicateur verrou -->
-        @if (isLockedByMe(node.id)) {
+        <!-- Indicateur verrou (rouge si modifications locales non partagées) -->
+        @if (collab.isLocalPending(node.id)) {
+          <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-red-400 ml-0.5"
+                [title]="'Modifications locales non partagées'">
+            lock
+          </span>
+        } @else if (isLockedByMe(node.id)) {
           <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-green-400 ml-0.5"
                 [title]="getLockTooltip(node.id)">
             lock
