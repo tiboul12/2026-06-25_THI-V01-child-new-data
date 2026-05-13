@@ -3691,6 +3691,25 @@
       "prompt": "lorsque je modifi une section il faut que le cadena s'affiche à droite du nom de la section dans le menu et que le nom soi surligné en rouge. Elle restera en rouge tans que la section ne sera pas sauvegardé et partagé. si on change de section (via le menu) la nouvelle section n'est pas affiché comme modification en cours et avec les boutons, seul si on est sur une section modifié et fermé (non partagé) l'information Modification en cours doit s'affiché. Le menu doit resté rouge tans que la section n'est pas enregistré.",
       "startedAt": "2026-05-13T22:00:00.000Z",
       "completedAt": "2026-05-13T22:30:00.000Z"
+    },
+    {
+      "id": "mod-160",
+      "version": "THI-0.90",
+      "date": "2026-05-13T23:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Barre Modifications mode Preview alignée sur mode Code",
+      "description": "La barre Annuler/Partager en mode Preview était à l'intérieur de chaque section (margin-top + border-top), alors qu'en mode Code elle est en haut full-width. Déplacée en haut de l'éditeur avec la même structure que mode Code (code-publish-bar) : info 'Modifications en cours' à gauche, actions à droite, icône share. Suppression de l'ancienne barre intra-section.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Dans le mode preview lorsqu'on modifi un texte, il y a bien les boutons qui indique les modifications en cours, mais le design est différent du mode edition modifi le design du mode preview pour qu'il soi identique au mode edition (lorsqu'on modifi un text)",
+      "startedAt": "2026-05-13T22:45:00.000Z",
+      "completedAt": "2026-05-13T23:00:00.000Z"
     }
   ]
 }

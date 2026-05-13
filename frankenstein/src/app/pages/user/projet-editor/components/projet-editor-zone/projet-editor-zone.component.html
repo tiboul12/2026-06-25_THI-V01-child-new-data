@@ -103,6 +103,27 @@
     </div>
   }
 
+  <!-- Barre Annuler/Partager mode Preview (même design que mode Code) -->
+  @if (mode === 'visu' && editingVisuSectionId()) {
+    <div class="code-publish-bar">
+      <span class="code-publish-bar__info">
+        <span class="material-symbols-outlined">edit</span>
+        Modifications en cours
+      </span>
+      <div class="code-publish-bar__actions">
+        <button class="visu-publish-bar__cancel"
+                (mousedown)="$event.preventDefault(); cancelVisuEdit(editingVisuSectionId()!)">
+          Annuler
+        </button>
+        <button class="visu-publish-bar__publish"
+                (mousedown)="$event.preventDefault(); publishVisuSection(editingVisuSectionId()!)">
+          <span class="material-symbols-outlined">share</span>
+          Partager mes modifications
+        </button>
+      </div>
+    </div>
+  }
+
   <!-- Vide -->
   @if (docSections.length === 0) {
     <div class="flex-1 px-6 py-4">
@@ -427,18 +448,6 @@
                    (input)="onVisuSectionInput(sec.sectionId)">
               </div>
 
-              <!-- Boutons Annuler / Partager (visibles quand je suis en train d'éditer) -->
-              @if (editingVisuSectionId() === sec.sectionId) {
-                <div class="visu-publish-bar">
-                  <button class="visu-publish-bar__cancel" (mousedown)="$event.preventDefault(); cancelVisuEdit(sec.sectionId)">
-                    Annuler
-                  </button>
-                  <button class="visu-publish-bar__publish" (mousedown)="$event.preventDefault(); publishVisuSection(sec.sectionId)">
-                    <span class="material-symbols-outlined">check</span>
-                    Partager mes modifications
-                  </button>
-                </div>
-              }
 
               <!-- Ligne d'insertion (visible au hover) -->
               <div class="visu-insert-row">
