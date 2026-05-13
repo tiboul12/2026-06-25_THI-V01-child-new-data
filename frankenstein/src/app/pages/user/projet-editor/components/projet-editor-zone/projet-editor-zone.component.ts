@@ -1114,21 +1114,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return undefined;
   }
 
-  // Applique le mode focus (edit) ou le filtre de sections (visu) selon activeNodeId
+  // Applique le mode focus (edit) selon activeNodeId.
+  // Logique alignée avec le filtre preview :
+  //  - dossier  → handle dossier (section + enfants)
+  //  - document → handle fichier (juste ce document)
+  //  - image    → handle image (1 ligne marker, rendue comme carte image)
   private applyFocusByActiveNode(): void {
     if (this.mode !== 'edit') return;
     const nodeId = this.activeNodeId;
-    if (nodeId) {
-      // Résoudre le dossier effectif (fichier → parent dossier)
-      const effectiveFolderId = this.findEffectiveFolderId(nodeId, this.files) ?? nodeId;
-      if (this.focusedHandle?.id === effectiveFolderId) return;
-      if (this.focusedHandle) this.exitFocusModeSync();
-      const handle = this.handles.find(h => h.id === effectiveFolderId && h.kind === 'folder')
-                  ?? this.handles.find(h => h.id === effectiveFolderId);
-      if (handle) this.enterFocusMode(handle);
-    } else {
+    if (!nodeId) {
       if (this.focusedHandle) this.exitFocusMode();
+      return;
     }
+
+    if (this.focusedHandle?.id === nodeId) return;
+    if (this.focusedHandle) this.exitFocusModeSync();
+
+    const handle = this.handles.find(h => h.id === nodeId && h.kind === 'folder')
+                ?? this.handles.find(h => h.id === nodeId);
+    if (handle) this.enterFocusMode(handle);
   }
 
   // Retourne l'ensemble des IDs de dossiers descendants (inclus) d'un nœud donné
@@ -1162,15 +1166,45 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return this.visuSections.filter(vs => visible.has(vs.sectionId));
     }
 
-    if (this.isImageFile(node.name)) {
-      // Image → afficher la section du dossier parent (image embarquée dedans)
-      const parentFolderId = this.findEffectiveFolderId(this.activeNodeId, this.files);
-      if (!parentFolderId) return this.visuSections;
-      return this.visuSections.filter(vs => vs.sectionId === parentFolderId);
-    }
-
-    // Document → singleFileVisuPreview gère l'affichage (préview standalone)
+    // Image ou document → preview standalone (singleImage/FileVisuPreview gèrent l'affichage)
     return [];
+  }
+
+  // Preview standalone d'une image avec ses options (rename/delete)
+  get singleImageVisuPreview(): { id: string; name: string; url: string } | null {
+    if (!this.activeNodeId) return null;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node || node.type !== 'file') return null;
+    if (!this.isImageFile(node.name)) return null;
+    const encodedPath = node.path.split('/').map((s: string) => encodeURIComponent(s)).join('/');
+    const url = this.svc.getImageUrl(this.projectName, encodedPath);
+    return { id: node.id, name: node.name, url };
+  }
+
+  // Wrappers acceptant id+name (utilisés depuis singleImageVisuPreview où on n'a pas de MirrorLine)
+  startRenameImageByNode(id: string, name: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.renamingImageId = id;
+    this.renameImageValue = name.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i, '');
+    this.deleteConfirmImageId = null;
+    this.hoverPreview = null;
+  }
+
+  async confirmRenameImageByNode(id: string, name: string): Promise<void> {
+    const fakeLine = { imageId: id, imageName: name } as MirrorLine;
+    return this.confirmRenameImage(fakeLine);
+  }
+
+  askDeleteImageByNode(id: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.deleteConfirmImageId = id;
+    this.renamingImageId = null;
+    this.hoverPreview = null;
+  }
+
+  async confirmDeleteImageByNode(id: string, name: string, ev: MouseEvent): Promise<void> {
+    const fakeLine = { imageId: id, imageName: name } as MirrorLine;
+    return this.confirmDeleteImage(fakeLine, ev);
   }
 
   // Cache du rendu HTML d'un document affiché en standalone

@@ -11,25 +11,6 @@
   <!-- Barre d'outils -->
   <div class="flex flex-wrap items-center gap-1 p-2 bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
 
-    <!-- Indicateur mode focus -->
-    @if (focusedHandle) {
-      <button class="ed-focus-exit" (click)="exitFocusMode()" title="Revenir à l'édition complète">
-        <span class="material-symbols-outlined">arrow_back</span>
-        Vue complète
-      </button>
-      <div class="ed-focus-label">
-        <span class="ed-focus-label__badge">{{
-          focusedHandle.kind === 'folder' ? 'H' + focusedHandle.level :
-          focusedHandle.kind === 'block-table' ? 'Tab.' :
-          focusedHandle.kind === 'block-quote' ? 'Cit.' :
-          focusedHandle.kind === 'block-fence' ? 'Code' :
-          focusedHandle.kind === 'block-list' ? 'List.' : 'Doc'
-        }}</span>
-        {{ focusedHandle.label }}
-      </div>
-      <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
-    }
-
     <!-- Tabs Code / Preview (style GitHub) -->
     <div class="ed-mode-tabs mr-2">
       <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'edit'" (click)="setMode('edit')">
@@ -341,6 +322,61 @@
             <div class="visu-section-wrap">
               <h2 class="visu-sec-heading">{{ preview.name }}</h2>
               <div class="visu-sec-content visu-sec-content--readonly" [innerHTML]="preview.html"></div>
+            </div>
+          }
+
+          <!-- Preview standalone d'une image avec options -->
+          @if (singleImageVisuPreview; as img) {
+            <div class="visu-section-wrap">
+              <!-- Nom + actions (rename / delete) -->
+              <div class="visu-image-header">
+                @if (renamingImageId === img.id) {
+                  <input class="visu-image-rename-input"
+                         [(ngModel)]="renameImageValue"
+                         (keydown.enter)="confirmRenameImageByNode(img.id, img.name)"
+                         (keydown.escape)="cancelRenameImage()"
+                         autofocus />
+                  <button class="visu-image-btn visu-image-btn--primary"
+                          (click)="confirmRenameImageByNode(img.id, img.name)"
+                          title="Confirmer">
+                    <span class="material-symbols-outlined">check</span>
+                  </button>
+                  <button class="visu-image-btn"
+                          (click)="cancelRenameImage()"
+                          title="Annuler">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                } @else if (deleteConfirmImageId === img.id) {
+                  <span class="visu-image-confirm-text">Supprimer cette image ?</span>
+                  <button class="visu-image-btn visu-image-btn--danger"
+                          (click)="confirmDeleteImageByNode(img.id, img.name, $event)"
+                          title="Confirmer la suppression">
+                    <span class="material-symbols-outlined">check</span>
+                  </button>
+                  <button class="visu-image-btn"
+                          (click)="cancelDeleteImage($event)"
+                          title="Annuler">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                } @else {
+                  <h2 class="visu-sec-heading visu-image-name">{{ img.name }}</h2>
+                  <button class="visu-image-btn"
+                          (click)="startRenameImageByNode(img.id, img.name, $event)"
+                          title="Renommer">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button class="visu-image-btn visu-image-btn--danger"
+                          (click)="askDeleteImageByNode(img.id, $event)"
+                          title="Supprimer">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                }
+              </div>
+
+              <!-- L'image -->
+              <div class="visu-image-display">
+                <img [src]="img.url" [alt]="img.name" />
+              </div>
             </div>
           }
 

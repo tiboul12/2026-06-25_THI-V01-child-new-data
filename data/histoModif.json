@@ -3609,6 +3609,66 @@
       "prompt": "Cela affiche bien les données au premier clique (menu) mais des que je change de dossier cela ne m'affiche plus les bonnes données (contenu)",
       "startedAt": "2026-05-13T20:20:00.000Z",
       "completedAt": "2026-05-13T20:30:00.000Z"
+    },
+    {
+      "id": "mod-156",
+      "version": "THI-0.88",
+      "date": "2026-05-13T21:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Preview image standalone : image seule + actions rename/delete",
+      "description": "Clic sur une image en zone 3 affiche en preview uniquement l'image avec son nom et les boutons Renommer/Supprimer (avec confirmation). singleImageVisuPreview construit l'URL via getImageUrl. Wrappers startRenameImageByNode, confirmRenameImageByNode, askDeleteImageByNode, confirmDeleteImageByNode délèguent aux méthodes existantes. Styles .visu-image-* ajoutés.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "quand je clique sur une image dans preview cela ne doit m'affiché que l'image et les options de l'image",
+      "startedAt": "2026-05-13T20:45:00.000Z",
+      "completedAt": "2026-05-13T21:00:00.000Z"
+    },
+    {
+      "id": "mod-157",
+      "version": "THI-0.88",
+      "date": "2026-05-13T21:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Code mode aligné sur Preview : focus par type de nœud + suppression Vue complète",
+      "description": "Avant : Code mode résolvait tous les fichiers vers le dossier parent (un clic sur un document affichait le dossier complet). Désormais aligné sur Preview : dossier → folder+enfants, document → juste ce bloc, image → dossier parent (marker seule inutile). Suppression du bouton 'Vue complète' et du badge focus : la navigation se fait via le menu zone 3 (clic projet = vue complète).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "dans la zone 4 en mode edition lorsqu'on selection un dossier ou un document, cela ne doit affiché que cette section et ses enfants. supprime le menu Vue complète qui ne sert plus à rien, dans le principe l'affichage entre le mode preview et le mode edition est identique (clique sur le menu) c'est le type d'affichage (code ou preview) qui est différent",
+      "startedAt": "2026-05-13T21:15:00.000Z",
+      "completedAt": "2026-05-13T21:30:00.000Z"
+    },
+    {
+      "id": "mod-158",
+      "version": "THI-0.88",
+      "date": "2026-05-13T21:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Code mode image : focus sur l'image seule (carte image)",
+      "description": "Code mode pour les images utilise désormais le handle de l'image (1 ligne marker {{IMG:id}} rendue comme carte image) au lieu du dossier parent. Simplification de applyFocusByActiveNode : mapping direct nodeId → handle sans redirection.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Dans la zone 4 mode edition lorsqu'on clique sur une image, seul l'image doit être affiché.",
+      "startedAt": "2026-05-13T21:40:00.000Z",
+      "completedAt": "2026-05-13T21:45:00.000Z"
     }
   ]
 }
