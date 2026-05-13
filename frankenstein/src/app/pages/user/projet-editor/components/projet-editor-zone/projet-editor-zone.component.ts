@@ -338,6 +338,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     if (changes['activeNodeId']) {
       this.recomputeHighlights();
+      this.applyFocusByActiveNode();
+      // En mode visu, la liste filteredVisuSections change → réinjecter le innerHTML
+      // dans les nouveaux éléments (sinon ils restent vides après navigation menu)
+      if (this.mode === 'visu') {
+        setTimeout(() => this.initVisuSectionHtml(), 0);
+      }
     }
 
     if (changes['scrollToNodeId'] && this.scrollToNodeId) {
@@ -1011,6 +1017,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (m === 'visu') {
       this.setupVisuSelectionListener();
     }
+    if (m === 'edit') {
+      // Réappliquer le focus sur la section active après changement de mode
+      setTimeout(() => this.applyFocusByActiveNode(), 0);
+    }
     if (this.activeNodeId) {
       setTimeout(() => this.scrollToActive(), 80);
     }
@@ -1085,6 +1095,115 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.lastSavedContent = '';
 
     this.recomputeAll(); // reconstruit handles depuis le document complet
+  }
+
+  // Retourne l'ID de dossier effectif pour un nodeId :
+  // - si c'est un dossier → lui-même
+  // - si c'est un fichier → son dossier parent
+  // Retourne undefined si le nœud n'est pas trouvé (distinct de null = pas de parent)
+  private findEffectiveFolderId(nodeId: string, nodes: FileNode[], parentFolderId: string | null = null): string | null | undefined {
+    for (const n of nodes) {
+      if (n.id === nodeId) {
+        return n.type === 'folder' ? n.id : parentFolderId;
+      }
+      if (n.children) {
+        const found = this.findEffectiveFolderId(nodeId, n.children, n.type === 'folder' ? n.id : parentFolderId);
+        if (found !== undefined) return found;
+      }
+    }
+    return undefined;
+  }
+
+  // Applique le mode focus (edit) ou le filtre de sections (visu) selon activeNodeId
+  private applyFocusByActiveNode(): void {
+    if (this.mode !== 'edit') return;
+    const nodeId = this.activeNodeId;
+    if (nodeId) {
+      // Résoudre le dossier effectif (fichier → parent dossier)
+      const effectiveFolderId = this.findEffectiveFolderId(nodeId, this.files) ?? nodeId;
+      if (this.focusedHandle?.id === effectiveFolderId) return;
+      if (this.focusedHandle) this.exitFocusModeSync();
+      const handle = this.handles.find(h => h.id === effectiveFolderId && h.kind === 'folder')
+                  ?? this.handles.find(h => h.id === effectiveFolderId);
+      if (handle) this.enterFocusMode(handle);
+    } else {
+      if (this.focusedHandle) this.exitFocusMode();
+    }
+  }
+
+  // Retourne l'ensemble des IDs de dossiers descendants (inclus) d'un nœud donné
+  private getDescendantFolderIds(nodeId: string, nodes: FileNode[]): Set<string> {
+    const ids = new Set<string>();
+    const collectFrom = (node: FileNode) => {
+      if (node.type === 'folder') ids.add(node.id);
+      for (const c of node.children || []) collectFrom(c);
+    };
+    const findAndCollect = (ns: FileNode[]): boolean => {
+      for (const n of ns) {
+        if (n.id === nodeId) { collectFrom(n); return true; }
+        if (n.children && findAndCollect(n.children)) return true;
+      }
+      return false;
+    };
+    findAndCollect(nodes);
+    return ids;
+  }
+
+  // Sections visu filtrées selon la sélection active (null = tout afficher)
+  get filteredVisuSections(): VisuSectionState[] {
+    if (!this.activeNodeId) return this.visuSections;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node) return this.visuSections;
+
+    if (node.type === 'folder') {
+      // Dossier → section sélectionnée + toutes les sous-sections enfants
+      const visible = this.getDescendantFolderIds(this.activeNodeId, this.files);
+      if (visible.size === 0) return this.visuSections;
+      return this.visuSections.filter(vs => visible.has(vs.sectionId));
+    }
+
+    if (this.isImageFile(node.name)) {
+      // Image → afficher la section du dossier parent (image embarquée dedans)
+      const parentFolderId = this.findEffectiveFolderId(this.activeNodeId, this.files);
+      if (!parentFolderId) return this.visuSections;
+      return this.visuSections.filter(vs => vs.sectionId === parentFolderId);
+    }
+
+    // Document → singleFileVisuPreview gère l'affichage (préview standalone)
+    return [];
+  }
+
+  // Cache du rendu HTML d'un document affiché en standalone
+  private fileVisuPreviewCache: { fileId: string; rawContent: string; html: string; name: string } | null = null;
+
+  // Preview standalone d'un document texte (lecture seule)
+  get singleFileVisuPreview(): { name: string; html: string } | null {
+    if (!this.activeNodeId) return null;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node || node.type !== 'file') return null;
+    if (this.isImageFile(node.name)) return null;
+    if (node.name === 'contenu.md') return null;
+
+    const content = node.content || '';
+    if (this.fileVisuPreviewCache
+        && this.fileVisuPreviewCache.fileId === node.id
+        && this.fileVisuPreviewCache.rawContent === content) {
+      return { name: this.fileVisuPreviewCache.name, html: this.fileVisuPreviewCache.html };
+    }
+
+    // Remplacer les marqueurs {{IMG:id}} par des URLs réelles avant rendu markdown
+    const processed = content.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (_m, id) => {
+      const img = this.allImages.find(im => im.id === id);
+      if (!img) return `*[image manquante: ${id}]*`;
+      const encodedPath = img.path.split('/').map((s: string) => encodeURIComponent(s)).join('/');
+      const url = this.svc.getImageUrl(this.projectName, encodedPath);
+      return `\n\n![${this.escapeAlt(img.name)}](${url})\n\n`;
+    });
+
+    const html = marked.parse(processed, { async: false }) as string;
+    const name = node.name.replace(/\.md$/, '');
+    this.fileVisuPreviewCache = { fileId: node.id, rawContent: content, html, name };
+    return { name, html };
   }
 
   // ── Edit-mode events ────────────────────────────────────────
@@ -2360,9 +2479,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // ── Visu edit : init/refresh du innerHTML des contenteditable ──
   initVisuSectionHtml() {
-    this.visuSectionEls.forEach((ref, i) => {
+    // Lookup par data-section-id pour gérer correctement les sections filtrées
+    const sections = this.filteredVisuSections;
+    this.visuSectionEls.forEach((ref) => {
       const el = ref.nativeElement;
-      const sec = this.visuSections[i];
+      const sectionId = el.getAttribute('data-section-id');
+      if (!sectionId) return;
+      const sec = sections.find(s => s.sectionId === sectionId);
       if (sec && !this.dirtyVisuSectionIds.has(sec.sectionId)) {
         el.innerHTML = sec.contentHtml;
       }
@@ -2371,9 +2494,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   private flushVisuSections() {
     if (this.mode !== 'visu') return;
-    this.visuSectionEls.forEach((ref, i) => {
+    this.visuSectionEls.forEach((ref) => {
       const el = ref.nativeElement;
-      const sec = this.visuSections[i];
+      const sectionId = el.getAttribute('data-section-id');
+      if (!sectionId) return;
+      const sec = this.visuSections.find(s => s.sectionId === sectionId);
       if (sec && this.dirtyVisuSectionIds.has(sec.sectionId)) {
         const md = this.htmlSectionToMarkdown(el);
         this.saveVisuSection(sec.sectionId, md, sec.markdownBefore);

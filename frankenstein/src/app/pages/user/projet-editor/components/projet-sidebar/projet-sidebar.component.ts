@@ -36,6 +36,7 @@ export class ProjetSidebarComponent implements OnChanges {
   @Output() fileSelect = new EventEmitter<FileNode>();
   @Output() folderCreated = new EventEmitter<{ name: string; parentId: string | null }>();
   @Output() refresh = new EventEmitter<void>();
+  @Output() projectSelect = new EventEmitter<void>();
 
   expanded = signal<Set<string>>(new Set(['root']));
   contextMenu = signal<ContextMenu | null>(null);
@@ -57,6 +58,10 @@ export class ProjetSidebarComponent implements OnChanges {
   readonly collab = inject(ProjetCollabService);
 
   constructor(private svc: ProjectFilesService, private elRef: ElementRef, private router: Router) {}
+
+  onProjectSelect(): void {
+    this.projectSelect.emit();
+  }
 
   // ── Verrous collaboration ──────────────────────────────────
 

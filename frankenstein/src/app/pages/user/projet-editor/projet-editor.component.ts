@@ -258,6 +258,11 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.scrollToNodeId.set(node.id), 0);
   }
 
+  onProjectRootSelect(): void {
+    this.activeNodeId.set(null);
+    this.scrollToNodeId.set(null);
+  }
+
   onNodeActive(nodeId: string) {
     if (this.activeNodeId() !== nodeId) {
       this.activeNodeId.set(nodeId);

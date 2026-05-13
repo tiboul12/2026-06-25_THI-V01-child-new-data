@@ -259,18 +259,6 @@
                   <span class="ed-handle__grip material-symbols-outlined">drag_indicator</span>
                 }
               </div>
-              <!-- Bouton "Édition" — ouvre le mode focus pour cette section/document/bloc -->
-              @if (hoveredHandle.kind !== 'image') {
-                <button class="ed-focus-btn"
-                        [class.ed-focus-btn--folder]="hoveredHandle.kind === 'folder'"
-                        [class.ed-focus-btn--file]="hoveredHandle.kind === 'file'"
-                        [class.ed-focus-btn--block]="hoveredHandle.kind === 'block-table' || hoveredHandle.kind === 'block-quote' || hoveredHandle.kind === 'block-fence' || hoveredHandle.kind === 'block-list'"
-                        [style.top.px]="hoveredHandle.top + 21"
-                        (click)="enterFocusMode(hoveredHandle, $event)"
-                        title="Éditer uniquement : {{ hoveredHandle.label }}">
-                  Éd.
-                </button>
-              }
             }
             @if (dropIndicator) {
               <div class="ed-drop-indicator"
@@ -347,7 +335,16 @@
 
         <!-- Sections éditables -->
         <div class="visu-content-wrap">
-          @for (sec of visuSections; track sec.sectionId) {
+
+          <!-- Preview standalone d'un document (lecture seule) -->
+          @if (singleFileVisuPreview; as preview) {
+            <div class="visu-section-wrap">
+              <h2 class="visu-sec-heading">{{ preview.name }}</h2>
+              <div class="visu-sec-content visu-sec-content--readonly" [innerHTML]="preview.html"></div>
+            </div>
+          }
+
+          @for (sec of filteredVisuSections; track sec.sectionId) {
             <div class="visu-section-wrap"
                  [class.visu-section-wrap--active]="activeVisuSectionId === sec.sectionId"
                  [class.visu-section-wrap--locked]="collab.isLockedByOther(sec.sectionId)">
