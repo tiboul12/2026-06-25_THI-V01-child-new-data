@@ -572,6 +572,60 @@
   }
 }
 
+// ── Toast partage ──────────────────────────────────────────
+.publish-toast {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #16a34a;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  animation: toast-in 0.18s ease;
+  pointer-events: none;
+
+  .material-symbols-outlined { font-size: 15px; }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── Barre Annuler/Partager mode Code ───────────────────────
+.code-publish-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  background: rgba(37, 99, 235, 0.06);
+  border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+  flex-shrink: 0;
+
+  &__info {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #2563eb;
+    opacity: 0.85;
+    .material-symbols-outlined { font-size: 13px; }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
 // ── Visu edit mode ──────────────────────────────────────────
 .visu-section-wrap {
   margin-bottom: 0.5em;

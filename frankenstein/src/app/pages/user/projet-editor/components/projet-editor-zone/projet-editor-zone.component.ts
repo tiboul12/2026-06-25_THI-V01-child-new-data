@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -192,7 +192,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   visuToolbar: { top: number; left: number } | null = null;
   visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
   activeVisuSectionId: string | null = null;
-  editingVisuSectionId: string | null = null;
+  editingVisuSectionId = signal<string | null>(null);
+  publishToastVisible = signal<boolean>(false);
+  codeEditPending = signal<boolean>(false);
+  private codeEditSnapshot = '';
   private dirtyVisuSectionIds = new Set<string>();
   private visuSectionLockSnapshot = new Map<string, string>();
   private visuSelectionListener: (() => void) | null = null;
@@ -997,6 +1000,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.flushContentModifications();
       if (this.focusedHandle) this.exitFocusMode();
       else this.saveAll();
+      this.codeEditPending.set(false);
+      this.codeEditSnapshot = '';
     } else if (this.mode === 'visu') {
       this.flushVisuSections();
       this.teardownVisuSelectionListener();
@@ -1094,6 +1099,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (!this.localDirty) {
       this.localDirty = true;
       this.dirtyChange.emit(true);
+    }
+    if (!this.codeEditPending()) {
+      this.codeEditSnapshot = this.lastSavedContent;
+      this.codeEditPending.set(true);
     }
     const entity = this.getCursorEntity();
     if (entity) {
@@ -2386,11 +2395,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.suppressScrollOnNextActiveChange = true;
     this.nodeActive.emit(sectionId);
     // Acquérir le lock et noter qu'on édite cette section
-    if (this.projectName && this.editingVisuSectionId !== sectionId) {
+    if (this.projectName && this.editingVisuSectionId() !== sectionId) {
       // Capturer le contenu original avant modification
       const vs = this.visuSections.find(v => v.sectionId === sectionId);
       if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
-      this.editingVisuSectionId = sectionId;
+      this.editingVisuSectionId.set(sectionId);
       this.collab.lockNode(this.projectName, sectionId).catch(() => {});
     }
   }
@@ -2438,9 +2447,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     this.dirtyVisuSectionIds.delete(sectionId);
     this.visuSectionLockSnapshot.delete(sectionId);
-    this.editingVisuSectionId = null;
+    this.editingVisuSectionId.set(null);
     this.localDirty = false;
     this.dirtyChange.emit(false);
+    this.showPublishToast();
   }
 
   async cancelVisuEdit(sectionId: string): Promise<void> {
@@ -2471,9 +2481,51 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     this.dirtyVisuSectionIds.delete(sectionId);
     this.visuSectionLockSnapshot.delete(sectionId);
-    this.editingVisuSectionId = null;
+    this.editingVisuSectionId.set(null);
     this.localDirty = false;
     this.dirtyChange.emit(false);
+  }
+
+  // ── Mode Code : Annuler / Partager ──────────────────────────
+  cancelCodeEdit(): void {
+    const snapshot = this.codeEditSnapshot || this.lastSavedContent;
+    this.unifiedContent = snapshot;
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = snapshot;
+    clearTimeout(this.saveTimeout);
+    this.lastSavedContent = snapshot;
+    this.recomputeAll();
+    this.localDirty = false;
+    this.dirtyChange.emit(false);
+    this.codeEditPending.set(false);
+    this.codeEditSnapshot = '';
+  }
+
+  async publishCodeEdit(): Promise<void> {
+    if (!this.projectName) return;
+    clearTimeout(this.saveTimeout);
+    this.unfoldAll();
+    const sections = this.parseContent();
+    try {
+      await Promise.all(
+        sections
+          .filter(s => s.fileId)
+          .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+      );
+      this.lastSavedContent = this.unifiedContent;
+      this.localDirty = false;
+      this.dirtyChange.emit(false);
+      this.codeEditPending.set(false);
+      this.codeEditSnapshot = '';
+      this.showPublishToast();
+    } catch (e) {
+      console.warn('[PublishCode] erreur:', e);
+    }
+  }
+
+  private showPublishToast(): void {
+    this.publishToastVisible.set(true);
+    setTimeout(() => this.publishToastVisible.set(false), 3000);
   }
 
   onVisuSectionInput(sectionId: string) {

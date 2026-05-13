@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
@@ -58,6 +58,7 @@ export interface StructureUpdateEvent {
 export class ProjetCollabService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
+  private zone = inject(NgZone);
 
   readonly history = signal<CollabHistoryEntry[]>([]);
   readonly pending = signal<PendingHistoryEntry[]>([]);
@@ -164,12 +165,16 @@ export class ProjetCollabService {
 
       this.eventSource.addEventListener('lock', (e: MessageEvent) => {
         const lock: LockInfo = JSON.parse(e.data);
-        this.locks.update(map => { const m = new Map(map); m.set(lock.nodeId, lock); return m; });
+        this.zone.run(() => {
+          this.locks.update(map => { const m = new Map(map); m.set(lock.nodeId, lock); return m; });
+        });
       });
 
       this.eventSource.addEventListener('unlock', (e: MessageEvent) => {
         const { nodeId } = JSON.parse(e.data);
-        this.locks.update(map => { const m = new Map(map); m.delete(nodeId); return m; });
+        this.zone.run(() => {
+          this.locks.update(map => { const m = new Map(map); m.delete(nodeId); return m; });
+        });
       });
 
       this.eventSource.addEventListener('content_update', (e: MessageEvent) => {

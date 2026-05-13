@@ -3355,7 +3355,10 @@
       "date": "2026-05-12T15:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein", "server"],
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
       "features": "frankenstein:projet-editor,server:collab",
       "title": "Collab visu : badge édition + boutons Annuler/Partager explicite",
       "description": "Ajout du flux UX complet pour le partage explicite des modifications. (1) Badge bleu 'Vous éditez cette section' visible uniquement pour l'auteur du lock, badge rouge 'Édité par [user]' pour les autres users. (2) Boutons [Annuler] et [✔ Partager mes modifications] apparaissent sous la section quand l'utilisateur a le lock. (3) Annuler : restaure le contenu HTML original (snapshot capturé à l'acquisition du lock), libère le lock sans publier. (4) Partager : met à jour unifiedContent, annule le debounce, appelle updateFile(publish=true) qui diffuse content_update SSE et libère le lock côté serveur en une seule requête. (5) onVisuSectionBlur conserve le lock (save local sans publish). (6) Backend PUT files/:id : broadcast SSE et unlock DB uniquement si publish=true dans le body. (7) updateFile() expose le param publish=false par défaut.",
@@ -3378,7 +3381,10 @@
       "date": "2026-05-12T14:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein", "server"],
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
       "features": "frankenstein:projet-editor,server:collab",
       "title": "Collaboration temps réel : hard lock, content_update SSE, structure_update SSE",
       "description": "Implémentation de la collaboration locale avec partage sélectif. (1) Backend : vérification hard lock (HTTP 423) dans PUT /api/file-projects/:name/files/:id — la modification est refusée si la section est verrouillée par un autre user ; broadcast SSE content_update après sauvegarde réussie (contenu + auteur) ; broadcast SSE structure_update sur toutes les opérations de structure (create/rename/delete dossier et fichier, reorder). (2) Service collab : ajout des interfaces ContentUpdateEvent et StructureUpdateEvent, Subject content_update$ et structureUpdate$, handlers SSE correspondants (self-filter : les événements émis par le user courant sont ignorés). (3) Composant éditeur : abonnement aux Subjects — content_update patche le signal files sans rechargement, structure_update déclenche un loadFiles() complet. (4) Zone éditeur visu : lock automatique de la section au focus (folderId comme nodeId), refus de focus si section verrouillée par autre user (contenteditable=false + reblur), unlock automatique au blur ; badge visuel rouge 'Édité par [user]' sur les sections verrouillées. (5) ProjectFilesService.updateFile() : paramètre folderId optionnel transmis au backend pour vérification combinée fileId+folderId.",
@@ -3417,6 +3423,72 @@
       "prompt": "Il y a un problème lorsque je rajoute une section de code, des que je fait enregistré le document complet change et le tableau en dessous est totalement cassé. Il y a aussi des problèmes lorsqu il y a plusieurs Séparateurs horizontal --- Verifi tous le système et corrige les problèmes",
       "startedAt": "2026-05-07T13:00:00Z",
       "completedAt": "2026-05-07T14:00:00Z"
+    },
+    {
+      "id": "mod-147",
+      "version": "THI-0.85",
+      "date": "2026-05-13T16:24:24.445Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Visu collab : signal editingVisuSectionId + NgZone locks SSE",
+      "description": "Conversion de editingVisuSectionId en signal Angular pour garantir la réactivité du badge édition et des boutons Annuler/Partager en mode visu. Ajout de NgZone.run() dans les handlers SSE lock/unlock du ProjetCollabService pour que les updates du signal locks déclenchent le change detection même hors zone.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/core/services/projet-collab.service.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je modifi une section je ne vois toujours pas d'information pour la section bloqué pour les autres users (affiché sur mon front) et de bouton pour enregistré/partagé et debloqué le partage (les autres users auront le document mise à jour directement)",
+      "startedAt": "2026-05-13T16:24:24.445Z",
+      "completedAt": "2026-05-13T16:24:24.445Z"
+    },
+    {
+      "id": "mod-148",
+      "version": "THI-0.85",
+      "date": "2026-05-13T16:39:42.387Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Visu/Code : barre Annuler/Partager + toast succès",
+      "description": "Ajout barre Annuler/Partager en mode Code (visible quand saveStatus=dirty) avec cancelCodeEdit() et publishCodeEdit() qui sauvegarde et broadcaste via SSE (publish:true). Ajout toast vert 3s après tout partage réussi, en mode Code comme en mode Preview.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il me faudrais la même chose en mode edition, lorsque je clique sur le bouton 'partager mes modifications' il me faudrais un message indiquant que le texte est bien enregistré et partagé dans tous le projet",
+      "startedAt": "2026-05-13T16:39:42.387Z",
+      "completedAt": "2026-05-13T16:39:42.387Z"
+    },
+    {
+      "id": "mod-149",
+      "version": "THI-0.86",
+      "date": "2026-05-13T17:10:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Fix barre Code : snapshot Annuler + signal codeEditPending",
+      "description": "Fix de deux bugs : (1) Annuler ne restaurait pas le texte → ajout de codeEditSnapshot capturé au premier keystroke avant tout auto-save. (2) La barre apparaissait une fois sur deux → remplacement de saveStatus==='dirty' par le signal interne codeEditPending. Reset du signal dans setMode() lors du passage en mode visu.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "cela ne fonctionne pas corectement lorsque je rajoute du texte j'ai bien les bouton annuler/partagé mais si je fait annulé, le texte ajouté n'est pas supprimé et une fois sur 2 le boutons ne s'affiche pas",
+      "startedAt": "2026-05-13T17:00:00.000Z",
+      "completedAt": "2026-05-13T17:10:00.000Z"
     }
   ]
 }
