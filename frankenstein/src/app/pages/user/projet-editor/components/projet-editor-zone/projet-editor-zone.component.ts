@@ -1063,6 +1063,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.lastSavedContent = this.unifiedContent;
     this.focusedHandle = handle;
 
+    // Si la section est déjà verrouillée par moi (verrou serveur persistant après reload),
+    // restaurer l'état "pending" pour que la barre Annuler/Partager s'affiche immédiatement
+    if (this.collab.isLockedByMe(handle.id) && !this.collab.isLocalPending(handle.id)) {
+      if (!this.codeSectionSnapshots.has(handle.id)) {
+        this.codeSectionSnapshots.set(handle.id, this.unifiedContent);
+      }
+      this.collab.addLocalPending(handle.id);
+    }
+
     this.recomputeAll();
     setTimeout(() => {
       const ta = this.textareaRef?.nativeElement;
@@ -1153,6 +1162,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // Sections visu filtrées selon la sélection active (null = tout afficher)
+  // Les sections avec modifications locales en attente (localPendingSections) sont toujours
+  // incluses, même si la navigation pointe vers une autre section — ainsi le DOM de la section
+  // modifiée n'est jamais détruit et son badge/cadenas reste visible jusqu'à Partager ou Annuler.
   get filteredVisuSections(): VisuSectionState[] {
     if (!this.activeNodeId) return this.visuSections;
     const node = this.findNode(this.activeNodeId, this.files);
@@ -1162,7 +1174,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Dossier → section sélectionnée + toutes les sous-sections enfants
       const visible = this.getDescendantFolderIds(this.activeNodeId, this.files);
       if (visible.size === 0) return this.visuSections;
-      return this.visuSections.filter(vs => visible.has(vs.sectionId));
+      // Conserver les sections avec modifications en attente pour éviter la destruction du DOM
+      const pending = this.collab.localPendingSections();
+      return this.visuSections.filter(vs => visible.has(vs.sectionId) || pending.has(vs.sectionId));
     }
 
     // Image ou document → preview standalone (singleImage/FileVisuPreview gèrent l'affichage)
@@ -2525,7 +2539,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const sectionId = el.getAttribute('data-section-id');
       if (!sectionId) return;
       const sec = sections.find(s => s.sectionId === sectionId);
-      if (sec && !this.dirtyVisuSectionIds.has(sec.sectionId)) {
+      if (!sec) return;
+      if (this.dirtyVisuSectionIds.has(sec.sectionId)) {
+        // Section avec modifs en attente : réinjecter uniquement si vide (nouvelle instance DOM)
+        // pour ne pas écraser le contenu en cours de frappe
+        if (!el.innerHTML.trim()) {
+          el.innerHTML = marked.parse(sec.markdownBefore, { async: false }) as string;
+        }
+      } else {
         el.innerHTML = sec.contentHtml;
       }
     });
@@ -2560,16 +2581,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.nodeActive.emit(sectionId);
     // Acquérir le lock et noter qu'on édite cette section
     if (this.projectName && this.editingVisuSectionId() !== sectionId) {
-      // Capturer le contenu original avant modification
+      // Capturer le snapshot original uniquement si pas déjà capturé (évite l'écrasement au retour sur une section dirty)
       const vs = this.visuSections.find(v => v.sectionId === sectionId);
-      if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+      if (vs && !this.visuSectionLockSnapshot.has(sectionId)) {
+        this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+      }
       this.editingVisuSectionId.set(sectionId);
       this.collab.lockNode(this.projectName, sectionId).catch(() => {});
     }
   }
 
   onVisuSectionBlur(sectionId: string) {
-    // Sauvegarder localement (sans publier) mais conserver le lock
+    // Sauvegarder localement (sans publier) mais conserver le lock ET l'état dirty
+    // → la section reste bloquée (badge + cadenas menu) jusqu'à Partager ou Annuler
     if (this.dirtyVisuSectionIds.has(sectionId)) {
       const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
       const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
@@ -2577,7 +2601,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         const md = this.htmlSectionToMarkdown(el);
         const sec = this.visuSections[idx];
         this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
-        this.dirtyVisuSectionIds.delete(sectionId);
+        // Ne PAS supprimer de dirtyVisuSectionIds — la section reste en attente
       }
     }
     // NE PAS libérer le lock ici — l'utilisateur doit cliquer Partager ou Annuler
@@ -2611,9 +2635,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     this.dirtyVisuSectionIds.delete(sectionId);
     this.visuSectionLockSnapshot.delete(sectionId);
-    this.editingVisuSectionId.set(null);
-    this.localDirty = false;
-    this.dirtyChange.emit(false);
+    this.collab.removeLocalPending(sectionId);
+    if (this.editingVisuSectionId() === sectionId) this.editingVisuSectionId.set(null);
+    this.localDirty = this.dirtyVisuSectionIds.size > 0;
+    this.dirtyChange.emit(this.localDirty);
     this.showPublishToast();
   }
 
@@ -2645,9 +2670,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     this.dirtyVisuSectionIds.delete(sectionId);
     this.visuSectionLockSnapshot.delete(sectionId);
-    this.editingVisuSectionId.set(null);
-    this.localDirty = false;
-    this.dirtyChange.emit(false);
+    this.collab.removeLocalPending(sectionId);
+    if (this.editingVisuSectionId() === sectionId) this.editingVisuSectionId.set(null);
+    this.localDirty = this.dirtyVisuSectionIds.size > 0;
+    this.dirtyChange.emit(this.localDirty);
   }
 
   // ── Mode Code : Annuler / Partager ──────────────────────────
@@ -2712,6 +2738,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   onVisuSectionInput(sectionId: string) {
     this.dirtyVisuSectionIds.add(sectionId);
+    this.collab.addLocalPending(sectionId);
     if (!this.localDirty) {
       this.localDirty = true;
       this.dirtyChange.emit(true);

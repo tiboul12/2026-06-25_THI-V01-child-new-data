@@ -422,11 +422,11 @@
                 }
               }
 
-              <!-- Badge "édité par moi" (bleu) -->
-              @if (editingVisuSectionId() === sec.sectionId) {
+              <!-- Badge modifications en attente (persiste même si on navigue sur une autre section) -->
+              @if (collab.isLocalPending(sec.sectionId)) {
                 <div class="visu-my-lock-badge">
-                  <span class="material-symbols-outlined">edit</span>
-                  Vous éditez cette section
+                  <span class="material-symbols-outlined">{{ editingVisuSectionId() === sec.sectionId ? 'edit' : 'lock' }}</span>
+                  {{ editingVisuSectionId() === sec.sectionId ? 'Vous éditez cette section' : 'Modifications en attente' }}
                 </div>
               }
 
