@@ -1004,7 +1004,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.mode === m) return;
     if (this.mode === 'edit') {
       this.unfoldAll();
-      this.flushContentModifications();
       if (this.focusedHandle) this.exitFocusMode();
       else this.saveAll();
     } else if (this.mode === 'visu') {
@@ -1080,7 +1079,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   exitFocusMode() {
-    this.flushContentModifications();
     this.exitFocusModeSync();
     setTimeout(() => {
       const ta = this.textareaRef?.nativeElement;
@@ -1292,6 +1290,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         timestamp: new Date().toISOString(),
         state: 'editing'
       });
+    } else if (this.focusedHandle) {
+      // Fichier direct (pas de ## Section header) : getCursorEntity retourne null
+      // → fallback sur focusedHandle.id qui est le fileId lui-même
+      const hId = this.focusedHandle.id;
+      this.modifiedEntities.set(hId, hId);
+      const node = this.findNode(hId, this.files);
+      this.collab.upsertPending({
+        entityId: hId,
+        label: `Modification de texte — «${node?.name || hId}»`,
+        username: this.authSvc.currentUser()?.username || 'Vous',
+        timestamp: new Date().toISOString(),
+        state: 'editing'
+      });
     }
   }
 
@@ -1400,7 +1411,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   onTextareaBlur() {
     this.saveAll();
-    this.flushContentModifications();
   }
 
   // Force une sauvegarde immédiate (bouton "Non sauvegardé" cliqué)
@@ -1408,7 +1418,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     clearTimeout(this.saveTimeout);
     this.unfoldAll(); // dépli obligatoire avant sauvegarde manuelle
     this.saveAll();
-    this.flushContentModifications();
   }
 
   private updateSnapshotFromFiles() {
@@ -1449,12 +1458,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
   }
 
-  public flushContentModifications() {
+  public flushContentModifications(filterSectionId?: string) {
     if (this.modifiedEntities.size === 0) return;
     const currentSections = this.parseContent();
     const lines = this.unifiedContent.split('\n');
     const updatedFolderIds = new Set<string>();
     for (const [entityId, folderId] of this.modifiedEntities) {
+      // Si un filtre de section est fourni, ne traiter que les entités de cette section
+      if (filterSectionId && folderId !== filterSectionId && entityId !== filterSectionId) continue;
       const isBlock = entityId.includes('##');
       const isFile = !isBlock && entityId !== folderId;
       const node = isBlock ? null : this.findNode(entityId, this.files);
@@ -1509,7 +1520,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.sectionFileSnapshot.set(folderId, { fileId: after.fileId, content: after.content });
       }
     }
-    this.modifiedEntities.clear();
+    // Supprimer uniquement les entités traitées (filtrées par section si applicable)
+    if (filterSectionId) {
+      for (const [entityId, folderId] of this.modifiedEntities) {
+        if (folderId === filterSectionId || entityId === filterSectionId) {
+          this.modifiedEntities.delete(entityId);
+        }
+      }
+    } else {
+      this.modifiedEntities.clear();
+    }
   }
 
   private blockKindLabel(blockId: string): string {
@@ -1570,11 +1590,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   private saveAll() {
-    // Bascule toutes les entrées 'editing' du panneau historique en 'saving' (clignote)
-    this.collab.markAllPendingSaving();
     if (this.unifiedContent === this.lastSavedContent) {
-      // Pas de changement de contenu, mais on flush pour que l'historique remonte sans attendre le blur
-      this.flushContentModifications();
       if (this.localDirty) {
         this.localDirty = false;
         this.dirtyChange.emit(false);
@@ -1610,8 +1626,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const sections = this.parseContent();
     this.unifiedContent = saved;
     this.sectionsChange.emit(sections);
-    // Flush historique en même temps que la sauvegarde (évite d'attendre le blur)
-    this.flushContentModifications();
   }
 
   // ── Content parsing (compat existant) ──────────────────────
@@ -2617,7 +2631,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const mdBefore = this.visuSectionLockSnapshot.get(sectionId) ?? '';
 
     // Mettre à jour unifiedContent puis annuler le debounce
-    this.saveVisuSection(sectionId, newMd, mdBefore);
+    this.saveVisuSection(sectionId, newMd, mdBefore, true);
     clearTimeout(this.saveTimeout);
     this.lastSavedContent = this.unifiedContent;
 
@@ -2671,6 +2685,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.dirtyVisuSectionIds.delete(sectionId);
     this.visuSectionLockSnapshot.delete(sectionId);
     this.collab.removeLocalPending(sectionId);
+    this.collab.clearPending(sectionId);
     if (this.editingVisuSectionId() === sectionId) this.editingVisuSectionId.set(null);
     this.localDirty = this.dirtyVisuSectionIds.size > 0;
     this.dirtyChange.emit(this.localDirty);
@@ -2695,7 +2710,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Sauvegarder le contenu restauré (sans publish) pour annuler tout auto-save sur le disque
     this.saveAll();
 
-    // Nettoyer le state pending
+    // Nettoyer le state pending : vider toutes les entrées zone 5 des entités modifiées
+    for (const [entityId, folderId] of this.modifiedEntities) {
+      if (folderId === sectionId || entityId === sectionId) {
+        this.collab.clearPending(entityId);
+      }
+    }
     this.codeSectionSnapshots.delete(sectionId);
     this.collab.removeLocalPending(sectionId);
     if (this.projectName) {
@@ -2707,6 +2727,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (!this.projectName || !this.focusedHandle) return;
     const sectionId = this.focusedHandle.id;
     clearTimeout(this.saveTimeout);
+    // Flusher l'historique de CETTE section AVANT unfoldAll (ranges encore valides en mode focus)
+    this.flushContentModifications(sectionId);
     this.unfoldAll();
     const sections = this.parseContent();
     try {
@@ -2739,6 +2761,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   onVisuSectionInput(sectionId: string) {
     this.dirtyVisuSectionIds.add(sectionId);
     this.collab.addLocalPending(sectionId);
+    // Afficher une entrée grisée dans le panneau historique dès la première frappe
+    if (!this.collab.pending().some(e => e.entityId === sectionId)) {
+      const node = this.findNode(sectionId, this.files);
+      this.collab.upsertPending({
+        entityId: sectionId,
+        label: `Modification visu — «${node?.name || sectionId}»`,
+        username: this.authSvc.currentUser()?.username || 'Vous',
+        timestamp: new Date().toISOString(),
+        state: 'editing'
+      });
+    }
     if (!this.localDirty) {
       this.localDirty = true;
       this.dirtyChange.emit(true);
@@ -2751,7 +2784,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // ── Visu edit : sauvegarde d'une section ────────────────────
-  private saveVisuSection(sectionId: string, newMd: string, mdBefore: string) {
+  private saveVisuSection(sectionId: string, newMd: string, mdBefore: string, trackHistory = false) {
     const range = this.sectionRanges.find(r => r.folderId === sectionId);
     if (!range) return;
 
@@ -2779,22 +2812,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     const node = this.findNode(sectionId, this.files);
     const snapshot = this.sectionFileSnapshot.get(sectionId);
-    this.woHistory.track({
-      section: 'projets/contenu',
-      actionType: 'update',
-      label: `Modification visu — «${node?.name || sectionId}»`,
-      entityType: 'content',
-      entityId: sectionId,
-      beforeState: { content: mdBefore },
-      afterState: { content: newMd },
-      context: { projectId: this.projectName },
-      undoable: !!snapshot?.fileId,
-      undoAction: snapshot?.fileId ? {
-        endpoint: `/api/file-projects/${this.projectName}/files/${snapshot.fileId}`,
-        method: 'PUT',
-        payload: { content: snapshot.content },
-      } : undefined,
-    }).catch(() => {});
+    if (trackHistory) {
+      this.woHistory.track({
+        section: 'projets/contenu',
+        actionType: 'update',
+        label: `Modification visu — «${node?.name || sectionId}»`,
+        entityType: 'content',
+        entityId: sectionId,
+        beforeState: { content: mdBefore },
+        afterState: { content: newMd },
+        context: { projectId: this.projectName },
+        undoable: !!snapshot?.fileId,
+        undoAction: snapshot?.fileId ? {
+          endpoint: `/api/file-projects/${this.projectName}/files/${snapshot.fileId}`,
+          method: 'PUT',
+          payload: { content: snapshot.content },
+        } : undefined,
+      }).catch(() => {});
+    }
 
     // Mettre à jour markdownBefore dans visuSections
     const vs = this.visuSections.find(s => s.sectionId === sectionId);
