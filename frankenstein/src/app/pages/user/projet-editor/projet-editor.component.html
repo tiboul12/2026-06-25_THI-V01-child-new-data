@@ -20,6 +20,7 @@
         [projetId]="project()?.id || ''"
         [nestedImagesMap]="nestedImagesMap()"
         (fileSelect)="onNodeSelect($event)"
+        (projectSelect)="onProjectRootSelect()"
         (folderCreated)="onFolderCreated($event)"
         (dragDrop)="onDragDrop($event)"
         (refresh)="onRefresh()" />

@@ -1,26 +1,15 @@
-<div class="h-full flex flex-col bg-white dark:bg-[#0f0f17] overflow-hidden">
+<div class="h-full flex flex-col bg-white dark:bg-[#0f0f17] overflow-hidden relative">
+
+  <!-- Toast succès partage -->
+  @if (publishToastVisible()) {
+    <div class="publish-toast">
+      <span class="material-symbols-outlined">check_circle</span>
+      Modifications enregistrées et partagées
+    </div>
+  }
 
   <!-- Barre d'outils -->
   <div class="flex flex-wrap items-center gap-1 p-2 bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
-
-    <!-- Indicateur mode focus -->
-    @if (focusedHandle) {
-      <button class="ed-focus-exit" (click)="exitFocusMode()" title="Revenir à l'édition complète">
-        <span class="material-symbols-outlined">arrow_back</span>
-        Vue complète
-      </button>
-      <div class="ed-focus-label">
-        <span class="ed-focus-label__badge">{{
-          focusedHandle.kind === 'folder' ? 'H' + focusedHandle.level :
-          focusedHandle.kind === 'block-table' ? 'Tab.' :
-          focusedHandle.kind === 'block-quote' ? 'Cit.' :
-          focusedHandle.kind === 'block-fence' ? 'Code' :
-          focusedHandle.kind === 'block-list' ? 'List.' : 'Doc'
-        }}</span>
-        {{ focusedHandle.label }}
-      </div>
-      <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
-    }
 
     <!-- Tabs Code / Preview (style GitHub) -->
     <div class="ed-mode-tabs mr-2">
@@ -94,6 +83,44 @@
       <button class="ml-auto text-red-400 hover:text-red-600" (click)="imageUploadError = ''">
         <span class="material-symbols-outlined text-sm">close</span>
       </button>
+    </div>
+  }
+
+  <!-- Barre Annuler/Partager mode Code -->
+  @if (mode === 'edit' && focusedHandle && collab.localPendingSections().has(focusedHandle.id)) {
+    <div class="code-publish-bar">
+      <span class="code-publish-bar__info">
+        <span class="material-symbols-outlined">edit</span>
+        Modifications en cours
+      </span>
+      <div class="code-publish-bar__actions">
+        <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
+        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()">
+          <span class="material-symbols-outlined">share</span>
+          Partager mes modifications
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Barre Annuler/Partager mode Preview (même design que mode Code) -->
+  @if (mode === 'visu' && editingVisuSectionId()) {
+    <div class="code-publish-bar">
+      <span class="code-publish-bar__info">
+        <span class="material-symbols-outlined">edit</span>
+        Modifications en cours
+      </span>
+      <div class="code-publish-bar__actions">
+        <button class="visu-publish-bar__cancel"
+                (mousedown)="$event.preventDefault(); cancelVisuEdit(editingVisuSectionId()!)">
+          Annuler
+        </button>
+        <button class="visu-publish-bar__publish"
+                (mousedown)="$event.preventDefault(); publishVisuSection(editingVisuSectionId()!)">
+          <span class="material-symbols-outlined">share</span>
+          Partager mes modifications
+        </button>
+      </div>
     </div>
   }
 
@@ -234,18 +261,6 @@
                   <span class="ed-handle__grip material-symbols-outlined">drag_indicator</span>
                 }
               </div>
-              <!-- Bouton "Édition" — ouvre le mode focus pour cette section/document/bloc -->
-              @if (hoveredHandle.kind !== 'image') {
-                <button class="ed-focus-btn"
-                        [class.ed-focus-btn--folder]="hoveredHandle.kind === 'folder'"
-                        [class.ed-focus-btn--file]="hoveredHandle.kind === 'file'"
-                        [class.ed-focus-btn--block]="hoveredHandle.kind === 'block-table' || hoveredHandle.kind === 'block-quote' || hoveredHandle.kind === 'block-fence' || hoveredHandle.kind === 'block-list'"
-                        [style.top.px]="hoveredHandle.top + 21"
-                        (click)="enterFocusMode(hoveredHandle, $event)"
-                        title="Éditer uniquement : {{ hoveredHandle.label }}">
-                  Éd.
-                </button>
-              }
             }
             @if (dropIndicator) {
               <div class="ed-drop-indicator"
@@ -280,11 +295,183 @@
       </div>
     }
 
-    <!-- Mode Preview : rendu markdown read-only -->
+    <!-- Mode Preview : éditable par section (contenteditable + toolbar flottante) -->
     @if (mode === 'visu') {
-      <div class="preview-wrap flex-1 min-h-0 overflow-y-auto"
-           (click)="onPreviewClick($event)">
-        <div class="preview-content" [innerHTML]="renderedHtml"></div>
+      <div class="preview-wrap flex-1 min-h-0 overflow-y-auto" #visu
+           (click)="onVisuContainerClick($event)"
+           (keydown)="onVisuSectionKeydown($event)">
+
+        <!-- Toolbar de formatage flottante (apparaît sur sélection de texte) -->
+        @if (visuToolbar) {
+          <div class="visu-format-toolbar"
+               [style.top.px]="visuToolbar.top"
+               [style.left.px]="visuToolbar.left">
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S</s></button>
+            <div class="visu-format-toolbar__sep"></div>
+            <button class="visu-format-toolbar__clear"
+                    (mousedown)="$event.preventDefault(); applyVisuFormat('removeFormat')"
+                    title="Effacer la mise en forme">
+              <span class="material-symbols-outlined" style="font-size:13px;line-height:1">format_clear</span>
+            </button>
+          </div>
+        }
+
+        <!-- Menu d'insertion de bloc -->
+        @if (visuInsertMenu) {
+          <div class="visu-insert-menu"
+               [style.top.px]="visuInsertMenu.top"
+               [style.left.px]="visuInsertMenu.left">
+            <button (click)="insertVisuBlock('menu', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">title</span>Nouveau titre
+            </button>
+            <button (click)="insertVisuBlock('doc', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">description</span>Nouveau document
+            </button>
+            <button (click)="insertVisuBlock('code', visuInsertMenu!.sectionId)">
+              <span class="material-symbols-outlined">code</span>Bloc de code
+            </button>
+          </div>
+        }
+
+        <!-- Sections éditables -->
+        <div class="visu-content-wrap">
+
+          <!-- Preview standalone d'un document (lecture seule) -->
+          @if (singleFileVisuPreview; as preview) {
+            <div class="visu-section-wrap">
+              <h2 class="visu-sec-heading">{{ preview.name }}</h2>
+              <div class="visu-sec-content visu-sec-content--readonly" [innerHTML]="preview.html"></div>
+            </div>
+          }
+
+          <!-- Preview standalone d'une image avec options -->
+          @if (singleImageVisuPreview; as img) {
+            <div class="visu-section-wrap">
+              <!-- Nom + actions (rename / delete) -->
+              <div class="visu-image-header">
+                @if (renamingImageId === img.id) {
+                  <input class="visu-image-rename-input"
+                         [(ngModel)]="renameImageValue"
+                         (keydown.enter)="confirmRenameImageByNode(img.id, img.name)"
+                         (keydown.escape)="cancelRenameImage()"
+                         autofocus />
+                  <button class="visu-image-btn visu-image-btn--primary"
+                          (click)="confirmRenameImageByNode(img.id, img.name)"
+                          title="Confirmer">
+                    <span class="material-symbols-outlined">check</span>
+                  </button>
+                  <button class="visu-image-btn"
+                          (click)="cancelRenameImage()"
+                          title="Annuler">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                } @else if (deleteConfirmImageId === img.id) {
+                  <span class="visu-image-confirm-text">Supprimer cette image ?</span>
+                  <button class="visu-image-btn visu-image-btn--danger"
+                          (click)="confirmDeleteImageByNode(img.id, img.name, $event)"
+                          title="Confirmer la suppression">
+                    <span class="material-symbols-outlined">check</span>
+                  </button>
+                  <button class="visu-image-btn"
+                          (click)="cancelDeleteImage($event)"
+                          title="Annuler">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                } @else {
+                  <h2 class="visu-sec-heading visu-image-name">{{ img.name }}</h2>
+                  <button class="visu-image-btn"
+                          (click)="startRenameImageByNode(img.id, img.name, $event)"
+                          title="Renommer">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button class="visu-image-btn visu-image-btn--danger"
+                          (click)="askDeleteImageByNode(img.id, $event)"
+                          title="Supprimer">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                }
+              </div>
+
+              <!-- L'image -->
+              <div class="visu-image-display">
+                <img [src]="img.url" [alt]="img.name" />
+              </div>
+            </div>
+          }
+
+          @for (sec of filteredVisuSections; track sec.sectionId) {
+            <div class="visu-section-wrap"
+                 [class.visu-section-wrap--active]="activeVisuSectionId === sec.sectionId"
+                 [class.visu-section-wrap--locked]="collab.isLockedByOther(sec.sectionId)">
+
+              <!-- En-tête non éditable (nom du dossier) -->
+              @switch (sec.level) {
+                @case (1) {
+                  <h1 class="visu-sec-heading" [attr.data-section-id]="sec.sectionId" (click)="onPreviewClick($event)">{{ sec.folderName }}</h1>
+                }
+                @case (2) {
+                  <h2 class="visu-sec-heading" [attr.data-section-id]="sec.sectionId" (click)="onPreviewClick($event)">{{ sec.folderName }}</h2>
+                }
+                @case (3) {
+                  <h3 class="visu-sec-heading" [attr.data-section-id]="sec.sectionId" (click)="onPreviewClick($event)">{{ sec.folderName }}</h3>
+                }
+                @default {
+                  <h4 class="visu-sec-heading" [attr.data-section-id]="sec.sectionId" (click)="onPreviewClick($event)">{{ sec.folderName }}</h4>
+                }
+              }
+
+              <!-- Badge modifications en attente (persiste même si on navigue sur une autre section) -->
+              @if (collab.isLocalPending(sec.sectionId)) {
+                <div class="visu-my-lock-badge">
+                  <span class="material-symbols-outlined">{{ editingVisuSectionId() === sec.sectionId ? 'edit' : 'lock' }}</span>
+                  {{ editingVisuSectionId() === sec.sectionId ? 'Vous éditez cette section' : 'Modifications en attente' }}
+                </div>
+              }
+
+              <!-- Badge de verrou par un autre user (rouge) -->
+              @if (collab.isLockedByOther(sec.sectionId)) {
+                <div class="visu-lock-badge">
+                  <span class="material-symbols-outlined">lock</span>
+                  Édité par {{ collab.getLock(sec.sectionId)?.lockedByName }}
+                </div>
+              }
+
+              <!-- Corps éditable (contenteditable) -->
+              <div #visuSectionEl
+                   class="visu-sec-content"
+                   [attr.contenteditable]="collab.isLockedByOther(sec.sectionId) ? 'false' : 'true'"
+                   [attr.data-section-id]="sec.sectionId"
+                   (focus)="onVisuSectionFocus(sec.sectionId)"
+                   (blur)="onVisuSectionBlur(sec.sectionId)"
+                   (input)="onVisuSectionInput(sec.sectionId)">
+              </div>
+
+
+              <!-- Ligne d'insertion (visible au hover) -->
+              <div class="visu-insert-row">
+                <button class="visu-insert-btn"
+                        (click)="showVisuInsertMenu(sec.sectionId, $event)"
+                        title="Insérer un bloc">
+                  <span class="material-symbols-outlined">add</span>
+                  Ajouter un bloc
+                </button>
+                <button class="visu-insert-btn visu-insert-btn--img"
+                        (click)="triggerVisuImageUpload(sec.sectionId)"
+                        title="Insérer une image">
+                  <span class="material-symbols-outlined">add_photo_alternate</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Input caché pour upload image en mode visu -->
+        <input #visuImgInput type="file"
+               accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp"
+               class="hidden"
+               (change)="onVisuImageSelected($event)">
       </div>
     }
 

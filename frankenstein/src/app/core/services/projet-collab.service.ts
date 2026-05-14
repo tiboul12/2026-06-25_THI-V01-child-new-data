@@ -1,6 +1,6 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -39,15 +39,56 @@ export interface PendingHistoryEntry {
   state: 'editing' | 'saving';
 }
 
+export interface ContentUpdateEvent {
+  nodeId: string;
+  folderId: string | null;
+  content: string;
+  updatedBy: string;
+  updatedByName: string;
+  timestamp: string;
+}
+
+export interface StructureUpdateEvent {
+  operation: 'create_folder' | 'rename_folder' | 'delete_folder' | 'rename_file' | 'delete_file' | 'reorder';
+  payload: any;
+  updatedBy: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProjetCollabService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
+  private zone = inject(NgZone);
 
   readonly history = signal<CollabHistoryEntry[]>([]);
   readonly pending = signal<PendingHistoryEntry[]>([]);
   readonly locks = signal<Map<string, LockInfo>>(new Map());
   readonly connected = signal(false);
+
+  // Sections avec modifications locales non encore partagées (publish)
+  // Persiste à travers les navigations entre sections via le menu zone 3
+  readonly localPendingSections = signal<Set<string>>(new Set());
+
+  addLocalPending(sectionId: string): void {
+    if (this.localPendingSections().has(sectionId)) return;
+    const next = new Set(this.localPendingSections());
+    next.add(sectionId);
+    this.localPendingSections.set(next);
+  }
+
+  removeLocalPending(sectionId: string): void {
+    if (!this.localPendingSections().has(sectionId)) return;
+    const next = new Set(this.localPendingSections());
+    next.delete(sectionId);
+    this.localPendingSections.set(next);
+  }
+
+  isLocalPending(sectionId: string): boolean {
+    return this.localPendingSections().has(sectionId);
+  }
+
+  readonly contentUpdate$ = new Subject<ContentUpdateEvent>();
+  readonly structureUpdate$ = new Subject<StructureUpdateEvent>();
 
   private eventSource: EventSource | null = null;
   private currentProjetId: string | null = null;
@@ -69,6 +110,7 @@ export class ProjetCollabService {
     this.history.set([]);
     this.pending.set([]);
     this.locks.set(new Map());
+    this.localPendingSections.set(new Set());
   }
 
   upsertPending(entry: PendingHistoryEntry): void {
@@ -146,12 +188,36 @@ export class ProjetCollabService {
 
       this.eventSource.addEventListener('lock', (e: MessageEvent) => {
         const lock: LockInfo = JSON.parse(e.data);
-        this.locks.update(map => { const m = new Map(map); m.set(lock.nodeId, lock); return m; });
+        this.zone.run(() => {
+          this.locks.update(map => { const m = new Map(map); m.set(lock.nodeId, lock); return m; });
+        });
       });
 
       this.eventSource.addEventListener('unlock', (e: MessageEvent) => {
         const { nodeId } = JSON.parse(e.data);
-        this.locks.update(map => { const m = new Map(map); m.delete(nodeId); return m; });
+        this.zone.run(() => {
+          this.locks.update(map => { const m = new Map(map); m.delete(nodeId); return m; });
+        });
+      });
+
+      this.eventSource.addEventListener('content_update', (e: MessageEvent) => {
+        try {
+          const update: ContentUpdateEvent = JSON.parse(e.data);
+          const me = this.auth.currentUser();
+          if (update.updatedBy !== me?.id) this.contentUpdate$.next(update);
+        } catch (err) {
+          console.warn('[Collab] SSE content_update parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('structure_update', (e: MessageEvent) => {
+        try {
+          const update: StructureUpdateEvent = JSON.parse(e.data);
+          const me = this.auth.currentUser();
+          if (update.updatedBy !== me?.id) this.structureUpdate$.next(update);
+        } catch (err) {
+          console.warn('[Collab] SSE structure_update parse error:', err);
+        }
       });
 
       this.eventSource.onerror = () => {

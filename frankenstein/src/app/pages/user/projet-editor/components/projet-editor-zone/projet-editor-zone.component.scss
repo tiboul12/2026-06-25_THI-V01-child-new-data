@@ -572,6 +572,60 @@
   }
 }
 
+// ── Toast partage ──────────────────────────────────────────
+.publish-toast {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #16a34a;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  animation: toast-in 0.18s ease;
+  pointer-events: none;
+
+  .material-symbols-outlined { font-size: 15px; }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── Barre Annuler/Partager mode Code ───────────────────────
+.code-publish-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  background: rgba(37, 99, 235, 0.06);
+  border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+  flex-shrink: 0;
+
+  &__info {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #2563eb;
+    opacity: 0.85;
+    .material-symbols-outlined { font-size: 13px; }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
 // ── Visu edit mode ──────────────────────────────────────────
 .visu-section-wrap {
   margin-bottom: 0.5em;
@@ -580,6 +634,85 @@
   transition: background-color 0.15s;
 
   &--active { background: rgba(59, 130, 246, 0.04); }
+
+  &--locked {
+    background: rgba(239, 68, 68, 0.03);
+    border-left: 2px solid rgba(239, 68, 68, 0.3);
+    padding-left: 8px;
+
+    .visu-sec-content { cursor: not-allowed; opacity: 0.6; }
+  }
+}
+
+.visu-my-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin: 2px 0 4px;
+  user-select: none;
+
+  .material-symbols-outlined { font-size: 13px; }
+}
+
+.visu-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin: 2px 0 6px;
+  user-select: none;
+
+  .material-symbols-outlined { font-size: 13px; }
+}
+
+.visu-publish-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(37, 99, 235, 0.15);
+
+  &__cancel {
+    padding: 4px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+    &:hover { opacity: 1; }
+  }
+
+  &__publish {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: #1d4ed8; }
+    .material-symbols-outlined { font-size: 14px; }
+  }
 }
 
 .visu-sec-heading {
@@ -654,6 +787,31 @@
       padding-left: 1em;
       margin: 0.6em 0;
       color: rgba(0, 0, 0, 0.65);
+    }
+
+    .visu-table-wrap {
+      margin: 0.8em 0;
+      overflow-x: auto;
+      cursor: default;
+      user-select: text;
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9em;
+
+        th, td {
+          padding: 0.45em 0.75em;
+          border: 1px solid rgba(0, 0, 0, 0.12);
+          text-align: left;
+          vertical-align: top;
+        }
+        th {
+          background: rgba(0, 0, 0, 0.04);
+          font-weight: 600;
+        }
+        tr:nth-child(even) td { background: rgba(0, 0, 0, 0.02); }
+      }
     }
 
     h1, h2, h3, h4 {
@@ -746,6 +904,12 @@
     pre { background: rgba(255, 255, 255, 0.04); }
     blockquote { border-left-color: rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.65); }
 
+    .visu-table-wrap table {
+      th, td { border-color: rgba(255, 255, 255, 0.09); }
+      th { background: rgba(255, 255, 255, 0.04); }
+      tr:nth-child(even) td { background: rgba(255, 255, 255, 0.02); }
+    }
+
     .visu-file {
       border-color: rgba(255, 255, 255, 0.07);
       background: rgba(255, 255, 255, 0.02);
@@ -804,10 +968,10 @@
   &--img:hover { color: rgb(216, 180, 254); border-color: rgba(168, 85, 247, 0.5); background: rgba(168, 85, 247, 0.08); }
 }
 
-// Toolbar de formatage (popover sur sélection de texte)
+// Toolbar de formatage (popover sur sélection de texte, fixed viewport)
 .visu-format-toolbar {
-  position: absolute;
-  z-index: 50;
+  position: fixed;
+  z-index: 200;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -857,10 +1021,10 @@
   }
 }
 
-// Menu d'insertion (popover)
+// Menu d'insertion (popover, fixed viewport)
 .visu-insert-menu {
-  position: absolute;
-  z-index: 50;
+  position: fixed;
+  z-index: 200;
   display: flex;
   flex-direction: column;
   min-width: 140px;
@@ -1372,5 +1536,135 @@
       background: rgba(255, 255, 255, 0.02);
       &__title { color: rgba(255, 255, 255, 0.38); }
     }
+  }
+}
+
+// ── Conteneur des sections visu (max-width + padding) ───────────────
+.visu-content-wrap {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 2.5rem 4rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  color: rgb(36, 41, 47);
+}
+
+:host-context(.dark) .visu-content-wrap {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+// ── Tailles des titres de section en mode visu ──────────────────────
+h1.visu-sec-heading {
+  font-size: 2em;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.07);
+  padding-bottom: 0.3em;
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+h2.visu-sec-heading {
+  font-size: 1.5em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 0.2em;
+  margin-top: 1.5em;
+  margin-bottom: 0.4em;
+}
+h3.visu-sec-heading {
+  font-size: 1.25em;
+  margin-top: 1.25em;
+  margin-bottom: 0.4em;
+}
+h4.visu-sec-heading {
+  font-size: 1em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+  margin-top: 1em;
+  margin-bottom: 0.3em;
+}
+
+:host-context(.dark) {
+  h1.visu-sec-heading { border-bottom-color: rgba(255, 255, 255, 0.1); }
+  h2.visu-sec-heading { border-bottom-color: rgba(255, 255, 255, 0.07); }
+}
+
+/* ── Preview standalone d'une image (clic image en zone 3) ── */
+.visu-image-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.visu-image-name {
+  flex: 1;
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.visu-image-rename-input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  color: inherit;
+  font-size: 1rem;
+  outline: none;
+  &:focus { border-color: var(--primary, #6366f1); }
+}
+
+.visu-image-confirm-text {
+  flex: 1;
+  color: #ef4444;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.visu-image-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.15s;
+  span { font-size: 18px; }
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+  }
+  &--primary {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+    &:hover { background: rgba(99, 102, 241, 0.25); }
+  }
+  &--danger {
+    &:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+  }
+}
+
+.visu-image-display {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+  img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
   }
 }

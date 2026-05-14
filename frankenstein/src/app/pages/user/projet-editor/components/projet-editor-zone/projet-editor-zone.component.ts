@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -155,7 +155,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private zone = inject(NgZone);
   private cdr = inject(ChangeDetectorRef);
   private woHistory = inject(WoActionHistoryService);
-  private collab = inject(ProjetCollabService);
+  collab = inject(ProjetCollabService);
   private authSvc = inject(AuthService);
 
   // Mode (toggle Edition / Visu)
@@ -192,7 +192,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   visuToolbar: { top: number; left: number } | null = null;
   visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
   activeVisuSectionId: string | null = null;
+  editingVisuSectionId = signal<string | null>(null);
+  publishToastVisible = signal<boolean>(false);
+  // Snapshots du contenu original par section (clé = sectionId / focusedHandle.id)
+  // Permet de restaurer le contenu original via "Annuler" même après navigation entre sections
+  private codeSectionSnapshots = new Map<string, string>();
   private dirtyVisuSectionIds = new Set<string>();
+  private visuSectionLockSnapshot = new Map<string, string>();
   private visuSelectionListener: (() => void) | null = null;
   visuImageSectionId: string | null = null;
   mirrorLines: MirrorLine[] = [];
@@ -333,6 +339,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     if (changes['activeNodeId']) {
       this.recomputeHighlights();
+      this.applyFocusByActiveNode();
+      // En mode visu, la liste filteredVisuSections change → réinjecter le innerHTML
+      // dans les nouveaux éléments (sinon ils restent vides après navigation menu)
+      if (this.mode === 'visu') {
+        setTimeout(() => this.initVisuSectionHtml(), 0);
+      }
     }
 
     if (changes['scrollToNodeId'] && this.scrollToNodeId) {
@@ -991,13 +1003,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   setMode(m: 'edit' | 'visu') {
     if (this.mode === m) return;
     if (this.mode === 'edit') {
-      this.unfoldAll(); // expand all sections before leaving Code mode
+      this.unfoldAll();
       this.flushContentModifications();
       if (this.focusedHandle) this.exitFocusMode();
       else this.saveAll();
+    } else if (this.mode === 'visu') {
+      this.flushVisuSections();
+      this.teardownVisuSelectionListener();
     }
     this.mode = m;
     this.recomputeAll();
+    if (m === 'visu') {
+      this.setupVisuSelectionListener();
+    }
+    if (m === 'edit') {
+      // Réappliquer le focus sur la section active après changement de mode
+      setTimeout(() => this.applyFocusByActiveNode(), 0);
+    }
     if (this.activeNodeId) {
       setTimeout(() => this.scrollToActive(), 80);
     }
@@ -1041,6 +1063,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.lastSavedContent = this.unifiedContent;
     this.focusedHandle = handle;
 
+    // Si la section est déjà verrouillée par moi (verrou serveur persistant après reload),
+    // restaurer l'état "pending" pour que la barre Annuler/Partager s'affiche immédiatement
+    if (this.collab.isLockedByMe(handle.id) && !this.collab.isLocalPending(handle.id)) {
+      if (!this.codeSectionSnapshots.has(handle.id)) {
+        this.codeSectionSnapshots.set(handle.id, this.unifiedContent);
+      }
+      this.collab.addLocalPending(handle.id);
+    }
+
     this.recomputeAll();
     setTimeout(() => {
       const ta = this.textareaRef?.nativeElement;
@@ -1074,6 +1105,154 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.recomputeAll(); // reconstruit handles depuis le document complet
   }
 
+  // Retourne l'ID de dossier effectif pour un nodeId :
+  // - si c'est un dossier → lui-même
+  // - si c'est un fichier → son dossier parent
+  // Retourne undefined si le nœud n'est pas trouvé (distinct de null = pas de parent)
+  private findEffectiveFolderId(nodeId: string, nodes: FileNode[], parentFolderId: string | null = null): string | null | undefined {
+    for (const n of nodes) {
+      if (n.id === nodeId) {
+        return n.type === 'folder' ? n.id : parentFolderId;
+      }
+      if (n.children) {
+        const found = this.findEffectiveFolderId(nodeId, n.children, n.type === 'folder' ? n.id : parentFolderId);
+        if (found !== undefined) return found;
+      }
+    }
+    return undefined;
+  }
+
+  // Applique le mode focus (edit) selon activeNodeId.
+  // Logique alignée avec le filtre preview :
+  //  - dossier  → handle dossier (section + enfants)
+  //  - document → handle fichier (juste ce document)
+  //  - image    → handle image (1 ligne marker, rendue comme carte image)
+  private applyFocusByActiveNode(): void {
+    if (this.mode !== 'edit') return;
+    const nodeId = this.activeNodeId;
+    if (!nodeId) {
+      if (this.focusedHandle) this.exitFocusMode();
+      return;
+    }
+
+    if (this.focusedHandle?.id === nodeId) return;
+    if (this.focusedHandle) this.exitFocusModeSync();
+
+    const handle = this.handles.find(h => h.id === nodeId && h.kind === 'folder')
+                ?? this.handles.find(h => h.id === nodeId);
+    if (handle) this.enterFocusMode(handle);
+  }
+
+  // Retourne l'ensemble des IDs de dossiers descendants (inclus) d'un nœud donné
+  private getDescendantFolderIds(nodeId: string, nodes: FileNode[]): Set<string> {
+    const ids = new Set<string>();
+    const collectFrom = (node: FileNode) => {
+      if (node.type === 'folder') ids.add(node.id);
+      for (const c of node.children || []) collectFrom(c);
+    };
+    const findAndCollect = (ns: FileNode[]): boolean => {
+      for (const n of ns) {
+        if (n.id === nodeId) { collectFrom(n); return true; }
+        if (n.children && findAndCollect(n.children)) return true;
+      }
+      return false;
+    };
+    findAndCollect(nodes);
+    return ids;
+  }
+
+  // Sections visu filtrées selon la sélection active (null = tout afficher)
+  // Les sections avec modifications locales en attente (localPendingSections) sont toujours
+  // incluses, même si la navigation pointe vers une autre section — ainsi le DOM de la section
+  // modifiée n'est jamais détruit et son badge/cadenas reste visible jusqu'à Partager ou Annuler.
+  get filteredVisuSections(): VisuSectionState[] {
+    if (!this.activeNodeId) return this.visuSections;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node) return this.visuSections;
+
+    if (node.type === 'folder') {
+      // Dossier → section sélectionnée + toutes les sous-sections enfants
+      const visible = this.getDescendantFolderIds(this.activeNodeId, this.files);
+      if (visible.size === 0) return this.visuSections;
+      // Conserver les sections avec modifications en attente pour éviter la destruction du DOM
+      const pending = this.collab.localPendingSections();
+      return this.visuSections.filter(vs => visible.has(vs.sectionId) || pending.has(vs.sectionId));
+    }
+
+    // Image ou document → preview standalone (singleImage/FileVisuPreview gèrent l'affichage)
+    return [];
+  }
+
+  // Preview standalone d'une image avec ses options (rename/delete)
+  get singleImageVisuPreview(): { id: string; name: string; url: string } | null {
+    if (!this.activeNodeId) return null;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node || node.type !== 'file') return null;
+    if (!this.isImageFile(node.name)) return null;
+    const encodedPath = node.path.split('/').map((s: string) => encodeURIComponent(s)).join('/');
+    const url = this.svc.getImageUrl(this.projectName, encodedPath);
+    return { id: node.id, name: node.name, url };
+  }
+
+  // Wrappers acceptant id+name (utilisés depuis singleImageVisuPreview où on n'a pas de MirrorLine)
+  startRenameImageByNode(id: string, name: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.renamingImageId = id;
+    this.renameImageValue = name.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i, '');
+    this.deleteConfirmImageId = null;
+    this.hoverPreview = null;
+  }
+
+  async confirmRenameImageByNode(id: string, name: string): Promise<void> {
+    const fakeLine = { imageId: id, imageName: name } as MirrorLine;
+    return this.confirmRenameImage(fakeLine);
+  }
+
+  askDeleteImageByNode(id: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.deleteConfirmImageId = id;
+    this.renamingImageId = null;
+    this.hoverPreview = null;
+  }
+
+  async confirmDeleteImageByNode(id: string, name: string, ev: MouseEvent): Promise<void> {
+    const fakeLine = { imageId: id, imageName: name } as MirrorLine;
+    return this.confirmDeleteImage(fakeLine, ev);
+  }
+
+  // Cache du rendu HTML d'un document affiché en standalone
+  private fileVisuPreviewCache: { fileId: string; rawContent: string; html: string; name: string } | null = null;
+
+  // Preview standalone d'un document texte (lecture seule)
+  get singleFileVisuPreview(): { name: string; html: string } | null {
+    if (!this.activeNodeId) return null;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node || node.type !== 'file') return null;
+    if (this.isImageFile(node.name)) return null;
+    if (node.name === 'contenu.md') return null;
+
+    const content = node.content || '';
+    if (this.fileVisuPreviewCache
+        && this.fileVisuPreviewCache.fileId === node.id
+        && this.fileVisuPreviewCache.rawContent === content) {
+      return { name: this.fileVisuPreviewCache.name, html: this.fileVisuPreviewCache.html };
+    }
+
+    // Remplacer les marqueurs {{IMG:id}} par des URLs réelles avant rendu markdown
+    const processed = content.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (_m, id) => {
+      const img = this.allImages.find(im => im.id === id);
+      if (!img) return `*[image manquante: ${id}]*`;
+      const encodedPath = img.path.split('/').map((s: string) => encodeURIComponent(s)).join('/');
+      const url = this.svc.getImageUrl(this.projectName, encodedPath);
+      return `\n\n![${this.escapeAlt(img.name)}](${url})\n\n`;
+    });
+
+    const html = marked.parse(processed, { async: false }) as string;
+    const name = node.name.replace(/\.md$/, '');
+    this.fileVisuPreviewCache = { fileId: node.id, rawContent: content, html, name };
+    return { name, html };
+  }
+
   // ── Edit-mode events ────────────────────────────────────────
   onTextareaInput(event: Event) {
     const ta = event.target as HTMLTextAreaElement;
@@ -1086,6 +1265,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (!this.localDirty) {
       this.localDirty = true;
       this.dirtyChange.emit(true);
+    }
+    // Marquer la section focusée comme "modifications locales en attente" + capturer snapshot original
+    // Le snapshot persiste à travers les navigations pour permettre Annuler après changement de section
+    if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
+      this.codeSectionSnapshots.set(this.focusedHandle.id, this.lastSavedContent);
+      this.collab.addLocalPending(this.focusedHandle.id);
+      // Verrouiller la section (les autres users la verront en rouge dans leur menu)
+      if (this.projectName) {
+        this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
+      }
     }
     const entity = this.getCursorEntity();
     if (entity) {
@@ -2275,6 +2464,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         markdownBefore: isDirty && existing ? existing.markdownBefore : markdownBefore,
       };
     });
+    // Initialiser le innerHTML des contenteditable après le rendu Angular
+    setTimeout(() => this.initVisuSectionHtml(), 0);
   }
 
   private buildVisuSectionHtml(sec: DocSection): string {
@@ -2285,8 +2476,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const fileBlocks: { token: string; html: string; md: string }[] = [];
     contentMd = contentMd.replace(/^(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_m, _d, name, content) => {
       const trimmed = (name as string).trim();
-      const mdSource = `'${trimmed}\n${((content as string) || '').trimEnd()}\n'`;
-      const inner = marked.parse((content as string) || '', { async: false }) as string;
+      const rawContent = (content as string) || '';
+      const mdSource = `'${trimmed}\n${rawContent.trimEnd()}\n'`;
+      // Traiter les {{IMG:...}} à l'intérieur du bloc avant marked.parse
+      let processedContent = rawContent.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (__, id) => {
+        const img = this.allImages.find(im => im.id === id);
+        if (!img) return `*[image manquante: ${id}]*`;
+        const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
+        const url = this.svc.getImageUrl(this.projectName, encodedPath);
+        return `\n\n![${this.escapeAlt(img.name)}](${url})\n\n`;
+      });
+      const inner = marked.parse(processedContent, { async: false }) as string;
       const token = `@@FB${fileBlocks.length}@@`;
       const encoded = btoa(unescape(encodeURIComponent(mdSource)));
       fileBlocks.push({
@@ -2317,6 +2517,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     let html = marked.parse(contentMd, { async: false }) as string;
 
+    // Les tables dans un contenteditable se corrompent — on les isole en non-éditable
+    html = html.replace(/<table>([\s\S]*?)<\/table>/gi,
+      '<div class="visu-table-wrap" contenteditable="false"><table>$1</table></div>');
+
     for (const fb of fileBlocks) {
       html = html.replace(new RegExp(`<p>\\s*${fb.token}\\s*</p>`, 'g'), fb.html).replace(fb.token, fb.html);
     }
@@ -2328,10 +2532,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // ── Visu edit : init/refresh du innerHTML des contenteditable ──
   initVisuSectionHtml() {
-    this.visuSectionEls.forEach((ref, i) => {
+    // Lookup par data-section-id pour gérer correctement les sections filtrées
+    const sections = this.filteredVisuSections;
+    this.visuSectionEls.forEach((ref) => {
       const el = ref.nativeElement;
-      const sec = this.visuSections[i];
-      if (sec && !this.dirtyVisuSectionIds.has(sec.sectionId)) {
+      const sectionId = el.getAttribute('data-section-id');
+      if (!sectionId) return;
+      const sec = sections.find(s => s.sectionId === sectionId);
+      if (!sec) return;
+      if (this.dirtyVisuSectionIds.has(sec.sectionId)) {
+        // Section avec modifs en attente : réinjecter uniquement si vide (nouvelle instance DOM)
+        // pour ne pas écraser le contenu en cours de frappe
+        if (!el.innerHTML.trim()) {
+          el.innerHTML = marked.parse(sec.markdownBefore, { async: false }) as string;
+        }
+      } else {
         el.innerHTML = sec.contentHtml;
       }
     });
@@ -2339,9 +2554,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   private flushVisuSections() {
     if (this.mode !== 'visu') return;
-    this.visuSectionEls.forEach((ref, i) => {
+    this.visuSectionEls.forEach((ref) => {
       const el = ref.nativeElement;
-      const sec = this.visuSections[i];
+      const sectionId = el.getAttribute('data-section-id');
+      if (!sectionId) return;
+      const sec = this.visuSections.find(s => s.sectionId === sectionId);
       if (sec && this.dirtyVisuSectionIds.has(sec.sectionId)) {
         const md = this.htmlSectionToMarkdown(el);
         this.saveVisuSection(sec.sectionId, md, sec.markdownBefore);
@@ -2352,21 +2569,176 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // ── Visu edit : événements section ─────────────────────────
   onVisuSectionFocus(sectionId: string) {
+    // Refuser le focus si la section est verrouillée par un autre user
+    if (this.collab.isLockedByOther(sectionId)) {
+      const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+      const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+      el?.blur();
+      return;
+    }
     this.activeVisuSectionId = sectionId;
     this.suppressScrollOnNextActiveChange = true;
     this.nodeActive.emit(sectionId);
+    // Acquérir le lock et noter qu'on édite cette section
+    if (this.projectName && this.editingVisuSectionId() !== sectionId) {
+      // Capturer le snapshot original uniquement si pas déjà capturé (évite l'écrasement au retour sur une section dirty)
+      const vs = this.visuSections.find(v => v.sectionId === sectionId);
+      if (vs && !this.visuSectionLockSnapshot.has(sectionId)) {
+        this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+      }
+      this.editingVisuSectionId.set(sectionId);
+      this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+    }
   }
 
-  onVisuSectionBlur(sectionId: string, el: HTMLElement) {
-    if (!this.dirtyVisuSectionIds.has(sectionId)) return;
-    const md = this.htmlSectionToMarkdown(el);
-    const sec = this.visuSections.find(vs => vs.sectionId === sectionId);
-    this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
+  onVisuSectionBlur(sectionId: string) {
+    // Sauvegarder localement (sans publier) mais conserver le lock ET l'état dirty
+    // → la section reste bloquée (badge + cadenas menu) jusqu'à Partager ou Annuler
+    if (this.dirtyVisuSectionIds.has(sectionId)) {
+      const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+      const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+      if (el) {
+        const md = this.htmlSectionToMarkdown(el);
+        const sec = this.visuSections[idx];
+        this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
+        // Ne PAS supprimer de dirtyVisuSectionIds — la section reste en attente
+      }
+    }
+    // NE PAS libérer le lock ici — l'utilisateur doit cliquer Partager ou Annuler
+  }
+
+  async publishVisuSection(sectionId: string): Promise<void> {
+    const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+    const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+    const snapshot = this.sectionFileSnapshot.get(sectionId);
+
+    const sec = this.visuSections[idx];
+    const newMd = el ? this.htmlSectionToMarkdown(el) : (sec?.markdownBefore ?? '');
+    const mdBefore = this.visuSectionLockSnapshot.get(sectionId) ?? '';
+
+    // Mettre à jour unifiedContent puis annuler le debounce
+    this.saveVisuSection(sectionId, newMd, mdBefore);
+    clearTimeout(this.saveTimeout);
+    this.lastSavedContent = this.unifiedContent;
+
+    // Publier : POST avec publish=true → SSE broadcast + unlock côté serveur
+    if (snapshot?.fileId && this.projectName) {
+      try {
+        await this.svc.updateFile(this.projectName, snapshot.fileId, newMd, sectionId, true);
+      } catch (e: any) {
+        console.warn('[Publish] erreur lors de la publication:', e);
+        return;
+      }
+    } else if (this.projectName) {
+      await this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+    }
+
     this.dirtyVisuSectionIds.delete(sectionId);
+    this.visuSectionLockSnapshot.delete(sectionId);
+    this.collab.removeLocalPending(sectionId);
+    if (this.editingVisuSectionId() === sectionId) this.editingVisuSectionId.set(null);
+    this.localDirty = this.dirtyVisuSectionIds.size > 0;
+    this.dirtyChange.emit(this.localDirty);
+    this.showPublishToast();
+  }
+
+  async cancelVisuEdit(sectionId: string): Promise<void> {
+    const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
+    const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+    const originalMd = this.visuSectionLockSnapshot.get(sectionId) ?? '';
+
+    // Restaurer le contenu HTML original dans le contenteditable
+    if (el) {
+      el.innerHTML = await Promise.resolve(marked(originalMd) as string);
+    }
+
+    // Restaurer unifiedContent à la version d'avant édition
+    if (originalMd !== undefined) {
+      const sec = this.visuSections[idx];
+      const currentMd = sec?.markdownBefore ?? '';
+      if (currentMd !== originalMd) {
+        this.saveVisuSection(sectionId, originalMd, currentMd);
+        clearTimeout(this.saveTimeout);
+        this.lastSavedContent = this.unifiedContent;
+      }
+    }
+
+    // Libérer le lock (pas de publication)
+    if (this.projectName) {
+      await this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+    }
+
+    this.dirtyVisuSectionIds.delete(sectionId);
+    this.visuSectionLockSnapshot.delete(sectionId);
+    this.collab.removeLocalPending(sectionId);
+    if (this.editingVisuSectionId() === sectionId) this.editingVisuSectionId.set(null);
+    this.localDirty = this.dirtyVisuSectionIds.size > 0;
+    this.dirtyChange.emit(this.localDirty);
+  }
+
+  // ── Mode Code : Annuler / Partager ──────────────────────────
+  async cancelCodeEdit(): Promise<void> {
+    if (!this.focusedHandle) return;
+    const sectionId = this.focusedHandle.id;
+    const snapshot = this.codeSectionSnapshots.get(sectionId) ?? this.lastSavedContent;
+
+    // Restaurer le contenu original dans la vue focusée
+    this.unifiedContent = snapshot;
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = snapshot;
+    clearTimeout(this.saveTimeout);
+    this.lastSavedContent = snapshot;
+    this.recomputeAll();
+    this.localDirty = false;
+    this.dirtyChange.emit(false);
+
+    // Sauvegarder le contenu restauré (sans publish) pour annuler tout auto-save sur le disque
+    this.saveAll();
+
+    // Nettoyer le state pending
+    this.codeSectionSnapshots.delete(sectionId);
+    this.collab.removeLocalPending(sectionId);
+    if (this.projectName) {
+      this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+    }
+  }
+
+  async publishCodeEdit(): Promise<void> {
+    if (!this.projectName || !this.focusedHandle) return;
+    const sectionId = this.focusedHandle.id;
+    clearTimeout(this.saveTimeout);
+    this.unfoldAll();
+    const sections = this.parseContent();
+    try {
+      await Promise.all(
+        sections
+          .filter(s => s.fileId)
+          .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+      );
+      this.lastSavedContent = this.unifiedContent;
+      this.localDirty = false;
+      this.dirtyChange.emit(false);
+
+      // Section partagée : retirer du pending + libérer le verrou
+      this.codeSectionSnapshots.delete(sectionId);
+      this.collab.removeLocalPending(sectionId);
+      if (this.projectName) {
+        this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+      }
+      this.showPublishToast();
+    } catch (e) {
+      console.warn('[PublishCode] erreur:', e);
+    }
+  }
+
+  private showPublishToast(): void {
+    this.publishToastVisible.set(true);
+    setTimeout(() => this.publishToastVisible.set(false), 3000);
   }
 
   onVisuSectionInput(sectionId: string) {
     this.dirtyVisuSectionIds.add(sectionId);
+    this.collab.addLocalPending(sectionId);
     if (!this.localDirty) {
       this.localDirty = true;
       this.dirtyChange.emit(true);
@@ -2386,7 +2758,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const lines = this.unifiedContent.split('\n');
     const headingLine = lines[range.lineStart];
     const before = lines.slice(0, range.lineStart);
-    const after = lines.slice(range.lineEnd + 1);
+
+    // Limiter au contenu DIRECT : s'arrêter juste avant la première sous-section.
+    // range.lineEnd inclut les sous-sections ; on cherche la première ligne #heading
+    // qui suit le heading courant pour ne pas les écraser.
+    let directEnd = range.lineEnd;
+    for (let j = range.lineStart + 1; j <= range.lineEnd; j++) {
+      if (/^#{1,4} /.test(lines[j])) {
+        directEnd = j - 1;
+        break;
+      }
+    }
+    const after = lines.slice(directEnd + 1);
 
     const newContentLines = newMd.trim() ? newMd.trim().split('\n') : [];
     const newLines = [...before, headingLine, ...newContentLines, ...after];
@@ -2426,6 +2809,26 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // ── Visu edit : HTML → Markdown ─────────────────────────────
+  private tableToMarkdown(table: HTMLTableElement | null): string {
+    if (!table) return '';
+    const cellMd = (c: Element) => this.nodesToMd(Array.from(c.childNodes)).replace(/\|/g, '\\|').replace(/\n/g, ' ').trim();
+    const rows: string[][] = [];
+    const thead = table.querySelector('thead');
+    if (thead) {
+      const cells = Array.from(thead.querySelectorAll('th, td')).map(cellMd);
+      rows.push(cells);
+      rows.push(cells.map(() => '---'));
+    }
+    const tbody = table.querySelector('tbody');
+    if (tbody) {
+      for (const tr of Array.from(tbody.querySelectorAll('tr'))) {
+        rows.push(Array.from(tr.querySelectorAll('td, th')).map(cellMd));
+      }
+    }
+    if (rows.length === 0) return '';
+    return '\n' + rows.map(r => '| ' + r.join(' | ') + ' |').join('\n') + '\n';
+  }
+
   private htmlSectionToMarkdown(el: HTMLElement): string {
     return this.nodesToMd(Array.from(el.childNodes)).replace(/\n{3,}/g, '\n\n').trim();
   }
@@ -2440,16 +2843,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
 
-    // Blocs non-éditables : restaurer depuis data-block-md ou data-img-id
-    if (el.getAttribute('contenteditable') === 'false') {
-      if (el.hasAttribute('data-block-md')) {
-        try { return '\n' + decodeURIComponent(escape(atob(el.getAttribute('data-block-md')!))) + '\n'; } catch { return ''; }
-      }
-      if (el.hasAttribute('data-img-id')) {
-        return `\n{{IMG:${el.getAttribute('data-img-id')}}}\n`;
-      }
-      return '';
+    // ── Vérifications par attribut data- ou classe (robuste même si contenteditable est normalisé)
+    if (el.hasAttribute('data-block-md')) {
+      try { return '\n' + decodeURIComponent(escape(atob(el.getAttribute('data-block-md')!))) + '\n'; } catch { return ''; }
     }
+    if (el.hasAttribute('data-img-id')) {
+      return `\n{{IMG:${el.getAttribute('data-img-id')}}}\n`;
+    }
+    // Table : via wrapper .visu-table-wrap OU balise <table> directe
+    if (el.classList.contains('visu-table-wrap')) {
+      return this.tableToMarkdown(el.querySelector('table'));
+    }
+    if (tag === 'table') {
+      return this.tableToMarkdown(el as HTMLTableElement);
+    }
+
+    // Éléments génériquement non-éditables sans attribut connu → ignorer
+    if (el.getAttribute('contenteditable') === 'false') return '';
 
     const inner = () => this.nodesToMd(Array.from(el.childNodes));
 
@@ -2483,7 +2893,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }
       case 'li': return inner();
       case 'blockquote': return `\n> ${inner().trim()}\n`;
-      case 'hr': return '\n---\n';
+      // Lignes vides encadrantes obligatoires pour éviter l'interprétation setext-heading
+      case 'hr': return '\n\n---\n\n';
       case 'img': return '';
       default: return inner();
     }
@@ -2518,11 +2929,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return;
     }
     const rect = range.getBoundingClientRect();
-    const visuRect = visuEl.getBoundingClientRect();
-    const toolbarW = 200;
-    let left = rect.left - visuRect.left + rect.width / 2 - toolbarW / 2;
-    left = Math.max(4, Math.min(left, visuRect.width - toolbarW - 4));
-    this.visuToolbar = { top: rect.top - visuRect.top - 44, left };
+    const toolbarW = 220;
+    const left = Math.max(4, Math.min(
+      rect.left + rect.width / 2 - toolbarW / 2,
+      window.innerWidth - toolbarW - 4
+    ));
+    this.visuToolbar = { top: rect.top - 48, left };
     this.cdr.detectChanges();
   }
 
@@ -2553,12 +2965,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     ev.stopPropagation();
     const btn = ev.currentTarget as HTMLElement;
     const rect = btn.getBoundingClientRect();
-    const visuEl = this.visuRef?.nativeElement;
-    const visuRect = visuEl?.getBoundingClientRect() ?? { top: 0, left: 0 };
     this.visuInsertMenu = {
       sectionId,
-      top: rect.bottom - visuRect.top + 4,
-      left: rect.left - visuRect.left,
+      top: rect.bottom + 4,
+      left: rect.left,
     };
   }
 
@@ -2573,7 +2983,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (type === 'doc')   insertion = "\n'Nouveau document\n\n'\n";
     if (type === 'code')  insertion = '\n```\ncode ici\n```\n';
 
-    lines.splice(range.lineEnd + 1, 0, ...insertion.split('\n'));
+    // Insérer dans le contenu DIRECT de la section (avant la première sous-section).
+    // range.lineEnd englobe les sous-sections ; on cherche la première ligne heading enfant.
+    let directEnd = range.lineEnd;
+    for (let j = range.lineStart + 1; j <= range.lineEnd; j++) {
+      if (/^#{1,4} /.test(lines[j])) { directEnd = j - 1; break; }
+    }
+    lines.splice(directEnd + 1, 0, ...insertion.split('\n'));
     this.unifiedContent = lines.join('\n');
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = this.unifiedContent;

@@ -1,6 +1,64 @@
 {
   "modifications": [
     {
+      "id": "mod-166",
+      "version": "THI-0.92",
+      "date": "2026-05-14T17:50:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:file-projects",
+      "title": "Upload image : nom unique par fichier, pas de remplacement par nom",
+      "description": "Correction du bug où uploader la même image (même nom) plusieurs fois dans le même dossier remplaçait le nœud existant, provoquant des marqueurs {{IMG:xxx}} orphelins dans d'autres documents. Désormais chaque upload génère un nom unique (imgsoleil-2.png, imgsoleil-3.png...) et un UUID distinct, sans jamais écraser un nœud existant. cleanStructure déduplique maintenant par id plutôt que par name+type pour rester compatible.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Si je selectionne une image et que la même image est enregistré mais dans un autre dossier, cela selectionne les 2 images, alors que chaque image enregistré même si elles sont identique à l'origine doit être enregistré avec un identifiant unique.",
+      "startedAt": "2026-05-14T17:25:00Z",
+      "completedAt": "2026-05-14T17:50:00Z"
+    },
+    {
+      "id": "mod-165",
+      "version": "THI-0.93",
+      "date": "2026-05-14T01:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Visu : section dirty toujours visible après navigation menu",
+      "description": "Fix 2 : la solution précédente était incomplète car `filteredVisuSections` filtrait les sections non-actives, ce qui détruisait le DOM de la section modifiée (section A) dès que l'utilisateur cliquait sur section B dans le menu. La destruction du DOM supprimait le badge et le cadenas de zone 4. Fix : `filteredVisuSections` inclut désormais toutes les sections qui ont des modifications en attente (via `collab.localPendingSections()` — signal réactif), ce qui préserve leur DOM même lors de la navigation. `initVisuSectionHtml` est également corrigé : pour une section dirty avec un contenteditable vide (nouvelle instance DOM), le contenu modifié est réinjecté depuis `markdownBefore`.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "non cela ne fonctionne pas si je modifi une section sans la validé ou l'annulé et que je change de section (clique sur une autre section dans le menu), le cadenas de la zone modifié disparait",
+      "startedAt": "2026-05-14T00:30:00Z",
+      "completedAt": "2026-05-14T01:00:00Z"
+    },
+    {
+      "id": "mod-164",
+      "version": "THI-0.92",
+      "date": "2026-05-14T00:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Visu : section garde cadenas et badge après navigation",
+      "description": "Fix : en mode Visu, quand une section est modifiée sans être partagée et que l'utilisateur navigue sur une autre section, la première section perdait son cadenas (menu) et son badge (zone 4). Correction : (1) onVisuSectionBlur ne supprime plus la section de dirtyVisuSectionIds — l'état dirty persiste jusqu'à Partager/Annuler ; (2) onVisuSectionInput appelle désormais collab.addLocalPending() pour afficher le cadenas rouge dans le menu latéral ; (3) onVisuSectionFocus protège le snapshot original contre l'écrasement lors du retour sur une section dirty ; (4) publishVisuSection et cancelVisuEdit appellent collab.removeLocalPending() et ne clearent editingVisuSectionId/localDirty que si la section traitée est bien la section active ; (5) badge template utilise collab.isLocalPending() (signal réactif) au lieu de editingVisuSectionId() pour persister entre navigations.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il y a encore un soucis, si je modifi une section exemple \"test de code tidddd ffffffff\" que je ne partage pas les modifications et que je passe sur une autre section, la première section perdc son cadenas et son info de modification, tans que je n'ai pas validé les modifications ou annulé les modification la section doit resté bloqué même si je selectionne une autre section. ET si je reviens sur cette section cela doit me réindiqué que cette section doit èetre partagé ou annulé",
+      "startedAt": "2026-05-14T00:00:00Z",
+      "completedAt": "2026-05-14T00:30:00Z"
+    },
+    {
       "id": "mod-001",
       "version": "THI-0.01",
       "date": "2026-04-25T00:00:00Z",
@@ -3282,6 +3340,521 @@
       "prompt": "Met à jour les fichiers docs @docs/structure/projet-editor.component.md et @docs/structure/projet-conversation.component.md avec les modifications que tu viens de faire.",
       "startedAt": "2026-05-07T10:20:00Z",
       "completedAt": "2026-05-07T10:30:00Z"
+    },
+    {
+      "id": "mod-141",
+      "version": "THI-0.80",
+      "date": "2026-05-07T11:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Mode Preview WYSIWYG : template, TS et SCSS connectés",
+      "description": "Reconnexion du mode visu éditable : remplacement du bloc preview read-only par le template WYSIWYG complet (sections contenteditable, toolbar flottante fixed, menu d'insertion fixed, input image caché). Mise à jour de 5 méthodes TS : setMode (flush + lifecycle selection listener), buildVisuSections (setTimeout initVisuSectionHtml), onVisuSectionBlur (suppression param el, lookup via QueryList), onVisuSelectionChange et showVisuInsertMenu (coordonnées fixed viewport). SCSS : position fixed + z-index 200 pour .visu-format-toolbar et .visu-insert-menu, ajout .visu-content-wrap et règles de taille h1-h4.visu-sec-heading.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "I need you to make coordinated changes to 3 files to implement a WYSIWYG editable preview mode. The infrastructure already exists in the TypeScript but was disconnected from the template. Do NOT run any build or git commands — just make the file edits.",
+      "startedAt": "2026-05-07T10:30:00Z",
+      "completedAt": "2026-05-07T11:00:00Z"
+    },
+    {
+      "id": "mod-142",
+      "version": "THI-0.81",
+      "date": "2026-05-07T12:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix tables et images dans blocs doc (mode visu)",
+      "description": "Deux corrections dans buildVisuSectionHtml : (1) les marqueurs {{IMG:...}} à l intérieur des blocs fichier (délimiteurs quotes) sont maintenant traités avant marked.parse, (2) les tableaux générés par marked sont wrappés dans <div contenteditable=\"false\" class=\"visu-table-wrap\"> pour éviter la corruption du DOM contenteditable. Ajout de tableToMarkdown() pour sérialiser les tables en markdown pipe lors de la sauvegarde. Ajout CSS .visu-table-wrap + dark mode dans .visu-sec-content ::ng-deep.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "ta modification à cassé l affichage des tableaux et l image dans un document, corrige tous ça",
+      "startedAt": "2026-05-07T11:45:00Z",
+      "completedAt": "2026-05-07T12:00:00Z"
+    },
+    {
+      "id": "mod-143",
+      "version": "THI-0.82",
+      "date": "2026-05-07T12:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix sauvegarde visu : sous-sections préservées",
+      "description": "Bug critique dans saveVisuSection : range.lineEnd inclut toutes les sous-sections de la section éditée. Lors du remplacement du contenu, les sous-sections étaient écrasées. Fix : calcul d un directEnd en cherchant la première ligne heading (#{1,4}) après lineStart, pour limiter le remplacement au contenu direct de la section uniquement.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai ajouté un texte dans Menu 1 et cela à effacé tous le texte qui suit peux tu vérifié pourquoi et corrige le problème",
+      "startedAt": "2026-05-07T12:15:00Z",
+      "completedAt": "2026-05-07T12:30:00Z"
+    },
+    {
+      "id": "mod-146",
+      "version": "THI-0.84",
+      "date": "2026-05-12T15:30:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
+      "features": "frankenstein:projet-editor,server:collab",
+      "title": "Collab visu : badge édition + boutons Annuler/Partager explicite",
+      "description": "Ajout du flux UX complet pour le partage explicite des modifications. (1) Badge bleu 'Vous éditez cette section' visible uniquement pour l'auteur du lock, badge rouge 'Édité par [user]' pour les autres users. (2) Boutons [Annuler] et [✔ Partager mes modifications] apparaissent sous la section quand l'utilisateur a le lock. (3) Annuler : restaure le contenu HTML original (snapshot capturé à l'acquisition du lock), libère le lock sans publier. (4) Partager : met à jour unifiedContent, annule le debounce, appelle updateFile(publish=true) qui diffuse content_update SSE et libère le lock côté serveur en une seule requête. (5) onVisuSectionBlur conserve le lock (save local sans publish). (6) Backend PUT files/:id : broadcast SSE et unlock DB uniquement si publish=true dans le body. (7) updateFile() expose le param publish=false par défaut.",
+      "files": [
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/project-files.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Comment je sais qu'une section est verouillé pour les autres user et pour moi même et comment je fais pour validé mes modifs et que je partage mon travail ?",
+      "startedAt": "2026-05-12T14:45:00Z",
+      "completedAt": "2026-05-12T15:30:00Z"
+    },
+    {
+      "id": "mod-145",
+      "version": "THI-0.83",
+      "date": "2026-05-12T14:30:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
+      "features": "frankenstein:projet-editor,server:collab",
+      "title": "Collaboration temps réel : hard lock, content_update SSE, structure_update SSE",
+      "description": "Implémentation de la collaboration locale avec partage sélectif. (1) Backend : vérification hard lock (HTTP 423) dans PUT /api/file-projects/:name/files/:id — la modification est refusée si la section est verrouillée par un autre user ; broadcast SSE content_update après sauvegarde réussie (contenu + auteur) ; broadcast SSE structure_update sur toutes les opérations de structure (create/rename/delete dossier et fichier, reorder). (2) Service collab : ajout des interfaces ContentUpdateEvent et StructureUpdateEvent, Subject content_update$ et structureUpdate$, handlers SSE correspondants (self-filter : les événements émis par le user courant sont ignorés). (3) Composant éditeur : abonnement aux Subjects — content_update patche le signal files sans rechargement, structure_update déclenche un loadFiles() complet. (4) Zone éditeur visu : lock automatique de la section au focus (folderId comme nodeId), refus de focus si section verrouillée par autre user (contenteditable=false + reblur), unlock automatique au blur ; badge visuel rouge 'Édité par [user]' sur les sections verrouillées. (5) ProjectFilesService.updateFile() : paramètre folderId optionnel transmis au backend pour vérification combinée fileId+folderId.",
+      "files": [
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/projet-collab.service.ts",
+        "frankenstein/src/app/core/services/project-files.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "J'ai un problème et je voudrais que tu étudie mon système pour me proposé des solutions. Je voudrais que mes projets soi géré en local (sans connexion) mais qu'a un moment donné les projets (menu + documents + contenu) puisse être partagé avec d'autre user qui bosse aussi sur le projet. Je voudrais ainsi que les menu projet (nom des dossiers, documents) soi partagé en direct. Mais que les documents eux soi disponible puis bloqué par un user pour faire une edition de la section (alors impossible à edité pendant l'edition par d'autre user) puis ensuite partagé pour être récupéré par les autres user. Fait une étude propose moi des solutions et si besoin pose moi des questions",
+      "startedAt": "2026-05-12T12:00:00Z",
+      "completedAt": "2026-05-12T14:30:00Z"
+    },
+    {
+      "id": "mod-144",
+      "version": "THI-0.83",
+      "date": "2026-05-07T14:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix visu : bloc code, tables et séparateurs HR",
+      "description": "3 corrections dans le mode visu : (1) insertVisuBlock insère désormais au directEnd+1 (avant les sous-sections) au lieu du lineEnd+1 (après), ce qui évite que le code fence soit attribué à la mauvaise section et corrompe le document ; (2) nodeToMd vérifie data-block-md/data-img-id/visu-table-wrap par attribut/classe AVANT de vérifier contenteditable (plus robuste contre la normalisation navigateur), et ajoute un case table direct en fallback ; tableToMarkdown utilise nodesToMd (préservation du formatage inline : backticks, gras…) ; (3) case hr retourne désormais \n\n---\n\n pour éviter l interprétation setext-heading.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Il y a un problème lorsque je rajoute une section de code, des que je fait enregistré le document complet change et le tableau en dessous est totalement cassé. Il y a aussi des problèmes lorsqu il y a plusieurs Séparateurs horizontal --- Verifi tous le système et corrige les problèmes",
+      "startedAt": "2026-05-07T13:00:00Z",
+      "completedAt": "2026-05-07T14:00:00Z"
+    },
+    {
+      "id": "mod-147",
+      "version": "THI-0.85",
+      "date": "2026-05-13T16:24:24.445Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Visu collab : signal editingVisuSectionId + NgZone locks SSE",
+      "description": "Conversion de editingVisuSectionId en signal Angular pour garantir la réactivité du badge édition et des boutons Annuler/Partager en mode visu. Ajout de NgZone.run() dans les handlers SSE lock/unlock du ProjetCollabService pour que les updates du signal locks déclenchent le change detection même hors zone.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/core/services/projet-collab.service.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je modifi une section je ne vois toujours pas d'information pour la section bloqué pour les autres users (affiché sur mon front) et de bouton pour enregistré/partagé et debloqué le partage (les autres users auront le document mise à jour directement)",
+      "startedAt": "2026-05-13T16:24:24.445Z",
+      "completedAt": "2026-05-13T16:24:24.445Z"
+    },
+    {
+      "id": "mod-148",
+      "version": "THI-0.85",
+      "date": "2026-05-13T16:39:42.387Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Visu/Code : barre Annuler/Partager + toast succès",
+      "description": "Ajout barre Annuler/Partager en mode Code (visible quand saveStatus=dirty) avec cancelCodeEdit() et publishCodeEdit() qui sauvegarde et broadcaste via SSE (publish:true). Ajout toast vert 3s après tout partage réussi, en mode Code comme en mode Preview.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il me faudrais la même chose en mode edition, lorsque je clique sur le bouton 'partager mes modifications' il me faudrais un message indiquant que le texte est bien enregistré et partagé dans tous le projet",
+      "startedAt": "2026-05-13T16:39:42.387Z",
+      "completedAt": "2026-05-13T16:39:42.387Z"
+    },
+    {
+      "id": "mod-149",
+      "version": "THI-0.86",
+      "date": "2026-05-13T17:10:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Fix barre Code : snapshot Annuler + signal codeEditPending",
+      "description": "Fix de deux bugs : (1) Annuler ne restaurait pas le texte → ajout de codeEditSnapshot capturé au premier keystroke avant tout auto-save. (2) La barre apparaissait une fois sur deux → remplacement de saveStatus==='dirty' par le signal interne codeEditPending. Reset du signal dans setMode() lors du passage en mode visu.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "cela ne fonctionne pas corectement lorsque je rajoute du texte j'ai bien les bouton annuler/partagé mais si je fait annulé, le texte ajouté n'est pas supprimé et une fois sur 2 le boutons ne s'affiche pas",
+      "startedAt": "2026-05-13T17:00:00.000Z",
+      "completedAt": "2026-05-13T17:10:00.000Z"
+    },
+    {
+      "id": "mod-150",
+      "version": "THI-0.87",
+      "date": "2026-05-13T18:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Zone 3→4 : clic dossier = focus section uniquement",
+      "description": "Suppression du bouton 'Éd.' : le clic sur un dossier/fichier en zone 3 active automatiquement le mode focus pour cette section (edit) ou filtre les sections affichées (preview). Clic sur le nom du projet affiche tout le document. Ajout de filteredVisuSections, applyFocusByActiveNode(), getDescendantFolderIds(), et projectSelect sur la sidebar.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu change l'application d'une fonction d'affichage des section. Actuellement pour affiché une seul section il faut cliqué sur le bouton \"Editer uniquement ...\", je voudrais que tu supprime ce bouton et que tu utilise cette fonction simplement en cliquant sur le menu des dossiers/document. Ainsi je veux que lorsque tu clique sur un dossier tu n'affiche dans la zone 4 (Edition/preview) uniquement la section selectionné (et les sections enfants). Si on clique sur le nom du projet dans la zone 3 menu du projet, cela affichera tous le projet dans la zone 4.",
+      "startedAt": "2026-05-13T17:20:00.000Z",
+      "completedAt": "2026-05-13T18:00:00.000Z"
+    },
+    {
+      "id": "mod-151",
+      "version": "THI-0.87",
+      "date": "2026-05-13T18:15:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Fix focus : changement de section depuis zone 3",
+      "description": "Quand on était en focus mode sur section A et qu'on cliquait sur section B, les handles étaient partiels (section A uniquement) donc B n'était pas trouvé. Fix : appel exitFocusModeSync() avant la recherche du nouveau handle pour restaurer les handles complets du document.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "cela fonctionne au premier clique sur un dossier/document mais si je clique ensuite dans un autre dossier/document il faut passé à l'autre dossier/document et ne pas resté sur le premier, le dossier/document sectionné doit s'affiché dans la zone 4",
+      "startedAt": "2026-05-13T18:10:00.000Z",
+      "completedAt": "2026-05-13T18:15:00.000Z"
+    },
+    {
+      "id": "mod-152",
+      "version": "THI-0.87",
+      "date": "2026-05-13T18:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Fix focus preview : fichier → dossier parent",
+      "description": "En mode Preview, cliquer sur un fichier (image, doc) retournait un filteredVisuSections vide car les fichiers n'ont pas de descendants dossiers. Fix : findEffectiveFolderId() résout le dossier parent pour tout nœud de type fichier, utilisé dans filteredVisuSections et applyFocusByActiveNode.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Cela fonctionne bien dans la zone 4 edition mais cela ne fonctionne pas dans la zone 4 preview, cela doit fonctionné de la même façon",
+      "startedAt": "2026-05-13T18:20:00.000Z",
+      "completedAt": "2026-05-13T18:30:00.000Z"
+    },
+    {
+      "id": "mod-153",
+      "version": "THI-0.87",
+      "date": "2026-05-13T19:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Fix preview : fichier → section parent seule sans sous-sections",
+      "description": "Clic sur un fichier montrait la section parent + toutes ses sous-sections (ex: Menu 2-2 + Menu 2-2-1). Fix : pour un fichier, filteredVisuSections n'affiche que la section du dossier parent direct (sans descendants). Pour un dossier, comportement inchangé (dossier + enfants).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Cela ne fonctionne pas correctement dans le mode preview, en cliquant sur le menu cela n'affiche pas la bonne section dossier/document selectionné dans le menu",
+      "startedAt": "2026-05-13T18:50:00.000Z",
+      "completedAt": "2026-05-13T19:00:00.000Z"
+    },
+    {
+      "id": "mod-154",
+      "version": "THI-0.87",
+      "date": "2026-05-13T20:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Fix preview : doc rendu standalone + lookup par data-section-id",
+      "description": "Bug racine : initVisuSectionHtml/flushVisuSections itéraient visuSectionEls par index et lisaient dans this.visuSections[i], mais le template itère filteredVisuSections (sous-ensemble) → HTML injecté dans les mauvais éléments. Fix : lookup par data-section-id. Ajout de singleFileVisuPreview pour rendre un document standalone (markdown parsé) quand un fichier doc est sélectionné. filteredVisuSections retourne [] pour les documents (laisse singleFileVisuPreview gérer l'affichage). Comportement final : clic dossier → dossier + enfants ; clic doc → preview standalone du doc ; clic image → section parente ; clic projet → tout.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Cela ne fonctionne toujours pas lorsque je clique sur le menu des dossiers/document zone 3 tu dois affiché la selection (section) dans la zone 4b preview, si je clique sur un autre menu exemple document, cela doit m'affiché le document, si je clique sur un dossier cela doit m'affiché tous le contenu du fichier, corrige et verifi que cela fonctionne bien",
+      "startedAt": "2026-05-13T19:30:00.000Z",
+      "completedAt": "2026-05-13T20:00:00.000Z"
+    },
+    {
+      "id": "mod-155",
+      "version": "THI-0.87",
+      "date": "2026-05-13T20:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Fix preview : ré-injection innerHTML au changement de sélection",
+      "description": "Quand on changeait de dossier dans zone 3, filteredVisuSections retournait les bons éléments, les titres s'affichaient mais le contenu était vide. Cause : initVisuSectionHtml (qui injecte le innerHTML) n'était appelée qu'au changement de files ou à l'entrée en mode visu, pas au changement de activeNodeId. Fix : appel de initVisuSectionHtml dans ngOnChanges quand activeNodeId change en mode visu.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Cela affiche bien les données au premier clique (menu) mais des que je change de dossier cela ne m'affiche plus les bonnes données (contenu)",
+      "startedAt": "2026-05-13T20:20:00.000Z",
+      "completedAt": "2026-05-13T20:30:00.000Z"
+    },
+    {
+      "id": "mod-156",
+      "version": "THI-0.88",
+      "date": "2026-05-13T21:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Preview image standalone : image seule + actions rename/delete",
+      "description": "Clic sur une image en zone 3 affiche en preview uniquement l'image avec son nom et les boutons Renommer/Supprimer (avec confirmation). singleImageVisuPreview construit l'URL via getImageUrl. Wrappers startRenameImageByNode, confirmRenameImageByNode, askDeleteImageByNode, confirmDeleteImageByNode délèguent aux méthodes existantes. Styles .visu-image-* ajoutés.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "quand je clique sur une image dans preview cela ne doit m'affiché que l'image et les options de l'image",
+      "startedAt": "2026-05-13T20:45:00.000Z",
+      "completedAt": "2026-05-13T21:00:00.000Z"
+    },
+    {
+      "id": "mod-157",
+      "version": "THI-0.88",
+      "date": "2026-05-13T21:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Code mode aligné sur Preview : focus par type de nœud + suppression Vue complète",
+      "description": "Avant : Code mode résolvait tous les fichiers vers le dossier parent (un clic sur un document affichait le dossier complet). Désormais aligné sur Preview : dossier → folder+enfants, document → juste ce bloc, image → dossier parent (marker seule inutile). Suppression du bouton 'Vue complète' et du badge focus : la navigation se fait via le menu zone 3 (clic projet = vue complète).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "dans la zone 4 en mode edition lorsqu'on selection un dossier ou un document, cela ne doit affiché que cette section et ses enfants. supprime le menu Vue complète qui ne sert plus à rien, dans le principe l'affichage entre le mode preview et le mode edition est identique (clique sur le menu) c'est le type d'affichage (code ou preview) qui est différent",
+      "startedAt": "2026-05-13T21:15:00.000Z",
+      "completedAt": "2026-05-13T21:30:00.000Z"
+    },
+    {
+      "id": "mod-158",
+      "version": "THI-0.88",
+      "date": "2026-05-13T21:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Code mode image : focus sur l'image seule (carte image)",
+      "description": "Code mode pour les images utilise désormais le handle de l'image (1 ligne marker {{IMG:id}} rendue comme carte image) au lieu du dossier parent. Simplification de applyFocusByActiveNode : mapping direct nodeId → handle sans redirection.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Dans la zone 4 mode edition lorsqu'on clique sur une image, seul l'image doit être affiché.",
+      "startedAt": "2026-05-13T21:40:00.000Z",
+      "completedAt": "2026-05-13T21:45:00.000Z"
+    },
+    {
+      "id": "mod-159",
+      "version": "THI-0.89",
+      "date": "2026-05-13T22:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Modifications en attente par section : menu rouge + cadena + bar",
+      "description": "Système de tracking per-section des modifications non encore partagées. ProjetCollabService.localPendingSections (Set<sectionId>) partagé entre éditeur et sidebar. À la première modification d'une section : snapshot capturé, ajout au pending set, verrou acquis. Dans le menu zone 3 : nom en rouge + cadena rouge. Bar 'Modifications en cours' visible uniquement si section focusée est dans pending. Persistance à travers les navigations entre sections. Annuler : restore snapshot + save sans publish + unlock. Partager : updateFile avec publish=true + unlock + remove pending. Remplace l'ancien codeEditPending (signal global) par codeSectionSnapshots Map per-section.",
+      "files": [
+        "frankenstein/src/app/core/services/projet-collab.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "lorsque je modifi une section il faut que le cadena s'affiche à droite du nom de la section dans le menu et que le nom soi surligné en rouge. Elle restera en rouge tans que la section ne sera pas sauvegardé et partagé. si on change de section (via le menu) la nouvelle section n'est pas affiché comme modification en cours et avec les boutons, seul si on est sur une section modifié et fermé (non partagé) l'information Modification en cours doit s'affiché. Le menu doit resté rouge tans que la section n'est pas enregistré.",
+      "startedAt": "2026-05-13T22:00:00.000Z",
+      "completedAt": "2026-05-13T22:30:00.000Z"
+    },
+    {
+      "id": "mod-160",
+      "version": "THI-0.90",
+      "date": "2026-05-13T23:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Barre Modifications mode Preview alignée sur mode Code",
+      "description": "La barre Annuler/Partager en mode Preview était à l'intérieur de chaque section (margin-top + border-top), alors qu'en mode Code elle est en haut full-width. Déplacée en haut de l'éditeur avec la même structure que mode Code (code-publish-bar) : info 'Modifications en cours' à gauche, actions à droite, icône share. Suppression de l'ancienne barre intra-section.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Dans le mode preview lorsqu'on modifi un texte, il y a bien les boutons qui indique les modifications en cours, mais le design est différent du mode edition modifi le design du mode preview pour qu'il soi identique au mode edition (lorsqu'on modifi un text)",
+      "startedAt": "2026-05-13T22:45:00.000Z",
+      "completedAt": "2026-05-13T23:00:00.000Z"
+    },
+    {
+      "id": "mod-161",
+      "version": "THI-0.91",
+      "date": "2026-05-14T15:33:30.864Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Editor : images imbriquées affichées correctement au premier rendu",
+      "description": "Au premier affichage de l'éditeur (mode Preview par défaut), les images imbriquées dans des blocs documents apparaissaient à tort comme fichiers de premier niveau dans la sidebar (zone 3). Cause : nestedImagesMap n'était calculée que lors d'un sectionsChange, déclenché uniquement par saveAll (donc après une modification). Fix : la map est désormais calculée directement depuis les files dans loadFiles(), en scannant les marqueurs {{IMG:xxx}} de chaque fichier texte.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "je voudrais que tu verifi tous le système d'affichage de la zone 4 en mode preview, je remarque quelques soucis comme au premier affichage (après une reactualisation de la page par exemple), les images ne sont pas bien placé dans le menu (zone 3).",
+      "startedAt": "2026-05-14T17:23:44+02:00",
+      "completedAt": "2026-05-14T15:33:30.865Z"
+    },
+    {
+      "id": "mod-162",
+      "version": "THI-0.91",
+      "date": "2026-05-14T15:52:09.518Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Editor : section ne se déplace plus en bas après validation",
+      "description": "Quand on modifiait/renommait un bloc document dans une section en mode Preview puis qu'on validait, le fichier additionnel se déplaçait en bas du dossier parent. Cause : un rename de bloc = delete+create côté serveur, le nouveau fichier reçoit order=parentItems.length+1 dans createFile (server-data.js:4196). Étape 7 de processSectionsChange ne touche pas ce fichier car son nouveau fileId n'est pas dans orderedFileIds (calculé avant la création). Fix : étape 6b injecte les af.fileId résolus dans orderedFileIds à leur position correcte (basée sur l'ordre dans s.additionalFiles) avant la sync d'order.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Quand je modifi une section comme par exemple la test Menu 2-2-1-2 dsfqfds qui était placé avant la section test Menu 2-2-1-3 lorsque je valide la modification (+partage) la section ce déplace toute seul en bas du dossier parent. Lorsque je valide une section celle ci ne doit pas bouger.",
+      "startedAt": "2026-05-14T17:37:13+02:00",
+      "completedAt": "2026-05-14T15:52:09.519Z"
+    },
+    {
+      "id": "mod-163",
+      "version": "THI-0.91",
+      "date": "2026-05-14T12:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix barre Modifs en cours absente après reload en mode Code",
+      "description": "En mode Code, si une section était verrouillée par moi (verrou serveur persistant après rechargement), la barre Annuler/Partager ne s'affichait pas car localPendingSections était vide. Fix : dans enterFocusMode, si collab.isLockedByMe(handle.id) est vrai et que la section n'est pas encore en pending local, on restaure l'état pending (addLocalPending + snapshot) pour que la barre s'affiche immédiatement.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "la section est marqué comme bloqué car en cours de modif (ce qui est vrai) mais il n'y a pas l'information bleu en cour de modification et le bouton enregistré/partage",
+      "startedAt": "2026-05-14T11:00:00Z",
+      "completedAt": "2026-05-14T12:00:00Z"
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ProjectService, Project } from '../../../core/services/project.service';
 import { ProjectFilesService, FileNode } from '../../../core/services/project-files.service';
 import { ConfigService } from '../../../core/services/config.service';
@@ -163,6 +164,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   private pendingSections: SectionInfo[] | null = null;
   private history = inject(WoActionHistoryService);
   private collab = inject(ProjetCollabService);
+  private collabSubs: Subscription[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -192,6 +194,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     await this.ensureProjectFolder(this.project()!);
     await this.loadFiles();
     this.collab.connect(this.projectFolderName);
+    this.subscribeToCollabEvents();
   }
 
   ngOnDestroy() {
@@ -199,6 +202,26 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     this.configService.setCurrentProjectId(null);
     clearTimeout(this.savedStatusTimer);
     this.collab.disconnect();
+    this.collabSubs.forEach(s => s.unsubscribe());
+  }
+
+  private subscribeToCollabEvents(): void {
+    this.collabSubs.push(
+      this.collab.contentUpdate$.subscribe(event => {
+        this.files.update(nodes => this.patchNodeContent(nodes, event.nodeId, event.content));
+      }),
+      this.collab.structureUpdate$.subscribe(() => {
+        this.loadFiles();
+      })
+    );
+  }
+
+  private patchNodeContent(nodes: FileNode[], nodeId: string, content: string): FileNode[] {
+    return nodes.map(node => {
+      if (node.id === nodeId) return { ...node, content };
+      if (node.children?.length) return { ...node, children: this.patchNodeContent(node.children, nodeId, content) };
+      return node;
+    });
   }
 
   private async ensureProjectFolder(proj: Project) {
@@ -216,11 +239,33 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   async loadFiles() {
     try {
       const res = await this.projectFilesService.getFiles(this.projectFolderName);
-      this.files.set(this.sortNodesByOrder(res.files || []));
+      const sorted = this.sortNodesByOrder(res.files || []);
+      this.files.set(sorted);
+      // Calcule la map des images imbriquées dès le chargement (sinon la sidebar
+      // affiche les images au top level tant que sectionsChange n'a pas été émis)
+      this.nestedImagesMap.set(this.computeNestedImagesMap(sorted));
     } catch (e) {
       console.warn('loadFiles error:', e);
       this.files.set([]);
     }
+  }
+
+  private computeNestedImagesMap(nodes: FileNode[]): Record<string, string[]> {
+    const map: Record<string, string[]> = {};
+    const walk = (ns: FileNode[]) => {
+      for (const n of ns) {
+        if (n.type === 'file' && !this.projectFilesService.isImageFile(n.name) && n.content) {
+          const ids: string[] = [];
+          const re = /\{\{IMG:([a-zA-Z0-9._-]+)\}\}/gi;
+          let m;
+          while ((m = re.exec(n.content)) !== null) ids.push(m[1]);
+          if (ids.length > 0) map[n.id] = ids;
+        }
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(nodes);
+    return map;
   }
 
   private sortNodesByOrder(nodes: FileNode[]): FileNode[] {
@@ -233,6 +278,11 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     this.activeNodeId.set(node.id);
     this.scrollToNodeId.set(null);
     setTimeout(() => this.scrollToNodeId.set(node.id), 0);
+  }
+
+  onProjectRootSelect(): void {
+    this.activeNodeId.set(null);
+    this.scrollToNodeId.set(null);
   }
 
   onNodeActive(nodeId: string) {
@@ -699,7 +749,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         if (s.fileId) {
           const oldContent = oldContentMap.get(s.fileId) ?? '';
           if (oldContent !== s.content) {
-            await this.projectFilesService.updateFile(this.projectFolderName, s.fileId, s.content);
+            await this.projectFilesService.updateFile(this.projectFolderName, s.fileId, s.content, s.folderId ?? undefined);
             this.patchFileContent(s.fileId, s.content);
             const fileNode = { id: s.fileId, name: 'contenu.md', type: 'file' as const, path: '', order: 0 };
             this.trackContentUpdate(fileNode, s.folderName, oldContent, s.content);
@@ -777,6 +827,29 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
       if (anyAdditionalFileCreated || additionalFileOrphanDeleted) {
         await this.loadFiles().catch(() => {});
+      }
+
+      // 6b. Patch orderedFileIds : injecter les af.fileId résolus après création
+      // (un rename de bloc doc = delete + create côté serveur avec order=last ;
+      // sans cette injection, l'étape 7 ne touche pas le nouveau fichier et il reste en bas)
+      for (const s of resolved) {
+        if (!s.additionalFiles || s.additionalFiles.length === 0) continue;
+        if (!s.orderedFileIds) s.orderedFileIds = [];
+        const orderedSet = new Set(s.orderedFileIds);
+        for (let i = 0; i < s.additionalFiles.length; i++) {
+          const af = s.additionalFiles[i];
+          if (!af.fileId || orderedSet.has(af.fileId)) continue;
+          // Position d'ancrage : af précédent déjà mappé, sinon mainFile, sinon fin
+          let anchorId: string | null = null;
+          for (let k = i - 1; k >= 0; k--) {
+            const prev = s.additionalFiles[k];
+            if (prev.fileId && orderedSet.has(prev.fileId)) { anchorId = prev.fileId; break; }
+          }
+          if (!anchorId && s.fileId && orderedSet.has(s.fileId)) anchorId = s.fileId;
+          const idx = anchorId ? s.orderedFileIds.indexOf(anchorId) + 1 : s.orderedFileIds.length;
+          s.orderedFileIds.splice(idx, 0, af.fileId);
+          orderedSet.add(af.fileId);
+        }
       }
 
       // 7. Sync file order within each folder to match text content order (orderedFileIds)
