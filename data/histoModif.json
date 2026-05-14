@@ -1,6 +1,64 @@
 {
   "modifications": [
     {
+      "id": "mod-166",
+      "version": "THI-0.92",
+      "date": "2026-05-14T17:50:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:file-projects",
+      "title": "Upload image : nom unique par fichier, pas de remplacement par nom",
+      "description": "Correction du bug où uploader la même image (même nom) plusieurs fois dans le même dossier remplaçait le nœud existant, provoquant des marqueurs {{IMG:xxx}} orphelins dans d'autres documents. Désormais chaque upload génère un nom unique (imgsoleil-2.png, imgsoleil-3.png...) et un UUID distinct, sans jamais écraser un nœud existant. cleanStructure déduplique maintenant par id plutôt que par name+type pour rester compatible.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Si je selectionne une image et que la même image est enregistré mais dans un autre dossier, cela selectionne les 2 images, alors que chaque image enregistré même si elles sont identique à l'origine doit être enregistré avec un identifiant unique.",
+      "startedAt": "2026-05-14T17:25:00Z",
+      "completedAt": "2026-05-14T17:50:00Z"
+    },
+    {
+      "id": "mod-165",
+      "version": "THI-0.93",
+      "date": "2026-05-14T01:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Visu : section dirty toujours visible après navigation menu",
+      "description": "Fix 2 : la solution précédente était incomplète car `filteredVisuSections` filtrait les sections non-actives, ce qui détruisait le DOM de la section modifiée (section A) dès que l'utilisateur cliquait sur section B dans le menu. La destruction du DOM supprimait le badge et le cadenas de zone 4. Fix : `filteredVisuSections` inclut désormais toutes les sections qui ont des modifications en attente (via `collab.localPendingSections()` — signal réactif), ce qui préserve leur DOM même lors de la navigation. `initVisuSectionHtml` est également corrigé : pour une section dirty avec un contenteditable vide (nouvelle instance DOM), le contenu modifié est réinjecté depuis `markdownBefore`.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "non cela ne fonctionne pas si je modifi une section sans la validé ou l'annulé et que je change de section (clique sur une autre section dans le menu), le cadenas de la zone modifié disparait",
+      "startedAt": "2026-05-14T00:30:00Z",
+      "completedAt": "2026-05-14T01:00:00Z"
+    },
+    {
+      "id": "mod-164",
+      "version": "THI-0.92",
+      "date": "2026-05-14T00:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Visu : section garde cadenas et badge après navigation",
+      "description": "Fix : en mode Visu, quand une section est modifiée sans être partagée et que l'utilisateur navigue sur une autre section, la première section perdait son cadenas (menu) et son badge (zone 4). Correction : (1) onVisuSectionBlur ne supprime plus la section de dirtyVisuSectionIds — l'état dirty persiste jusqu'à Partager/Annuler ; (2) onVisuSectionInput appelle désormais collab.addLocalPending() pour afficher le cadenas rouge dans le menu latéral ; (3) onVisuSectionFocus protège le snapshot original contre l'écrasement lors du retour sur une section dirty ; (4) publishVisuSection et cancelVisuEdit appellent collab.removeLocalPending() et ne clearent editingVisuSectionId/localDirty que si la section traitée est bien la section active ; (5) badge template utilise collab.isLocalPending() (signal réactif) au lieu de editingVisuSectionId() pour persister entre navigations.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il y a encore un soucis, si je modifi une section exemple \"test de code tidddd ffffffff\" que je ne partage pas les modifications et que je passe sur une autre section, la première section perdc son cadenas et son info de modification, tans que je n'ai pas validé les modifications ou annulé les modification la section doit resté bloqué même si je selectionne une autre section. ET si je reviens sur cette section cela doit me réindiqué que cette section doit èetre partagé ou annulé",
+      "startedAt": "2026-05-14T00:00:00Z",
+      "completedAt": "2026-05-14T00:30:00Z"
+    },
+    {
       "id": "mod-001",
       "version": "THI-0.01",
       "date": "2026-04-25T00:00:00Z",
@@ -3776,6 +3834,27 @@
       "prompt": "Quand je modifi une section comme par exemple la test Menu 2-2-1-2 dsfqfds qui était placé avant la section test Menu 2-2-1-3 lorsque je valide la modification (+partage) la section ce déplace toute seul en bas du dossier parent. Lorsque je valide une section celle ci ne doit pas bouger.",
       "startedAt": "2026-05-14T17:37:13+02:00",
       "completedAt": "2026-05-14T15:52:09.519Z"
+    },
+    {
+      "id": "mod-163",
+      "version": "THI-0.91",
+      "date": "2026-05-14T12:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Fix barre Modifs en cours absente après reload en mode Code",
+      "description": "En mode Code, si une section était verrouillée par moi (verrou serveur persistant après rechargement), la barre Annuler/Partager ne s'affichait pas car localPendingSections était vide. Fix : dans enterFocusMode, si collab.isLockedByMe(handle.id) est vrai et que la section n'est pas encore en pending local, on restaure l'état pending (addLocalPending + snapshot) pour que la barre s'affiche immédiatement.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "la section est marqué comme bloqué car en cours de modif (ce qui est vrai) mais il n'y a pas l'information bleu en cour de modification et le bouton enregistré/partage",
+      "startedAt": "2026-05-14T11:00:00Z",
+      "completedAt": "2026-05-14T12:00:00Z"
     }
   ]
 }

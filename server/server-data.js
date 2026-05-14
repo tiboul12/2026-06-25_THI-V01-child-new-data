@@ -4027,7 +4027,7 @@ function getProjectConfig(projectName) {
             const seen = new Set();
             const cleaned = [];
             for (const item of items) {
-                const key = `${item.type}:${item.name.toLowerCase()}`;
+                const key = item.id || `${item.type}:${item.name.toLowerCase()}`;
                 if (!seen.has(key)) {
                     seen.add(key);
                     if (item.type === 'folder' && item.children) {
@@ -4498,27 +4498,31 @@ app.post('/api/file-projects/:name/upload-image', (req, res) => {
         const ext = extMap[mimeType] || 'jpg';
         const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.[^.]+$/, '') + '.' + ext;
         let parentItems = config.structure;
-        let filePath = safeName;
+        let parentPath = '';
         if (parentId) {
             const parent = findNodeById(config.structure, parentId);
             if (!parent || parent.type !== 'folder') return res.status(400).json({ error: 'Dossier parent invalide' });
-            filePath = parent.path + '/' + safeName;
+            parentPath = parent.path;
             parentItems = parent.children = parent.children || [];
         }
+        // Générer un nom unique si un fichier du même nom existe déjà dans ce dossier
+        const dotIdx = safeName.lastIndexOf('.');
+        const baseName = dotIdx !== -1 ? safeName.substring(0, dotIdx) : safeName;
+        const extPart = dotIdx !== -1 ? safeName.substring(dotIdx) : '';
+        let uniqueName = safeName;
+        let counter = 1;
+        while (parentItems.some(n => n.type === 'file' && n.name.toLowerCase() === uniqueName.toLowerCase())) {
+            uniqueName = `${baseName}-${counter}${extPart}`;
+            counter++;
+        }
+        const filePath = parentPath ? `${parentPath}/${uniqueName}` : uniqueName;
         const fullPath = safeProjectPath(req.params.name, filePath);
         if (!fullPath) return res.status(400).json({ error: 'Chemin invalide' });
         fs.mkdirSync(path.dirname(fullPath), { recursive: true });
         fs.writeFileSync(fullPath, buffer);
-        // Remplacer un éventuel nœud existant avec le même nom (évite les doublons
-        // que cleanStructure supprimerait au prochain getProjectConfig, rendant le DELETE 404).
-        const existingIdx = parentItems.findIndex(n => n.type === 'file' && n.name.toLowerCase() === safeName.toLowerCase());
         const maxOrder = parentItems.filter(n => n.type === 'file').reduce((m, n) => Math.max(m, n.order || 0), 0);
-        const newNode = { id: require('crypto').randomUUID(), type: 'file', name: safeName, path: filePath, order: maxOrder + 1, fileType: 'image' };
-        if (existingIdx !== -1) {
-            parentItems.splice(existingIdx, 1, newNode);
-        } else {
-            parentItems.push(newNode);
-        }
+        const newNode = { id: require('crypto').randomUUID(), type: 'file', name: uniqueName, path: filePath, order: maxOrder + 1, fileType: 'image' };
+        parentItems.push(newNode);
         saveProjectConfig(req.params.name, config);
         res.status(201).json(newNode);
     } catch (e) { res.status(500).json({ error: e.message }); }
