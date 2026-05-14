@@ -3476,7 +3476,9 @@
       "date": "2026-05-13T17:10:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Fix barre Code : snapshot Annuler + signal codeEditPending",
       "description": "Fix de deux bugs : (1) Annuler ne restaurait pas le texte → ajout de codeEditSnapshot capturé au premier keystroke avant tout auto-save. (2) La barre apparaissait une fois sur deux → remplacement de saveStatus==='dirty' par le signal interne codeEditPending. Reset du signal dans setMode() lors du passage en mode visu.",
@@ -3496,7 +3498,9 @@
       "date": "2026-05-13T18:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Zone 3→4 : clic dossier = focus section uniquement",
       "description": "Suppression du bouton 'Éd.' : le clic sur un dossier/fichier en zone 3 active automatiquement le mode focus pour cette section (edit) ou filtre les sections affichées (preview). Clic sur le nom du projet affiche tout le document. Ajout de filteredVisuSections, applyFocusByActiveNode(), getDescendantFolderIds(), et projectSelect sur la sidebar.",
@@ -3520,7 +3524,9 @@
       "date": "2026-05-13T18:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Fix focus : changement de section depuis zone 3",
       "description": "Quand on était en focus mode sur section A et qu'on cliquait sur section B, les handles étaient partiels (section A uniquement) donc B n'était pas trouvé. Fix : appel exitFocusModeSync() avant la recherche du nouveau handle pour restaurer les handles complets du document.",
@@ -3539,7 +3545,9 @@
       "date": "2026-05-13T18:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Fix focus preview : fichier → dossier parent",
       "description": "En mode Preview, cliquer sur un fichier (image, doc) retournait un filteredVisuSections vide car les fichiers n'ont pas de descendants dossiers. Fix : findEffectiveFolderId() résout le dossier parent pour tout nœud de type fichier, utilisé dans filteredVisuSections et applyFocusByActiveNode.",
@@ -3558,7 +3566,9 @@
       "date": "2026-05-13T19:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Fix preview : fichier → section parent seule sans sous-sections",
       "description": "Clic sur un fichier montrait la section parent + toutes ses sous-sections (ex: Menu 2-2 + Menu 2-2-1). Fix : pour un fichier, filteredVisuSections n'affiche que la section du dossier parent direct (sans descendants). Pour un dossier, comportement inchangé (dossier + enfants).",
@@ -3577,7 +3587,9 @@
       "date": "2026-05-13T20:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Fix preview : doc rendu standalone + lookup par data-section-id",
       "description": "Bug racine : initVisuSectionHtml/flushVisuSections itéraient visuSectionEls par index et lisaient dans this.visuSections[i], mais le template itère filteredVisuSections (sous-ensemble) → HTML injecté dans les mauvais éléments. Fix : lookup par data-section-id. Ajout de singleFileVisuPreview pour rendre un document standalone (markdown parsé) quand un fichier doc est sélectionné. filteredVisuSections retourne [] pour les documents (laisse singleFileVisuPreview gérer l'affichage). Comportement final : clic dossier → dossier + enfants ; clic doc → preview standalone du doc ; clic image → section parente ; clic projet → tout.",
@@ -3597,7 +3609,9 @@
       "date": "2026-05-13T20:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Fix preview : ré-injection innerHTML au changement de sélection",
       "description": "Quand on changeait de dossier dans zone 3, filteredVisuSections retournait les bons éléments, les titres s'affichaient mais le contenu était vide. Cause : initVisuSectionHtml (qui injecte le innerHTML) n'était appelée qu'au changement de files ou à l'entrée en mode visu, pas au changement de activeNodeId. Fix : appel de initVisuSectionHtml dans ngOnChanges quand activeNodeId change en mode visu.",
@@ -3616,7 +3630,9 @@
       "date": "2026-05-13T21:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Preview image standalone : image seule + actions rename/delete",
       "description": "Clic sur une image en zone 3 affiche en preview uniquement l'image avec son nom et les boutons Renommer/Supprimer (avec confirmation). singleImageVisuPreview construit l'URL via getImageUrl. Wrappers startRenameImageByNode, confirmRenameImageByNode, askDeleteImageByNode, confirmDeleteImageByNode délèguent aux méthodes existantes. Styles .visu-image-* ajoutés.",
@@ -3637,7 +3653,9 @@
       "date": "2026-05-13T21:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Code mode aligné sur Preview : focus par type de nœud + suppression Vue complète",
       "description": "Avant : Code mode résolvait tous les fichiers vers le dossier parent (un clic sur un document affichait le dossier complet). Désormais aligné sur Preview : dossier → folder+enfants, document → juste ce bloc, image → dossier parent (marker seule inutile). Suppression du bouton 'Vue complète' et du badge focus : la navigation se fait via le menu zone 3 (clic projet = vue complète).",
@@ -3657,7 +3675,9 @@
       "date": "2026-05-13T21:45:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Code mode image : focus sur l'image seule (carte image)",
       "description": "Code mode pour les images utilise désormais le handle de l'image (1 ligne marker {{IMG:id}} rendue comme carte image) au lieu du dossier parent. Simplification de applyFocusByActiveNode : mapping direct nodeId → handle sans redirection.",
@@ -3676,7 +3696,9 @@
       "date": "2026-05-13T22:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Modifications en attente par section : menu rouge + cadena + bar",
       "description": "Système de tracking per-section des modifications non encore partagées. ProjetCollabService.localPendingSections (Set<sectionId>) partagé entre éditeur et sidebar. À la première modification d'une section : snapshot capturé, ajout au pending set, verrou acquis. Dans le menu zone 3 : nom en rouge + cadena rouge. Bar 'Modifications en cours' visible uniquement si section focusée est dans pending. Persistance à travers les navigations entre sections. Annuler : restore snapshot + save sans publish + unlock. Partager : updateFile avec publish=true + unlock + remove pending. Remplace l'ancien codeEditPending (signal global) par codeSectionSnapshots Map per-section.",
@@ -3698,7 +3720,9 @@
       "date": "2026-05-13T23:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Barre Modifications mode Preview alignée sur mode Code",
       "description": "La barre Annuler/Partager en mode Preview était à l'intérieur de chaque section (margin-top + border-top), alors qu'en mode Code elle est en haut full-width. Déplacée en haut de l'éditeur avec la même structure que mode Code (code-publish-bar) : info 'Modifications en cours' à gauche, actions à droite, icône share. Suppression de l'ancienne barre intra-section.",
@@ -3710,6 +3734,48 @@
       "prompt": "Dans le mode preview lorsqu'on modifi un texte, il y a bien les boutons qui indique les modifications en cours, mais le design est différent du mode edition modifi le design du mode preview pour qu'il soi identique au mode edition (lorsqu'on modifi un text)",
       "startedAt": "2026-05-13T22:45:00.000Z",
       "completedAt": "2026-05-13T23:00:00.000Z"
+    },
+    {
+      "id": "mod-161",
+      "version": "THI-0.91",
+      "date": "2026-05-14T15:33:30.864Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Editor : images imbriquées affichées correctement au premier rendu",
+      "description": "Au premier affichage de l'éditeur (mode Preview par défaut), les images imbriquées dans des blocs documents apparaissaient à tort comme fichiers de premier niveau dans la sidebar (zone 3). Cause : nestedImagesMap n'était calculée que lors d'un sectionsChange, déclenché uniquement par saveAll (donc après une modification). Fix : la map est désormais calculée directement depuis les files dans loadFiles(), en scannant les marqueurs {{IMG:xxx}} de chaque fichier texte.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "je voudrais que tu verifi tous le système d'affichage de la zone 4 en mode preview, je remarque quelques soucis comme au premier affichage (après une reactualisation de la page par exemple), les images ne sont pas bien placé dans le menu (zone 3).",
+      "startedAt": "2026-05-14T17:23:44+02:00",
+      "completedAt": "2026-05-14T15:33:30.865Z"
+    },
+    {
+      "id": "mod-162",
+      "version": "THI-0.91",
+      "date": "2026-05-14T15:52:09.518Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:editor",
+      "title": "Editor : section ne se déplace plus en bas après validation",
+      "description": "Quand on modifiait/renommait un bloc document dans une section en mode Preview puis qu'on validait, le fichier additionnel se déplaçait en bas du dossier parent. Cause : un rename de bloc = delete+create côté serveur, le nouveau fichier reçoit order=parentItems.length+1 dans createFile (server-data.js:4196). Étape 7 de processSectionsChange ne touche pas ce fichier car son nouveau fileId n'est pas dans orderedFileIds (calculé avant la création). Fix : étape 6b injecte les af.fileId résolus dans orderedFileIds à leur position correcte (basée sur l'ordre dans s.additionalFiles) avant la sync d'order.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "Quand je modifi une section comme par exemple la test Menu 2-2-1-2 dsfqfds qui était placé avant la section test Menu 2-2-1-3 lorsque je valide la modification (+partage) la section ce déplace toute seul en bas du dossier parent. Lorsque je valide une section celle ci ne doit pas bouger.",
+      "startedAt": "2026-05-14T17:37:13+02:00",
+      "completedAt": "2026-05-14T15:52:09.519Z"
     }
   ]
 }

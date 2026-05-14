@@ -239,11 +239,33 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   async loadFiles() {
     try {
       const res = await this.projectFilesService.getFiles(this.projectFolderName);
-      this.files.set(this.sortNodesByOrder(res.files || []));
+      const sorted = this.sortNodesByOrder(res.files || []);
+      this.files.set(sorted);
+      // Calcule la map des images imbriquées dès le chargement (sinon la sidebar
+      // affiche les images au top level tant que sectionsChange n'a pas été émis)
+      this.nestedImagesMap.set(this.computeNestedImagesMap(sorted));
     } catch (e) {
       console.warn('loadFiles error:', e);
       this.files.set([]);
     }
+  }
+
+  private computeNestedImagesMap(nodes: FileNode[]): Record<string, string[]> {
+    const map: Record<string, string[]> = {};
+    const walk = (ns: FileNode[]) => {
+      for (const n of ns) {
+        if (n.type === 'file' && !this.projectFilesService.isImageFile(n.name) && n.content) {
+          const ids: string[] = [];
+          const re = /\{\{IMG:([a-zA-Z0-9._-]+)\}\}/gi;
+          let m;
+          while ((m = re.exec(n.content)) !== null) ids.push(m[1]);
+          if (ids.length > 0) map[n.id] = ids;
+        }
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(nodes);
+    return map;
   }
 
   private sortNodesByOrder(nodes: FileNode[]): FileNode[] {
@@ -805,6 +827,29 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
       if (anyAdditionalFileCreated || additionalFileOrphanDeleted) {
         await this.loadFiles().catch(() => {});
+      }
+
+      // 6b. Patch orderedFileIds : injecter les af.fileId résolus après création
+      // (un rename de bloc doc = delete + create côté serveur avec order=last ;
+      // sans cette injection, l'étape 7 ne touche pas le nouveau fichier et il reste en bas)
+      for (const s of resolved) {
+        if (!s.additionalFiles || s.additionalFiles.length === 0) continue;
+        if (!s.orderedFileIds) s.orderedFileIds = [];
+        const orderedSet = new Set(s.orderedFileIds);
+        for (let i = 0; i < s.additionalFiles.length; i++) {
+          const af = s.additionalFiles[i];
+          if (!af.fileId || orderedSet.has(af.fileId)) continue;
+          // Position d'ancrage : af précédent déjà mappé, sinon mainFile, sinon fin
+          let anchorId: string | null = null;
+          for (let k = i - 1; k >= 0; k--) {
+            const prev = s.additionalFiles[k];
+            if (prev.fileId && orderedSet.has(prev.fileId)) { anchorId = prev.fileId; break; }
+          }
+          if (!anchorId && s.fileId && orderedSet.has(s.fileId)) anchorId = s.fileId;
+          const idx = anchorId ? s.orderedFileIds.indexOf(anchorId) + 1 : s.orderedFileIds.length;
+          s.orderedFileIds.splice(idx, 0, af.fileId);
+          orderedSet.add(af.fileId);
+        }
       }
 
       // 7. Sync file order within each folder to match text content order (orderedFileIds)
