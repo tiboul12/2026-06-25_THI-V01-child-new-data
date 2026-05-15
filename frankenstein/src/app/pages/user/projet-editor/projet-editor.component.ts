@@ -17,6 +17,7 @@ import { ProjetConversationComponent } from './components/projet-conversation/pr
 import { ProjetStatusbarComponent } from './components/projet-statusbar/projet-statusbar.component';
 import { ProjetHistoryComponent } from './components/projet-history/projet-history.component';
 import { ProjetDiffComponent } from './components/projet-diff/projet-diff.component';
+import { ProjetUpdateBannerComponent } from './components/projet-update-banner/projet-update-banner.component';
 
 @Component({
   selector: 'app-projet-editor',
@@ -30,6 +31,7 @@ import { ProjetDiffComponent } from './components/projet-diff/projet-diff.compon
     ProjetStatusbarComponent,
     ProjetHistoryComponent,
     ProjetDiffComponent,
+    ProjetUpdateBannerComponent,
   ],
   templateUrl: './projet-editor.component.html',
   styleUrl: './projet-editor.component.scss'
@@ -1082,6 +1084,11 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       waited += 50;
     }
     await this.loadFiles();
+  }
+
+  /** Après un pull réussi déclenché par la bannière de notification */
+  async onProjectPulled(_event: { newCommits: number; changedFiles: string[] }): Promise<void> {
+    await this.onRefresh();
   }
 
   private findParentFolder(fileId: string, nodes: FileNode[]): FileNode | null {

@@ -10,6 +10,12 @@
     <app-projet-toolbar
       [projectTitle]="projectTitle" />
 
+    <div class="px-4">
+      <app-projet-update-banner
+        [projectName]="project()?.id || null"
+        (pulled)="onProjectPulled($event)" />
+    </div>
+
     <div class="flex flex-1 overflow-hidden pb-[72px]">
 
       <app-projet-sidebar #sidebar

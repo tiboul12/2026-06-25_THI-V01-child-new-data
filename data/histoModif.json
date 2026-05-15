@@ -1,6 +1,34 @@
 {
   "modifications": [
     {
+      "id": "mod-171",
+      "version": "THI-0.95",
+      "date": "2026-05-15T01:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "frankenstein"],
+      "features": "server:projet-git,frankenstein:projet-editor",
+      "title": "Partage de projet par git : POC complet phases 1-3 (sans Gitea)",
+      "description": "Implémentation du système de partage de projets via git par projet. Nouveau module server/modules/projet-git.js (init, branches wip per-user/per-section, merge ff-only au publish, discard, pull, push, sync-status). Hooks dans server-data.js : git init au create-project, création branche wip à lock acquire, commit auto-save sur file PUT, merge wip→main + SSE section_published au publish, discard wip à unlock sans publish, commits direct sur main pour changements structurels (create/rename/delete/move folder/file + upload-image). Trois nouvelles routes : POST /pull, GET /sync-status, POST /push. Script server/migrate-projets-to-git.js pour initialiser les projets existants (2 projets migrés). Côté Angular : ProjetCollabService étendu avec signaux pendingUpdates et isOnline, handlers SSE section_published et project_synced, méthodes pullProject/pushProject/getSyncStatus. Nouveau composant standalone ProjetUpdateBannerComponent affichant les notifications de partage avec bouton 'Mettre à jour' (pull) et croix de dismiss, intégré en haut de la page projet-editor. Documentation docs/structure/projet-update-banner.component.md. Phase 4 (Gitea + UI collaborateurs) non incluse — nécessite installation Gitea.",
+      "files": [
+        "server/modules/projet-git.js",
+        "server/migrate-projets-to-git.js",
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/projet-collab.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.scss",
+        "docs/structure/projet-update-banner.component.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "tu peux lancer toutes les modications pour le partage",
+      "startedAt": "2026-05-15T00:30:00Z",
+      "completedAt": "2026-05-15T01:00:00Z"
+    },
+    {
       "id": "mod-170",
       "version": "THI-0.94",
       "date": "2026-05-15T00:00:00Z",

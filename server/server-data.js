@@ -18,6 +18,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const pool = require('./db');
+const projetGit = require('./modules/projet-git');
 
 // ============================================================
 // Configuration
@@ -4121,6 +4122,15 @@ app.post('/api/file-projects', (req, res) => {
         fs.mkdirSync(projectDir, { recursive: true });
         const config = { projectName, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), structure: [] };
         fs.writeFileSync(path.join(projectDir, 'config.json'), JSON.stringify(config, null, 2));
+        // Git : init du repo projet + premier commit
+        try {
+            projetGit.initProjetRepo(projectDir, {
+                authorName: user.username || user.email || 'Worganic',
+                authorEmail: user.email || 'worganic@local'
+            });
+        } catch (gitErr) {
+            console.warn('[ProjetGit] init au create-project échoué:', gitErr.message);
+        }
         res.status(201).json({ name: dir, ...config });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4195,8 +4205,11 @@ app.post('/api/file-projects/:name/files', (req, res) => {
         fs.writeFileSync(full, content || '', 'utf8');
         const newFile = { id: crypto.randomUUID(), type: 'file', name: fileName, path: filePath, order: parentItems.length + 1 };
         parentItems.push(newFile);
-        
+
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `create_file ${fileName}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit create_file:', gitErr.message); }
         res.status(201).json({ ...newFile, content: content || '' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4242,7 +4255,30 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         fs.writeFileSync(full, content, 'utf8');
         saveProjectConfig(req.params.name, config);
 
-        // Broadcast SSE content_update seulement si publication explicite
+        // Git : commit sur la branche wip de l'éditeur courant
+        const projetPath = path.join(PROJECTS_DIR, req.params.name);
+        const gitNodeId = folderId || req.params.id;
+        let publishCommitHash = null;
+        try {
+            if (projetGit.isRepo(projetPath)) {
+                if (publish) {
+                    // Commit du contenu final puis merge wip → main
+                    const result = projetGit.publishWip(projetPath, user.id, gitNodeId, {
+                        username: user.username || user.email || 'user',
+                        sectionName: item.name || req.params.id,
+                        filePath: item.path
+                    });
+                    if (result.success) publishCommitHash = result.commitHash;
+                } else {
+                    // Auto-save : commit silencieux sur la branche wip
+                    projetGit.commitFile(projetPath, item.path, `wip: auto-save ${item.name || req.params.id}`);
+                }
+            }
+        } catch (gitErr) {
+            console.warn('[ProjetGit] commit sur file PUT échoué:', gitErr.message);
+        }
+
+        // Broadcast SSE seulement si publication explicite
         if (publish) {
             broadcastToProject(req.params.name, 'content_update', {
                 nodeId: req.params.id,
@@ -4250,6 +4286,18 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
                 content,
                 updatedBy: user.id,
                 updatedByName: user.username || user.email || 'Utilisateur',
+                timestamp: new Date().toISOString()
+            });
+            // Nouvel événement métier : signale aux autres users qu'une section a été partagée
+            broadcastToProject(req.params.name, 'section_published', {
+                nodeId: req.params.id,
+                folderId,
+                sectionName: item.name || req.params.id,
+                publishedBy: {
+                    userId: user.id,
+                    username: user.username || user.email || 'Utilisateur'
+                },
+                commitHash: publishCommitHash,
                 timestamp: new Date().toISOString()
             });
             // Libérer le lock automatiquement au moment de la publication
@@ -4262,7 +4310,7 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
             }
         }
 
-        res.json({ success: true });
+        res.json({ success: true, commitHash: publishCommitHash });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -4298,6 +4346,9 @@ app.patch('/api/file-projects/:name/files/:id', (req, res) => {
         if (fs.existsSync(oldFull)) fs.renameSync(oldFull, newFull);
         item.name = newName; item.path = newPath;
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `rename_file ${newName}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit rename_file:', gitErr.message); }
         broadcastToProject(req.params.name, 'structure_update', { operation: 'rename_file', payload: item, updatedBy: user.id });
         res.json(item);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -4314,8 +4365,12 @@ app.delete('/api/file-projects/:name/files/:id', (req, res) => {
     try {
         const full = safeProjectPath(req.params.name, item.path);
         if (full && fs.existsSync(full)) fs.unlinkSync(full);
+        const deletedName = item.name;
         removeNodeById(config.structure, req.params.id);
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `delete_file ${deletedName}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit delete_file:', gitErr.message); }
         broadcastToProject(req.params.name, 'structure_update', { operation: 'delete_file', payload: { id: req.params.id }, updatedBy: user.id });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -4361,6 +4416,9 @@ app.post('/api/file-projects/:name/folders', (req, res) => {
         parentItems.push(newFolder);
 
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `create_folder ${name}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit create_folder:', gitErr.message); }
         broadcastToProject(req.params.name, 'structure_update', { operation: 'create_folder', payload: { ...newFolder, parentId: parentId || null }, updatedBy: user.id });
         res.status(201).json(newFolder);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -4399,6 +4457,9 @@ app.patch('/api/file-projects/:name/folders/:id', (req, res) => {
         updateNodePaths(item, oldPath, newPath);
         item.name = name;
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `rename_folder ${name}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit rename_folder:', gitErr.message); }
         broadcastToProject(req.params.name, 'structure_update', { operation: 'rename_folder', payload: { id: req.params.id, name, oldPath, newPath }, updatedBy: user.id });
         res.json(item);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -4415,8 +4476,12 @@ app.delete('/api/file-projects/:name/folders/:id', (req, res) => {
     try {
         const full = safeProjectPath(req.params.name, item.path);
         if (full && fs.existsSync(full)) fs.rmSync(full, { recursive: true, force: true });
+        const deletedName = item.name;
         removeNodeById(config.structure, req.params.id);
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `delete_folder ${deletedName}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit delete_folder:', gitErr.message); }
         broadcastToProject(req.params.name, 'structure_update', { operation: 'delete_folder', payload: { id: req.params.id }, updatedBy: user.id });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -4431,6 +4496,9 @@ app.put('/api/file-projects/:name/structure', (req, res) => {
     try {
         config.structure = req.body.structure;
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), 'reorder');
+        } catch (gitErr) { console.warn('[ProjetGit] commit reorder:', gitErr.message); }
         broadcastToProject(req.params.name, 'structure_update', { operation: 'reorder', payload: { structure: req.body.structure }, updatedBy: user.id });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -4478,6 +4546,9 @@ app.post('/api/file-projects/:name/move-file', (req, res) => {
             config.structure.push(item);
         }
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `move_file ${item.name}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit move_file:', gitErr.message); }
         res.json({ success: true, item });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4524,6 +4595,9 @@ app.post('/api/file-projects/:name/upload-image', (req, res) => {
         const newNode = { id: require('crypto').randomUUID(), type: 'file', name: uniqueName, path: filePath, order: maxOrder + 1, fileType: 'image' };
         parentItems.push(newNode);
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `upload_image ${uniqueName}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit upload_image:', gitErr.message); }
         res.status(201).json(newNode);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -4595,8 +4669,79 @@ app.post('/api/file-projects/:name/move-folder', (req, res) => {
         targetItems.push(folder);
 
         saveProjectConfig(req.params.name, config);
+        try {
+            projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `move_folder ${folder.name}`);
+        } catch (gitErr) { console.warn('[ProjetGit] commit move_folder:', gitErr.message); }
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// Git par projet : sync, pull, status
+// ============================================================
+
+// GET /api/file-projects/:name/sync-status
+//   Retourne l'état git du projet : repo existant, commits ahead/behind par rapport au remote
+app.get('/api/file-projects/:name/sync-status', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    if (!fs.existsSync(projetPath)) return res.status(404).json({ error: 'Projet non trouvé' });
+    try {
+        const status = projetGit.getSyncStatus(projetPath);
+        res.json({ success: true, ...status });
+    } catch (e) {
+        console.warn('[ProjetGit] sync-status error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/file-projects/:name/pull
+//   Effectue git pull --ff-only sur main. Retourne le nombre de commits récupérés
+//   et la liste des fichiers modifiés (utile pour invalider le cache Angular).
+app.post('/api/file-projects/:name/pull', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    if (!fs.existsSync(projetPath)) return res.status(404).json({ error: 'Projet non trouvé' });
+    try {
+        const result = projetGit.pullMain(projetPath);
+        if (!result.success && !result.skipped) {
+            return res.status(409).json({ error: result.error || 'Pull impossible', ...result });
+        }
+        if (result.success && result.newCommits > 0) {
+            // Notifier les autres clients qu'une sync a eu lieu (utile pour multi-onglets)
+            broadcastToProject(req.params.name, 'project_synced', {
+                pulledBy: { userId: user.id, username: user.username || user.email },
+                newCommits: result.newCommits,
+                changedFiles: result.changedFiles,
+                timestamp: new Date().toISOString()
+            });
+        }
+        res.json({ success: true, ...result });
+    } catch (e) {
+        console.warn('[ProjetGit] pull error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/file-projects/:name/push
+//   Push manuel de main vers le remote (utile au retour en ligne après travail offline)
+app.post('/api/file-projects/:name/push', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    if (!fs.existsSync(projetPath)) return res.status(404).json({ error: 'Projet non trouvé' });
+    try {
+        const result = projetGit.pushMain(projetPath);
+        if (!result.success && !result.skipped) {
+            return res.status(409).json({ error: result.error || 'Push impossible' });
+        }
+        res.json({ success: true, ...result });
+    } catch (e) {
+        console.warn('[ProjetGit] push error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ============================================================
@@ -5513,6 +5658,18 @@ app.post('/api/collab/:projetId/nodes/:nodeId/lock', async (req, res) => {
             [nodeId, projetId, userId, userName || 'Utilisateur']
         );
         const lock = { nodeId, projetId, lockedById: userId, lockedByName: userName || 'Utilisateur', lockedAt: new Date().toISOString() };
+        // Git : créer/reprendre la branche wip pour cette édition
+        try {
+            const projetPath = path.join(PROJECTS_DIR, projetId);
+            if (fs.existsSync(projetPath)) {
+                projetGit.createWipBranch(projetPath, userId, nodeId, {
+                    authorName: userName || 'Worganic',
+                    authorEmail: 'worganic@local'
+                });
+            }
+        } catch (gitErr) {
+            console.warn('[ProjetGit] createWipBranch sur lock échoué:', gitErr.message);
+        }
         broadcastToProject(projetId, 'lock', lock);
         res.json(lock);
     } catch (e) {
@@ -5531,7 +5688,17 @@ app.delete('/api/collab/:projetId/nodes/:nodeId/lock', async (req, res) => {
         if (userId && existing[0].locked_by_id !== userId) {
             return res.status(403).json({ error: 'Vous ne pouvez pas déverrouiller cette section' });
         }
+        const lockOwnerId = existing[0].locked_by_id;
         await pool.query('DELETE FROM projet_section_lock WHERE node_id = ?', [nodeId]);
+        // Git : supprimer la branche wip orpheline (annulation sans partage)
+        try {
+            const projetPath = path.join(PROJECTS_DIR, projetId);
+            if (projetGit.isRepo(projetPath)) {
+                projetGit.discardWip(projetPath, lockOwnerId, nodeId);
+            }
+        } catch (gitErr) {
+            console.warn('[ProjetGit] discardWip sur unlock échoué:', gitErr.message);
+        }
         broadcastToProject(projetId, 'unlock', { nodeId, projetId });
         res.json({ success: true });
     } catch (e) {
