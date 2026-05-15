@@ -1,6 +1,23 @@
 {
   "modifications": [
     {
+      "id": "mod-170",
+      "version": "THI-0.94",
+      "date": "2026-05-15T00:00:00Z",
+      "type": "config",
+      "commitType": "MERGE",
+      "scope": ["system"],
+      "features": "system:workflow",
+      "title": "Merge zone5-historique -> main + branche br-20260515-projet-partage",
+      "description": "Fusion de la branche zone5-historique dans main (commit 1328dc0). La branche zone5-historique est conservée. Création et passage sur la nouvelle branche br-20260515-projet-partage pour les développements liés au partage de projet.",
+      "files": [],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "peux tu merger la branche git:zone5-historique dans le main et ne pas supprimé la branche zone5-historique, ensuite retourne sur la branch main et créé une nouvelle branche br-20260515-projet-partage et passe sur cette branche met à jour le fichier historique git avec les infos de la branche mergé",
+      "startedAt": "2026-05-15T00:00:00Z",
+      "completedAt": "2026-05-15T00:01:00Z"
+    },
+    {
       "id": "mod-169",
       "version": "THI-0.93",
       "date": "2026-05-14T20:30:00Z",
