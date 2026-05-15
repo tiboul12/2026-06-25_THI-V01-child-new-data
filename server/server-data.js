@@ -19,6 +19,7 @@ const path = require('path');
 const fs = require('fs');
 const pool = require('./db');
 const projetGit = require('./modules/projet-git');
+const githubService = require('./modules/github-service');
 
 // ============================================================
 // Configuration
@@ -4108,8 +4109,47 @@ app.get('/api/file-projects', (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+/**
+ * Helper : configure le remote GitHub pour un projet (idempotent).
+ * - Crée le repo GitHub si absent
+ * - Configure le remote 'origin' avec une URL authentifiée
+ * - Push main vers le remote
+ * Retourne un résumé du résultat sans exposer le token.
+ */
+async function setupGithubRemoteForProject(projectDir, dirName, projectName) {
+    if (!githubService.isEnabled()) return { enabled: false };
+    try {
+        const repoName = githubService.buildRepoName(dirName, projectName);
+        const created = await githubService.createRepo(repoName, {
+            description: `Worganic project: ${projectName}`
+        });
+        if (!created.success) {
+            console.warn('[GitHub] createRepo failed:', created.error);
+            return { enabled: true, success: false, error: created.error };
+        }
+        const authUrl = githubService.buildAuthenticatedCloneUrl(repoName);
+        const remote = projetGit.setRemote(projectDir, authUrl);
+        if (!remote.success) {
+            return { enabled: true, success: false, error: remote.error };
+        }
+        const pushed = projetGit.pushMain(projectDir);
+        return {
+            enabled: true,
+            success: pushed.success,
+            repoName,
+            publicUrl: githubService.buildPublicRepoUrl(repoName),
+            alreadyExisted: !!created.alreadyExists,
+            pushed: pushed.success,
+            pushError: pushed.success ? null : pushed.error
+        };
+    } catch (e) {
+        console.warn('[GitHub] setupGithubRemoteForProject error:', e.message);
+        return { enabled: true, success: false, error: e.message };
+    }
+}
+
 // POST /api/projects
-app.post('/api/file-projects', (req, res) => {
+app.post('/api/file-projects', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const { projectName, folderName } = req.body;
@@ -4122,16 +4162,18 @@ app.post('/api/file-projects', (req, res) => {
         fs.mkdirSync(projectDir, { recursive: true });
         const config = { projectName, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), structure: [] };
         fs.writeFileSync(path.join(projectDir, 'config.json'), JSON.stringify(config, null, 2));
-        // Git : init du repo projet + premier commit
+        // Git : init local + (si activé) création repo GitHub + push initial
+        let github = null;
         try {
             projetGit.initProjetRepo(projectDir, {
                 authorName: user.username || user.email || 'Worganic',
                 authorEmail: user.email || 'worganic@local'
             });
+            github = await setupGithubRemoteForProject(projectDir, dir, projectName);
         } catch (gitErr) {
-            console.warn('[ProjetGit] init au create-project échoué:', gitErr.message);
+            console.warn('[ProjetGit] init/github au create-project échoué:', gitErr.message);
         }
-        res.status(201).json({ name: dir, ...config });
+        res.status(201).json({ name: dir, ...config, github });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -4721,6 +4763,36 @@ app.post('/api/file-projects/:name/pull', (req, res) => {
         res.json({ success: true, ...result });
     } catch (e) {
         console.warn('[ProjetGit] pull error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/file-projects/:name/setup-remote
+//   Crée le repo GitHub pour un projet existant et configure son remote.
+//   Idempotent : peut être rejoué sans casser un projet déjà câblé.
+app.post('/api/file-projects/:name/setup-remote', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    if (!fs.existsSync(projetPath)) return res.status(404).json({ error: 'Projet non trouvé' });
+    if (!githubService.isEnabled()) {
+        return res.status(503).json({ error: 'GitHub désactivé ou non configuré (voir data/config/github.json)' });
+    }
+    try {
+        const config = getProjectConfig(req.params.name);
+        const projectName = config?.projectName || req.params.name;
+        // S'assurer que le repo local existe
+        projetGit.ensureProjetRepo(projetPath, {
+            authorName: user.username || user.email || 'Worganic',
+            authorEmail: user.email || 'worganic@local'
+        });
+        const result = await setupGithubRemoteForProject(projetPath, req.params.name, projectName);
+        if (!result.success) {
+            return res.status(409).json(result);
+        }
+        res.json({ success: true, ...result });
+    } catch (e) {
+        console.warn('[GitHub] setup-remote error:', e.message);
         res.status(500).json({ error: e.message });
     }
 });

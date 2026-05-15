@@ -270,10 +270,20 @@ function publishWip(projetPath, userId, nodeId, opts = {}) {
     const mainHead = execGit('rev-parse HEAD', projetPath);
 
     log(`publish OK: ${branch} → main @ ${mainHead.stdout?.slice(0, 7)}`);
+
+    // Auto-push si remote configuré (silencieux si pas de remote)
+    let pushedToRemote = false;
+    if (hasRemote(projetPath)) {
+        const pushed = pushMain(projetPath);
+        pushedToRemote = !!pushed.success;
+        if (!pushed.success) warn('publish: auto-push failed:', pushed.error);
+    }
+
     return {
         success: true,
         commitHash: mainHead.ok ? mainHead.stdout : (wipHead.ok ? wipHead.stdout : null),
-        mergedBranch: branch
+        mergedBranch: branch,
+        pushedToRemote
     };
 }
 
@@ -313,13 +323,52 @@ function commitOnMain(projetPath, message, filePath = null) {
         // → commit silencieux sur la branche courante avec préfixe struct:
         return commitFile(projetPath, filePath, `struct: ${message}`);
     }
-    return commitFile(projetPath, filePath, `struct: ${message}`);
+    const result = commitFile(projetPath, filePath, `struct: ${message}`);
+    // Auto-push si remote configuré et qu'un commit a bien été créé (pas empty)
+    if (result.success && !result.empty && hasRemote(projetPath)) {
+        const pushed = pushMain(projetPath);
+        if (!pushed.success) warn('commitOnMain: auto-push failed:', pushed.error);
+    }
+    return result;
 }
 
 function hasRemote(projetPath) {
     if (!isRepo(projetPath)) return false;
     const r = execGit('remote', projetPath);
     return r.ok && r.stdout.length > 0;
+}
+
+/**
+ * Récupère l'URL du remote 'origin'. Retourne null si absent.
+ */
+function getRemoteUrl(projetPath) {
+    if (!isRepo(projetPath)) return null;
+    const r = execGit('remote get-url origin', projetPath);
+    return r.ok ? r.stdout : null;
+}
+
+/**
+ * Configure le remote 'origin' (ajoute s'il manque, met à jour sinon).
+ * url contient typiquement un token — ne JAMAIS logger l'url complète.
+ */
+function setRemote(projetPath, url) {
+    if (!isRepo(projetPath)) return { success: false, error: 'not a repo' };
+    if (!url) return { success: false, error: 'url required' };
+    const existing = execGit('remote get-url origin', projetPath);
+    if (existing.ok) {
+        const r = execGit(`remote set-url origin "${url}"`, projetPath);
+        if (!r.ok) {
+            warn('remote set-url failed:', r.stderr);
+            return { success: false, error: r.stderr };
+        }
+        return { success: true, updated: true };
+    }
+    const r = execGit(`remote add origin "${url}"`, projetPath);
+    if (!r.ok) {
+        warn('remote add failed:', r.stderr);
+        return { success: false, error: r.stderr };
+    }
+    return { success: true, added: true };
 }
 
 function pushMain(projetPath) {
@@ -399,5 +448,7 @@ module.exports = {
     pushMain,
     pullMain,
     hasRemote,
+    getRemoteUrl,
+    setRemote,
     getSyncStatus
 };

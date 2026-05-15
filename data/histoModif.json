@@ -1,6 +1,29 @@
 {
   "modifications": [
     {
+      "id": "mod-172",
+      "version": "THI-0.96",
+      "date": "2026-05-16T00:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "system"],
+      "features": "server:projet-git|github,system:workflow",
+      "title": "Auto-création repos GitHub par projet",
+      "description": "Création automatique d'un repo GitHub par projet à la création + setup-remote pour projets existants. Nouveau module server/modules/github-service.js (API REST GitHub : createRepo, repoExists, deleteRepo, buildRepoName avec pattern configurable, buildAuthenticatedCloneUrl). Extension de server/modules/projet-git.js : setRemote, getRemoteUrl, auto-push après publishWip et commitOnMain. Hook dans server-data.js : helper setupGithubRemoteForProject appelé automatiquement à la création de projet (POST /api/file-projects) + nouvelle route POST /api/file-projects/:name/setup-remote pour câbler les projets existants. Configuration via data/config/github.json (gitignored) avec template data/config/github.json.example. Support owner type org/user. Convention de nommage configurable (par défaut thi-projet-{uuid8}). Validé : 2 projets existants câblés et pushés vers GitHub avec succès.",
+      "files": [
+        "server/modules/github-service.js",
+        "server/modules/projet-git.js",
+        "server/server-data.js",
+        "data/config/github.json.example",
+        ".gitignore"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "non je veux que tu crais une depot pour chaque projet, je veux que tu le fasse automatiquement",
+      "startedAt": "2026-05-15T02:00:00Z",
+      "completedAt": "2026-05-16T00:00:00Z"
+    },
+    {
       "id": "mod-171",
       "version": "THI-0.95",
       "date": "2026-05-15T01:00:00Z",
