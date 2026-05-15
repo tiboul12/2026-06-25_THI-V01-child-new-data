@@ -54,6 +54,29 @@ export interface StructureUpdateEvent {
   updatedBy: string;
 }
 
+export interface SectionPublishedEvent {
+  nodeId: string;
+  folderId: string | null;
+  sectionName: string;
+  publishedBy: { userId: string; username: string };
+  commitHash: string | null;
+  timestamp: string;
+}
+
+export interface ProjectSyncedEvent {
+  pulledBy: { userId: string; username: string };
+  newCommits: number;
+  changedFiles: string[];
+  timestamp: string;
+}
+
+export interface SyncStatus {
+  isRepo: boolean;
+  hasRemote?: boolean;
+  ahead?: number;
+  behind?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProjetCollabService {
   private http = inject(HttpClient);
@@ -68,6 +91,12 @@ export class ProjetCollabService {
   // Sections avec modifications locales non encore partagées (publish)
   // Persiste à travers les navigations entre sections via le menu zone 3
   readonly localPendingSections = signal<Set<string>>(new Set());
+
+  // Sections partagées par d'autres users en attente de pull local
+  // Keyed par nodeId ; remplace l'entrée précédente si même section repartagée
+  readonly pendingUpdates = signal<Map<string, SectionPublishedEvent>>(new Map());
+
+  readonly isOnline = signal<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   addLocalPending(sectionId: string): void {
     if (this.localPendingSections().has(sectionId)) return;
@@ -89,6 +118,8 @@ export class ProjetCollabService {
 
   readonly contentUpdate$ = new Subject<ContentUpdateEvent>();
   readonly structureUpdate$ = new Subject<StructureUpdateEvent>();
+  readonly sectionPublished$ = new Subject<SectionPublishedEvent>();
+  readonly projectSynced$ = new Subject<ProjectSyncedEvent>();
 
   private eventSource: EventSource | null = null;
   private currentProjetId: string | null = null;
@@ -111,6 +142,7 @@ export class ProjetCollabService {
     this.pending.set([]);
     this.locks.set(new Map());
     this.localPendingSections.set(new Set());
+    this.pendingUpdates.set(new Map());
   }
 
   upsertPending(entry: PendingHistoryEntry): void {
@@ -220,6 +252,35 @@ export class ProjetCollabService {
         }
       });
 
+      this.eventSource.addEventListener('section_published', (e: MessageEvent) => {
+        try {
+          const evt: SectionPublishedEvent = JSON.parse(e.data);
+          const me = this.auth.currentUser();
+          // Notification destinée aux AUTRES users du projet
+          if (evt.publishedBy.userId !== me?.id) {
+            this.zone.run(() => {
+              this.pendingUpdates.update(map => {
+                const m = new Map(map);
+                m.set(evt.nodeId, evt);
+                return m;
+              });
+              this.sectionPublished$.next(evt);
+            });
+          }
+        } catch (err) {
+          console.warn('[Collab] SSE section_published parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('project_synced', (e: MessageEvent) => {
+        try {
+          const evt: ProjectSyncedEvent = JSON.parse(e.data);
+          this.zone.run(() => this.projectSynced$.next(evt));
+        } catch (err) {
+          console.warn('[Collab] SSE project_synced parse error:', err);
+        }
+      });
+
       this.eventSource.onerror = () => {
         this.connected.set(false);
         this.eventSource?.close();
@@ -295,5 +356,67 @@ export class ProjetCollabService {
 
   getLock(nodeId: string): LockInfo | undefined {
     return this.locks().get(nodeId);
+  }
+
+  hasPendingUpdate(nodeId: string): boolean {
+    return this.pendingUpdates().has(nodeId);
+  }
+
+  getPendingUpdate(nodeId: string): SectionPublishedEvent | undefined {
+    return this.pendingUpdates().get(nodeId);
+  }
+
+  dismissPendingUpdate(nodeId: string): void {
+    if (!this.pendingUpdates().has(nodeId)) return;
+    const m = new Map(this.pendingUpdates());
+    m.delete(nodeId);
+    this.pendingUpdates.set(m);
+  }
+
+  clearAllPendingUpdates(): void {
+    if (this.pendingUpdates().size === 0) return;
+    this.pendingUpdates.set(new Map());
+  }
+
+  async pullProject(projectName: string): Promise<{ newCommits: number; changedFiles: string[] }> {
+    const res = await firstValueFrom(
+      this.http.post<{ success: boolean; newCommits?: number; changedFiles?: string[] }>(
+        `${API}/api/file-projects/${encodeURIComponent(projectName)}/pull`,
+        {}
+      )
+    );
+    // Une fois le pull réussi, on vide les notifs en attente (le contenu local est à jour)
+    this.clearAllPendingUpdates();
+    return { newCommits: res.newCommits || 0, changedFiles: res.changedFiles || [] };
+  }
+
+  async pushProject(projectName: string): Promise<{ success: boolean }> {
+    const res = await firstValueFrom(
+      this.http.post<{ success: boolean }>(
+        `${API}/api/file-projects/${encodeURIComponent(projectName)}/push`,
+        {}
+      )
+    );
+    return res;
+  }
+
+  async getSyncStatus(projectName: string): Promise<SyncStatus> {
+    try {
+      return await firstValueFrom(
+        this.http.get<SyncStatus>(`${API}/api/file-projects/${encodeURIComponent(projectName)}/sync-status`)
+      );
+    } catch {
+      return { isRepo: false };
+    }
+  }
+
+  private listenOnlineStatus(): void {
+    if (typeof window === 'undefined') return;
+    window.addEventListener('online', () => this.zone.run(() => this.isOnline.set(true)));
+    window.addEventListener('offline', () => this.zone.run(() => this.isOnline.set(false)));
+  }
+
+  constructor() {
+    this.listenOnlineStatus();
   }
 }

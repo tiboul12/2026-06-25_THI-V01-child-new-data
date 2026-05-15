@@ -1,0 +1,17 @@
+{
+  "_comment": "Config GitHub pour la création automatique de repos par projet. Copier ce fichier vers github.json et remplir les champs. NE PAS commiter github.json (déjà dans .gitignore).",
+  "enabled": false,
+  "token": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+  "owner": "worganic",
+  "ownerType": "org",
+  "visibility": "private",
+  "repoNamePattern": "thi-projet-{uuid8}",
+  "_help": {
+    "enabled": "true pour activer l'auto-création de repos, false pour rester en local-only",
+    "token": "Personal Access Token (Fine-grained recommandé). Scopes nécessaires : repo administration r/w, contents r/w",
+    "owner": "Nom de l'organisation ou du user GitHub propriétaire des repos",
+    "ownerType": "'org' si owner est une organisation, 'user' si c'est un compte personnel",
+    "visibility": "'private' ou 'public'",
+    "repoNamePattern": "Modèle de nom du repo. Variables disponibles : {uuid8} = 8 premiers caractères de l'UUID, {slug} = slug du projectName, {uuid} = UUID complet"
+  }
+}

@@ -84,4 +84,6 @@ _a-supprimer/
 
 # Données runtime générées automatiquement
 data/projets/conversations/
-data/projets/*/
+
+# Config GitHub (contient le PAT) — ne JAMAIS commiter
+data/config/github.json
