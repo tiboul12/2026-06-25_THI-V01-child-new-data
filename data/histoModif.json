@@ -1,6 +1,63 @@
 {
   "modifications": [
     {
+      "id": "mod-169",
+      "version": "THI-0.93",
+      "date": "2026-05-14T20:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Zone 5 : historique figé uniquement au 'Partager', grisé pendant édition",
+      "description": "Correction : flushContentModifications() était appelé depuis saveAll() (auto-save 10s), onTextareaBlur(), forceSave(), setMode() et exitFocusMode(), ce qui finalisait l'entrée zone 5 immédiatement sans attendre le bouton 'Partager'. Suppression de ces appels prématurés. flushContentModifications() reçoit désormais un filterSectionId optionnel : seul publishCodeEdit(sectionId) l'appelle avec le filtre. Côté visu, saveVisuSection() reçoit trackHistory=false par défaut, seul publishVisuSection() passe true. modifiedEntities conserve les entrées des autres sections pour leur publication ultérieure.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "La zone d'historisation ne doit pas ce figer (non grisé) tans que la zone modifié n'a pas été validé (bouton Partager mes modifications) et effacer si la modification est annulé",
+      "startedAt": "2026-05-14T20:00:00Z",
+      "completedAt": "2026-05-14T20:30:00Z"
+    },
+    {
+      "id": "mod-168",
+      "version": "THI-0.93",
+      "date": "2026-05-14T19:45:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Zone 5 : historique fichier direct (sans ## Section)",
+      "description": "Correction du cas où getCursorEntity() retourne null quand on édite un fichier direct (pas un dossier) — le contenu n'a pas de ## Section header donc sectionRanges est vide. Ajout d'un fallback sur focusedHandle.id (qui EST le fileId) dans onTextareaInput(), avec modifiedEntities.set(fileId, fileId) pour que flushContentModifications() et cancelCodeEdit() le traitent correctement.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "l'historisation fonctionne bien lorsque je modifi un texte d'un dossier mais pas quand je modifi une section spécifique de code/document cela ne fonctionne pas. Lorsque je modifi un texte l'encart de modification dans l'historique ne doit ce figer que lorsque la zone est validé (partagé) sinon elle reste grisé et s'efface si la moldification est annulé",
+      "startedAt": "2026-05-14T19:30:00Z",
+      "completedAt": "2026-05-14T19:45:00Z"
+    },
+    {
+      "id": "mod-167",
+      "version": "THI-0.93",
+      "date": "2026-05-14T18:30:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Zone 5 : historique visu/code grisé en édition, figé à la publication",
+      "description": "Ajout de l'entrée grisée dans l'historique zone 5 dès la première modification. Mode visu : onVisuSectionInput appelle collab.upsertPending(sectionId), cancelVisuEdit appelle collab.clearPending(sectionId). Mode code : onTextareaInput utilise entity.id (fichier) comme entityId pour upsertPending — cohérent avec activeHistoryIds qui filtre par fileId ; publishCodeEdit appelle flushContentModifications() AVANT unfoldAll() pour que les sectionRanges soient encore valides (pattern miroir de exitFocusMode) ; cancelCodeEdit itère modifiedEntities pour clearPending(entityId) sur toutes les entrées liées à la section annulée.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Toutes les modifications de texte ne sont pas historisé, exemple si je fais une modif d'une section document/code, rien ne s'affiche dans l'historisation zone5, dés qu'on fait une modification l'encart modif doit s'affiché en grisé et lorsque la modification est enregistré et partagé, l'historisation doit ce figer",
+      "startedAt": "2026-05-14T18:00:00Z",
+      "completedAt": "2026-05-14T19:15:00Z"
+    },
+    {
       "id": "mod-166",
       "version": "THI-0.92",
       "date": "2026-05-14T17:50:00Z",
