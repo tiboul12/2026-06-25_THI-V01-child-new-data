@@ -4017,40 +4017,73 @@ function slugify(text) {
         .replace(/-+/g, '-').trim();
 }
 
-function getProjectConfig(projectName) {
+function cleanStructure(items) {
+    if (!items) return [];
+    const seen = new Set();
+    const cleaned = [];
+    for (const item of items) {
+        const key = item.id || `${item.type}:${item.name.toLowerCase()}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            if (item.type === 'folder' && item.children) {
+                item.children = cleanStructure(item.children);
+            }
+            cleaned.push(item);
+        }
+    }
+    return cleaned;
+}
+
+async function getProjectConfig(projectName) {
+    try {
+        const [rows] = await pool.query(
+            'SELECT display_name, git_remote_url, structure, created_at, updated_at FROM file_project_meta WHERE id = ?',
+            [projectName]
+        );
+        if (rows.length > 0) {
+            const row = rows[0];
+            const structure = cleanStructure(typeof row.structure === 'string' ? JSON.parse(row.structure) : (row.structure || []));
+            return {
+                projectName: row.display_name,
+                gitRemoteUrl: row.git_remote_url || null,
+                createdAt: row.created_at,
+                updatedAt: row.updated_at,
+                structure
+            };
+        }
+    } catch (e) {
+        console.warn('[getProjectConfig] MySQL error, fallback filesystem:', e.message);
+    }
+    // Fallback filesystem + auto-migration vers MySQL
     const cfgPath = path.join(PROJECTS_DIR, projectName, 'config.json');
     if (!fs.existsSync(cfgPath)) return null;
     try {
         const config = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-        
-        // Nettoyage des doublons (même nom et type au même niveau)
-        function cleanStructure(items) {
-            if (!items) return [];
-            const seen = new Set();
-            const cleaned = [];
-            for (const item of items) {
-                const key = item.id || `${item.type}:${item.name.toLowerCase()}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    if (item.type === 'folder' && item.children) {
-                        item.children = cleanStructure(item.children);
-                    }
-                    cleaned.push(item);
-                }
-            }
-            return cleaned;
-        }
-        if (config.structure) {
-            config.structure = cleanStructure(config.structure);
-        }
-        
+        if (config.structure) config.structure = cleanStructure(config.structure);
+        // Auto-migration silencieuse
+        try {
+            await pool.query(
+                'INSERT INTO file_project_meta (id, display_name, structure, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), structure = VALUES(structure), updated_at = VALUES(updated_at)',
+                [projectName, config.projectName || projectName, JSON.stringify(config.structure || []), config.createdAt || new Date(), config.updatedAt || new Date()]
+            );
+        } catch (e2) { console.warn('[getProjectConfig] auto-migration failed:', e2.message); }
         return config;
     } catch { return null; }
 }
 
-function saveProjectConfig(projectName, config) {
+async function saveProjectConfig(projectName, config) {
     config.updatedAt = new Date().toISOString();
-    fs.writeFileSync(path.join(PROJECTS_DIR, projectName, 'config.json'), JSON.stringify(config, null, 2), 'utf8');
+    try {
+        await pool.query(
+            'UPDATE file_project_meta SET structure = ?, updated_at = ? WHERE id = ?',
+            [JSON.stringify(config.structure || []), config.updatedAt, projectName]
+        );
+    } catch (e) { console.warn('[saveProjectConfig] MySQL write error:', e.message); }
+    // Backup filesystem
+    const cfgPath = path.join(PROJECTS_DIR, projectName, 'config.json');
+    if (fs.existsSync(path.dirname(cfgPath))) {
+        try { fs.writeFileSync(cfgPath, JSON.stringify(config, null, 2), 'utf8'); } catch {}
+    }
 }
 
 function findNodeById(items, id) {
@@ -4094,18 +4127,22 @@ function safeProjectPath(projectName, filePath) {
 }
 
 // GET /api/projects
-app.get('/api/file-projects', (req, res) => {
+app.get('/api/file-projects', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     try {
-        if (!fs.existsSync(PROJECTS_DIR)) return res.json([]);
-        const dirs = fs.readdirSync(PROJECTS_DIR, { withFileTypes: true })
-            .filter(d => d.isDirectory())
-            .map(d => {
-                const cfg = getProjectConfig(d.name);
-                return { name: d.name, projectName: cfg?.projectName || d.name, createdAt: cfg?.createdAt, updatedAt: cfg?.updatedAt };
-            });
-        res.json(dirs);
+        const [rows] = await pool.query(
+            'SELECT id, display_name, git_remote_url, created_at, updated_at FROM file_project_meta ORDER BY updated_at DESC'
+        );
+        const result = rows.map(r => ({
+            name: r.id,
+            projectName: r.display_name,
+            gitRemoteUrl: r.git_remote_url || null,
+            localExists: fs.existsSync(path.join(PROJECTS_DIR, r.id)),
+            createdAt: r.created_at,
+            updatedAt: r.updated_at
+        }));
+        res.json(result);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -4325,64 +4362,82 @@ app.post('/api/file-projects', async (req, res) => {
     if (!projectName) return res.status(400).json({ error: 'Nom requis' });
     const dir = folderName || slugify(projectName);
     if (!dir) return res.status(400).json({ error: 'Nom invalide' });
+    // Vérifier en MySQL ET en filesystem
+    try {
+        const [existing] = await pool.query('SELECT id FROM file_project_meta WHERE id = ?', [dir]);
+        if (existing.length > 0) return res.status(409).json({ error: 'Projet déjà existant' });
+    } catch {}
     const projectDir = path.join(PROJECTS_DIR, dir);
     if (fs.existsSync(projectDir)) return res.status(409).json({ error: 'Projet déjà existant' });
     try {
+        const now = new Date().toISOString();
+        const config = { projectName, createdAt: now, updatedAt: now, structure: [] };
+        // Insérer en MySQL en premier (source de vérité)
+        await pool.query(
+            'INSERT INTO file_project_meta (id, display_name, structure, owner_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [dir, projectName, JSON.stringify([]), user.id || null, now, now]
+        );
         fs.mkdirSync(projectDir, { recursive: true });
-        const config = { projectName, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), structure: [] };
         fs.writeFileSync(path.join(projectDir, 'config.json'), JSON.stringify(config, null, 2));
         // Git : init local + (si activé) création repo GitHub + push initial
         let github = null;
+        let gitRemoteUrl = null;
         try {
             projetGit.initProjetRepo(projectDir, {
                 authorName: user.username || user.email || 'Worganic',
                 authorEmail: user.email || 'worganic@local'
             });
             github = await setupGithubRemoteForProject(projectDir, dir, projectName);
+            if (github?.success && github?.publicUrl) {
+                gitRemoteUrl = github.publicUrl;
+                await pool.query('UPDATE file_project_meta SET git_remote_url = ? WHERE id = ?', [gitRemoteUrl, dir]);
+            }
         } catch (gitErr) {
             console.warn('[ProjetGit] init/github au create-project échoué:', gitErr.message);
         }
-        res.status(201).json({ name: dir, ...config, github });
+        res.status(201).json({ name: dir, ...config, gitRemoteUrl, github });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // GET /api/projects/:name
-app.get('/api/file-projects/:name', (req, res) => {
+app.get('/api/file-projects/:name', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     res.json(config);
 });
 
 // DELETE /api/projects/:name
-app.delete('/api/file-projects/:name', (req, res) => {
+app.delete('/api/file-projects/:name', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const projectDir = path.join(PROJECTS_DIR, req.params.name);
-    if (!fs.existsSync(projectDir)) return res.status(404).json({ error: 'Projet non trouvé' });
     try {
-        fs.rmSync(projectDir, { recursive: true, force: true });
+        const projectDir = path.join(PROJECTS_DIR, req.params.name);
+        if (fs.existsSync(projectDir)) fs.rmSync(projectDir, { recursive: true, force: true });
+        await pool.query('DELETE FROM file_project_meta WHERE id = ?', [req.params.name]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // GET /api/projects/:name/files
-app.get('/api/file-projects/:name/files', (req, res) => {
+app.get('/api/file-projects/:name/files', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     try {
-        res.json({ success: true, project: config.projectName, files: attachContent(req.params.name, config.structure || []) });
+        const localExists = fs.existsSync(path.join(PROJECTS_DIR, req.params.name));
+        const files = localExists ? attachContent(req.params.name, config.structure || []) : (config.structure || []);
+        res.json({ success: true, project: config.projectName, gitRemoteUrl: config.gitRemoteUrl || null, localExists, files });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // POST /api/projects/:name/files
-app.post('/api/file-projects/:name/files', (req, res) => {
+app.post('/api/file-projects/:name/files', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const { name, parentId, content } = req.body;
     if (!name) return res.status(400).json({ error: 'Nom requis' });
@@ -4417,7 +4472,7 @@ app.post('/api/file-projects/:name/files', (req, res) => {
         const newFile = { id: crypto.randomUUID(), type: 'file', name: fileName, path: filePath, order: parentItems.length + 1 };
         parentItems.push(newFile);
 
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `create_file ${fileName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit create_file:', gitErr.message); }
@@ -4429,7 +4484,7 @@ app.post('/api/file-projects/:name/files', (req, res) => {
 app.put('/api/file-projects/:name/files/:id', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const item = findNodeById(config.structure, req.params.id);
     if (!item || item.type !== 'file') return res.status(404).json({ error: 'Fichier non trouvé' });
@@ -4464,7 +4519,7 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         const folderId = req.body.folderId || null;
         const publish = req.body.publish === true;
         fs.writeFileSync(full, content, 'utf8');
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
 
         // Git : commit sur la branche wip de l'éditeur courant
         const projetPath = path.join(PROJECTS_DIR, req.params.name);
@@ -4526,10 +4581,10 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
 });
 
 // PATCH /api/projects/:name/files/:id (rename)
-app.patch('/api/file-projects/:name/files/:id', (req, res) => {
+app.patch('/api/file-projects/:name/files/:id', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const item = findNodeById(config.structure, req.params.id);
     if (!item || item.type !== 'file') return res.status(404).json({ error: 'Fichier non trouvé' });
@@ -4556,7 +4611,7 @@ app.patch('/api/file-projects/:name/files/:id', (req, res) => {
         if (!oldFull || !newFull) return res.status(400).json({ error: 'Chemin invalide' });
         if (fs.existsSync(oldFull)) fs.renameSync(oldFull, newFull);
         item.name = newName; item.path = newPath;
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `rename_file ${newName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit rename_file:', gitErr.message); }
@@ -4566,10 +4621,10 @@ app.patch('/api/file-projects/:name/files/:id', (req, res) => {
 });
 
 // DELETE /api/projects/:name/files/:id
-app.delete('/api/file-projects/:name/files/:id', (req, res) => {
+app.delete('/api/file-projects/:name/files/:id', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const item = findNodeById(config.structure, req.params.id);
     if (!item || item.type !== 'file') return res.status(404).json({ error: 'Fichier non trouvé' });
@@ -4578,7 +4633,7 @@ app.delete('/api/file-projects/:name/files/:id', (req, res) => {
         if (full && fs.existsSync(full)) fs.unlinkSync(full);
         const deletedName = item.name;
         removeNodeById(config.structure, req.params.id);
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `delete_file ${deletedName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit delete_file:', gitErr.message); }
@@ -4588,10 +4643,10 @@ app.delete('/api/file-projects/:name/files/:id', (req, res) => {
 });
 
 // POST /api/projects/:name/folders
-app.post('/api/file-projects/:name/folders', (req, res) => {
+app.post('/api/file-projects/:name/folders', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const { name, parentId } = req.body;
     if (!name) return res.status(400).json({ error: 'Nom requis' });
@@ -4626,7 +4681,7 @@ app.post('/api/file-projects/:name/folders', (req, res) => {
         };
         parentItems.push(newFolder);
 
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `create_folder ${name}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit create_folder:', gitErr.message); }
@@ -4636,10 +4691,10 @@ app.post('/api/file-projects/:name/folders', (req, res) => {
 });
 
 // PATCH /api/projects/:name/folders/:id (rename)
-app.patch('/api/file-projects/:name/folders/:id', (req, res) => {
+app.patch('/api/file-projects/:name/folders/:id', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const item = findNodeById(config.structure, req.params.id);
     if (!item || item.type !== 'folder') return res.status(404).json({ error: 'Dossier non trouvé' });
@@ -4667,7 +4722,7 @@ app.patch('/api/file-projects/:name/folders/:id', (req, res) => {
         }
         updateNodePaths(item, oldPath, newPath);
         item.name = name;
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `rename_folder ${name}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit rename_folder:', gitErr.message); }
@@ -4677,10 +4732,10 @@ app.patch('/api/file-projects/:name/folders/:id', (req, res) => {
 });
 
 // DELETE /api/projects/:name/folders/:id
-app.delete('/api/file-projects/:name/folders/:id', (req, res) => {
+app.delete('/api/file-projects/:name/folders/:id', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const item = findNodeById(config.structure, req.params.id);
     if (!item || item.type !== 'folder') return res.status(404).json({ error: 'Dossier non trouvé' });
@@ -4689,7 +4744,7 @@ app.delete('/api/file-projects/:name/folders/:id', (req, res) => {
         if (full && fs.existsSync(full)) fs.rmSync(full, { recursive: true, force: true });
         const deletedName = item.name;
         removeNodeById(config.structure, req.params.id);
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `delete_folder ${deletedName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit delete_folder:', gitErr.message); }
@@ -4699,14 +4754,14 @@ app.delete('/api/file-projects/:name/folders/:id', (req, res) => {
 });
 
 // PUT /api/projects/:name/structure
-app.put('/api/file-projects/:name/structure', (req, res) => {
+app.put('/api/file-projects/:name/structure', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     try {
         config.structure = req.body.structure;
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), 'reorder');
         } catch (gitErr) { console.warn('[ProjetGit] commit reorder:', gitErr.message); }
@@ -4716,10 +4771,10 @@ app.put('/api/file-projects/:name/structure', (req, res) => {
 });
 
 // POST /api/projects/:name/move-file
-app.post('/api/file-projects/:name/move-file', (req, res) => {
+app.post('/api/file-projects/:name/move-file', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const { fileId, targetFolderId } = req.body;
     try {
@@ -4756,7 +4811,7 @@ app.post('/api/file-projects/:name/move-file', (req, res) => {
             item.path = newPath;
             config.structure.push(item);
         }
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `move_file ${item.name}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit move_file:', gitErr.message); }
@@ -4765,10 +4820,10 @@ app.post('/api/file-projects/:name/move-file', (req, res) => {
 });
 
 // POST /api/file-projects/:name/upload-image
-app.post('/api/file-projects/:name/upload-image', (req, res) => {
+app.post('/api/file-projects/:name/upload-image', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const { name: fileName, parentId, data, mimeType } = req.body;
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp'];
@@ -4805,7 +4860,7 @@ app.post('/api/file-projects/:name/upload-image', (req, res) => {
         const maxOrder = parentItems.filter(n => n.type === 'file').reduce((m, n) => Math.max(m, n.order || 0), 0);
         const newNode = { id: require('crypto').randomUUID(), type: 'file', name: uniqueName, path: filePath, order: maxOrder + 1, fileType: 'image' };
         parentItems.push(newNode);
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `upload_image ${uniqueName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit upload_image:', gitErr.message); }
@@ -4814,10 +4869,10 @@ app.post('/api/file-projects/:name/upload-image', (req, res) => {
 });
 
 // POST /api/file-projects/:name/move-folder
-app.post('/api/file-projects/:name/move-folder', (req, res) => {
+app.post('/api/file-projects/:name/move-folder', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const config = getProjectConfig(req.params.name);
+    const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
     const { folderId, targetParentId } = req.body;
     try {
@@ -4879,7 +4934,7 @@ app.post('/api/file-projects/:name/move-folder', (req, res) => {
         folder.order = maxOrder + 1;
         targetItems.push(folder);
 
-        saveProjectConfig(req.params.name, config);
+        await saveProjectConfig(req.params.name, config);
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `move_folder ${folder.name}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit move_folder:', gitErr.message); }
@@ -4959,9 +5014,41 @@ app.post('/api/file-projects/:name/setup-remote', async (req, res) => {
         if (!result.success) {
             return res.status(409).json(result);
         }
+        // Stocker l'URL git remote en BDD pour que les autres children puissent cloner
+        if (result.publicUrl) {
+            try {
+                await pool.query('UPDATE file_project_meta SET git_remote_url = ? WHERE id = ?', [result.publicUrl, req.params.name]);
+            } catch (e2) { console.warn('[setup-remote] MySQL update git_remote_url failed:', e2.message); }
+        }
         res.json({ success: true, ...result });
     } catch (e) {
         console.warn('[GitHub] setup-remote error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/file-projects/:name/ensure-local
+//   Vérifie que le dossier projet existe localement. Si non et que git_remote_url est connu → git clone.
+//   Retourne { status: 'ready' | 'cloned' | 'no-remote' }
+app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    if (fs.existsSync(projetPath)) return res.json({ status: 'ready' });
+    try {
+        const [rows] = await pool.query('SELECT git_remote_url FROM file_project_meta WHERE id = ?', [req.params.name]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Projet non trouvé en BDD' });
+        const gitRemoteUrl = rows[0].git_remote_url;
+        if (!gitRemoteUrl) {
+            return res.json({ status: 'no-remote', message: 'Ce projet n\'est pas disponible localement — un remote Git doit être configuré par le propriétaire.' });
+        }
+        // Cloner le repo
+        const { execSync } = require('child_process');
+        fs.mkdirSync(PROJECTS_DIR, { recursive: true });
+        execSync(`git clone "${gitRemoteUrl}" "${projetPath}"`, { timeout: 60000 });
+        return res.json({ status: 'cloned', gitRemoteUrl });
+    } catch (e) {
+        console.warn('[ensure-local] error:', e.message);
         res.status(500).json({ error: e.message });
     }
 });
@@ -6088,6 +6175,20 @@ app.listen(PORT, async () => {
             INDEX idx_pc_folder  (project_id, folder_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `).catch(e => console.error('[DB] project_comments init error:', e.message));
+
+    // Métadonnées et structure des file-projects (source de vérité partagée entre children)
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS file_project_meta (
+            id              VARCHAR(255) PRIMARY KEY,
+            display_name    VARCHAR(255) NOT NULL,
+            git_remote_url  VARCHAR(500) DEFAULT NULL,
+            structure       JSON         NOT NULL DEFAULT (JSON_ARRAY()),
+            owner_user_id   VARCHAR(64)  DEFAULT NULL,
+            created_at      DATETIME     DEFAULT CURRENT_TIMESTAMP,
+            updated_at      DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_fpm_owner (owner_user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] file_project_meta init error:', e.message));
 
     console.log(`
 +==========================================+

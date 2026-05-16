@@ -4,7 +4,15 @@
   </div>
 }
 
-@if (!loading()) {
+@if (!loading() && localUnavailable()) {
+  <div class="flex flex-col items-center justify-center h-[60vh] gap-4 text-center px-8">
+    <span class="material-symbols-outlined text-5xl text-yellow-500">cloud_off</span>
+    <p class="text-light-text dark:text-dark-text font-medium text-lg">Projet non disponible localement</p>
+    <p class="text-light-text-light dark:text-dark-text-light text-sm max-w-md">{{ localUnavailable() }}</p>
+  </div>
+}
+
+@if (!loading() && !localUnavailable()) {
   <div class="fixed inset-0 flex flex-col bg-white dark:bg-[#0f0f17] overflow-hidden">
 
     <app-projet-toolbar

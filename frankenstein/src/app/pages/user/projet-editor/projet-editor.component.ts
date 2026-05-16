@@ -45,6 +45,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   project = signal<Project | null>(null);
   files = signal<FileNode[]>([]);
   loading = signal(true);
+  localUnavailable = signal<string | null>(null);
   saveStatus = signal<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
   activeNodeId = signal<string | null>(null);
   scrollToNodeId = signal<string | null>(null);
@@ -203,6 +204,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       this.loading.set(false);
     }
     await this.ensureProjectFolder(this.project()!);
+    if (this.localUnavailable()) return;
     await this.loadFiles();
     this.collab.connect(this.projectFolderName);
     this.subscribeToCollabEvents();
@@ -264,15 +266,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  private async ensureProjectFolder(proj: Project) {
+  private async ensureProjectFolder(_proj: Project) {
     try {
-      await this.projectFilesService.getConfig(this.projectFolderName);
-    } catch {
-      try {
-        await this.projectFilesService.createProject(proj.title, this.projectFolderName);
-      } catch (e) {
-        console.warn('ensureProjectFolder create error (may already exist):', e);
+      const result = await this.projectFilesService.ensureLocal(this.projectFolderName);
+      if (result.status === 'no-remote') {
+        this.localUnavailable.set(result.message || 'Ce projet n\'est pas disponible localement — un remote Git doit être configuré par le propriétaire.');
       }
+    } catch (e) {
+      console.warn('ensureProjectFolder error:', e);
     }
   }
 

@@ -19,7 +19,15 @@ export interface ProjectFilesConfig {
   projectName: string;
   createdAt: string;
   updatedAt: string;
+  gitRemoteUrl?: string | null;
   structure: FileNode[];
+}
+
+export type EnsureLocalStatus = 'ready' | 'cloned' | 'no-remote';
+export interface EnsureLocalResult {
+  status: EnsureLocalStatus;
+  message?: string;
+  gitRemoteUrl?: string;
 }
 
 const API = environment.apiDataUrl;
@@ -32,6 +40,10 @@ export class ProjectFilesService {
 
   getConfig(name: string): Promise<ProjectFilesConfig> {
     return firstValueFrom(this.http.get<ProjectFilesConfig>(`${API}/api/file-projects/${name}`, { headers: this.h() }));
+  }
+
+  ensureLocal(name: string): Promise<EnsureLocalResult> {
+    return firstValueFrom(this.http.post<EnsureLocalResult>(`${API}/api/file-projects/${name}/ensure-local`, {}, { headers: this.h() }));
   }
 
   getFiles(name: string): Promise<{ success: boolean; project: string; files: FileNode[] }> {
