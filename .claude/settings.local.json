@@ -34,7 +34,11 @@
       "Bash(powershell *)",
       "Bash(node *)",
       "Bash(python -c \"import sys,json; mods=json.load\\(sys.stdin\\)['modifications']; print\\(mods[-1]['id'] if mods else 'none'\\)\")",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(git ls-tree *)",
+      "Bash(netstat -ano)",
+      "Bash(curl *)",
+      "Bash(git merge *)"
     ]
   }
 }
