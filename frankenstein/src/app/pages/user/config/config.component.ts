@@ -46,17 +46,17 @@ export class ConfigComponent implements OnInit, OnDestroy {
   ticketsEnabled = false;
   recetteWidgetEnabled = false;
 
-  get cliIaEnabled(): boolean { return this.configService.cliIaEnabled(); }
+  get cliIaEnabled(): boolean { return this.configService.tchatIaEnabled(); }
   toggleCliIa() {
     const val = !this.cliIaEnabled;
-    this.configService.setCliIaEnabled(val);
+    this.configService.setTchatIaEnabled(val);
     this.http.post(`${API}/api/config/keys`, { cliIaEnabled: val }).subscribe();
   }
 
-  get apiKeysEnabled(): boolean { return this.configService.apiKeysEnabled(); }
+  get apiKeysEnabled(): boolean { return this.configService.ticketsEnabled(); }
   toggleApiKeys() {
     const val = !this.apiKeysEnabled;
-    this.configService.setApiKeysEnabled(val);
+    this.configService.setTicketsEnabled(val);
     this.http.post(`${API}/api/config/keys`, { apiKeysEnabled: val }).subscribe();
   }
 

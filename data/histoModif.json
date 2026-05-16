@@ -1,6 +1,25 @@
 {
   "modifications": [
     {
+      "id": "mod-173",
+      "version": "THI-0.97",
+      "date": "2026-05-16T14:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:site",
+      "title": "Fix compilation Angular 20 post-sync",
+      "description": "Après sync base B0.44 (migration Angular 18→20), npm install non exécuté (node_modules restés sur Angular 18). Correction des 4 appels renommés dans config.component.ts : cliIaEnabled→tchatIaEnabled, setCliIaEnabled→setTchatIaEnabled, apiKeysEnabled→ticketsEnabled, setApiKeysEnabled→setTicketsEnabled. Fix appliqué également dans worganic-base.",
+      "files": [
+        "frankenstein/src/app/pages/user/config/config.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je viens de faire une synchro entre base et child (avec une grosse migration dans base en passant d'angular 19 à 20), mais maintenant le child ne compil plus, peux tu regarder les correction à effectué en sachant que les modifications ne doivent impacté que les partie autorisé dans le child (non commune avec la base), sinon il faudra faire les modifs dans la base pour ensuite les répercuté dans le child",
+      "startedAt": "2026-05-16T13:30:00Z",
+      "completedAt": "2026-05-16T14:00:00Z"
+    },
+    {
       "id": "mod-172",
       "version": "THI-0.96",
       "date": "2026-05-16T00:00:00Z",
