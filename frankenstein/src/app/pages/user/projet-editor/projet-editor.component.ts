@@ -18,6 +18,8 @@ import { ProjetStatusbarComponent } from './components/projet-statusbar/projet-s
 import { ProjetHistoryComponent } from './components/projet-history/projet-history.component';
 import { ProjetDiffComponent } from './components/projet-diff/projet-diff.component';
 import { ProjetUpdateBannerComponent } from './components/projet-update-banner/projet-update-banner.component';
+import { CommentsDrawerComponent } from './components/comments-drawer/comments-drawer.component';
+import { ProjectCommentsService } from './services/project-comments.service';
 
 @Component({
   selector: 'app-projet-editor',
@@ -32,6 +34,7 @@ import { ProjetUpdateBannerComponent } from './components/projet-update-banner/p
     ProjetHistoryComponent,
     ProjetDiffComponent,
     ProjetUpdateBannerComponent,
+    CommentsDrawerComponent,
   ],
   templateUrl: './projet-editor.component.html',
   styleUrl: './projet-editor.component.scss'
@@ -46,6 +49,11 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   activeNodeId = signal<string | null>(null);
   scrollToNodeId = signal<string | null>(null);
   zone5Tab = signal<'conversation' | 'history'>('conversation');
+  // F6 — Drawer des commentaires de section
+  commentsDrawer = signal<{ visible: boolean; folderId: string | null; folderName: string }>({
+    visible: false, folderId: null, folderName: ''
+  });
+  commentCounts = signal<Record<string, number>>({});
   // Map fileId -> imageIds[] pour les images imbriquées dans un bloc document
   nestedImagesMap = signal<Record<string, string[]>>({});
   diffEntry = signal<CollabHistoryEntry | null>(null);
@@ -166,6 +174,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   private pendingSections: SectionInfo[] | null = null;
   private history = inject(WoActionHistoryService);
   private collab = inject(ProjetCollabService);
+  private commentsService = inject(ProjectCommentsService);
   private collabSubs: Subscription[] = [];
 
   constructor(
@@ -197,6 +206,35 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     await this.loadFiles();
     this.collab.connect(this.projectFolderName);
     this.subscribeToCollabEvents();
+    // F4 — Scroll vers une section si fournie en queryParam (depuis la recherche)
+    const sectionFromSearch = this.route.snapshot.queryParamMap.get('section');
+    if (sectionFromSearch) {
+      setTimeout(() => this.scrollToNodeId.set(sectionFromSearch), 200);
+    }
+    // F6 — Charger les compteurs de commentaires par section
+    this.loadCommentCounts();
+  }
+
+  // F6 — Commentaires inline
+  onCommentRequest(evt: { folderId: string; folderName: string }) {
+    this.commentsDrawer.set({ visible: true, folderId: evt.folderId, folderName: evt.folderName });
+  }
+
+  closeCommentsDrawer() {
+    this.commentsDrawer.update(d => ({ ...d, visible: false }));
+  }
+
+  onCommentCountsChange(counts: Record<string, number>) {
+    this.commentCounts.set(counts);
+  }
+
+  private async loadCommentCounts() {
+    const projectId = this.project()?.id;
+    if (!projectId) return;
+    try {
+      const counts = await this.commentsService.counts(projectId);
+      this.commentCounts.set(counts);
+    } catch { /* silent */ }
   }
 
   ngOnDestroy() {
@@ -258,7 +296,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       for (const n of ns) {
         if (n.type === 'file' && !this.projectFilesService.isImageFile(n.name) && n.content) {
           const ids: string[] = [];
-          const re = /\{\{IMG:([a-zA-Z0-9._-]+)\}\}/gi;
+          const re = /\{\{IMG:([a-zA-Z0-9._-]+)(?:\|[^}]*)?\}\}/gi;
           let m;
           while ((m = re.exec(n.content)) !== null) ids.push(m[1]);
           if (ids.length > 0) map[n.id] = ids;

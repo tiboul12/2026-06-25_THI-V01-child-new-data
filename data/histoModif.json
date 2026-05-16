@@ -1,6 +1,39 @@
 {
   "modifications": [
     {
+      "id": "mod-174",
+      "version": "THI-0.98",
+      "date": "2026-05-16T16:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:projet-editor,server:projet-comments|search",
+      "title": "Éditeur projets : 6 features UX (slash/callouts/caption/resize/search/comments)",
+      "description": "Comparaison avec Notion/GitBook/Obsidian → ajout de 6 features manquantes dans le menu /projets/. F1 Slash commands (/ pour insérer blocs image/callout/table/code/quote/list). F2 Callouts sémantiques > [!INFO/WARNING/SUCCESS/DANGER]. F3 Caption d'image {{IMG:id|Légende}}. F5 Resize image {{IMG:id|caption|align|width}} + panneau de propriétés visuel. F4 Search full-text serveur /api/search + composant de recherche dans la liste projets. F6 Commentaires inline par section : table MySQL project_comments, routes CRUD, drawer latéral + bulle bouton sur chaque section en mode Visu. Aucune modif dans shared/core/tools (tout dans pages/user/projet-editor/).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "frankenstein/src/app/pages/user/projet-editor/components/image-props-panel/image-props-panel.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/slash-command-menu/slash-command-menu.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/comments-drawer/comments-drawer.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/services/project-comments.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
+        "frankenstein/src/app/pages/user/projets/projets.component.ts",
+        "frankenstein/src/app/pages/user/projets/projets.component.html",
+        "frankenstein/src/app/pages/user/projets/search.service.ts",
+        "frankenstein/src/app/pages/user/projets/projet-search/projet-search.component.ts",
+        "server/server-data.js",
+        "frankenstein/angular.json"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "ok je voudrais que tu améliore l'UX en mettant en place le guidage à l'insertion. Ajoute aussi les améliorations pour la caption d'image. Ajoute Slash commands, Callouts / blocs sémantiques, le search full-texte, le redimenssionnement d'image et les commentaires inline par section. Fait moi un plan de mise à jour complet [puis] vas y lance les modifications",
+      "startedAt": "2026-05-16T15:30:00Z",
+      "completedAt": "2026-05-16T16:00:00Z"
+    },
+    {
       "id": "mod-173",
       "version": "THI-0.97",
       "date": "2026-05-16T14:00:00Z",

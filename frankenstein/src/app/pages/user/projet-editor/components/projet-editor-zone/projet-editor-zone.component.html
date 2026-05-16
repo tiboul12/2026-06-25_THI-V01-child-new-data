@@ -218,10 +218,21 @@
                   wrap="off"
                   [value]="unifiedContent"
                   (input)="onTextareaInput($event)"
+                  (keydown)="onTextareaKeydown($event)"
                   (scroll)="onTextareaScroll($event)"
                   (keyup)="onTextareaCursor($event)"
                   (mouseup)="onTextareaCursor($event)"
                   (blur)="onTextareaBlur()"></textarea>
+
+        <!-- F1 — Menu des slash commands (mode Code) -->
+        <app-slash-command-menu
+          #slashMenu
+          [visible]="slashMenuState.visible"
+          [top]="slashMenuState.top"
+          [left]="slashMenuState.left"
+          [query]="slashMenuState.query"
+          (commandSelect)="onSlashCommandSelect($event)">
+        </app-slash-command-menu>
 
         <!-- Overlay (chevrons fold + gouttière drag + indicateur drop) -->
         <div class="ed-overlay" #overlay aria-hidden="true">
@@ -406,6 +417,19 @@
                  [class.visu-section-wrap--active]="activeVisuSectionId === sec.sectionId"
                  [class.visu-section-wrap--locked]="collab.isLockedByOther(sec.sectionId)">
 
+              <!-- F6 — Bouton commentaires (apparaît au hover de la section) -->
+              <button type="button"
+                      class="visu-comment-btn"
+                      [class.visu-comment-btn--has]="(commentCounts[sec.sectionId] || 0) > 0"
+                      [attr.data-folder-id]="sec.sectionId"
+                      [attr.data-folder-name]="sec.folderName"
+                      title="Commentaires">
+                <span class="material-symbols-outlined">chat_bubble</span>
+                @if ((commentCounts[sec.sectionId] || 0) > 0) {
+                  <span class="visu-comment-btn__badge">{{ commentCounts[sec.sectionId] }}</span>
+                }
+              </button>
+
               <!-- En-tête non éditable (nom du dossier) -->
               @switch (sec.level) {
                 @case (1) {
@@ -472,6 +496,20 @@
                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp"
                class="hidden"
                (change)="onVisuImageSelected($event)">
+
+        <!-- F5 — Panneau de propriétés d'image (caption / align / width) -->
+        <app-image-props-panel
+          [visible]="imagePropsPanel.visible"
+          [top]="imagePropsPanel.top"
+          [left]="imagePropsPanel.left"
+          [imageId]="imagePropsPanel.imageId"
+          [caption]="imagePropsPanel.caption"
+          [alignment]="imagePropsPanel.alignment"
+          [width]="imagePropsPanel.width"
+          (propsChange)="onImagePropsChange($event)"
+          (delete)="onImagePropsDelete($event)"
+          (close)="closeImagePropsPanel()">
+        </app-image-props-panel>
       </div>
     }
 

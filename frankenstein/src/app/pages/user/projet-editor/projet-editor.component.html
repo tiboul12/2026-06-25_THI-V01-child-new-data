@@ -38,12 +38,14 @@
           [saveStatus]="saveStatus()"
           [projectName]="project()?.id || ''"
           [activeNodeId]="activeNodeId()"
+          [commentCounts]="commentCounts()"
           (fileSave)="onFileSave($event)"
           (sectionsChange)="onSectionsChange($event)"
           (nodeActive)="onNodeActive($event)"
           (dragDrop)="onDragDrop($event)"
           (dirtyChange)="onDirtyChange($event)"
           (saveStarting)="onSaveStarting()"
+          (commentRequest)="onCommentRequest($event)"
           (refresh)="onRefresh()" />
       } @else {
         <app-projet-diff
@@ -110,6 +112,16 @@
       class="absolute bottom-10 left-0 right-0 z-20"
       [status]="statusLabel"
       [isDirty]="saveStatus() === 'saving'" />
+
+    <!-- F6 — Drawer des commentaires de section -->
+    <app-comments-drawer
+      [visible]="commentsDrawer().visible"
+      [projectId]="project()?.id || ''"
+      [folderId]="commentsDrawer().folderId"
+      [folderName]="commentsDrawer().folderName"
+      (close)="closeCommentsDrawer()"
+      (countsChange)="onCommentCountsChange($event)">
+    </app-comments-drawer>
 
   </div>
 }

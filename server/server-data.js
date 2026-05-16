@@ -4109,6 +4109,175 @@ app.get('/api/file-projects', (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// F4 — GET /api/search?q=&projectId= — recherche full-text dans contenu.md et docs additionnels
+app.get('/api/search', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const q = (req.query.q || '').toString().trim();
+    if (q.length < 2) return res.json({ results: [] });
+    const projectFilter = (req.query.projectId || '').toString().trim();
+    const MAX_RESULTS = 50;
+    const EXCERPT_LEN = 80;
+    const results = [];
+    try {
+        if (!fs.existsSync(PROJECTS_DIR)) return res.json({ results: [] });
+        const projectDirs = fs.readdirSync(PROJECTS_DIR, { withFileTypes: true })
+            .filter(d => d.isDirectory() && (!projectFilter || d.name === projectFilter));
+
+        const qLower = q.toLowerCase();
+        for (const d of projectDirs) {
+            if (results.length >= MAX_RESULTS) break;
+            const projectName = d.name;
+            const cfg = getProjectConfig(projectName);
+            if (!cfg || !cfg.structure) continue;
+            const displayName = cfg.projectName || projectName;
+
+            const walk = (items, sectionPath, parentSection) => {
+                if (results.length >= MAX_RESULTS) return;
+                for (const item of items || []) {
+                    if (results.length >= MAX_RESULTS) return;
+                    if (item.type === 'folder') {
+                        const folderPath = item.path ? path.join(PROJECTS_DIR, projectName, item.path) : null;
+                        const nextSection = { id: item.id, name: item.name, path: folderPath };
+                        const nextPath = [...sectionPath, item.name];
+                        walk(item.children || [], nextPath, nextSection);
+                    } else if (item.type === 'file' && item.path && !isImageFile(item.name)) {
+                        const full = path.join(PROJECTS_DIR, projectName, item.path);
+                        if (!fs.existsSync(full)) continue;
+                        let content;
+                        try { content = fs.readFileSync(full, 'utf8'); } catch { continue; }
+                        const cLower = content.toLowerCase();
+                        const idx = cLower.indexOf(qLower);
+                        if (idx === -1) continue;
+                        // Comptage occurrences
+                        let matchCount = 0; let pos = 0;
+                        while ((pos = cLower.indexOf(qLower, pos)) !== -1) { matchCount++; pos += qLower.length; }
+                        // Extrait : ~EXCERPT_LEN chars autour de la première occurrence
+                        const start = Math.max(0, idx - 40);
+                        const end = Math.min(content.length, idx + qLower.length + 40);
+                        const rawExcerpt = (start > 0 ? '…' : '') + content.substring(start, end).replace(/\s+/g, ' ').trim() + (end < content.length ? '…' : '');
+
+                        results.push({
+                            projectId: projectName,
+                            projectName: displayName,
+                            sectionId: parentSection?.id || '',
+                            sectionName: parentSection?.name || item.name.replace(/\.md$/, ''),
+                            sectionPath,
+                            fileId: item.id,
+                            fileName: item.name,
+                            excerpt: rawExcerpt,
+                            matchCount
+                        });
+                    }
+                }
+            };
+            walk(cfg.structure, [], null);
+        }
+        res.json({ results, total: results.length, truncated: results.length >= MAX_RESULTS });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// F6 — Commentaires inline par section (project_comments)
+// ============================================================
+
+// GET /api/project-comments/:projectId?folderId=
+app.get('/api/project-comments/:projectId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { projectId } = req.params;
+    const folderId = (req.query.folderId || '').toString();
+    try {
+        let rows;
+        if (folderId) {
+            [rows] = await pool.query(
+                'SELECT * FROM project_comments WHERE project_id = ? AND folder_id = ? ORDER BY created_at ASC',
+                [projectId, folderId]
+            );
+        } else {
+            [rows] = await pool.query(
+                'SELECT * FROM project_comments WHERE project_id = ? ORDER BY created_at ASC',
+                [projectId]
+            );
+        }
+        res.json({
+            comments: rows.map(r => ({
+                id: r.id,
+                projectId: r.project_id,
+                folderId: r.folder_id,
+                userId: r.user_id,
+                username: r.username,
+                text: r.text,
+                createdAt: r.created_at,
+                updatedAt: r.updated_at
+            }))
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/project-comments/:projectId/counts — compteurs par folderId
+app.get('/api/project-comments/:projectId/counts', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { projectId } = req.params;
+    try {
+        const [rows] = await pool.query(
+            'SELECT folder_id, COUNT(*) AS cnt FROM project_comments WHERE project_id = ? GROUP BY folder_id',
+            [projectId]
+        );
+        const counts = {};
+        for (const r of rows) counts[r.folder_id] = r.cnt;
+        res.json({ counts });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/project-comments/:projectId  body: { folderId, text }
+app.post('/api/project-comments/:projectId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { projectId } = req.params;
+    const { folderId, text } = req.body || {};
+    if (!folderId || typeof text !== 'string' || !text.trim()) {
+        return res.status(400).json({ error: 'folderId et text requis' });
+    }
+    if (text.length > 5000) return res.status(400).json({ error: 'Commentaire trop long (max 5000 chars)' });
+    try {
+        const id = 'comment-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+        await pool.query(
+            'INSERT INTO project_comments (id, project_id, folder_id, user_id, username, text) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, projectId, folderId, String(user.id), user.username || '', text.trim()]
+        );
+        const [rows] = await pool.query('SELECT * FROM project_comments WHERE id = ?', [id]);
+        const r = rows[0];
+        res.json({
+            comment: {
+                id: r.id, projectId: r.project_id, folderId: r.folder_id,
+                userId: r.user_id, username: r.username, text: r.text,
+                createdAt: r.created_at, updatedAt: r.updated_at
+            }
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/project-comments/:projectId/:commentId
+app.delete('/api/project-comments/:projectId/:commentId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { projectId, commentId } = req.params;
+    try {
+        const [rows] = await pool.query(
+            'SELECT user_id FROM project_comments WHERE id = ? AND project_id = ?',
+            [commentId, projectId]
+        );
+        if (rows.length === 0) return res.status(404).json({ error: 'Commentaire introuvable' });
+        const isOwner = String(rows[0].user_id) === String(user.id);
+        const isAdmin = user.role === 'admin';
+        if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Action non autorisée' });
+        await pool.query('DELETE FROM project_comments WHERE id = ?', [commentId]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 /**
  * Helper : configure le remote GitHub pour un projet (idempotent).
  * - Crée le repo GitHub si absent
@@ -5903,6 +6072,22 @@ app.listen(PORT, async () => {
             INDEX idx_psl_projet (projet_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `).catch(e => console.error('[DB] projet_section_lock init error:', e.message));
+
+    // F6 — Commentaires inline par section
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS project_comments (
+            id          VARCHAR(36)  PRIMARY KEY,
+            project_id  VARCHAR(255) NOT NULL,
+            folder_id   VARCHAR(255) NOT NULL,
+            user_id     VARCHAR(64)  NOT NULL,
+            username    VARCHAR(255) NOT NULL,
+            text        TEXT         NOT NULL,
+            created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_pc_project (project_id),
+            INDEX idx_pc_folder  (project_id, folder_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] project_comments init error:', e.message));
 
     console.log(`
 +==========================================+
