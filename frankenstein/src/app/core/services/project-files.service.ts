@@ -38,6 +38,10 @@ export class ProjectFilesService {
 
   private h() { return this.auth.getAuthHeaders(); }
 
+  getProjects(): Promise<Array<{ name: string; projectName: string; gitRemoteUrl: string | null; localExists: boolean }>> {
+    return firstValueFrom(this.http.get<any[]>(`${API}/api/file-projects`, { headers: this.h() }));
+  }
+
   getConfig(name: string): Promise<ProjectFilesConfig> {
     return firstValueFrom(this.http.get<ProjectFilesConfig>(`${API}/api/file-projects/${name}`, { headers: this.h() }));
   }
@@ -135,5 +139,13 @@ export class ProjectFilesService {
       }
     }
     return result;
+  }
+
+  autoSync(name: string): Promise<{ success: boolean; status: string; ahead?: number; behind?: number; newCommits?: number; changedFiles?: string[] }> {
+    return firstValueFrom(this.http.post<any>(`${API}/api/file-projects/${name}/auto-sync`, {}, { headers: this.h() }));
+  }
+
+  getGithubReachable(): Promise<{ reachable: boolean; reason?: string }> {
+    return firstValueFrom(this.http.get<any>(`${API}/api/github/reachable`, { headers: this.h() }));
   }
 }

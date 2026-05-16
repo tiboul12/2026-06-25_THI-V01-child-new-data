@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { WorgHelpTriggerComponent } from '../../../shared/help/worg-help-trigger.component';
 import { Router } from '@angular/router';
 import { ProjectService, Project } from '../../../core/services/project.service';
+import { ProjectFilesService } from '../../../core/services/project-files.service';
 import { WoActionHistoryService } from '../../../core/services/wo-action-history.service';
 import { ProjetSearchComponent } from './projet-search/projet-search.component';
 
@@ -34,12 +35,20 @@ export class ProjetsComponent implements OnInit {
   // Confirmation suppression
   deletingId = signal<string | null>(null);
 
+  githubReachable = signal<boolean | null>(null);
+  projectsWithRemote = signal<Set<string>>(new Set());
+
   private woHistory = inject(WoActionHistoryService);
 
-  constructor(private projectService: ProjectService, private router: Router) {}
+  constructor(
+    private projectService: ProjectService,
+    private projectFilesService: ProjectFilesService,
+    private router: Router
+  ) {}
 
   async ngOnInit() {
     await this.loadProjects();
+    this.checkGithubStatus();
   }
 
   async loadProjects() {
@@ -48,11 +57,31 @@ export class ProjetsComponent implements OnInit {
     try {
       const list = await this.projectService.getProjects();
       this.projects.set(list);
+      // Charger la liste des projets avec un remote git pour afficher le badge
+      this.projectFilesService.getProjects().then(fileProjects => {
+        const withRemote = new Set(
+          fileProjects.filter(p => p.gitRemoteUrl).map(p => p.name)
+        );
+        this.projectsWithRemote.set(withRemote);
+      }).catch(() => {});
     } catch (e: any) {
       this.error.set(e?.error?.error || 'Erreur lors du chargement des projets');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private async checkGithubStatus() {
+    try {
+      const result = await this.projectFilesService.getGithubReachable();
+      this.githubReachable.set(result.reachable);
+    } catch {
+      this.githubReachable.set(null);
+    }
+  }
+
+  hasGithubWarning(projectId: string): boolean {
+    return this.projectsWithRemote().has(projectId) && this.githubReachable() === false;
   }
 
   openNewModal() {

@@ -4587,6 +4587,7 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         const projetPath = path.join(PROJECTS_DIR, req.params.name);
         const gitNodeId = folderId || req.params.id;
         let publishCommitHash = null;
+        let publishResult = null;
         try {
             if (projetGit.isRepo(projetPath)) {
                 if (publish) {
@@ -4594,12 +4595,12 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
                     // (cas projet créé avant activation GitHub), rafraîchit l'URL sinon.
                     await ensureGithubRemoteForProject(req.params.name, config);
                     // Commit du contenu final puis merge wip → main
-                    const result = projetGit.publishWip(projetPath, user.id, gitNodeId, {
+                    publishResult = projetGit.publishWip(projetPath, user.id, gitNodeId, {
                         username: user.username || user.email || 'user',
                         sectionName: item.name || req.params.id,
                         filePath: item.path
                     });
-                    if (result.success) publishCommitHash = result.commitHash;
+                    publishCommitHash = publishResult?.commitHash || null;
                 } else {
                     // Auto-save : commit silencieux sur la branche wip
                     projetGit.commitFile(projetPath, item.path, `wip: auto-save ${item.name || req.params.id}`);
@@ -4610,6 +4611,7 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         }
 
         // Broadcast SSE seulement si publication explicite
+        // (même si push GitHub échoué — le contenu est sauvé localement et visible aux co-éditeurs)
         if (publish) {
             broadcastToProject(req.params.name, 'content_update', {
                 nodeId: req.params.id,
@@ -4639,6 +4641,17 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
             } catch (e2) {
                 console.error('[LOCK] unlock on publish error:', e2.message);
             }
+        }
+
+        // Push GitHub échoué → HTTP 502 pour bloquer le toast succès côté client
+        // (la sauvegarde locale et le broadcast SSE ont eu lieu normalement)
+        if (publish && publishResult?.pushFailed) {
+            return res.status(502).json({
+                error: 'Modifications sauvegardées localement mais non synchronisées avec GitHub',
+                localSaved: true,
+                pushFailed: true,
+                commitHash: publishCommitHash
+            });
         }
 
         res.json({ success: true, commitHash: publishCommitHash });
@@ -5057,6 +5070,63 @@ app.post('/api/file-projects/:name/pull', (req, res) => {
     } catch (e) {
         console.warn('[ProjetGit] pull error:', e.message);
         res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/file-projects/:name/auto-sync
+//   Synchronise automatiquement le projet avec GitHub au chargement :
+//   pull si remote en avance, push si local en avance, signale la divergence sinon.
+app.post('/api/file-projects/:name/auto-sync', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    if (!fs.existsSync(projetPath)) return res.status(404).json({ error: 'Projet non trouvé' });
+    if (!projetGit.isRepo(projetPath)) return res.json({ success: true, status: 'no-repo' });
+    if (!projetGit.hasRemote(projetPath)) return res.json({ success: true, status: 'no-remote' });
+    try {
+        const status = projetGit.getSyncStatus(projetPath);
+        let action = 'in-sync';
+        let opResult = null;
+        if (!status.fetchOk) {
+            return res.json({ success: false, status: 'fetch-failed', ...status });
+        }
+        if (status.behind > 0 && status.ahead === 0) {
+            opResult = projetGit.pullMain(projetPath);
+            action = opResult.success ? 'pulled' : 'pull-failed';
+        } else if (status.ahead > 0 && status.behind === 0) {
+            opResult = projetGit.pushMain(projetPath);
+            action = opResult.success ? 'pushed' : 'push-failed';
+        } else if (status.ahead > 0 && status.behind > 0) {
+            action = 'diverged';
+        }
+        if (opResult && !opResult.success && !opResult.skipped) {
+            return res.status(409).json({ error: opResult.error || 'Synchronisation impossible', status: action, ...status });
+        }
+        res.json({ success: true, status: action, ahead: status.ahead, behind: status.behind, ...(opResult || {}) });
+    } catch (e) {
+        console.warn('[AutoSync] error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/github/reachable
+//   Vérifie si github.com est accessible depuis le serveur.
+//   Utilisé par le frontend pour afficher un indicateur de connectivité par projet.
+app.get('/api/github/reachable', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    if (!githubService.isEnabled()) return res.json({ reachable: false, reason: 'not-configured' });
+    try {
+        const https = require('https');
+        await new Promise((resolve, reject) => {
+            const r = https.request({ hostname: 'github.com', method: 'HEAD', path: '/', timeout: 5000 }, resolve);
+            r.on('error', reject);
+            r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
+            r.end();
+        });
+        res.json({ reachable: true });
+    } catch (e) {
+        res.json({ reachable: false, error: e.message });
     }
 });
 

@@ -263,26 +263,32 @@ function publishWip(projetPath, userId, nodeId, opts = {}) {
         }
     }
 
-    // Supprimer la branche wip locale
-    const del = execGit(`branch -D "${branch}"`, projetPath);
-    if (!del.ok) {
-        warn(`publish: branch delete failed (${branch}):`, del.stderr);
-    }
-
     const mainHead = execGit('rev-parse HEAD', projetPath);
 
-    log(`publish OK: ${branch} → main @ ${mainHead.stdout?.slice(0, 7)}`);
-
-    // Auto-push si remote configuré (silencieux si pas de remote)
+    // Auto-push si remote configuré — AVANT suppression de la branche wip
+    // (permet de conserver la branche wip pour diagnostic si push échoue)
     let pushedToRemote = false;
+    let pushError = null;
     if (hasRemote(projetPath)) {
         const pushed = pushMain(projetPath);
         pushedToRemote = !!pushed.success;
-        if (!pushed.success) warn('publish: auto-push failed:', pushed.error);
+        if (!pushed.success) {
+            warn('publish: auto-push failed:', pushed.error);
+            pushError = pushed.error || 'push failed';
+        }
     }
 
+    // Supprimer la branche wip locale (contenu sécurisé sur main même si push échoué)
+    const del = execGit(`branch -D "${branch}"`, projetPath);
+    if (!del.ok) warn(`publish: branch delete failed (${branch}):`, del.stderr);
+
+    log(`publish ${pushedToRemote ? 'OK' : (pushError ? 'push-failed' : 'local-only')}: ${branch} → main @ ${mainHead.stdout?.slice(0, 7)}`);
+
     return {
-        success: true,
+        success: !pushError,
+        localSuccess: true,
+        pushFailed: !!pushError,
+        pushError: pushError || null,
         commitHash: mainHead.ok ? mainHead.stdout : (wipHead.ok ? wipHead.stdout : null),
         mergedBranch: branch,
         pushedToRemote

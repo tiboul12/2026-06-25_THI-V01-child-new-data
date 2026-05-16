@@ -8,6 +8,14 @@
     </div>
   }
 
+  <!-- Toast erreur partage (push GitHub échoué ou autre erreur) -->
+  @if (publishErrorToastVisible()) {
+    <div class="publish-toast publish-toast--error">
+      <span class="material-symbols-outlined">cloud_off</span>
+      {{ publishErrorMessage() }}
+    </div>
+  }
+
   <!-- Barre d'outils -->
   <div class="flex flex-wrap items-center gap-1 p-2 bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
 
@@ -301,7 +309,7 @@
       <div class="ed-img-preview"
            [style.top.px]="hoverPreview.top"
            [style.left.px]="hoverPreview.left">
-        <img [src]="hoverPreview.url" [alt]="hoverPreview.name">
+        <img [src]="hoverPreview.url" [alt]="hoverPreview.name" (error)="onImgError($event)">
         <div class="ed-img-preview__name">{{ hoverPreview.name }}</div>
       </div>
     }
@@ -407,7 +415,14 @@
 
               <!-- L'image -->
               <div class="visu-image-display">
-                <img [src]="img.url" [alt]="img.name" />
+                @if (brokenImages.has(img.id)) {
+                  <div class="visu-image-broken">
+                    <span class="material-symbols-outlined">sync_problem</span>
+                    <span>Image non synchronisée — en attente de mise à jour</span>
+                  </div>
+                } @else {
+                  <img [src]="img.url" [alt]="img.name" (error)="onImgError($event, img.id)" />
+                }
               </div>
             </div>
           }

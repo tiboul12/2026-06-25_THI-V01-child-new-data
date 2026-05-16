@@ -1,6 +1,33 @@
 {
   "modifications": [
     {
+      "id": "mod-183",
+      "version": "THI-1.07",
+      "date": "2026-05-17T08:55:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:projets|projet-editor,server:projet-git|workflow",
+      "title": "Sécurité transferts : vérif fichiers + statut GitHub",
+      "description": "Implémentation d'un système de vérification et synchronisation sécurisée des fichiers projets. (1) publishWip : le push GitHub est effectué AVANT la suppression de la branche wip, et retourne success:false si le push échoue — le client reçoit HTTP 502 avec localSaved:true. (2) Toast d'erreur dans l'éditeur si 'Partager mes modifications' échoue (push GitHub ou autre). (3) Auto-sync au chargement du projet : pull automatique si le remote est en avance. (4) Badge 'GitHub hors ligne' sur les cartes projet quand github.com est inaccessible. (5) Nouveaux endpoints : POST /api/file-projects/:name/auto-sync et GET /api/github/reachable.",
+      "files": [
+        "server/modules/projet-git.js",
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/project-files.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projets/projets.component.ts",
+        "frankenstein/src/app/pages/user/projets/projets.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Je voudrais qu'une vérification des fichiers soi faite sur la liste des fichiers à chaque commit/push, si celui ci ne ce passe pas bien exemple deconnexion et le \"Partage mes modifications\" est effectué, l'enregistrement de la modification doit être bloqué. La suppression du fichier en local ne doit ce faire que lorsque la modification est bien validé (bdd+git valide). A chaque lancement du projet, cela doit vérifié si les fichiers local sont identique au dépot et doit mettre à jour le dépot ou le local suivant le résultat. Le but est de renforcé la sécurité des transferts des datas/fichiers... Une information doit être affiché pour chaque projet si l'accèt au dépot github lié au projet est impossible et bloqué l'accès.",
+      "startedAt": "2026-05-17T08:30:00Z",
+      "completedAt": "2026-05-17T08:55:00Z"
+    },
+    {
       "id": "mod-182",
       "version": "THI-1.06",
       "date": "2026-05-17T00:30:00Z",

@@ -206,6 +206,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     await this.ensureProjectFolder(this.project()!);
     if (this.localUnavailable()) return;
     await this.loadFiles();
+    this.autoSyncProject(this.projectFolderName);
     this.collab.connect(this.projectFolderName);
     this.subscribeToCollabEvents();
     // F4 — Scroll vers une section si fournie en queryParam (depuis la recherche)
@@ -275,6 +276,15 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       if (node.children?.length) return { ...node, children: this.patchNodeContent(node.children, nodeId, content) };
       return node;
     });
+  }
+
+  private async autoSyncProject(name: string): Promise<void> {
+    try {
+      const result = await this.projectFilesService.autoSync(name);
+      if (result.status === 'pulled' && (result.newCommits ?? 0) > 0) {
+        await this.onRefresh();
+      }
+    } catch { /* silencieux — pas bloquant */ }
   }
 
   private async ensureProjectFolder(_proj: Project) {

@@ -592,6 +592,11 @@
   pointer-events: none;
 
   .material-symbols-outlined { font-size: 15px; }
+
+  &--error {
+    background: #dc2626;
+    top: 56px;
+  }
 }
 
 @keyframes toast-in {
@@ -1778,4 +1783,17 @@ h4.visu-sec-heading {
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.02);
   }
+}
+
+.visu-image-broken {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px dashed rgba(234, 179, 8, 0.4);
+  color: rgb(234, 179, 8);
+  font-size: 0.85rem;
+  .material-symbols-outlined { font-size: 1.2rem; }
 }

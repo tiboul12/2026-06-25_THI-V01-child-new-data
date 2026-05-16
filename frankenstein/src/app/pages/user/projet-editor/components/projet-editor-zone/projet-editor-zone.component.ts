@@ -201,6 +201,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   activeVisuSectionId: string | null = null;
   editingVisuSectionId = signal<string | null>(null);
   publishToastVisible = signal<boolean>(false);
+  publishErrorToastVisible = signal<boolean>(false);
+  publishErrorMessage = signal<string>('');
   // Snapshots du contenu original par section (clé = sectionId / focusedHandle.id)
   // Permet de restaurer le contenu original via "Annuler" même après navigation entre sections
   private codeSectionSnapshots = new Map<string, string>();
@@ -2948,6 +2950,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         await this.svc.updateFile(this.projectName, snapshot.fileId, newMd, sectionId, true);
       } catch (e: any) {
         console.warn('[Publish] erreur lors de la publication:', e);
+        const msg = e?.error?.pushFailed
+          ? 'Sauvegardé localement — synchronisation GitHub échouée'
+          : 'Erreur lors du partage des modifications';
+        this.showPublishErrorToast(msg);
         return;
       }
     } else if (this.projectName) {
@@ -3074,14 +3080,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         context: { projectId: this.projectName },
         undoable: false
       }).catch(() => {});
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[PublishCode] erreur:', e);
+      const msg = e?.error?.pushFailed
+        ? 'Sauvegardé localement — synchronisation GitHub échouée'
+        : 'Erreur lors du partage des modifications';
+      this.showPublishErrorToast(msg);
     }
   }
 
   private showPublishToast(): void {
     this.publishToastVisible.set(true);
     setTimeout(() => this.publishToastVisible.set(false), 3000);
+  }
+
+  private showPublishErrorToast(msg: string): void {
+    this.publishErrorMessage.set(msg);
+    this.publishErrorToastVisible.set(true);
+    setTimeout(() => this.publishErrorToastVisible.set(false), 6000);
   }
 
   onVisuSectionInput(sectionId: string) {
