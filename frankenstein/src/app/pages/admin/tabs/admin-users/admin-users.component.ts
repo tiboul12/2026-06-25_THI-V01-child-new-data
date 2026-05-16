@@ -1,15 +1,14 @@
 import { Component, OnInit, Output, EventEmitter, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { AuthService, AuthUser } from '../../../../core/services/auth.service';
 import { environment } from '../../../../../environments/environment';
 import { WoActionHistoryService } from '../../../../core/services/wo-action-history.service';
 
 @Component({
-  selector: 'app-admin-users',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './admin-users.component.html',
+    selector: 'app-admin-users',
+    imports: [FormsModule],
+    templateUrl: './admin-users.component.html'
 })
 export class AdminUsersComponent implements OnInit {
   @Output() count = new EventEmitter<number>();

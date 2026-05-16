@@ -6,11 +6,10 @@ import { HttpClient } from '@angular/common/http';
 const API = 'http://localhost:3001';
 
 @Component({
-  selector: 'wo-ia-logs',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './wo-ia-logs.component.html',
-  styleUrl: './wo-ia-logs.component.scss'
+    selector: 'wo-ia-logs',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './wo-ia-logs.component.html',
+    styleUrl: './wo-ia-logs.component.scss'
 })
 export class WoIaLogsComponent implements OnInit {
   aiLogs: any[] = [];

@@ -1,16 +1,15 @@
 import { Component, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Router } from '@angular/router';
 import { marked } from 'marked';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MarkdownEditorComponent } from '../../../shared/ui/markdown-editor/markdown-editor.component';
 
 @Component({
-  selector: 'app-editor',
-  standalone: true,
-  imports: [CommonModule, MarkdownEditorComponent],
-  templateUrl: './editor.component.html',
-  styleUrl: './editor.component.scss'
+    selector: 'app-editor',
+    imports: [MarkdownEditorComponent],
+    templateUrl: './editor.component.html',
+    styleUrl: './editor.component.scss'
 })
 export class EditorComponent {
   markdownContent = '';

@@ -15,271 +15,284 @@
     </div>
     <!-- Section tabs -->
     <div class="max-w-6xl mx-auto px-6 flex items-center gap-0.5 pb-0 overflow-x-auto">
-      <button *ngFor="let s of sections"
-              (click)="activeSection = s.id"
+      @for (s of sections; track s) {
+        <button
+          (click)="activeSection = s.id"
               [ngClass]="activeSection === s.id
                 ? 'border-b-2 border-violet-500 text-white bg-violet-500/10'
                 : 'border-b-2 border-transparent text-white/40 hover:text-white/70'"
-              class="flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-all whitespace-nowrap">
-        <span class="material-symbols-outlined text-[14px]">{{s.icon}}</span>
-        {{s.label}}
-      </button>
+          class="flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-all whitespace-nowrap">
+          <span class="material-symbols-outlined text-[14px]">{{s.icon}}</span>
+          {{s.label}}
+        </button>
+      }
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto px-6 py-10">
 
     <!-- ══ OVERVIEW ════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'overview'">
-      <div class="flex items-start gap-6 mb-10">
-        <div class="w-16 h-16 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center flex-shrink-0">
-          <span class="material-symbols-outlined text-violet-400 text-3xl">smart_toy</span>
-        </div>
-        <div>
-          <h1 class="text-3xl font-bold text-white mb-2">Composant <code class="text-violet-400">&lt;wo-tchat-ia&gt;</code></h1>
-          <p class="text-white/60 text-base leading-relaxed max-w-2xl">
-            Composant Angular 18 standalone de tchat IA, entièrement réutilisable hors contexte Frankenstein.
-            Toutes les URLs et options sont configurables via <code class="text-violet-300 text-sm">&#64;Input()</code>.
-            Supporte le streaming SSE, les formulaires dynamiques, la sélection de zones, l'historique multi-sessions et bien plus.
-          </p>
-        </div>
-      </div>
-
-      <!-- Quick features grid -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-violet-400 text-2xl">stream</span>
-          <span class="font-semibold text-sm text-white">SSE Streaming</span>
-          <span class="text-xs text-white/40">Réponse mot par mot en temps réel</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-violet-400 text-2xl">dynamic_form</span>
-          <span class="font-semibold text-sm text-white">Formulaires IA</span>
-          <span class="text-xs text-white/40">Générés automatiquement depuis la réponse</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-amber-400 text-2xl">select_all</span>
-          <span class="font-semibold text-sm text-white">Sélection zones</span>
-          <span class="text-xs text-white/40">Modifier/supprimer des extraits</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-blue-400 text-2xl">shuffle</span>
-          <span class="font-semibold text-sm text-white">Variantes</span>
-          <span class="text-xs text-white/40">Générer N versions d'une réponse</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-cyan-400 text-2xl">history</span>
-          <span class="font-semibold text-sm text-white">Sessions localStorage</span>
-          <span class="text-xs text-white/40">Historique auto-sauvegardé (20 max)</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-green-400 text-2xl">download</span>
-          <span class="font-semibold text-sm text-white">Export</span>
-          <span class="text-xs text-white/40">Conversation en .md ou .json</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-white/60 text-2xl">format_bold</span>
-          <span class="font-semibold text-sm text-white">Markdown</span>
-          <span class="text-xs text-white/40">Rendu riche inline sans dépendance</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-white/60 text-2xl">expand</span>
-          <span class="font-semibold text-sm text-white">Redimensionnable</span>
-          <span class="text-xs text-white/40">CSS resize both, min 400×400px</span>
-        </div>
-      </div>
-
-      <!-- Structure fichiers -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-8">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">folder_open</span> Fichiers du package
-        </h2>
-        <div class="font-mono text-sm space-y-2">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-violet-400 text-sm">description</span>
-            <span class="text-violet-300">tchat-ia.component.ts</span>
-            <span class="text-white/30 text-xs ml-auto">Logique principale · ~350 lignes</span>
+    @if (activeSection === 'overview') {
+      <section>
+        <div class="flex items-start gap-6 mb-10">
+          <div class="w-16 h-16 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-violet-400 text-3xl">smart_toy</span>
           </div>
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-blue-400 text-sm">description</span>
-            <span class="text-blue-300">tchat-ia.component.html</span>
-            <span class="text-white/30 text-xs ml-auto">Template UI complet</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-cyan-400 text-sm">description</span>
-            <span class="text-cyan-300">tchat-ia.types.ts</span>
-            <span class="text-white/30 text-xs ml-auto">Interfaces TypeScript exportables</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-amber-400 text-sm">description</span>
-            <span class="text-amber-300">tchat-ia-doc.component.ts/html</span>
-            <span class="text-white/30 text-xs ml-auto">Cette page de documentation</span>
+          <div>
+            <h1 class="text-3xl font-bold text-white mb-2">Composant <code class="text-violet-400">&lt;wo-tchat-ia&gt;</code></h1>
+            <p class="text-white/60 text-base leading-relaxed max-w-2xl">
+              Composant Angular 18 standalone de tchat IA, entièrement réutilisable hors contexte Frankenstein.
+              Toutes les URLs et options sont configurables via <code class="text-violet-300 text-sm">&#64;Input()</code>.
+              Supporte le streaming SSE, les formulaires dynamiques, la sélection de zones, l'historique multi-sessions et bien plus.
+            </p>
           </div>
         </div>
-      </div>
-
-      <!-- Dépendances -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">package_2</span> Dépendances Angular requises
-        </h2>
-        <div class="flex flex-wrap gap-2">
-          <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">CommonModule</span>
-          <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">FormsModule</span>
-          <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">DatePipe</span>
-          <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">HttpClient</span>
-          <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">DomSanitizer</span>
+        <!-- Quick features grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-violet-400 text-2xl">stream</span>
+            <span class="font-semibold text-sm text-white">SSE Streaming</span>
+            <span class="text-xs text-white/40">Réponse mot par mot en temps réel</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-violet-400 text-2xl">dynamic_form</span>
+            <span class="font-semibold text-sm text-white">Formulaires IA</span>
+            <span class="text-xs text-white/40">Générés automatiquement depuis la réponse</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-2xl">select_all</span>
+            <span class="font-semibold text-sm text-white">Sélection zones</span>
+            <span class="text-xs text-white/40">Modifier/supprimer des extraits</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-blue-400 text-2xl">shuffle</span>
+            <span class="font-semibold text-sm text-white">Variantes</span>
+            <span class="text-xs text-white/40">Générer N versions d'une réponse</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-cyan-400 text-2xl">history</span>
+            <span class="font-semibold text-sm text-white">Sessions localStorage</span>
+            <span class="text-xs text-white/40">Historique auto-sauvegardé (20 max)</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-green-400 text-2xl">download</span>
+            <span class="font-semibold text-sm text-white">Export</span>
+            <span class="text-xs text-white/40">Conversation en .md ou .json</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-white/60 text-2xl">format_bold</span>
+            <span class="font-semibold text-sm text-white">Markdown</span>
+            <span class="text-xs text-white/40">Rendu riche inline sans dépendance</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-white/60 text-2xl">expand</span>
+            <span class="font-semibold text-sm text-white">Redimensionnable</span>
+            <span class="text-xs text-white/40">CSS resize both, min 400×400px</span>
+          </div>
         </div>
-        <p class="text-xs text-white/30 mt-3">Aucune dépendance npm externe. Markdown rendu en pur regex JS.</p>
-      </div>
-    </section>
+        <!-- Structure fichiers -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-8">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">folder_open</span> Fichiers du package
+          </h2>
+          <div class="font-mono text-sm space-y-2">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-violet-400 text-sm">description</span>
+              <span class="text-violet-300">tchat-ia.component.ts</span>
+              <span class="text-white/30 text-xs ml-auto">Logique principale · ~350 lignes</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-blue-400 text-sm">description</span>
+              <span class="text-blue-300">tchat-ia.component.html</span>
+              <span class="text-white/30 text-xs ml-auto">Template UI complet</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-cyan-400 text-sm">description</span>
+              <span class="text-cyan-300">tchat-ia.types.ts</span>
+              <span class="text-white/30 text-xs ml-auto">Interfaces TypeScript exportables</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-amber-400 text-sm">description</span>
+              <span class="text-amber-300">tchat-ia-doc.component.ts/html</span>
+              <span class="text-white/30 text-xs ml-auto">Cette page de documentation</span>
+            </div>
+          </div>
+        </div>
+        <!-- Dépendances -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">package_2</span> Dépendances Angular requises
+          </h2>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">CommonModule</span>
+            <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">FormsModule</span>
+            <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">DatePipe</span>
+            <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">HttpClient</span>
+            <span class="px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-mono">DomSanitizer</span>
+          </div>
+          <p class="text-xs text-white/30 mt-3">Aucune dépendance npm externe. Markdown rendu en pur regex JS.</p>
+        </div>
+      </section>
+    }
 
     <!-- ══ INPUTS ═══════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'inputs'">
-      <h1 class="text-2xl font-bold text-white mb-2">Entrées <span class="text-violet-400">&#64;Input()</span></h1>
-      <p class="text-white/50 text-sm mb-8">{{inputs.length}} propriétés configurables. Toutes optionnelles sauf <code class="text-violet-300">executorUrl</code> en production.</p>
-
-      <div class="space-y-3">
-        <div *ngFor="let inp of inputs"
-             class="bg-[#111120] border border-white/10 hover:border-violet-500/30 rounded-xl p-5 transition-all">
-          <div class="flex items-start gap-4">
-            <!-- Icon -->
-            <div class="w-9 h-9 rounded-lg bg-violet-500/15 border border-violet-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span class="material-symbols-outlined text-violet-400 text-[18px]">{{inp.icon}}</span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <!-- Name + type + required -->
-              <div class="flex flex-wrap items-center gap-2 mb-1">
-                <code class="text-violet-300 font-bold text-sm">{{inp.name}}</code>
-                <code class="text-cyan-400/80 text-xs bg-cyan-400/10 px-2 py-0.5 rounded">{{inp.type}}</code>
-                <code class="text-white/30 text-xs bg-white/5 px-2 py-0.5 rounded">default: {{inp.default}}</code>
-                <span *ngIf="inp.required"
-                      class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400">
-                  recommandé
-                </span>
+    @if (activeSection === 'inputs') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Entrées <span class="text-violet-400">&#64;Input()</span></h1>
+        <p class="text-white/50 text-sm mb-8">{{inputs.length}} propriétés configurables. Toutes optionnelles sauf <code class="text-violet-300">executorUrl</code> en production.</p>
+        <div class="space-y-3">
+          @for (inp of inputs; track inp) {
+            <div
+              class="bg-[#111120] border border-white/10 hover:border-violet-500/30 rounded-xl p-5 transition-all">
+              <div class="flex items-start gap-4">
+                <!-- Icon -->
+                <div class="w-9 h-9 rounded-lg bg-violet-500/15 border border-violet-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span class="material-symbols-outlined text-violet-400 text-[18px]">{{inp.icon}}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <!-- Name + type + required -->
+                  <div class="flex flex-wrap items-center gap-2 mb-1">
+                    <code class="text-violet-300 font-bold text-sm">{{inp.name}}</code>
+                    <code class="text-cyan-400/80 text-xs bg-cyan-400/10 px-2 py-0.5 rounded">{{inp.type}}</code>
+                    <code class="text-white/30 text-xs bg-white/5 px-2 py-0.5 rounded">default: {{inp.default}}</code>
+                    @if (inp.required) {
+                      <span
+                        class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400">
+                        recommandé
+                      </span>
+                    }
+                  </div>
+                  <!-- Description -->
+                  <p class="text-sm text-white/60 leading-relaxed">{{inp.desc}}</p>
+                </div>
               </div>
-              <!-- Description -->
-              <p class="text-sm text-white/60 leading-relaxed">{{inp.desc}}</p>
             </div>
-          </div>
+          }
         </div>
-      </div>
-    </section>
+      </section>
+    }
 
     <!-- ══ OUTPUTS ══════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'outputs'">
-      <h1 class="text-2xl font-bold text-white mb-2">Sorties <span class="text-violet-400">&#64;Output()</span></h1>
-      <p class="text-white/50 text-sm mb-8">{{outputs.length}} événements émis. Tous optionnels — souscrivez uniquement à ceux dont vous avez besoin.</p>
-
-      <div class="space-y-4">
-        <div *ngFor="let out of outputs"
-             class="bg-[#111120] border border-white/10 hover:border-green-500/30 rounded-xl p-5 transition-all">
-          <div class="flex items-start gap-4">
-            <div class="w-9 h-9 rounded-lg bg-green-500/15 border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span class="material-symbols-outlined text-green-400 text-[18px]">{{out.icon}}</span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex flex-wrap items-center gap-2 mb-1">
-                <code class="text-green-300 font-bold text-sm">{{out.name}}</code>
-                <code class="text-cyan-400/80 text-xs bg-cyan-400/10 px-2 py-0.5 rounded">EventEmitter&lt;{{out.payload}}&gt;</code>
+    @if (activeSection === 'outputs') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Sorties <span class="text-violet-400">&#64;Output()</span></h1>
+        <p class="text-white/50 text-sm mb-8">{{outputs.length}} événements émis. Tous optionnels — souscrivez uniquement à ceux dont vous avez besoin.</p>
+        <div class="space-y-4">
+          @for (out of outputs; track out) {
+            <div
+              class="bg-[#111120] border border-white/10 hover:border-green-500/30 rounded-xl p-5 transition-all">
+              <div class="flex items-start gap-4">
+                <div class="w-9 h-9 rounded-lg bg-green-500/15 border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span class="material-symbols-outlined text-green-400 text-[18px]">{{out.icon}}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex flex-wrap items-center gap-2 mb-1">
+                    <code class="text-green-300 font-bold text-sm">{{out.name}}</code>
+                    <code class="text-cyan-400/80 text-xs bg-cyan-400/10 px-2 py-0.5 rounded">EventEmitter&lt;{{out.payload}}&gt;</code>
+                  </div>
+                  <p class="text-sm text-white/60 leading-relaxed">{{out.desc}}</p>
+                </div>
               </div>
-              <p class="text-sm text-white/60 leading-relaxed">{{out.desc}}</p>
             </div>
-          </div>
+          }
         </div>
-      </div>
-
-      <!-- TchatResult interface -->
-      <div class="mt-8 bg-[#111120] border border-white/10 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">data_object</span> Interface TchatResult (payload de closed)
-        </h2>
-        <pre class="text-sm font-mono text-green-300/90 leading-relaxed whitespace-pre-wrap">interface TchatResult &#123;
-  messages:        TchatMessage[];   // tous les messages hors system
-  conversation:    string;           // export texte [IA] ... / [USER] ...
-  formAnswers:     Array&lt;&#123; formTitle: string; values: Record&lt;string, any&gt; &#125;&gt;;
-  documentsCreated: string[];        // noms des fichiers créés
-&#125;</pre>
-      </div>
-    </section>
+        <!-- TchatResult interface -->
+        <div class="mt-8 bg-[#111120] border border-white/10 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">data_object</span> Interface TchatResult (payload de closed)
+          </h2>
+          <pre class="text-sm font-mono text-green-300/90 leading-relaxed whitespace-pre-wrap">interface TchatResult &#123;
+            messages:        TchatMessage[];   // tous les messages hors system
+            conversation:    string;           // export texte [IA] ... / [USER] ...
+            formAnswers:     Array&lt;&#123; formTitle: string; values: Record&lt;string, any&gt; &#125;&gt;;
+            documentsCreated: string[];        // noms des fichiers créés
+          &#125;</pre>
+        </div>
+      </section>
+    }
 
     <!-- ══ MARKERS ══════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'markers'">
-      <h1 class="text-2xl font-bold text-white mb-2">Marqueurs IA</h1>
-      <p class="text-white/50 text-sm mb-8">
-        Strings spéciaux que l'IA doit inclure dans ses réponses pour déclencher des comportements côté composant.
-        Ils sont automatiquement injectés dans le prompt système — l'IA n'a pas besoin d'instructions supplémentaires.
-      </p>
-
-      <div class="space-y-6">
-        <div *ngFor="let m of markers"
-             class="bg-[#111120] border border-white/10 rounded-2xl p-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+    @if (activeSection === 'markers') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Marqueurs IA</h1>
+        <p class="text-white/50 text-sm mb-8">
+          Strings spéciaux que l'IA doit inclure dans ses réponses pour déclencher des comportements côté composant.
+          Ils sont automatiquement injectés dans le prompt système — l'IA n'a pas besoin d'instructions supplémentaires.
+        </p>
+        <div class="space-y-6">
+          @for (m of markers; track m) {
+            <div
+              class="bg-[#111120] border border-white/10 rounded-2xl p-6">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                  [ngClass]="{
                    'bg-violet-500/15 border border-violet-500/20': m.color === 'violet',
                    'bg-blue-500/15 border border-blue-500/20':     m.color === 'blue',
                    'bg-green-500/15 border border-green-500/20':   m.color === 'green',
                    'bg-teal-500/15 border border-teal-500/20':     m.color === 'teal'
                  }">
-              <span class="material-symbols-outlined text-[18px]"
+                  <span class="material-symbols-outlined text-[18px]"
                     [ngClass]="{
                       'text-violet-400': m.color === 'violet',
                       'text-blue-400':   m.color === 'blue',
                       'text-green-400':  m.color === 'green',
                       'text-teal-400':   m.color === 'teal'
                     }">{{m.icon}}</span>
-            </div>
-            <code class="font-bold text-base"
+                </div>
+                <code class="font-bold text-base"
                   [ngClass]="{
                     'text-violet-300': m.color === 'violet',
                     'text-blue-300':   m.color === 'blue',
                     'text-green-300':  m.color === 'green',
                     'text-teal-300':   m.color === 'teal'
                   }">{{m.name}}</code>
-          </div>
-          <p class="text-sm text-white/60 mb-4 leading-relaxed">{{m.desc}}</p>
-          <div class="bg-black/40 rounded-xl p-4">
-            <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[12px]">code</span> Exemple dans une réponse IA
+              </div>
+              <p class="text-sm text-white/60 mb-4 leading-relaxed">{{m.desc}}</p>
+              <div class="bg-black/40 rounded-xl p-4">
+                <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[12px]">code</span> Exemple dans une réponse IA
+                </div>
+                <pre class="text-xs font-mono text-green-300/80 leading-relaxed whitespace-pre-wrap">{{m.example}}</pre>
+              </div>
             </div>
-            <pre class="text-xs font-mono text-green-300/80 leading-relaxed whitespace-pre-wrap">{{m.example}}</pre>
+          }
+        </div>
+        <!-- Types de champs de formulaire -->
+        <div class="mt-8 bg-[#111120] border border-white/10 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">dynamic_form</span> Types de champs disponibles pour les formulaires
+          </h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            @for (t of ['text','textarea','select','radio','checkbox','number','date']; track t) {
+              <div
+                class="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                <span class="material-symbols-outlined text-violet-400 text-sm">
+                  {{t === 'text' ? 'text_fields' : t === 'textarea' ? 'notes' : t === 'select' ? 'arrow_drop_down_circle' : t === 'radio' ? 'radio_button_checked' : t === 'checkbox' ? 'check_box' : t === 'number' ? 'pin' : 'calendar_today'}}
+                </span>
+                <code class="text-violet-300 text-xs font-mono">{{t}}</code>
+              </div>
+            }
+          </div>
+          <div class="mt-4 text-xs text-white/40">
+            Les champs <code class="text-violet-300">select</code> et <code class="text-violet-300">radio</code> requièrent un tableau
+            <code class="text-cyan-300">"options": [&#123;"value":"v","label":"L"&#125;]</code>.
           </div>
         </div>
-      </div>
-
-      <!-- Types de champs de formulaire -->
-      <div class="mt-8 bg-[#111120] border border-white/10 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">dynamic_form</span> Types de champs disponibles pour les formulaires
-        </h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div *ngFor="let t of ['text','textarea','select','radio','checkbox','number','date']"
-               class="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
-            <span class="material-symbols-outlined text-violet-400 text-sm">
-              {{t === 'text' ? 'text_fields' : t === 'textarea' ? 'notes' : t === 'select' ? 'arrow_drop_down_circle' : t === 'radio' ? 'radio_button_checked' : t === 'checkbox' ? 'check_box' : t === 'number' ? 'pin' : 'calendar_today'}}
-            </span>
-            <code class="text-violet-300 text-xs font-mono">{{t}}</code>
-          </div>
-        </div>
-        <div class="mt-4 text-xs text-white/40">
-          Les champs <code class="text-violet-300">select</code> et <code class="text-violet-300">radio</code> requièrent un tableau
-          <code class="text-cyan-300">"options": [&#123;"value":"v","label":"L"&#125;]</code>.
-        </div>
-      </div>
-    </section>
+      </section>
+    }
 
     <!-- ══ FEATURES ═════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'features'">
-      <h1 class="text-2xl font-bold text-white mb-2">Fonctionnalités</h1>
-      <p class="text-white/50 text-sm mb-8">Description détaillée de chaque fonctionnalité intégrée au composant.</p>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div *ngFor="let f of features"
-             class="bg-[#111120] border border-white/10 hover:border-white/20 rounded-xl p-5 transition-all">
-          <div class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span class="material-symbols-outlined text-[18px]"
+    @if (activeSection === 'features') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Fonctionnalités</h1>
+        <p class="text-white/50 text-sm mb-8">Description détaillée de chaque fonctionnalité intégrée au composant.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          @for (f of features; track f) {
+            <div
+              class="bg-[#111120] border border-white/10 hover:border-white/20 rounded-xl p-5 transition-all">
+              <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span class="material-symbols-outlined text-[18px]"
                     [ngClass]="{
                       'text-violet-400': f.color === 'violet',
                       'text-amber-400':  f.color === 'amber',
@@ -288,177 +301,169 @@
                       'text-green-400':  f.color === 'green',
                       'text-white/70':   f.color === 'white'
                     }">{{f.icon}}</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-white text-sm mb-1">{{f.title}}</h3>
+                  <p class="text-xs text-white/50 leading-relaxed">{{f.desc}}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h3 class="font-bold text-white text-sm mb-1">{{f.title}}</h3>
-              <p class="text-xs text-white/50 leading-relaxed">{{f.desc}}</p>
+          }
+        </div>
+        <!-- Interface utilisateur — zones annotées -->
+        <div class="mt-8 bg-[#111120] border border-white/10 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">web</span> Interface — zones du modal
+          </h2>
+          <div class="space-y-3 text-sm">
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+              <span class="material-symbols-outlined text-violet-400 text-base flex-shrink-0">crop_square</span>
+              <div><span class="font-semibold text-white">Header</span><span class="text-white/50 ml-2">— Titre, provider/modèle, compteur tokens, onglets (chat/log/history), bouton sélection zones, menu export, bouton aide, bouton fermer</span></div>
+            </div>
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+              <span class="material-symbols-outlined text-amber-400 text-base flex-shrink-0">crop_square</span>
+              <div><span class="font-semibold text-white">Bandeau sélection</span><span class="text-white/50 ml-2">— Affiché uniquement en mode sélection, rappelle le mode actif</span></div>
+            </div>
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+              <span class="material-symbols-outlined text-cyan-400 text-base flex-shrink-0">crop_square</span>
+              <div><span class="font-semibold text-white">Zone de messages</span><span class="text-white/50 ml-2">— Bulles IA (gauche, violet) et utilisateur (droite). Actions au survol : copier, 👍/👎, demander variantes. Streaming cursor animé.</span></div>
+            </div>
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+              <span class="material-symbols-outlined text-blue-400 text-base flex-shrink-0">crop_square</span>
+              <div><span class="font-semibold text-white">Panel variantes</span><span class="text-white/50 ml-2">— Apparaît automatiquement après la réponse si l'IA utilise les marqueurs [VARIANTE N]</span></div>
+            </div>
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+              <span class="material-symbols-outlined text-green-400 text-base flex-shrink-0">crop_square</span>
+              <div><span class="font-semibold text-white">Zone input</span><span class="text-white/50 ml-2">— Form templates, quick prompts, textarea + bouton envoyer. Remplacée par message "Terminé" quand l'IA envoie le marqueur de fin.</span></div>
+            </div>
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+              <span class="material-symbols-outlined text-white/50 text-base flex-shrink-0">crop_square</span>
+              <div><span class="font-semibold text-white">Toolbar zone (floating fixed)</span><span class="text-white/50 ml-2">— Apparaît à la position de la sélection : Modifier / Développer / Supprimer + champ instruction</span></div>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Interface utilisateur — zones annotées -->
-      <div class="mt-8 bg-[#111120] border border-white/10 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">web</span> Interface — zones du modal
-        </h2>
-        <div class="space-y-3 text-sm">
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-            <span class="material-symbols-outlined text-violet-400 text-base flex-shrink-0">crop_square</span>
-            <div><span class="font-semibold text-white">Header</span><span class="text-white/50 ml-2">— Titre, provider/modèle, compteur tokens, onglets (chat/log/history), bouton sélection zones, menu export, bouton aide, bouton fermer</span></div>
-          </div>
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-            <span class="material-symbols-outlined text-amber-400 text-base flex-shrink-0">crop_square</span>
-            <div><span class="font-semibold text-white">Bandeau sélection</span><span class="text-white/50 ml-2">— Affiché uniquement en mode sélection, rappelle le mode actif</span></div>
-          </div>
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-            <span class="material-symbols-outlined text-cyan-400 text-base flex-shrink-0">crop_square</span>
-            <div><span class="font-semibold text-white">Zone de messages</span><span class="text-white/50 ml-2">— Bulles IA (gauche, violet) et utilisateur (droite). Actions au survol : copier, 👍/👎, demander variantes. Streaming cursor animé.</span></div>
-          </div>
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-            <span class="material-symbols-outlined text-blue-400 text-base flex-shrink-0">crop_square</span>
-            <div><span class="font-semibold text-white">Panel variantes</span><span class="text-white/50 ml-2">— Apparaît automatiquement après la réponse si l'IA utilise les marqueurs [VARIANTE N]</span></div>
-          </div>
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-            <span class="material-symbols-outlined text-green-400 text-base flex-shrink-0">crop_square</span>
-            <div><span class="font-semibold text-white">Zone input</span><span class="text-white/50 ml-2">— Form templates, quick prompts, textarea + bouton envoyer. Remplacée par message "Terminé" quand l'IA envoie le marqueur de fin.</span></div>
-          </div>
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-            <span class="material-symbols-outlined text-white/50 text-base flex-shrink-0">crop_square</span>
-            <div><span class="font-semibold text-white">Toolbar zone (floating fixed)</span><span class="text-white/50 ml-2">— Apparaît à la position de la sélection : Modifier / Développer / Supprimer + champ instruction</span></div>
-          </div>
-        </div>
-      </div>
-    </section>
+      </section>
+    }
 
     <!-- ══ USAGE ═════════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'usage'">
-      <h1 class="text-2xl font-bold text-white mb-2">Exemple d'usage</h1>
-      <p class="text-white/50 text-sm mb-8">Intégration minimale et intégration complète avec toutes les options.</p>
-
-      <!-- Import -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">add_circle</span> 1. Import dans le composant parent
-        </h2>
-        <pre class="text-sm font-mono text-green-300/90 leading-relaxed">import &#123; TchatIaComponent &#125; from '../../components/tchat-ia/tchat-ia.component';
-
-&#64;Component(&#123;
-  imports: [TchatIaComponent, ...]
-&#125;)</pre>
-      </div>
-
-      <!-- Minimal -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">minimize</span> 2. Usage minimal
-        </h2>
-        <pre class="text-sm font-mono text-blue-300/90 leading-relaxed whitespace-pre-wrap">&lt;wo-tchat-ia
-  [visible]="showChat"
-  executorUrl="http://localhost:3002"
-  (closed)="showChat = false"&gt;
-&lt;/wo-tchat-ia&gt;</pre>
-      </div>
-
-      <!-- Full -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">open_in_full</span> 3. Usage complet
-        </h2>
-        <pre class="text-sm font-mono text-blue-300/90 leading-relaxed whitespace-pre-wrap">&lt;wo-tchat-ia
-  [visible]="showChat"
-  executorUrl="http://localhost:3002"
-  apiUrl="http://localhost:3001"
-  provider="claude"
-  model="claude-sonnet-4-6"
-  title="Assistant Projet"
-  systemPrompt="Tu es expert en gestion de projet agile..."
-  initialPrompt="Bonjour ! Quel est votre besoin ?"
-  [context]="&#123; user: currentUser, siteName: 'MonApp', params: &#123; role: 'admin' &#125; &#125;"
-  [allowFormGeneration]="true"
-  [allowZoneSelection]="true"
-  [allowMarkdown]="true"
-  [allowExport]="true"
-  [allowContinueAfterEnd]="false"
-  [quickPrompts]="['Reformule', 'Plus de détails', 'Résume']"
-  endMarker="[FIN_TCHAT]"
-  [formTemplates]="myForms"
-  (closed)="onChatClosed($event)"
-  (aiResponse)="onAiMsg($event)"
-  (formSubmitted)="onForm($event)"
-  (messageSent)="onUserMsg($event)"
-  (zoneModificationRequested)="onZone($event)"&gt;
-&lt;/wo-tchat-ia&gt;</pre>
-      </div>
-
-      <!-- TS side -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">code</span> 4. Côté TypeScript
-        </h2>
-        <pre class="text-sm font-mono text-green-300/90 leading-relaxed whitespace-pre-wrap">import &#123; TchatResult, TchatMessage, TchatForm &#125; from '../../components/tchat-ia/tchat-ia.types';
-
-showChat = false;
-
-myForms: TchatForm[] = [
-  &#123;
-    title: 'Nouveau projet',
-    fields: [
-      &#123; id: 'name', type: 'text',   label: 'Nom',  required: true &#125;,
-      &#123; id: 'type', type: 'select', label: 'Type',
-        options: [&#123;value:'web',label:'Web'&#125;, &#123;value:'app',label:'App'&#125;] &#125;
-    ]
-  &#125;
-];
-
-onChatClosed(result: TchatResult) &#123;
-  console.log('Messages :', result.messages.length);
-  console.log('Formulaires soumis :', result.formAnswers);
-  console.log('Documents :', result.documentsCreated);
-  this.showChat = false;
-&#125;
-
-onAiMsg(msg: TchatMessage) &#123;
-  console.log('IA a répondu :', msg.type, msg.tokensUsed, 'tokens');
-&#125;
-
-onForm(data: &#123; formTitle: string; values: any &#125;) &#123;
-  console.log('Formulaire :', data.formTitle, data.values);
-&#125;</pre>
-      </div>
-
-      <!-- Executor API -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">dns</span> 5. API executor requise — POST /execute-chat-turn
-        </h2>
-        <p class="text-xs text-white/40 mb-4">Le composant envoie ce payload et attend un flux SSE en réponse.</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Payload envoyé</div>
-            <pre class="text-xs font-mono text-blue-300/80 leading-relaxed whitespace-pre-wrap">&#123;
-  "stepId": "tchat-ia",
-  "conversationHistory": [
-    &#123; "role": "system", "content": "..." &#125;,
-    &#123; "role": "user",   "content": "..." &#125;
-  ],
-  "provider": "claude",
-  "model": "claude-sonnet-4-6"
-&#125;</pre>
-          </div>
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Événements SSE attendus</div>
-            <pre class="text-xs font-mono text-green-300/80 leading-relaxed whitespace-pre-wrap">data: &#123;"type":"start","message":"..."&#125;
-data: &#123;"type":"stdout","message":"texte"&#125;
-data: &#123;"type":"tokens","tokensUsed":42&#125;
-data: &#123;"type":"stderr","message":"..."&#125;
-data: &#123;"type":"end","code":0&#125;
-data: &#123;"type":"error","message":"..."&#125;
-data: &#123;"type":"heartbeat","message":"..."&#125;</pre>
+    @if (activeSection === 'usage') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Exemple d'usage</h1>
+        <p class="text-white/50 text-sm mb-8">Intégration minimale et intégration complète avec toutes les options.</p>
+        <!-- Import -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">add_circle</span> 1. Import dans le composant parent
+          </h2>
+          <pre class="text-sm font-mono text-green-300/90 leading-relaxed">import &#123; TchatIaComponent &#125; from '../../components/tchat-ia/tchat-ia.component';
+            &#64;Component(&#123;
+            imports: [TchatIaComponent, ...]
+          &#125;)</pre>
+        </div>
+        <!-- Minimal -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">minimize</span> 2. Usage minimal
+          </h2>
+          <pre class="text-sm font-mono text-blue-300/90 leading-relaxed whitespace-pre-wrap">&lt;wo-tchat-ia
+            [visible]="showChat"
+            executorUrl="http://localhost:3002"
+            (closed)="showChat = false"&gt;
+          &lt;/wo-tchat-ia&gt;</pre>
+        </div>
+        <!-- Full -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">open_in_full</span> 3. Usage complet
+          </h2>
+          <pre class="text-sm font-mono text-blue-300/90 leading-relaxed whitespace-pre-wrap">&lt;wo-tchat-ia
+            [visible]="showChat"
+            executorUrl="http://localhost:3002"
+            apiUrl="http://localhost:3001"
+            provider="claude"
+            model="claude-sonnet-4-6"
+            title="Assistant Projet"
+            systemPrompt="Tu es expert en gestion de projet agile..."
+            initialPrompt="Bonjour ! Quel est votre besoin ?"
+            [context]="&#123; user: currentUser, siteName: 'MonApp', params: &#123; role: 'admin' &#125; &#125;"
+            [allowFormGeneration]="true"
+            [allowZoneSelection]="true"
+            [allowMarkdown]="true"
+            [allowExport]="true"
+            [allowContinueAfterEnd]="false"
+            [quickPrompts]="['Reformule', 'Plus de détails', 'Résume']"
+            endMarker="[FIN_TCHAT]"
+            [formTemplates]="myForms"
+            (closed)="onChatClosed($event)"
+            (aiResponse)="onAiMsg($event)"
+            (formSubmitted)="onForm($event)"
+            (messageSent)="onUserMsg($event)"
+            (zoneModificationRequested)="onZone($event)"&gt;
+          &lt;/wo-tchat-ia&gt;</pre>
+        </div>
+        <!-- TS side -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">code</span> 4. Côté TypeScript
+          </h2>
+          <pre class="text-sm font-mono text-green-300/90 leading-relaxed whitespace-pre-wrap">import &#123; TchatResult, TchatMessage, TchatForm &#125; from '../../components/tchat-ia/tchat-ia.types';
+            showChat = false;
+            myForms: TchatForm[] = [
+            &#123;
+            title: 'Nouveau projet',
+            fields: [
+            &#123; id: 'name', type: 'text',   label: 'Nom',  required: true &#125;,
+            &#123; id: 'type', type: 'select', label: 'Type',
+            options: [&#123;value:'web',label:'Web'&#125;, &#123;value:'app',label:'App'&#125;] &#125;
+            ]
+            &#125;
+            ];
+            onChatClosed(result: TchatResult) &#123;
+            console.log('Messages :', result.messages.length);
+            console.log('Formulaires soumis :', result.formAnswers);
+            console.log('Documents :', result.documentsCreated);
+            this.showChat = false;
+            &#125;
+            onAiMsg(msg: TchatMessage) &#123;
+            console.log('IA a répondu :', msg.type, msg.tokensUsed, 'tokens');
+            &#125;
+            onForm(data: &#123; formTitle: string; values: any &#125;) &#123;
+            console.log('Formulaire :', data.formTitle, data.values);
+          &#125;</pre>
+        </div>
+        <!-- Executor API -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">dns</span> 5. API executor requise — POST /execute-chat-turn
+          </h2>
+          <p class="text-xs text-white/40 mb-4">Le composant envoie ce payload et attend un flux SSE en réponse.</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Payload envoyé</div>
+              <pre class="text-xs font-mono text-blue-300/80 leading-relaxed whitespace-pre-wrap">&#123;
+                "stepId": "tchat-ia",
+                "conversationHistory": [
+                &#123; "role": "system", "content": "..." &#125;,
+                &#123; "role": "user",   "content": "..." &#125;
+                ],
+                "provider": "claude",
+                "model": "claude-sonnet-4-6"
+              &#125;</pre>
+            </div>
+            <div>
+              <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Événements SSE attendus</div>
+              <pre class="text-xs font-mono text-green-300/80 leading-relaxed whitespace-pre-wrap">data: &#123;"type":"start","message":"..."&#125;
+                data: &#123;"type":"stdout","message":"texte"&#125;
+                data: &#123;"type":"tokens","tokensUsed":42&#125;
+                data: &#123;"type":"stderr","message":"..."&#125;
+                data: &#123;"type":"end","code":0&#125;
+                data: &#123;"type":"error","message":"..."&#125;
+              data: &#123;"type":"heartbeat","message":"..."&#125;</pre>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    }
 
   </main>
 

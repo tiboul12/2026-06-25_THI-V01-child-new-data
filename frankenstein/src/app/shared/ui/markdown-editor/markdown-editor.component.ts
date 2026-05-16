@@ -1,14 +1,13 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { marked } from 'marked';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
-  selector: 'app-markdown-editor',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './markdown-editor.component.html',
-  host: { class: 'flex flex-col min-h-0 flex-1' },
+    selector: 'app-markdown-editor',
+    imports: [],
+    templateUrl: './markdown-editor.component.html',
+    host: { class: 'flex flex-col min-h-0 flex-1' }
 })
 export class MarkdownEditorComponent {
   @Input() value = '';

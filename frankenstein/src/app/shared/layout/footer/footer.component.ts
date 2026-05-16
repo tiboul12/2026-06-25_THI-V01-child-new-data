@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfigService } from '../../../core/services/config.service';
@@ -9,10 +9,9 @@ import { environment } from '../../../../environments/environment';
 const API = environment.apiDataUrl;
 
 @Component({
-  selector: 'app-footer',
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  templateUrl: './footer.component.html',
+    selector: 'app-footer',
+    imports: [RouterModule],
+    templateUrl: './footer.component.html'
 })
 export class FooterComponent implements OnInit {
   @Input() onOpenTools?: () => void;

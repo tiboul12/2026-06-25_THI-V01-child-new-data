@@ -6,16 +6,17 @@
     <div class="glow-orb orb-1"></div>
     <div class="glow-orb orb-2"></div>
     <div class="glow-orb orb-3"></div>
-    <div
-      *ngFor="let p of particles"
-      class="particle"
-      [style.left.%]="p.x"
-      [style.top.%]="p.y"
-      [style.width.px]="p.size"
-      [style.height.px]="p.size"
-      [style.animationDuration.s]="p.duration"
-      [style.animationDelay.s]="p.delay">
-    </div>
+    @for (p of particles; track p) {
+      <div
+        class="particle"
+        [style.left.%]="p.x"
+        [style.top.%]="p.y"
+        [style.width.px]="p.size"
+        [style.height.px]="p.size"
+        [style.animationDuration.s]="p.duration"
+        [style.animationDelay.s]="p.delay">
+      </div>
+    }
   </div>
 
   <!-- ─── HEADER ─── -->
@@ -48,18 +49,20 @@
     </div>
 
     <!-- Bannière erreur BDD -->
-    <div *ngIf="dbError" class="db-error-banner">
-      <span class="material-symbols-outlined">error</span>
-      <div>
-        <strong>Service indisponible</strong>
-        <p>La connexion à la base de données a échoué. Veuillez contacter l'administrateur.</p>
-        <p class="db-error-ip">IP : {{ db.clientIp() || 'non disponible' }}</p>
-        <button class="db-retry-btn" (click)="retryDb()" [disabled]="retrying">
-          <span class="material-symbols-outlined">{{ retrying ? 'hourglass_empty' : 'refresh' }}</span>
-          {{ retrying ? 'Vérification...' : 'Retester la connexion' }}
-        </button>
+    @if (dbError) {
+      <div class="db-error-banner">
+        <span class="material-symbols-outlined">error</span>
+        <div>
+          <strong>Service indisponible</strong>
+          <p>La connexion à la base de données a échoué. Veuillez contacter l'administrateur.</p>
+          <p class="db-error-ip">IP : {{ db.clientIp() || 'non disponible' }}</p>
+          <button class="db-retry-btn" (click)="retryDb()" [disabled]="retrying">
+            <span class="material-symbols-outlined">{{ retrying ? 'hourglass_empty' : 'refresh' }}</span>
+            {{ retrying ? 'Vérification...' : 'Retester la connexion' }}
+          </button>
+        </div>
       </div>
-    </div>
+    }
 
     <h1 class="hero-title">
       Automatisez vos<br>
@@ -229,176 +232,179 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════
-     LOGIN MODAL
+LOGIN MODAL
 ════════════════════════════════════════════════ -->
-<div *ngIf="showLoginModal"
-     class="modal-overlay"
-     (click)="onOverlayClick($event)"
-     role="dialog" aria-modal="true" aria-label="Connexion">
-  <div class="modal-box">
-    <!-- Header -->
-    <div class="modal-head">
-      <div class="modal-icon modal-icon-purple">
-        <span class="material-symbols-outlined">login</span>
-      </div>
-      <div>
-        <h2 class="modal-title">Connexion</h2>
-        <p class="modal-sub">Accédez à votre espace Frankenstein Junior</p>
-      </div>
-      <button class="modal-close" (click)="closeModals()" aria-label="Fermer">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <!-- Body -->
-    <div class="modal-body">
-      <div *ngIf="loginError" class="modal-error">
-        <span class="material-symbols-outlined">error</span>
-        {{ loginError }}
-      </div>
-
-      <form autocomplete="on" (ngSubmit)="submitLogin()">
-      <div class="form-group">
-        <label for="login-email">Email</label>
-        <div class="input-wrap">
-          <span class="material-symbols-outlined input-icon">mail</span>
-          <input id="login-email"
-                 type="email"
-                 [(ngModel)]="loginEmail"
-                 name="login-email"
-                 placeholder="votre&#64;email.com"
-                 (keydown.enter)="submitLogin()"
-                 autocomplete="email" />
+@if (showLoginModal) {
+  <div
+    class="modal-overlay"
+    (click)="onOverlayClick($event)"
+    role="dialog" aria-modal="true" aria-label="Connexion">
+    <div class="modal-box">
+      <!-- Header -->
+      <div class="modal-head">
+        <div class="modal-icon modal-icon-purple">
+          <span class="material-symbols-outlined">login</span>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label for="login-password">Mot de passe</label>
-        <div class="input-wrap">
-          <span class="material-symbols-outlined input-icon">lock</span>
-          <input id="login-password"
-                 type="password"
-                 [(ngModel)]="loginPassword"
-                 name="login-password"
-                 placeholder="••••••••"
-                 autocomplete="current-password" />
+        <div>
+          <h2 class="modal-title">Connexion</h2>
+          <p class="modal-sub">Accédez à votre espace Frankenstein Junior</p>
         </div>
+        <button class="modal-close" (click)="closeModals()" aria-label="Fermer">
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
-
-      <button type="submit" class="btn-submit" [disabled]="loginLoading">
-        <span *ngIf="!loginLoading" class="material-symbols-outlined">login</span>
-        <span *ngIf="loginLoading" class="spinner"></span>
-        {{ loginLoading ? 'Connexion...' : 'Se connecter' }}
-      </button>
-      </form>
-
-      <p class="modal-switch">
-        Pas encore de compte ?
-        <button class="link-btn" (click)="openRegister()">Créer un compte</button>
-      </p>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     REGISTER MODAL
-════════════════════════════════════════════════ -->
-<div *ngIf="showRegisterModal"
-     class="modal-overlay"
-     (click)="onOverlayClick($event)"
-     role="dialog" aria-modal="true" aria-label="Inscription">
-  <div class="modal-box">
-    <!-- Header -->
-    <div class="modal-head">
-      <div class="modal-icon modal-icon-green">
-        <span class="material-symbols-outlined">person_add</span>
-      </div>
-      <div>
-        <h2 class="modal-title">Créer un compte</h2>
-        <p class="modal-sub">Rejoignez la plateforme Frankenstein Junior</p>
-      </div>
-      <button class="modal-close" (click)="closeModals()" aria-label="Fermer">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <!-- Body -->
-    <div class="modal-body">
-      <div *ngIf="registerError" class="modal-error">
-        <span class="material-symbols-outlined">error</span>
-        {{ registerError }}
-      </div>
-
-      <form autocomplete="on" (ngSubmit)="submitRegister()">
-      <div class="form-group">
-        <label for="reg-username">Nom d'utilisateur</label>
-        <div class="input-wrap">
-          <span class="material-symbols-outlined input-icon">person</span>
-          <input id="reg-username"
-                 type="text"
-                 [(ngModel)]="registerUsername"
-                 name="reg-username"
-                 placeholder="johndoe"
-                 autocomplete="username" />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="reg-email">Email</label>
-        <div class="input-wrap">
-          <span class="material-symbols-outlined input-icon">mail</span>
-          <input id="reg-email"
-                 type="email"
-                 [(ngModel)]="registerEmail"
-                 placeholder="votre&#64;email.com"
-                 autocomplete="email" />
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="reg-password">Mot de passe</label>
-          <div class="input-wrap">
-            <span class="material-symbols-outlined input-icon">lock</span>
-            <input id="reg-password"
-                   type="password"
-                   [(ngModel)]="registerPassword"
-                   name="reg-password"
-                   placeholder="Min. 6 caractères"
-                   autocomplete="new-password" />
+      <!-- Body -->
+      <div class="modal-body">
+        @if (loginError) {
+          <div class="modal-error">
+            <span class="material-symbols-outlined">error</span>
+            {{ loginError }}
           </div>
-        </div>
-
-        <div class="form-group">
-          <label for="reg-password2">Confirmer</label>
-          <div class="input-wrap">
-            <span class="material-symbols-outlined input-icon">lock_check</span>
-            <input id="reg-password2"
-                   type="password"
-                   [(ngModel)]="registerPasswordConfirm"
-                   name="reg-password2"
-                   placeholder="Répéter le mot de passe"
-                   autocomplete="new-password" />
+        }
+        <form autocomplete="on" (ngSubmit)="submitLogin()">
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <div class="input-wrap">
+              <span class="material-symbols-outlined input-icon">mail</span>
+              <input id="login-email"
+                type="email"
+                [(ngModel)]="loginEmail"
+                name="login-email"
+                placeholder="votre&#64;email.com"
+                (keydown.enter)="submitLogin()"
+                autocomplete="email" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="login-password">Mot de passe</label>
+              <div class="input-wrap">
+                <span class="material-symbols-outlined input-icon">lock</span>
+                <input id="login-password"
+                  type="password"
+                  [(ngModel)]="loginPassword"
+                  name="login-password"
+                  placeholder="••••••••"
+                  autocomplete="current-password" />
+                </div>
+              </div>
+              <button type="submit" class="btn-submit" [disabled]="loginLoading">
+                @if (!loginLoading) {
+                  <span class="material-symbols-outlined">login</span>
+                }
+                @if (loginLoading) {
+                  <span class="spinner"></span>
+                }
+                {{ loginLoading ? 'Connexion...' : 'Se connecter' }}
+              </button>
+            </form>
+            <p class="modal-switch">
+              Pas encore de compte ?
+              <button class="link-btn" (click)="openRegister()">Créer un compte</button>
+            </p>
           </div>
         </div>
       </div>
+    }
 
-      <div class="register-info">
-        <span class="material-symbols-outlined">info</span>
-        Le premier compte créé obtient automatiquement le rôle <strong>Admin</strong>
-      </div>
-
-      <button type="submit" class="btn-submit btn-green" [disabled]="registerLoading">
-        <span *ngIf="!registerLoading" class="material-symbols-outlined">person_add</span>
-        <span *ngIf="registerLoading" class="spinner"></span>
-        {{ registerLoading ? 'Inscription...' : 'Créer mon compte' }}
-      </button>
-      </form>
-
-      <p class="modal-switch">
-        Déjà un compte ?
-        <button class="link-btn" (click)="openLogin()">Se connecter</button>
-      </p>
-    </div>
-  </div>
-</div>
+    <!-- ═══════════════════════════════════════════════
+    REGISTER MODAL
+    ════════════════════════════════════════════════ -->
+    @if (showRegisterModal) {
+      <div
+        class="modal-overlay"
+        (click)="onOverlayClick($event)"
+        role="dialog" aria-modal="true" aria-label="Inscription">
+        <div class="modal-box">
+          <!-- Header -->
+          <div class="modal-head">
+            <div class="modal-icon modal-icon-green">
+              <span class="material-symbols-outlined">person_add</span>
+            </div>
+            <div>
+              <h2 class="modal-title">Créer un compte</h2>
+              <p class="modal-sub">Rejoignez la plateforme Frankenstein Junior</p>
+            </div>
+            <button class="modal-close" (click)="closeModals()" aria-label="Fermer">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <!-- Body -->
+          <div class="modal-body">
+            @if (registerError) {
+              <div class="modal-error">
+                <span class="material-symbols-outlined">error</span>
+                {{ registerError }}
+              </div>
+            }
+            <form autocomplete="on" (ngSubmit)="submitRegister()">
+              <div class="form-group">
+                <label for="reg-username">Nom d'utilisateur</label>
+                <div class="input-wrap">
+                  <span class="material-symbols-outlined input-icon">person</span>
+                  <input id="reg-username"
+                    type="text"
+                    [(ngModel)]="registerUsername"
+                    name="reg-username"
+                    placeholder="johndoe"
+                    autocomplete="username" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="reg-email">Email</label>
+                  <div class="input-wrap">
+                    <span class="material-symbols-outlined input-icon">mail</span>
+                    <input id="reg-email"
+                      type="email"
+                      [(ngModel)]="registerEmail"
+                      placeholder="votre&#64;email.com"
+                      autocomplete="email" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="reg-password">Mot de passe</label>
+                      <div class="input-wrap">
+                        <span class="material-symbols-outlined input-icon">lock</span>
+                        <input id="reg-password"
+                          type="password"
+                          [(ngModel)]="registerPassword"
+                          name="reg-password"
+                          placeholder="Min. 6 caractères"
+                          autocomplete="new-password" />
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label for="reg-password2">Confirmer</label>
+                        <div class="input-wrap">
+                          <span class="material-symbols-outlined input-icon">lock_check</span>
+                          <input id="reg-password2"
+                            type="password"
+                            [(ngModel)]="registerPasswordConfirm"
+                            name="reg-password2"
+                            placeholder="Répéter le mot de passe"
+                            autocomplete="new-password" />
+                          </div>
+                        </div>
+                      </div>
+                      <div class="register-info">
+                        <span class="material-symbols-outlined">info</span>
+                        Le premier compte créé obtient automatiquement le rôle <strong>Admin</strong>
+                      </div>
+                      <button type="submit" class="btn-submit btn-green" [disabled]="registerLoading">
+                        @if (!registerLoading) {
+                          <span class="material-symbols-outlined">person_add</span>
+                        }
+                        @if (registerLoading) {
+                          <span class="spinner"></span>
+                        }
+                        {{ registerLoading ? 'Inscription...' : 'Créer mon compte' }}
+                      </button>
+                    </form>
+                    <p class="modal-switch">
+                      Déjà un compte ?
+                      <button class="link-btn" (click)="openLogin()">Se connecter</button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            }

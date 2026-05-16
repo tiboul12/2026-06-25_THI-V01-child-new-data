@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideZoneChangeDetection, APP_INITIALIZER } from '@angular/core';
+import { ApplicationConfig, provideZoneChangeDetection, provideAppInitializer, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -15,18 +15,8 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimations(),
-    {
-      provide: APP_INITIALIZER,
-      useFactory: (db: DbStatusService) => () => db.check(),
-      deps: [DbStatusService],
-      multi: true
-    },
-    {
-      provide: APP_INITIALIZER,
-      useFactory: (cfg: AppConfigService) => () => cfg.load(),
-      deps: [AppConfigService],
-      multi: true
-    },
+    provideAppInitializer(() => inject(DbStatusService).check()),
+    provideAppInitializer(() => inject(AppConfigService).load()),
     ...CHILD_ADMIN_TABS_PROVIDERS
   ]
 };

@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, HostListener, effect, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NavComponent } from '../nav/nav.component';
@@ -15,10 +15,9 @@ const EXECUTOR_API = environment.apiExecutorUrl;
 const API = environment.apiDataUrl;
 
 @Component({
-  selector: 'app-header',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NavComponent],
-  templateUrl: './header.component.html',
+    selector: 'app-header',
+    imports: [FormsModule, RouterModule, NavComponent],
+    templateUrl: './header.component.html'
 })
 export class HeaderComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();

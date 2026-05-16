@@ -1,7 +1,7 @@
 import {
   Component, OnInit, ChangeDetectorRef
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { CahierRecetteService } from './cahier-recette.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -15,11 +15,10 @@ import type {
 type Tab = 'catalogue' | 'campagnes' | 'lancer' | 'rapports' | 'avance';
 
 @Component({
-  selector: 'wo-cahier-recette',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './cahier-recette.component.html',
-  styleUrl: './cahier-recette.component.scss'
+    selector: 'wo-cahier-recette',
+    imports: [FormsModule],
+    templateUrl: './cahier-recette.component.html',
+    styleUrl: './cahier-recette.component.scss'
 })
 export class CahierRecetteComponent implements OnInit {
   isOpen = false;

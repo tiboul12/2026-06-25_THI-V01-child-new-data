@@ -165,10 +165,9 @@ const HEADING_LEVELS = [
 ];
 
 @Component({
-  selector: 'app-admin-theme',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './admin-theme.component.html',
+    selector: 'app-admin-theme',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './admin-theme.component.html'
 })
 export class AdminThemeComponent implements OnInit {
   private http = inject(HttpClient);

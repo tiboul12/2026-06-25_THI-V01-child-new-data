@@ -12,10 +12,9 @@ interface ToolEntry {
 }
 
 @Component({
-  selector: 'wo-tools-admin',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './wo-tools-admin.component.html',
+    selector: 'wo-tools-admin',
+    imports: [CommonModule],
+    templateUrl: './wo-tools-admin.component.html'
 })
 export class WoToolsAdminComponent {
   readonly configService = inject(ConfigService);

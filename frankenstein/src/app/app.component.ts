@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 
 import { ThemeService } from './core/services/theme.service';
 import { AuthService } from './core/services/auth.service';
@@ -18,11 +18,9 @@ import { WoToolsPanelComponent } from './tools/wo/wo-tools-panel/wo-tools-panel.
 import { WorgHelpDrawerComponent } from './shared/help/worg-help-drawer.component';
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [
+    selector: 'app-root',
+    imports: [
     RouterOutlet,
-    CommonModule,
     HeaderComponent,
     FooterComponent,
     TicketWidgetComponent,
@@ -30,10 +28,10 @@ import { WorgHelpDrawerComponent } from './shared/help/worg-help-drawer.componen
     WoTchatIaWidgetComponent,
     WoActionsWidgetComponent,
     WoToolsPanelComponent,
-    WorgHelpDrawerComponent,
-  ],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+    WorgHelpDrawerComponent
+],
+    templateUrl: './app.component.html',
+    styleUrl: './app.component.scss'
 })
 export class AppComponent implements OnInit {
   @ViewChild(WoToolsPanelComponent) toolsPanel?: WoToolsPanelComponent;

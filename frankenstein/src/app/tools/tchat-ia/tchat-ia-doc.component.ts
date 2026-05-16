@@ -2,10 +2,9 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'wo-tchat-ia-doc',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './tchat-ia-doc.component.html'
+    selector: 'wo-tchat-ia-doc',
+    imports: [CommonModule],
+    templateUrl: './tchat-ia-doc.component.html'
 })
 export class TchatIaDocComponent {
   activeSection = 'overview';

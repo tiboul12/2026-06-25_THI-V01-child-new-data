@@ -13,511 +13,519 @@
       <span class="text-[10px] text-white/20 font-mono">angular/src/app/components/ticket-widget/</span>
     </div>
     <div class="max-w-6xl mx-auto px-6 flex items-center gap-0.5 overflow-x-auto">
-      <button *ngFor="let s of sections"
-              (click)="activeSection = s.id"
+      @for (s of sections; track s) {
+        <button
+          (click)="activeSection = s.id"
               [ngClass]="activeSection === s.id
                 ? 'border-b-2 border-blue-500 text-white bg-blue-500/10'
                 : 'border-b-2 border-transparent text-white/40 hover:text-white/70'"
-              class="flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-all whitespace-nowrap">
-        <span class="material-symbols-outlined text-[14px]">{{s.icon}}</span>
-        {{s.label}}
-      </button>
+          class="flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-all whitespace-nowrap">
+          <span class="material-symbols-outlined text-[14px]">{{s.icon}}</span>
+          {{s.label}}
+        </button>
+      }
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto px-6 py-10">
 
     <!-- ══ OVERVIEW ════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'overview'">
-      <div class="flex items-start gap-6 mb-10">
-        <div class="w-16 h-16 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
-          <span class="material-symbols-outlined text-blue-400 text-3xl">confirmation_number</span>
+    @if (activeSection === 'overview') {
+      <section>
+        <div class="flex items-start gap-6 mb-10">
+          <div class="w-16 h-16 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-blue-400 text-3xl">confirmation_number</span>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold text-white mb-2">Composant <code class="text-blue-400">&lt;wo-ticket-widget&gt;</code></h1>
+            <p class="text-white/60 text-base leading-relaxed max-w-2xl">
+              Widget standalone de signalement de bugs et d'améliorations. Capture automatiquement
+              une copie d'écran via <code class="text-blue-300 text-sm">html2canvas</code>, permet
+              de l'annoter au trait, puis envoie le ticket enrichi à l'API. Aucun &#64;Input() ni &#64;Output() —
+              le composant est entièrement autonome.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 class="text-3xl font-bold text-white mb-2">Composant <code class="text-blue-400">&lt;wo-ticket-widget&gt;</code></h1>
-          <p class="text-white/60 text-base leading-relaxed max-w-2xl">
-            Widget standalone de signalement de bugs et d'améliorations. Capture automatiquement
-            une copie d'écran via <code class="text-blue-300 text-sm">html2canvas</code>, permet
-            de l'annoter au trait, puis envoie le ticket enrichi à l'API. Aucun &#64;Input() ni &#64;Output() —
-            le composant est entièrement autonome.
+        <!-- Quick features -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-blue-400 text-2xl">screenshot_monitor</span>
+            <span class="font-semibold text-sm text-white">Capture auto</span>
+            <span class="text-xs text-white/40">html2canvas sur document.body</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-red-400 text-2xl">draw</span>
+            <span class="font-semibold text-sm text-white">Annotation canvas</span>
+            <span class="text-xs text-white/40">Trait rouge ou masquage blanc</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-green-400 text-2xl">touch_app</span>
+            <span class="font-semibold text-sm text-white">Tactile</span>
+            <span class="text-xs text-white/40">Événements touch intégrés</span>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
+            <span class="material-symbols-outlined text-violet-400 text-2xl">cloud_upload</span>
+            <span class="font-semibold text-sm text-white">Envoi API</span>
+            <span class="text-xs text-white/40">POST /api/tickets + Auth</span>
+          </div>
+        </div>
+        <!-- Fichiers -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">folder_open</span> Fichiers du package
+          </h2>
+          <div class="font-mono text-sm space-y-2">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-blue-400 text-sm">description</span>
+              <span class="text-blue-300">ticket-widget.component.ts</span>
+              <span class="text-white/30 text-xs ml-auto">Logique · phases, canvas, submit</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-violet-400 text-sm">description</span>
+              <span class="text-violet-300">ticket-widget.component.html</span>
+              <span class="text-white/30 text-xs ml-auto">Template UI — 3 phases</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-cyan-400 text-sm">description</span>
+              <span class="text-cyan-300">ticket-widget.component.scss</span>
+              <span class="text-white/30 text-xs ml-auto">Styles spécifiques (optionnel)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-amber-400 text-sm">description</span>
+              <span class="text-amber-300">ticket-widget-doc.component.ts/html</span>
+              <span class="text-white/30 text-xs ml-auto">Cette page de documentation</span>
+            </div>
+          </div>
+        </div>
+        <!-- Dépendances -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">package_2</span> Dépendances requises
+          </h2>
+          <div class="flex flex-wrap gap-2 mb-3">
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">html2canvas ^1.4.1</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">HttpClient</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">AuthService</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">ChangeDetectorRef</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">NgZone</span>
+          </div>
+          <p class="text-xs text-white/30">
+            L'<code class="text-blue-300">AuthService</code> est utilisé pour récupérer le token d'authentification
+            via <code class="text-blue-300">getAuthHeaders()</code> lors de l'envoi du ticket.
           </p>
         </div>
-      </div>
-
-      <!-- Quick features -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-blue-400 text-2xl">screenshot_monitor</span>
-          <span class="font-semibold text-sm text-white">Capture auto</span>
-          <span class="text-xs text-white/40">html2canvas sur document.body</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-red-400 text-2xl">draw</span>
-          <span class="font-semibold text-sm text-white">Annotation canvas</span>
-          <span class="text-xs text-white/40">Trait rouge ou masquage blanc</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-green-400 text-2xl">touch_app</span>
-          <span class="font-semibold text-sm text-white">Tactile</span>
-          <span class="text-xs text-white/40">Événements touch intégrés</span>
-        </div>
-        <div class="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-2">
-          <span class="material-symbols-outlined text-violet-400 text-2xl">cloud_upload</span>
-          <span class="font-semibold text-sm text-white">Envoi API</span>
-          <span class="text-xs text-white/40">POST /api/tickets + Auth</span>
-        </div>
-      </div>
-
-      <!-- Fichiers -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">folder_open</span> Fichiers du package
-        </h2>
-        <div class="font-mono text-sm space-y-2">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-blue-400 text-sm">description</span>
-            <span class="text-blue-300">ticket-widget.component.ts</span>
-            <span class="text-white/30 text-xs ml-auto">Logique · phases, canvas, submit</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-violet-400 text-sm">description</span>
-            <span class="text-violet-300">ticket-widget.component.html</span>
-            <span class="text-white/30 text-xs ml-auto">Template UI — 3 phases</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-cyan-400 text-sm">description</span>
-            <span class="text-cyan-300">ticket-widget.component.scss</span>
-            <span class="text-white/30 text-xs ml-auto">Styles spécifiques (optionnel)</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-amber-400 text-sm">description</span>
-            <span class="text-amber-300">ticket-widget-doc.component.ts/html</span>
-            <span class="text-white/30 text-xs ml-auto">Cette page de documentation</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Dépendances -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">package_2</span> Dépendances requises
-        </h2>
-        <div class="flex flex-wrap gap-2 mb-3">
-          <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">html2canvas ^1.4.1</span>
-          <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">HttpClient</span>
-          <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">AuthService</span>
-          <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">ChangeDetectorRef</span>
-          <span class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">NgZone</span>
-        </div>
-        <p class="text-xs text-white/30">
-          L'<code class="text-blue-300">AuthService</code> est utilisé pour récupérer le token d'authentification
-          via <code class="text-blue-300">getAuthHeaders()</code> lors de l'envoi du ticket.
-        </p>
-      </div>
-    </section>
+      </section>
+    }
 
     <!-- ══ PHASES ════════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'phases'">
-      <h1 class="text-2xl font-bold text-white mb-2">Phases & États</h1>
-      <p class="text-white/50 text-sm mb-8">
-        Le composant utilise une machine à états à 3 phases. La propriété
-        <code class="text-blue-300">phase: 'idle' | 'capturing' | 'form'</code> contrôle
-        l'affichage via <code class="text-blue-300">*ngIf</code>.
-      </p>
-
-      <!-- Phase diagram -->
-      <div class="flex items-center gap-3 mb-10 overflow-x-auto pb-2">
-        <div *ngFor="let p of phases; let last = last" class="flex items-center gap-3">
-          <div class="flex-shrink-0 p-5 rounded-2xl border min-w-[200px]"
+    @if (activeSection === 'phases') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Phases & États</h1>
+        <p class="text-white/50 text-sm mb-8">
+          Le composant utilise une machine à états à 3 phases. La propriété
+          <code class="text-blue-300">phase: 'idle' | 'capturing' | 'form'</code> contrôle
+          l'affichage via <code class="text-blue-300">*ngIf</code>.
+        </p>
+        <!-- Phase diagram -->
+        <div class="flex items-center gap-3 mb-10 overflow-x-auto pb-2">
+          @for (p of phases; track p; let last = $last) {
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0 p-5 rounded-2xl border min-w-[200px]"
                [ngClass]="{
                  'bg-blue-500/10 border-blue-500/30':  p.color === 'blue',
                  'bg-amber-500/10 border-amber-500/30': p.color === 'amber',
                  'bg-green-500/10 border-green-500/30': p.color === 'green'
                }">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="material-symbols-outlined text-xl"
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="material-symbols-outlined text-xl"
                     [ngClass]="{
                       'text-blue-400':  p.color === 'blue',
                       'text-amber-400': p.color === 'amber',
                       'text-green-400': p.color === 'green'
                     }">{{p.icon}}</span>
-              <code class="font-bold text-sm"
+                  <code class="font-bold text-sm"
                     [ngClass]="{
                       'text-blue-300':  p.color === 'blue',
                       'text-amber-300': p.color === 'amber',
                       'text-green-300': p.color === 'green'
                     }">{{p.name}}</code>
+                </div>
+                <p class="text-xs font-semibold text-white/60 mb-1">{{p.label}}</p>
+              </div>
+              @if (!last) {
+                <span class="material-symbols-outlined text-white/20 text-2xl flex-shrink-0">arrow_forward</span>
+              }
             </div>
-            <p class="text-xs font-semibold text-white/60 mb-1">{{p.label}}</p>
-          </div>
-          <span *ngIf="!last" class="material-symbols-outlined text-white/20 text-2xl flex-shrink-0">arrow_forward</span>
+          }
         </div>
-      </div>
-
-      <!-- Phase details -->
-      <div class="space-y-4">
-        <div *ngFor="let p of phases"
-             class="bg-[#111120] border rounded-2xl p-6 transition-all"
+        <!-- Phase details -->
+        <div class="space-y-4">
+          @for (p of phases; track p) {
+            <div
+              class="bg-[#111120] border rounded-2xl p-6 transition-all"
              [ngClass]="{
                'border-blue-500/20 hover:border-blue-500/40':  p.color === 'blue',
                'border-amber-500/20 hover:border-amber-500/40': p.color === 'amber',
                'border-green-500/20 hover:border-green-500/40': p.color === 'green'
              }">
-          <div class="flex items-center gap-3 mb-3">
-            <span class="material-symbols-outlined text-xl"
+              <div class="flex items-center gap-3 mb-3">
+                <span class="material-symbols-outlined text-xl"
                   [ngClass]="{
                     'text-blue-400':  p.color === 'blue',
                     'text-amber-400': p.color === 'amber',
                     'text-green-400': p.color === 'green'
                   }">{{p.icon}}</span>
-            <code class="font-bold text-base"
+                <code class="font-bold text-base"
                   [ngClass]="{
                     'text-blue-300':  p.color === 'blue',
                     'text-amber-300': p.color === 'amber',
                     'text-green-300': p.color === 'green'
                   }">phase === '{{p.name}}'</code>
-          </div>
-          <p class="text-sm text-white/60 leading-relaxed">{{p.desc}}</p>
+              </div>
+              <p class="text-sm text-white/60 leading-relaxed">{{p.desc}}</p>
+            </div>
+          }
         </div>
-      </div>
-
-      <!-- Méthodes publiques -->
-      <h2 class="text-lg font-bold text-white mt-10 mb-4">Méthodes publiques</h2>
-      <div class="space-y-3">
-        <div *ngFor="let m of methods"
-             class="bg-[#111120] border border-white/10 hover:border-blue-500/30 rounded-xl p-4 flex items-start gap-4 transition-all">
-          <div class="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span class="material-symbols-outlined text-blue-400 text-[16px]">{{m.icon}}</span>
-          </div>
-          <div>
-            <code class="text-blue-300 font-bold text-sm">{{m.name}}</code>
-            <p class="text-sm text-white/60 mt-1 leading-relaxed">{{m.desc}}</p>
-          </div>
+        <!-- Méthodes publiques -->
+        <h2 class="text-lg font-bold text-white mt-10 mb-4">Méthodes publiques</h2>
+        <div class="space-y-3">
+          @for (m of methods; track m) {
+            <div
+              class="bg-[#111120] border border-white/10 hover:border-blue-500/30 rounded-xl p-4 flex items-start gap-4 transition-all">
+              <div class="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="material-symbols-outlined text-blue-400 text-[16px]">{{m.icon}}</span>
+              </div>
+              <div>
+                <code class="text-blue-300 font-bold text-sm">{{m.name}}</code>
+                <p class="text-sm text-white/60 mt-1 leading-relaxed">{{m.desc}}</p>
+              </div>
+            </div>
+          }
         </div>
-      </div>
-    </section>
+      </section>
+    }
 
     <!-- ══ FORM ══════════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'form'">
-      <h1 class="text-2xl font-bold text-white mb-2">Formulaire</h1>
-      <p class="text-white/50 text-sm mb-8">Champs du formulaire, types de tickets et niveaux de priorité.</p>
-
-      <!-- Champs -->
-      <h2 class="text-base font-bold text-white/80 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-blue-400 text-base">edit_note</span> Champs du formulaire
-      </h2>
-      <div class="space-y-3 mb-10">
-        <div *ngFor="let f of formFields"
-             class="bg-[#111120] border border-white/10 hover:border-blue-500/30 rounded-xl p-5 flex items-start gap-4 transition-all">
-          <div class="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span class="material-symbols-outlined text-blue-400 text-[18px]">{{f.icon}}</span>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2 mb-1">
-              <code class="text-blue-300 font-bold text-sm">form.{{f.name}}</code>
-              <code class="text-cyan-400/80 text-xs bg-cyan-400/10 px-2 py-0.5 rounded">{{f.type}}</code>
-              <span *ngIf="f.required"
-                    class="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400">
-                obligatoire
-              </span>
-            </div>
-            <p class="text-sm text-white/60 leading-relaxed">{{f.desc}}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Types -->
-      <h2 class="text-base font-bold text-white/80 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-blue-400 text-base">category</span> Types de tickets
-        <code class="text-xs text-white/30 font-mono bg-white/5 px-2 py-0.5 rounded">type TicketType</code>
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
-        <div *ngFor="let t of ticketTypes"
-             class="bg-[#111120] border border-white/10 rounded-xl p-4 flex items-start gap-3">
-          <div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-outlined text-white/60 text-[16px]">{{t.icon}}</span>
-          </div>
-          <div>
-            <code class="text-white font-bold text-sm">'{{t.value}}'</code>
-            <span class="ml-2 text-white/50 text-sm">— {{t.label}}</span>
-            <p class="text-xs text-white/40 mt-1">{{t.desc}}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Priorités -->
-      <h2 class="text-base font-bold text-white/80 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-blue-400 text-base">priority_high</span> Niveaux de priorité
-        <code class="text-xs text-white/30 font-mono bg-white/5 px-2 py-0.5 rounded">type Priority</code>
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div *ngFor="let p of priorities"
-             class="bg-[#111120] border border-white/10 rounded-xl p-4 flex items-start gap-3">
-          <div class="w-3 h-3 rounded-full mt-1 flex-shrink-0" [ngClass]="p.dot"></div>
-          <div>
-            <code class="text-white font-bold text-sm">'{{p.value}}'</code>
-            <span class="ml-2 text-white/50 text-sm">— {{p.label}}</span>
-            <p class="text-xs text-white/40 mt-1">{{p.desc}}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Validation -->
-      <div class="mt-8 bg-[#111120] border border-amber-500/20 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-amber-400/80 uppercase tracking-widest mb-3 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">warning</span> Règles de validation
+    @if (activeSection === 'form') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Formulaire</h1>
+        <p class="text-white/50 text-sm mb-8">Champs du formulaire, types de tickets et niveaux de priorité.</p>
+        <!-- Champs -->
+        <h2 class="text-base font-bold text-white/80 mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-400 text-base">edit_note</span> Champs du formulaire
         </h2>
-        <ul class="space-y-2 text-sm text-white/60">
-          <li class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-red-400 text-sm">block</span>
-            <code class="text-blue-300">form.title</code> vide → soumission bloquée, message d'erreur affiché
-          </li>
-          <li class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-red-400 text-sm">block</span>
-            <code class="text-blue-300">form.description</code> vide → soumission bloquée, message d'erreur affiché
-          </li>
-          <li class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-green-400 text-sm">check</span>
-            Les erreurs s'effacent automatiquement à chaque tentative de soumission
-          </li>
-        </ul>
-      </div>
-    </section>
+        <div class="space-y-3 mb-10">
+          @for (f of formFields; track f) {
+            <div
+              class="bg-[#111120] border border-white/10 hover:border-blue-500/30 rounded-xl p-5 flex items-start gap-4 transition-all">
+              <div class="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="material-symbols-outlined text-blue-400 text-[18px]">{{f.icon}}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                  <code class="text-blue-300 font-bold text-sm">form.{{f.name}}</code>
+                  <code class="text-cyan-400/80 text-xs bg-cyan-400/10 px-2 py-0.5 rounded">{{f.type}}</code>
+                  @if (f.required) {
+                    <span
+                      class="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400">
+                      obligatoire
+                    </span>
+                  }
+                </div>
+                <p class="text-sm text-white/60 leading-relaxed">{{f.desc}}</p>
+              </div>
+            </div>
+          }
+        </div>
+        <!-- Types -->
+        <h2 class="text-base font-bold text-white/80 mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-400 text-base">category</span> Types de tickets
+          <code class="text-xs text-white/30 font-mono bg-white/5 px-2 py-0.5 rounded">type TicketType</code>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
+          @for (t of ticketTypes; track t) {
+            <div
+              class="bg-[#111120] border border-white/10 rounded-xl p-4 flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white/60 text-[16px]">{{t.icon}}</span>
+              </div>
+              <div>
+                <code class="text-white font-bold text-sm">'{{t.value}}'</code>
+                <span class="ml-2 text-white/50 text-sm">— {{t.label}}</span>
+                <p class="text-xs text-white/40 mt-1">{{t.desc}}</p>
+              </div>
+            </div>
+          }
+        </div>
+        <!-- Priorités -->
+        <h2 class="text-base font-bold text-white/80 mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-400 text-base">priority_high</span> Niveaux de priorité
+          <code class="text-xs text-white/30 font-mono bg-white/5 px-2 py-0.5 rounded">type Priority</code>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          @for (p of priorities; track p) {
+            <div
+              class="bg-[#111120] border border-white/10 rounded-xl p-4 flex items-start gap-3">
+              <div class="w-3 h-3 rounded-full mt-1 flex-shrink-0" [ngClass]="p.dot"></div>
+              <div>
+                <code class="text-white font-bold text-sm">'{{p.value}}'</code>
+                <span class="ml-2 text-white/50 text-sm">— {{p.label}}</span>
+                <p class="text-xs text-white/40 mt-1">{{p.desc}}</p>
+              </div>
+            </div>
+          }
+        </div>
+        <!-- Validation -->
+        <div class="mt-8 bg-[#111120] border border-amber-500/20 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-amber-400/80 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">warning</span> Règles de validation
+          </h2>
+          <ul class="space-y-2 text-sm text-white/60">
+            <li class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-red-400 text-sm">block</span>
+              <code class="text-blue-300">form.title</code> vide → soumission bloquée, message d'erreur affiché
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-red-400 text-sm">block</span>
+              <code class="text-blue-300">form.description</code> vide → soumission bloquée, message d'erreur affiché
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-green-400 text-sm">check</span>
+              Les erreurs s'effacent automatiquement à chaque tentative de soumission
+            </li>
+          </ul>
+        </div>
+      </section>
+    }
 
     <!-- ══ CANVAS ════════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'canvas'">
-      <h1 class="text-2xl font-bold text-white mb-2">Annotation Canvas</h1>
-      <p class="text-white/50 text-sm mb-8">
-        Le système d'annotation utilise deux éléments <code class="text-blue-300">&lt;canvas&gt;</code> superposés :
-        <code class="text-blue-300">#bgCanvas</code> (fond, lecture seule) et
-        <code class="text-blue-300">#drawCanvas</code> (calque de dessin transparent).
-      </p>
-
-      <!-- Architecture canvas -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-8">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">layers</span> Architecture des calques
+    @if (activeSection === 'canvas') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Annotation Canvas</h1>
+        <p class="text-white/50 text-sm mb-8">
+          Le système d'annotation utilise deux éléments <code class="text-blue-300">&lt;canvas&gt;</code> superposés :
+          <code class="text-blue-300">#bgCanvas</code> (fond, lecture seule) et
+          <code class="text-blue-300">#drawCanvas</code> (calque de dessin transparent).
+        </p>
+        <!-- Architecture canvas -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-8">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">layers</span> Architecture des calques
+          </h2>
+          <div class="space-y-3">
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+              <span class="material-symbols-outlined text-blue-400 text-base">photo</span>
+              <div>
+                <code class="text-blue-300 font-bold text-sm">#bgCanvas</code>
+                <span class="text-white/50 text-sm ml-2">— Calque fond (position: static)</span>
+                <p class="text-xs text-white/40 mt-1">Reçoit drawImage() du screenshot au chargement. Lecture seule — aucun événement souris. Largeur fixée à 1000px, hauteur calculée proportionnellement.</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+              <span class="material-symbols-outlined text-red-400 text-base">brush</span>
+              <div>
+                <code class="text-blue-300 font-bold text-sm">#drawCanvas</code>
+                <span class="text-white/50 text-sm ml-2">— Calque dessin (position: absolute, top: 0, left: 0)</span>
+                <p class="text-xs text-white/40 mt-1">Superposé sur bgCanvas. Reçoit tous les événements souris/touch. Fond transparent. La fusion est faite à la soumission via getMergedScreenshot().</p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 bg-black/30 rounded-xl p-4">
+            <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Fusion à la soumission</div>
+            <pre class="text-xs font-mono text-green-300/80">getMergedScreenshot() &#123;
+              // Crée un canvas temporaire identique
+              // ctx.drawImage(bgCanvas, 0, 0);   ← fond
+              // ctx.drawImage(drawCanvas, 0, 0); ← annotations
+              // return tmp.toDataURL('image/png');
+            &#125;</pre>
+          </div>
+        </div>
+        <!-- Modes canvas -->
+        <h2 class="text-base font-bold text-white/80 mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-400 text-base">draw</span> Modes de dessin
+          <code class="text-xs text-white/30 font-mono bg-white/5 px-2 py-0.5 rounded">canvasMode: 'none' | 'red' | 'white'</code>
         </h2>
-        <div class="space-y-3">
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-            <span class="material-symbols-outlined text-blue-400 text-base">photo</span>
-            <div>
-              <code class="text-blue-300 font-bold text-sm">#bgCanvas</code>
-              <span class="text-white/50 text-sm ml-2">— Calque fond (position: static)</span>
-              <p class="text-xs text-white/40 mt-1">Reçoit drawImage() du screenshot au chargement. Lecture seule — aucun événement souris. Largeur fixée à 1000px, hauteur calculée proportionnellement.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-            <span class="material-symbols-outlined text-red-400 text-base">brush</span>
-            <div>
-              <code class="text-blue-300 font-bold text-sm">#drawCanvas</code>
-              <span class="text-white/50 text-sm ml-2">— Calque dessin (position: absolute, top: 0, left: 0)</span>
-              <p class="text-xs text-white/40 mt-1">Superposé sur bgCanvas. Reçoit tous les événements souris/touch. Fond transparent. La fusion est faite à la soumission via getMergedScreenshot().</p>
-            </div>
-          </div>
-        </div>
-        <div class="mt-4 bg-black/30 rounded-xl p-4">
-          <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Fusion à la soumission</div>
-          <pre class="text-xs font-mono text-green-300/80">getMergedScreenshot() &#123;
-  // Crée un canvas temporaire identique
-  // ctx.drawImage(bgCanvas, 0, 0);   ← fond
-  // ctx.drawImage(drawCanvas, 0, 0); ← annotations
-  // return tmp.toDataURL('image/png');
-&#125;</pre>
-        </div>
-      </div>
-
-      <!-- Modes canvas -->
-      <h2 class="text-base font-bold text-white/80 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-blue-400 text-base">draw</span> Modes de dessin
-        <code class="text-xs text-white/30 font-mono bg-white/5 px-2 py-0.5 rounded">canvasMode: 'none' | 'red' | 'white'</code>
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div *ngFor="let m of canvasModes"
-             class="bg-[#111120] border border-white/10 rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="material-symbols-outlined text-base"
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          @for (m of canvasModes; track m) {
+            <div
+              class="bg-[#111120] border border-white/10 rounded-xl p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="material-symbols-outlined text-base"
                   [ngClass]="{
                     'text-white/50': m.color === 'white',
                     'text-red-400':  m.color === 'red'
                   }">{{m.icon}}</span>
-            <code class="font-bold text-sm"
+                <code class="font-bold text-sm"
                   [ngClass]="{
                     'text-white/70': m.color === 'white',
                     'text-red-300':  m.color === 'red'
                   }">'{{m.name}}'</code>
-          </div>
-          <p class="text-xs text-white/50 leading-relaxed">{{m.desc}}</p>
+              </div>
+              <p class="text-xs text-white/50 leading-relaxed">{{m.desc}}</p>
+            </div>
+          }
         </div>
-      </div>
-
-      <!-- Traits de dessin -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">straighten</span> Paramètres du trait
-        </h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div class="p-3 rounded-lg bg-white/5 text-center">
-            <div class="text-xs text-white/40 mb-1">lineWidth</div>
-            <div class="text-lg font-bold text-white">5</div>
-            <div class="text-xs text-white/30">pixels</div>
-          </div>
-          <div class="p-3 rounded-lg bg-white/5 text-center">
-            <div class="text-xs text-white/40 mb-1">lineCap</div>
-            <div class="text-lg font-bold text-white">'round'</div>
-          </div>
-          <div class="p-3 rounded-lg bg-white/5 text-center">
-            <div class="text-xs text-white/40 mb-1">lineJoin</div>
-            <div class="text-lg font-bold text-white">'round'</div>
-          </div>
-          <div class="p-3 rounded-lg bg-white/5 text-center">
-            <div class="text-xs text-white/40 mb-1">scale capture</div>
-            <div class="text-lg font-bold text-white">0.75</div>
-            <div class="text-xs text-white/30">html2canvas</div>
+        <!-- Traits de dessin -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">straighten</span> Paramètres du trait
+          </h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="p-3 rounded-lg bg-white/5 text-center">
+              <div class="text-xs text-white/40 mb-1">lineWidth</div>
+              <div class="text-lg font-bold text-white">5</div>
+              <div class="text-xs text-white/30">pixels</div>
+            </div>
+            <div class="p-3 rounded-lg bg-white/5 text-center">
+              <div class="text-xs text-white/40 mb-1">lineCap</div>
+              <div class="text-lg font-bold text-white">'round'</div>
+            </div>
+            <div class="p-3 rounded-lg bg-white/5 text-center">
+              <div class="text-xs text-white/40 mb-1">lineJoin</div>
+              <div class="text-lg font-bold text-white">'round'</div>
+            </div>
+            <div class="p-3 rounded-lg bg-white/5 text-center">
+              <div class="text-xs text-white/40 mb-1">scale capture</div>
+              <div class="text-lg font-bold text-white">0.75</div>
+              <div class="text-xs text-white/30">html2canvas</div>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    }
 
     <!-- ══ API ════════════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'api'">
-      <h1 class="text-2xl font-bold text-white mb-2">API & Backend</h1>
-      <p class="text-white/50 text-sm mb-8">Endpoint requis et structure du payload envoyé.</p>
-
-      <!-- Endpoint -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">cloud_upload</span> Endpoint — POST /api/tickets
-        </h2>
-        <div class="flex flex-wrap items-center gap-3 mb-4">
-          <span class="px-3 py-1.5 rounded-lg bg-green-500/15 border border-green-500/30 text-green-300 text-xs font-mono font-bold">POST</span>
-          <code class="text-blue-300 text-sm">/api/tickets</code>
-          <span class="text-xs text-white/40 ml-auto">Nécessite le header Authorization</span>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Payload JSON envoyé</div>
-            <pre class="text-xs font-mono text-blue-300/80 leading-relaxed bg-black/30 rounded-xl p-4">&#123;
-  "title":       "string (requis)",
-  "description": "string (requis)",
-  "url":         "string",
-  "type":        "bug | amelioration | ui | contenu | performance",
-  "priority":    "critique | haute | normale | basse",
-  "screenshot":  "string | null  ← base64 PNG"
-&#125;</pre>
+    @if (activeSection === 'api') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">API & Backend</h1>
+        <p class="text-white/50 text-sm mb-8">Endpoint requis et structure du payload envoyé.</p>
+        <!-- Endpoint -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">cloud_upload</span> Endpoint — POST /api/tickets
+          </h2>
+          <div class="flex flex-wrap items-center gap-3 mb-4">
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/15 border border-green-500/30 text-green-300 text-xs font-mono font-bold">POST</span>
+            <code class="text-blue-300 text-sm">/api/tickets</code>
+            <span class="text-xs text-white/40 ml-auto">Nécessite le header Authorization</span>
           </div>
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Réponse succès</div>
-            <pre class="text-xs font-mono text-green-300/80 leading-relaxed bg-black/30 rounded-xl p-4">HTTP 200 / 201
-&#123; "id": "...", "status": "ok" &#125;
-
-→ Appel de close() automatique
-→ Retour en phase "idle"
-
-Erreur :
-&#123; "error": "message" &#125;
-→ Affichage dans la zone erreur</pre>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Payload JSON envoyé</div>
+              <pre class="text-xs font-mono text-blue-300/80 leading-relaxed bg-black/30 rounded-xl p-4">&#123;
+                "title":       "string (requis)",
+                "description": "string (requis)",
+                "url":         "string",
+                "type":        "bug | amelioration | ui | contenu | performance",
+                "priority":    "critique | haute | normale | basse",
+                "screenshot":  "string | null  ← base64 PNG"
+              &#125;</pre>
+            </div>
+            <div>
+              <div class="text-[10px] text-white/30 uppercase tracking-widest mb-2">Réponse succès</div>
+              <pre class="text-xs font-mono text-green-300/80 leading-relaxed bg-black/30 rounded-xl p-4">HTTP 200 / 201
+                &#123; "id": "...", "status": "ok" &#125;
+                → Appel de close() automatique
+                → Retour en phase "idle"
+                Erreur :
+                &#123; "error": "message" &#125;
+              → Affichage dans la zone erreur</pre>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Auth -->
-      <div class="bg-[#111120] border border-blue-500/20 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-3 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm text-blue-400">lock</span> Authentification
-        </h2>
-        <p class="text-sm text-white/60 mb-3">
-          Le composant utilise <code class="text-blue-300">AuthService.getAuthHeaders()</code> pour ajouter
-          le header <code class="text-blue-300">Authorization</code> à la requête.
-          Le token est lu depuis le <code class="text-blue-300">localStorage</code> clé
-          <code class="text-blue-300">frankenstein_token</code>.
-        </p>
-        <pre class="text-xs font-mono text-green-300/80 bg-black/30 rounded-xl p-4">// Dans ticket-widget.component.ts
-await this.http.post(`$&#123;API&#125;/api/tickets`, payload, &#123;
-  headers: this.auth.getAuthHeaders()
-&#125;).toPromise();</pre>
-      </div>
-
-      <!-- Stockage -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-3 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">storage</span> Stockage backend
-        </h2>
-        <p class="text-sm text-white/60">
-          Les tickets sont persistés dans <code class="text-blue-300">data/tickets.json</code> via
-          <code class="text-blue-300">server/server-data.js</code>.
-          La liste est consultable dans la section <strong>Tickets</strong> de l'interface admin
-          à l'adresse <code class="text-blue-300">/tickets</code>.
-        </p>
-      </div>
-    </section>
+        <!-- Auth -->
+        <div class="bg-[#111120] border border-blue-500/20 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm text-blue-400">lock</span> Authentification
+          </h2>
+          <p class="text-sm text-white/60 mb-3">
+            Le composant utilise <code class="text-blue-300">AuthService.getAuthHeaders()</code> pour ajouter
+            le header <code class="text-blue-300">Authorization</code> à la requête.
+            Le token est lu depuis le <code class="text-blue-300">localStorage</code> clé
+            <code class="text-blue-300">frankenstein_token</code>.
+          </p>
+          <pre class="text-xs font-mono text-green-300/80 bg-black/30 rounded-xl p-4">// Dans ticket-widget.component.ts
+            await this.http.post(`$&#123;API&#125;/api/tickets`, payload, &#123;
+            headers: this.auth.getAuthHeaders()
+          &#125;).toPromise();</pre>
+        </div>
+        <!-- Stockage -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">storage</span> Stockage backend
+          </h2>
+          <p class="text-sm text-white/60">
+            Les tickets sont persistés dans <code class="text-blue-300">data/tickets.json</code> via
+            <code class="text-blue-300">server/server-data.js</code>.
+            La liste est consultable dans la section <strong>Tickets</strong> de l'interface admin
+            à l'adresse <code class="text-blue-300">/tickets</code>.
+          </p>
+        </div>
+      </section>
+    }
 
     <!-- ══ INTEGRATION ════════════════════════════════════════════════════════ -->
-    <section *ngIf="activeSection === 'integration'">
-      <h1 class="text-2xl font-bold text-white mb-2">Intégration</h1>
-      <p class="text-white/50 text-sm mb-8">Le widget ne nécessite qu'un import et une balise HTML — aucun &#64;Input() ni &#64;Output().</p>
-
-      <!-- Import -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">add_circle</span> 1. Import
-        </h2>
-        <pre class="text-sm font-mono text-green-300/90 leading-relaxed">import &#123; TicketWidgetComponent &#125; from '../../components/ticket-widget/ticket-widget.component';
-
-&#64;Component(&#123;
-  imports: [TicketWidgetComponent, ...]
-&#125;)</pre>
-      </div>
-
-      <!-- HTML -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">html</span> 2. Template — usage complet
-        </h2>
-        <pre class="text-sm font-mono text-blue-300/90 leading-relaxed whitespace-pre-wrap">&lt;!-- Placer en bas de la page hôte, hors des conteneurs overflow-hidden --&gt;
-&lt;wo-ticket-widget&gt;&lt;/wo-ticket-widget&gt;</pre>
-        <p class="text-xs text-white/30 mt-3">
-          Le bouton flottant est positionné en <code class="text-blue-300">fixed bottom-6 left-6 z-[500]</code>.
-          Aucune configuration supplémentaire requise.
-        </p>
-      </div>
-
-      <!-- Exemple app.component -->
-      <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
-        <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">integration_instructions</span> 3. Exemple — app.component.html
-        </h2>
-        <pre class="text-sm font-mono text-blue-300/90 leading-relaxed whitespace-pre-wrap">&lt;router-outlet&gt;&lt;/router-outlet&gt;
-
-&lt;!-- Widget visible sur toutes les pages de l'app --&gt;
-&lt;wo-ticket-widget&gt;&lt;/wo-ticket-widget&gt;</pre>
-      </div>
-
-      <!-- Notes -->
-      <div class="bg-[#111120] border border-amber-500/20 rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-amber-400/80 uppercase tracking-widest mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">tips_and_updates</span> Bonnes pratiques
-        </h2>
-        <ul class="space-y-2 text-sm text-white/60">
-          <li class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-green-400 text-sm mt-0.5">check</span>
-            Placer la balise à la racine du composant hôte, jamais dans un conteneur avec <code class="text-blue-300">overflow: hidden</code>
-          </li>
-          <li class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-green-400 text-sm mt-0.5">check</span>
-            Le z-index 500 garantit que le widget s'affiche au-dessus des modals standards
-          </li>
-          <li class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-amber-400 text-sm mt-0.5">warning</span>
-            html2canvas peut échouer sur des iframes ou des éléments cross-origin — le composant gère le cas null (affiche "capture non disponible")
-          </li>
-          <li class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-amber-400 text-sm mt-0.5">warning</span>
-            La capture est faite à l'ouverture du widget (avant l'affichage du formulaire) pour éviter de capturer le formulaire lui-même
-          </li>
-        </ul>
-      </div>
-    </section>
+    @if (activeSection === 'integration') {
+      <section>
+        <h1 class="text-2xl font-bold text-white mb-2">Intégration</h1>
+        <p class="text-white/50 text-sm mb-8">Le widget ne nécessite qu'un import et une balise HTML — aucun &#64;Input() ni &#64;Output().</p>
+        <!-- Import -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">add_circle</span> 1. Import
+          </h2>
+          <pre class="text-sm font-mono text-green-300/90 leading-relaxed">import &#123; TicketWidgetComponent &#125; from '../../components/ticket-widget/ticket-widget.component';
+            &#64;Component(&#123;
+            imports: [TicketWidgetComponent, ...]
+          &#125;)</pre>
+        </div>
+        <!-- HTML -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">html</span> 2. Template — usage complet
+          </h2>
+          <pre class="text-sm font-mono text-blue-300/90 leading-relaxed whitespace-pre-wrap">&lt;!-- Placer en bas de la page hôte, hors des conteneurs overflow-hidden --&gt;
+          &lt;wo-ticket-widget&gt;&lt;/wo-ticket-widget&gt;</pre>
+          <p class="text-xs text-white/30 mt-3">
+            Le bouton flottant est positionné en <code class="text-blue-300">fixed bottom-6 left-6 z-[500]</code>.
+            Aucune configuration supplémentaire requise.
+          </p>
+        </div>
+        <!-- Exemple app.component -->
+        <div class="bg-[#111120] border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-sm font-bold text-white/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">integration_instructions</span> 3. Exemple — app.component.html
+          </h2>
+          <pre class="text-sm font-mono text-blue-300/90 leading-relaxed whitespace-pre-wrap">&lt;router-outlet&gt;&lt;/router-outlet&gt;
+            &lt;!-- Widget visible sur toutes les pages de l'app --&gt;
+          &lt;wo-ticket-widget&gt;&lt;/wo-ticket-widget&gt;</pre>
+        </div>
+        <!-- Notes -->
+        <div class="bg-[#111120] border border-amber-500/20 rounded-2xl p-6">
+          <h2 class="text-sm font-bold text-amber-400/80 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">tips_and_updates</span> Bonnes pratiques
+          </h2>
+          <ul class="space-y-2 text-sm text-white/60">
+            <li class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-green-400 text-sm mt-0.5">check</span>
+              Placer la balise à la racine du composant hôte, jamais dans un conteneur avec <code class="text-blue-300">overflow: hidden</code>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-green-400 text-sm mt-0.5">check</span>
+              Le z-index 500 garantit que le widget s'affiche au-dessus des modals standards
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-amber-400 text-sm mt-0.5">warning</span>
+              html2canvas peut échouer sur des iframes ou des éléments cross-origin — le composant gère le cas null (affiche "capture non disponible")
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-amber-400 text-sm mt-0.5">warning</span>
+              La capture est faite à l'ouverture du widget (avant l'affichage du formulaire) pour éviter de capturer le formulaire lui-même
+            </li>
+          </ul>
+        </div>
+      </section>
+    }
 
   </main>
 

@@ -2,10 +2,9 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'wo-ticket-widget-doc',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './ticket-widget-doc.component.html'
+    selector: 'wo-ticket-widget-doc',
+    imports: [CommonModule],
+    templateUrl: './ticket-widget-doc.component.html'
 })
 export class TicketWidgetDocComponent {
   activeSection = 'overview';

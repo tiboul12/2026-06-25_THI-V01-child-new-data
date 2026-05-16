@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -9,11 +9,10 @@ import { AppConfigService } from '../../../core/services/app-config.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
-  selector: 'app-landing',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './landing.component.html',
-  styleUrl: './landing.component.scss'
+    selector: 'app-landing',
+    imports: [FormsModule],
+    templateUrl: './landing.component.html',
+    styleUrl: './landing.component.scss'
 })
 export class LandingComponent implements OnInit, OnDestroy {
   get appName()        { return this.appConfig.appName(); }

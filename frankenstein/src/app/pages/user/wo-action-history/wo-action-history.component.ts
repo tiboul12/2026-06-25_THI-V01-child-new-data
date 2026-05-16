@@ -6,11 +6,10 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ConfigService } from '../../../core/services/config.service';
 
 @Component({
-  selector: 'app-wo-action-history',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './wo-action-history.component.html',
-  styleUrl: './wo-action-history.component.scss'
+    selector: 'app-wo-action-history',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './wo-action-history.component.html',
+    styleUrl: './wo-action-history.component.scss'
 })
 export class WoActionHistoryComponent implements OnInit {
   private historyService = inject(WoActionHistoryService);

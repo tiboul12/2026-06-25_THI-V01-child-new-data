@@ -1,1283 +1,1411 @@
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     Cahier de Recette — Full-screen dark modal
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<div *ngIf="isOpen"
-     class="fixed inset-0 z-[80] flex items-stretch justify-stretch p-4"
-     style="background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);">
-
-  <!-- ── Main panel ──────────────────────────────────────────────────────── -->
-  <div class="relative flex flex-col w-full max-w-7xl mx-auto bg-gray-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-
-    <!-- ── Header ─────────────────────────────────────────────────────────── -->
-    <div class="flex items-center gap-3 px-5 py-3 border-b border-white/10 bg-gray-900 flex-shrink-0">
-      <!-- Icon + Title -->
-      <span class="flex items-center justify-center w-9 h-9 rounded-xl bg-teal-500/20">
-        <span class="material-symbols-outlined text-teal-400" style="font-size:20px">checklist</span>
-      </span>
-      <span class="text-white font-bold text-base tracking-tight">Cahier de Recette</span>
-
-      <!-- Tab bar -->
-      <nav class="flex items-center gap-1 ml-4 flex-1">
-        <button *ngFor="let t of tabs; trackBy: trackById"
-          (click)="switchTab(t.id)"
-          [class]="'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ' + (tab === t.id ? 'bg-teal-500 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5')">
-          <span class="material-symbols-outlined" style="font-size:16px">{{t.icon}}</span>
-          {{t.label}}
+Cahier de Recette — Full-screen dark modal
+═══════════════════════════════════════════════════════════════════════════ -->
+@if (isOpen) {
+  <div
+    class="fixed inset-0 z-[80] flex items-stretch justify-stretch p-4"
+    style="background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);">
+    <!-- ── Main panel ──────────────────────────────────────────────────────── -->
+    <div class="relative flex flex-col w-full max-w-7xl mx-auto bg-gray-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <!-- ── Header ─────────────────────────────────────────────────────────── -->
+      <div class="flex items-center gap-3 px-5 py-3 border-b border-white/10 bg-gray-900 flex-shrink-0">
+        <!-- Icon + Title -->
+        <span class="flex items-center justify-center w-9 h-9 rounded-xl bg-teal-500/20">
+          <span class="material-symbols-outlined text-teal-400" style="font-size:20px">checklist</span>
+        </span>
+        <span class="text-white font-bold text-base tracking-tight">Cahier de Recette</span>
+        <!-- Tab bar -->
+        <nav class="flex items-center gap-1 ml-4 flex-1">
+          @for (t of tabs; track trackById($index, t)) {
+            <button
+              (click)="switchTab(t.id)"
+              [class]="'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ' + (tab === t.id ? 'bg-teal-500 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5')">
+              <span class="material-symbols-outlined" style="font-size:16px">{{t.icon}}</span>
+              {{t.label}}
+            </button>
+          }
+        </nav>
+        <!-- Doc + Close -->
+        <button (click)="openDoc()"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+          <span class="material-symbols-outlined" style="font-size:15px">help_outline</span>
+          Doc
         </button>
-      </nav>
-
-      <!-- Doc + Close -->
-      <button (click)="openDoc()"
-              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
-        <span class="material-symbols-outlined" style="font-size:15px">help_outline</span>
-        Doc
-      </button>
-      <button (click)="close()"
-              [disabled]="svc.isRunning()"
-              class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-        <span class="material-symbols-outlined" style="font-size:20px">close</span>
-      </button>
-    </div>
-
-    <!-- ── Loading spinner ─────────────────────────────────────────────────── -->
-    <div *ngIf="loading" class="flex-1 flex items-center justify-center">
-      <div class="flex flex-col items-center gap-3 text-gray-400">
-        <div class="w-10 h-10 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
-        <span class="text-sm">Chargement…</span>
+        <button (click)="close()"
+          [disabled]="svc.isRunning()"
+          class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <span class="material-symbols-outlined" style="font-size:20px">close</span>
+        </button>
       </div>
-    </div>
-
-    <!-- ── Content area ────────────────────────────────────────────────────── -->
-    <div *ngIf="!loading" class="flex-1 overflow-hidden flex flex-col min-h-0">
-
-      <!-- ════════════════════════════════════════════════════════════════════
-           TAB: CATALOGUE
-           ════════════════════════════════════════════════════════════════════ -->
-      <div *ngIf="tab === 'catalogue'" class="flex-1 flex overflow-hidden min-h-0">
-
-        <!-- LEFT: Categories sidebar -->
-        <div class="w-64 flex-shrink-0 bg-gray-800/60 border-r border-white/10 flex flex-col overflow-hidden">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
-            <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Catégories</span>
-            <button (click)="openCreateCategory()"
+      <!-- ── Loading spinner ─────────────────────────────────────────────────── -->
+      @if (loading) {
+        <div class="flex-1 flex items-center justify-center">
+          <div class="flex flex-col items-center gap-3 text-gray-400">
+            <div class="w-10 h-10 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+            <span class="text-sm">Chargement…</span>
+          </div>
+        </div>
+      }
+      <!-- ── Content area ────────────────────────────────────────────────────── -->
+      @if (!loading) {
+        <div class="flex-1 overflow-hidden flex flex-col min-h-0">
+          <!-- ════════════════════════════════════════════════════════════════════
+          TAB: CATALOGUE
+          ════════════════════════════════════════════════════════════════════ -->
+          @if (tab === 'catalogue') {
+            <div class="flex-1 flex overflow-hidden min-h-0">
+              <!-- LEFT: Categories sidebar -->
+              <div class="w-64 flex-shrink-0 bg-gray-800/60 border-r border-white/10 flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                  <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Catégories</span>
+                  <button (click)="openCreateCategory()"
                     class="p-1 rounded-md bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors"
                     title="Nouvelle catégorie">
-              <span class="material-symbols-outlined" style="font-size:16px">add</span>
-            </button>
-          </div>
-
-          <div class="flex-1 overflow-y-auto py-2 space-y-1 px-2">
-            <div *ngFor="let cat of svc.categories(); trackBy: trackById"
-                 (click)="selectedCategoryId = cat.id"
-                 class="group flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all duration-150 border"
+                    <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                  </button>
+                </div>
+                <div class="flex-1 overflow-y-auto py-2 space-y-1 px-2">
+                  @for (cat of svc.categories(); track trackById($index, cat)) {
+                    <div
+                      (click)="selectedCategoryId = cat.id"
+                      class="group flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all duration-150 border"
                  [class]="selectedCategoryId === cat.id
                    ? catBgCls(cat.color) + ' border-opacity-100'
                    : 'border-transparent hover:bg-white/5 hover:border-white/10'">
-              <span class="material-symbols-outlined flex-shrink-0" style="font-size:18px"
-                    [class]="catColorCls(cat.color)">{{cat.icon}}</span>
-              <span class="flex-1 text-sm font-medium truncate"
-                    [class]="selectedCategoryId === cat.id ? 'text-white' : 'text-gray-300'">{{cat.name}}</span>
-              <span class="text-xs text-gray-500 flex-shrink-0">
-                {{svc.getTestsForCategory(cat.id).length}}
-              </span>
-              <!-- Edit / Delete buttons -->
-              <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button (click)="openEditCategory(cat, $event)"
-                        class="p-0.5 rounded text-gray-400 hover:text-blue-400 transition-colors">
-                  <span class="material-symbols-outlined" style="font-size:14px">edit</span>
-                </button>
-                <button (click)="deleteCategory(cat.id, $event)"
-                        class="p-0.5 rounded text-gray-400 hover:text-red-400 transition-colors">
-                  <span class="material-symbols-outlined" style="font-size:14px">delete</span>
-                </button>
+                      <span class="material-symbols-outlined flex-shrink-0" style="font-size:18px"
+                      [class]="catColorCls(cat.color)">{{cat.icon}}</span>
+                      <span class="flex-1 text-sm font-medium truncate"
+                      [class]="selectedCategoryId === cat.id ? 'text-white' : 'text-gray-300'">{{cat.name}}</span>
+                      <span class="text-xs text-gray-500 flex-shrink-0">
+                        {{svc.getTestsForCategory(cat.id).length}}
+                      </span>
+                      <!-- Edit / Delete buttons -->
+                      <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button (click)="openEditCategory(cat, $event)"
+                          class="p-0.5 rounded text-gray-400 hover:text-blue-400 transition-colors">
+                          <span class="material-symbols-outlined" style="font-size:14px">edit</span>
+                        </button>
+                        <button (click)="deleteCategory(cat.id, $event)"
+                          class="p-0.5 rounded text-gray-400 hover:text-red-400 transition-colors">
+                          <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  @if (svc.categories().length === 0) {
+                    <div
+                      class="text-center text-gray-600 text-xs py-8">
+                      Aucune catégorie.<br>Créez-en une.
+                    </div>
+                  }
+                </div>
               </div>
-            </div>
-
-            <div *ngIf="svc.categories().length === 0"
-                 class="text-center text-gray-600 text-xs py-8">
-              Aucune catégorie.<br>Créez-en une.
-            </div>
-          </div>
-        </div>
-
-        <!-- RIGHT: Tests list -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-          <!-- Filters bar -->
-          <div class="flex items-center gap-2 px-4 py-3 border-b border-white/10 flex-shrink-0">
-            <div class="relative flex-1 max-w-xs">
-              <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" style="font-size:16px">search</span>
-              <input [(ngModel)]="testSearch" placeholder="Rechercher un test…"
-                     class="w-full bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg pl-8 pr-3 py-1.5 text-white text-sm outline-none transition-colors" />
-            </div>
-            <select [(ngModel)]="testStatusFilter"
+              <!-- RIGHT: Tests list -->
+              <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- Filters bar -->
+                <div class="flex items-center gap-2 px-4 py-3 border-b border-white/10 flex-shrink-0">
+                  <div class="relative flex-1 max-w-xs">
+                    <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" style="font-size:16px">search</span>
+                    <input [(ngModel)]="testSearch" placeholder="Rechercher un test…"
+                      class="w-full bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg pl-8 pr-3 py-1.5 text-white text-sm outline-none transition-colors" />
+                  </div>
+                  <select [(ngModel)]="testStatusFilter"
                     class="bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-sm text-white outline-none">
-              <option value="">Tous statuts</option>
-              <option value="active">Actif</option>
-              <option value="draft">Brouillon</option>
-              <option value="deprecated">Obsolète</option>
-            </select>
-            <select [(ngModel)]="testPriorityFilter"
+                    <option value="">Tous statuts</option>
+                    <option value="active">Actif</option>
+                    <option value="draft">Brouillon</option>
+                    <option value="deprecated">Obsolète</option>
+                  </select>
+                  <select [(ngModel)]="testPriorityFilter"
                     class="bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-sm text-white outline-none">
-              <option value="">Toutes priorités</option>
-              <option value="critique">Critique</option>
-              <option value="haute">Haute</option>
-              <option value="normale">Normale</option>
-              <option value="basse">Basse</option>
-            </select>
-            <select [(ngModel)]="tagFilter"
+                    <option value="">Toutes priorités</option>
+                    <option value="critique">Critique</option>
+                    <option value="haute">Haute</option>
+                    <option value="normale">Normale</option>
+                    <option value="basse">Basse</option>
+                  </select>
+                  <select [(ngModel)]="tagFilter"
                     class="bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-sm text-white outline-none">
-              <option value="">Tous tags</option>
-              <option *ngFor="let tag of svc.allTags()" [value]="tag">{{tag}}</option>
-            </select>
-            <div class="flex-1"></div>
-            <button (click)="openCreateTest()"
+                    <option value="">Tous tags</option>
+                    @for (tag of svc.allTags(); track tag) {
+                      <option [value]="tag">{{tag}}</option>
+                    }
+                  </select>
+                  <div class="flex-1"></div>
+                  <button (click)="openCreateTest()"
                     class="flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-lg transition-colors">
-              <span class="material-symbols-outlined" style="font-size:16px">add</span>
-              Nouveau test
-            </button>
-          </div>
-
-          <!-- Test list -->
-          <div class="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-            <div *ngIf="!selectedCategoryId" class="text-center text-gray-500 py-16">
-              Sélectionnez une catégorie
-            </div>
-
-            <div *ngIf="selectedCategoryId && filteredTests.length === 0"
-                 class="text-center text-gray-500 py-16">
-              <span class="material-symbols-outlined text-4xl text-gray-700 block mb-2">inbox</span>
-              Aucun test dans cette catégorie
-            </div>
-
-            <div *ngFor="let t of filteredTests; trackBy: trackById"
-                 class="group flex items-center gap-3 px-4 py-3 bg-gray-800 hover:bg-gray-750 border border-white/5 hover:border-teal-500/30 rounded-xl transition-all duration-150 cursor-pointer"
-                 (click)="showTestDetail = showTestDetail?.id === t.id ? null : t">
-              <!-- Priority dot -->
-              <span class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
-                    [class]="priorityColor(t.priority).replace('text-','bg-')"></span>
-
-              <!-- Name + description -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="text-white text-sm font-medium truncate">{{t.name}}</span>
-                  <span class="text-xs px-1.5 py-0.5 rounded-full" [class]="statusBadgeCls(t.status)">
-                    {{statusLabel(t.status)}}
-                  </span>
-                  <span class="text-xs px-1.5 py-0.5 rounded-full" [class]="priorityBadgeCls(t.priority)">
-                    {{priorityLabel(t.priority)}}
-                  </span>
+                    <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                    Nouveau test
+                  </button>
                 </div>
-                <div *ngIf="t.description" class="text-xs text-gray-500 truncate mt-0.5">{{t.description}}</div>
-              </div>
-
-              <!-- Tags -->
-              <div class="flex flex-wrap gap-1 max-w-[180px]">
-                <span *ngFor="let tag of t.tags.slice(0, 3)"
-                      class="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded-full">{{tag}}</span>
-                <span *ngIf="t.tags.length > 3"
-                      class="text-xs text-gray-500">+{{t.tags.length - 3}}</span>
-              </div>
-
-              <!-- Duration -->
-              <span class="text-xs text-gray-500 flex-shrink-0 flex items-center gap-0.5">
-                <span class="material-symbols-outlined" style="font-size:12px">schedule</span>
-                {{t.estimatedMinutes}}min
-              </span>
-
-              <!-- Steps count -->
-              <span class="text-xs text-gray-500 flex-shrink-0 flex items-center gap-0.5">
-                <span class="material-symbols-outlined" style="font-size:12px">list</span>
-                {{t.steps.length}}
-              </span>
-
-              <!-- Actions -->
-              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button (click)="openEditTest(t); $event.stopPropagation()"
-                        class="p-1 rounded-md text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors">
-                  <span class="material-symbols-outlined" style="font-size:15px">edit</span>
-                </button>
-                <button (click)="deleteTest(t.id); $event.stopPropagation()"
-                        class="p-1 rounded-md text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                  <span class="material-symbols-outlined" style="font-size:15px">delete</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Test detail slide-in panel -->
-          <div *ngIf="showTestDetail"
-               class="border-t border-white/10 bg-gray-800/80 px-5 py-4 overflow-y-auto max-h-72 flex-shrink-0">
-            <div class="flex items-start justify-between mb-3">
-              <div>
-                <h3 class="text-white font-semibold">{{showTestDetail.name}}</h3>
-                <p *ngIf="showTestDetail.description" class="text-sm text-gray-400 mt-0.5">{{showTestDetail.description}}</p>
-              </div>
-              <button (click)="showTestDetail = null" class="text-gray-500 hover:text-white transition-colors">
-                <span class="material-symbols-outlined" style="font-size:18px">close</span>
-              </button>
-            </div>
-            <div *ngIf="showTestDetail.preconditions" class="mb-3">
-              <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Prérequis</div>
-              <p class="text-sm text-gray-300">{{showTestDetail.preconditions}}</p>
-            </div>
-            <div *ngIf="showTestDetail.steps.length > 0">
-              <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Étapes ({{showTestDetail.steps.length}})</div>
-              <div class="space-y-1.5">
-                <div *ngFor="let step of showTestDetail.steps"
-                     class="grid grid-cols-4 gap-2 text-xs bg-gray-900/60 rounded-lg px-3 py-2">
-                  <span class="text-teal-400 font-mono">{{step.page}}</span>
-                  <span class="text-blue-400">{{step.action}}</span>
-                  <span class="text-gray-400">{{step.element}}</span>
-                  <span class="text-green-400">{{step.expected}}</span>
+                <!-- Test list -->
+                <div class="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+                  @if (!selectedCategoryId) {
+                    <div class="text-center text-gray-500 py-16">
+                      Sélectionnez une catégorie
+                    </div>
+                  }
+                  @if (selectedCategoryId && filteredTests.length === 0) {
+                    <div
+                      class="text-center text-gray-500 py-16">
+                      <span class="material-symbols-outlined text-4xl text-gray-700 block mb-2">inbox</span>
+                      Aucun test dans cette catégorie
+                    </div>
+                  }
+                  @for (t of filteredTests; track trackById($index, t)) {
+                    <div
+                      class="group flex items-center gap-3 px-4 py-3 bg-gray-800 hover:bg-gray-750 border border-white/5 hover:border-teal-500/30 rounded-xl transition-all duration-150 cursor-pointer"
+                      (click)="showTestDetail = showTestDetail?.id === t.id ? null : t">
+                      <!-- Priority dot -->
+                      <span class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
+                      [class]="priorityColor(t.priority).replace('text-','bg-')"></span>
+                      <!-- Name + description -->
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span class="text-white text-sm font-medium truncate">{{t.name}}</span>
+                          <span class="text-xs px-1.5 py-0.5 rounded-full" [class]="statusBadgeCls(t.status)">
+                            {{statusLabel(t.status)}}
+                          </span>
+                          <span class="text-xs px-1.5 py-0.5 rounded-full" [class]="priorityBadgeCls(t.priority)">
+                            {{priorityLabel(t.priority)}}
+                          </span>
+                        </div>
+                        @if (t.description) {
+                          <div class="text-xs text-gray-500 truncate mt-0.5">{{t.description}}</div>
+                        }
+                      </div>
+                      <!-- Tags -->
+                      <div class="flex flex-wrap gap-1 max-w-[180px]">
+                        @for (tag of t.tags.slice(0, 3); track tag) {
+                          <span
+                          class="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded-full">{{tag}}</span>
+                        }
+                        @if (t.tags.length > 3) {
+                          <span
+                          class="text-xs text-gray-500">+{{t.tags.length - 3}}</span>
+                        }
+                      </div>
+                      <!-- Duration -->
+                      <span class="text-xs text-gray-500 flex-shrink-0 flex items-center gap-0.5">
+                        <span class="material-symbols-outlined" style="font-size:12px">schedule</span>
+                        {{t.estimatedMinutes}}min
+                      </span>
+                      <!-- Steps count -->
+                      <span class="text-xs text-gray-500 flex-shrink-0 flex items-center gap-0.5">
+                        <span class="material-symbols-outlined" style="font-size:12px">list</span>
+                        {{t.steps.length}}
+                      </span>
+                      <!-- Actions -->
+                      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button (click)="openEditTest(t); $event.stopPropagation()"
+                          class="p-1 rounded-md text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors">
+                          <span class="material-symbols-outlined" style="font-size:15px">edit</span>
+                        </button>
+                        <button (click)="deleteTest(t.id); $event.stopPropagation()"
+                          class="p-1 rounded-md text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                          <span class="material-symbols-outlined" style="font-size:15px">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  }
                 </div>
+                <!-- Test detail slide-in panel -->
+                @if (showTestDetail) {
+                  <div
+                    class="border-t border-white/10 bg-gray-800/80 px-5 py-4 overflow-y-auto max-h-72 flex-shrink-0">
+                    <div class="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 class="text-white font-semibold">{{showTestDetail.name}}</h3>
+                        @if (showTestDetail.description) {
+                          <p class="text-sm text-gray-400 mt-0.5">{{showTestDetail.description}}</p>
+                        }
+                      </div>
+                      <button (click)="showTestDetail = null" class="text-gray-500 hover:text-white transition-colors">
+                        <span class="material-symbols-outlined" style="font-size:18px">close</span>
+                      </button>
+                    </div>
+                    @if (showTestDetail.preconditions) {
+                      <div class="mb-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Prérequis</div>
+                        <p class="text-sm text-gray-300">{{showTestDetail.preconditions}}</p>
+                      </div>
+                    }
+                    @if (showTestDetail.steps.length > 0) {
+                      <div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Étapes ({{showTestDetail.steps.length}})</div>
+                        <div class="space-y-1.5">
+                          @for (step of showTestDetail.steps; track step) {
+                            <div
+                              class="grid grid-cols-4 gap-2 text-xs bg-gray-900/60 rounded-lg px-3 py-2">
+                              <span class="text-teal-400 font-mono">{{step.page}}</span>
+                              <span class="text-blue-400">{{step.action}}</span>
+                              <span class="text-gray-400">{{step.element}}</span>
+                              <span class="text-green-400">{{step.expected}}</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ════════════════════════════════════════════════════════════════════
-           TAB: CAMPAGNES
-           ════════════════════════════════════════════════════════════════════ -->
-      <div *ngIf="tab === 'campagnes'" class="flex-1 flex overflow-hidden min-h-0">
-
-        <!-- Campaign list -->
-        <div class="w-80 flex-shrink-0 bg-gray-800/60 border-r border-white/10 flex flex-col overflow-hidden">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
-            <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Campagnes</span>
-            <button (click)="openCreateCampaign()"
+          }
+          <!-- ════════════════════════════════════════════════════════════════════
+          TAB: CAMPAGNES
+          ════════════════════════════════════════════════════════════════════ -->
+          @if (tab === 'campagnes') {
+            <div class="flex-1 flex overflow-hidden min-h-0">
+              <!-- Campaign list -->
+              <div class="w-80 flex-shrink-0 bg-gray-800/60 border-r border-white/10 flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                  <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Campagnes</span>
+                  <button (click)="openCreateCampaign()"
                     class="p-1 rounded-md bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors">
-              <span class="material-symbols-outlined" style="font-size:16px">add</span>
-            </button>
-          </div>
-          <div class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
-            <div *ngFor="let c of svc.campaigns(); trackBy: trackById"
-                 (click)="selectedCampaign = c"
-                 class="group px-3 py-3 rounded-xl cursor-pointer border transition-all duration-150"
+                    <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                  </button>
+                </div>
+                <div class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
+                  @for (c of svc.campaigns(); track trackById($index, c)) {
+                    <div
+                      (click)="selectedCampaign = c"
+                      class="group px-3 py-3 rounded-xl cursor-pointer border transition-all duration-150"
                  [class]="selectedCampaign?.id === c.id
                    ? 'bg-teal-500/10 border-teal-500/30'
                    : 'border-transparent hover:bg-white/5 hover:border-white/10'">
-              <div class="flex items-start justify-between">
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-white truncate">{{c.name}}</div>
-                  <div *ngIf="c.description" class="text-xs text-gray-500 truncate mt-0.5">{{c.description}}</div>
-                  <div class="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-                    <span class="flex items-center gap-0.5">
-                      <span class="material-symbols-outlined" style="font-size:12px">assignment</span>
-                      {{campaignTestCount(c)}} tests
-                    </span>
-                    <span class="flex items-center gap-0.5">
-                      <span class="material-symbols-outlined" style="font-size:12px">schedule</span>
-                      ~{{campaignDuration(c)}}min
-                    </span>
+                      <div class="flex items-start justify-between">
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-white truncate">{{c.name}}</div>
+                          @if (c.description) {
+                            <div class="text-xs text-gray-500 truncate mt-0.5">{{c.description}}</div>
+                          }
+                          <div class="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+                            <span class="flex items-center gap-0.5">
+                              <span class="material-symbols-outlined" style="font-size:12px">assignment</span>
+                              {{campaignTestCount(c)}} tests
+                            </span>
+                            <span class="flex items-center gap-0.5">
+                              <span class="material-symbols-outlined" style="font-size:12px">schedule</span>
+                              ~{{campaignDuration(c)}}min
+                            </span>
+                          </div>
+                          <div class="flex flex-wrap gap-1 mt-1.5">
+                            @for (tag of c.tags.slice(0,4); track tag) {
+                              <span
+                              class="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-400 rounded-full">{{tag}}</span>
+                            }
+                          </div>
+                        </div>
+                        <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0">
+                          <button (click)="openEditCampaign(c); $event.stopPropagation()"
+                            class="p-0.5 rounded text-gray-400 hover:text-blue-400 transition-colors">
+                            <span class="material-symbols-outlined" style="font-size:14px">edit</span>
+                          </button>
+                          <button (click)="deleteCampaign(c.id); $event.stopPropagation()"
+                            class="p-0.5 rounded text-gray-400 hover:text-red-400 transition-colors">
+                            <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  @if (svc.campaigns().length === 0) {
+                    <div
+                      class="text-center text-gray-600 text-xs py-8">
+                      Aucune campagne.<br>Créez-en une.
+                    </div>
+                  }
+                </div>
+              </div>
+              <!-- Campaign detail -->
+              <div class="flex-1 flex flex-col overflow-hidden">
+                @if (!selectedCampaign) {
+                  <div class="flex-1 flex items-center justify-center text-gray-600">
+                    <div class="text-center">
+                      <span class="material-symbols-outlined text-5xl block text-gray-700 mb-2">collections_bookmark</span>
+                      Sélectionnez une campagne
+                    </div>
                   </div>
-                  <div class="flex flex-wrap gap-1 mt-1.5">
-                    <span *ngFor="let tag of c.tags.slice(0,4)"
-                          class="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-400 rounded-full">{{tag}}</span>
+                }
+                @if (selectedCampaign) {
+                  <div class="flex-1 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
+                      <div>
+                        <h2 class="text-white font-bold text-base">{{selectedCampaign.name}}</h2>
+                        @if (selectedCampaign.description) {
+                          <p class="text-sm text-gray-400">{{selectedCampaign.description}}</p>
+                        }
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button (click)="runConfig.scope = 'campaign'; runConfig.campaignId = selectedCampaign!.id; switchTab('lancer')"
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-lg transition-colors">
+                          <span class="material-symbols-outlined" style="font-size:16px">play_circle</span>
+                          Lancer cette campagne
+                        </button>
+                      </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+                      @for (testId of selectedCampaign.testIds; track testId) {
+                        <div class="flex items-center gap-3 px-4 py-2.5 bg-gray-800 border border-white/5 rounded-xl">
+                          <span class="material-symbols-outlined text-teal-400" style="font-size:16px">check_box</span>
+                          <span class="text-sm text-white">{{testNameById(testId)}}</span>
+                        </div>
+                      }
+                      @if (selectedCampaign.testIds.length === 0) {
+                        <div
+                        class="text-center text-gray-600 text-sm py-8">Aucun test dans cette campagne</div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          <!-- ════════════════════════════════════════════════════════════════════
+          TAB: LANCER
+          ════════════════════════════════════════════════════════════════════ -->
+          @if (tab === 'lancer') {
+            <div class="flex-1 overflow-y-auto px-6 py-5">
+              <!-- Live progress overlay -->
+              @if (showLiveProgress) {
+                <div
+                  class="fixed inset-0 z-[90] flex items-center justify-center"
+                  style="background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);">
+                  <div class="w-full max-w-lg bg-gray-900 border border-white/10 rounded-2xl p-6 shadow-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-3 h-3 bg-teal-400 rounded-full animate-pulse"></div>
+                        <span class="text-white font-bold">Exécution en cours…</span>
+                      </div>
+                      <button (click)="abortRun()"
+                        class="flex items-center gap-1 px-2.5 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg text-sm transition-colors">
+                        <span class="material-symbols-outlined" style="font-size:15px">stop</span>
+                        Annuler
+                      </button>
+                    </div>
+                    <!-- Progress bar -->
+                    <div class="mb-3">
+                      <div class="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>{{svc.runProgress()?.current || 0}} / {{svc.runProgress()?.total || 0}} tests</span>
+                        <span>{{runProgressPct()}}%</span>
+                      </div>
+                      <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-teal-500 rounded-full transition-all duration-500"
+                        [style.width.%]="runProgressPct()"></div>
+                      </div>
+                    </div>
+                    <!-- Current test -->
+                    @if (svc.runProgress()?.currentTestName) {
+                      <div
+                        class="text-sm text-gray-400 mb-4 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-teal-400 animate-spin" style="font-size:14px">autorenew</span>
+                        <span class="truncate">{{svc.runProgress()?.currentTestName}}</span>
+                      </div>
+                    }
+                    <!-- Live results -->
+                    <div class="space-y-1 max-h-52 overflow-y-auto">
+                      @for (r of svc.runProgress()?.partialResults; track r) {
+                        <div
+                          class="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg"
+                          [class]="r.status === 'passed' ? 'bg-green-500/10' : r.status === 'failed' ? 'bg-red-500/10' : 'bg-gray-700/40'">
+                          <span class="material-symbols-outlined" style="font-size:14px"
+                            [class]="r.status === 'passed' ? 'text-green-400' : r.status === 'failed' ? 'text-red-400' : r.status === 'skipped' ? 'text-gray-400' : 'text-orange-400'">
+                            {{resultIcon(r.status)}}
+                          </span>
+                          <span class="flex-1 truncate text-gray-300">{{testNameById(r.testId)}}</span>
+                          <span class="text-gray-500">{{r.score}}%</span>
+                        </div>
+                      }
+                    </div>
                   </div>
                 </div>
-                <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0">
-                  <button (click)="openEditCampaign(c); $event.stopPropagation()"
-                          class="p-0.5 rounded text-gray-400 hover:text-blue-400 transition-colors">
-                    <span class="material-symbols-outlined" style="font-size:14px">edit</span>
-                  </button>
-                  <button (click)="deleteCampaign(c.id); $event.stopPropagation()"
-                          class="p-0.5 rounded text-gray-400 hover:text-red-400 transition-colors">
-                    <span class="material-symbols-outlined" style="font-size:14px">delete</span>
-                  </button>
+              }
+              <div class="max-w-3xl mx-auto space-y-6">
+                <!-- Error banner -->
+                @if (runError) {
+                  <div
+                    class="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+                    <span class="material-symbols-outlined" style="font-size:18px">error_outline</span>
+                    {{runError}}
+                  </div>
+                }
+                <!-- Run config card -->
+                <div class="bg-gray-800 border border-white/10 rounded-xl p-5">
+                  <h3 class="text-white font-semibold text-sm mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-teal-400" style="font-size:18px">settings</span>
+                    Configuration du run
+                  </h3>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                      <label class="block text-xs text-gray-400 mb-1">Nom du run <span class="text-red-400">*</span></label>
+                      <input [(ngModel)]="runConfig.name" placeholder="Ex: Sprint 12 – Recette complète"
+                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-400 mb-1">Nom du site</label>
+                      <input [(ngModel)]="runConfig.siteName"
+                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-400 mb-1">URL du site</label>
+                      <input [(ngModel)]="runConfig.siteUrl"
+                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-400 mb-1">Navigateur</label>
+                      <select [(ngModel)]="runConfig.browser"
+                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                        @for (b of browsers; track b) {
+                          <option [value]="b">{{b}}</option>
+                        }
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-400 mb-1">Environnement</label>
+                      <select [(ngModel)]="runConfig.environment"
+                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                        @for (e of environments; track e) {
+                          <option [value]="e.value">{{e.label}}</option>
+                        }
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-400 mb-1">Testeur</label>
+                      <input [(ngModel)]="runConfig.testerName"
+                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-400 mb-1">Provider IA</label>
+                      <input [(ngModel)]="runConfig.aiProvider"
+                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                    </div>
+                    <div class="col-span-2">
+                      <label class="block text-xs text-gray-400 mb-1">Modèle IA</label>
+                      <input [(ngModel)]="runConfig.aiModel"
+                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div *ngIf="svc.campaigns().length === 0"
-                 class="text-center text-gray-600 text-xs py-8">
-              Aucune campagne.<br>Créez-en une.
-            </div>
-          </div>
-        </div>
-
-        <!-- Campaign detail -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-          <div *ngIf="!selectedCampaign" class="flex-1 flex items-center justify-center text-gray-600">
-            <div class="text-center">
-              <span class="material-symbols-outlined text-5xl block text-gray-700 mb-2">collections_bookmark</span>
-              Sélectionnez une campagne
-            </div>
-          </div>
-          <div *ngIf="selectedCampaign" class="flex-1 flex flex-col overflow-hidden">
-            <div class="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
-              <div>
-                <h2 class="text-white font-bold text-base">{{selectedCampaign.name}}</h2>
-                <p *ngIf="selectedCampaign.description" class="text-sm text-gray-400">{{selectedCampaign.description}}</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button (click)="runConfig.scope = 'campaign'; runConfig.campaignId = selectedCampaign!.id; switchTab('lancer')"
-                        class="flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-lg transition-colors">
-                  <span class="material-symbols-outlined" style="font-size:16px">play_circle</span>
-                  Lancer cette campagne
-                </button>
-              </div>
-            </div>
-            <div class="flex-1 overflow-y-auto px-5 py-3 space-y-2">
-              <div *ngFor="let testId of selectedCampaign.testIds" class="flex items-center gap-3 px-4 py-2.5 bg-gray-800 border border-white/5 rounded-xl">
-                <span class="material-symbols-outlined text-teal-400" style="font-size:16px">check_box</span>
-                <span class="text-sm text-white">{{testNameById(testId)}}</span>
-              </div>
-              <div *ngIf="selectedCampaign.testIds.length === 0"
-                   class="text-center text-gray-600 text-sm py-8">Aucun test dans cette campagne</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ════════════════════════════════════════════════════════════════════
-           TAB: LANCER
-           ════════════════════════════════════════════════════════════════════ -->
-      <div *ngIf="tab === 'lancer'" class="flex-1 overflow-y-auto px-6 py-5">
-
-        <!-- Live progress overlay -->
-        <div *ngIf="showLiveProgress"
-             class="fixed inset-0 z-[90] flex items-center justify-center"
-             style="background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);">
-          <div class="w-full max-w-lg bg-gray-900 border border-white/10 rounded-2xl p-6 shadow-2xl">
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <div class="w-3 h-3 bg-teal-400 rounded-full animate-pulse"></div>
-                <span class="text-white font-bold">Exécution en cours…</span>
-              </div>
-              <button (click)="abortRun()"
-                      class="flex items-center gap-1 px-2.5 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg text-sm transition-colors">
-                <span class="material-symbols-outlined" style="font-size:15px">stop</span>
-                Annuler
-              </button>
-            </div>
-            <!-- Progress bar -->
-            <div class="mb-3">
-              <div class="flex justify-between text-xs text-gray-400 mb-1">
-                <span>{{svc.runProgress()?.current || 0}} / {{svc.runProgress()?.total || 0}} tests</span>
-                <span>{{runProgressPct()}}%</span>
-              </div>
-              <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
-                <div class="h-full bg-teal-500 rounded-full transition-all duration-500"
-                     [style.width.%]="runProgressPct()"></div>
-              </div>
-            </div>
-            <!-- Current test -->
-            <div *ngIf="svc.runProgress()?.currentTestName"
-                 class="text-sm text-gray-400 mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-teal-400 animate-spin" style="font-size:14px">autorenew</span>
-              <span class="truncate">{{svc.runProgress()?.currentTestName}}</span>
-            </div>
-            <!-- Live results -->
-            <div class="space-y-1 max-h-52 overflow-y-auto">
-              <div *ngFor="let r of svc.runProgress()?.partialResults"
-                   class="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg"
-                   [class]="r.status === 'passed' ? 'bg-green-500/10' : r.status === 'failed' ? 'bg-red-500/10' : 'bg-gray-700/40'">
-                <span class="material-symbols-outlined" style="font-size:14px"
-                      [class]="r.status === 'passed' ? 'text-green-400' : r.status === 'failed' ? 'text-red-400' : r.status === 'skipped' ? 'text-gray-400' : 'text-orange-400'">
-                  {{resultIcon(r.status)}}
-                </span>
-                <span class="flex-1 truncate text-gray-300">{{testNameById(r.testId)}}</span>
-                <span class="text-gray-500">{{r.score}}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="max-w-3xl mx-auto space-y-6">
-
-          <!-- Error banner -->
-          <div *ngIf="runError"
-               class="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-            <span class="material-symbols-outlined" style="font-size:18px">error_outline</span>
-            {{runError}}
-          </div>
-
-          <!-- Run config card -->
-          <div class="bg-gray-800 border border-white/10 rounded-xl p-5">
-            <h3 class="text-white font-semibold text-sm mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-teal-400" style="font-size:18px">settings</span>
-              Configuration du run
-            </h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="col-span-2">
-                <label class="block text-xs text-gray-400 mb-1">Nom du run <span class="text-red-400">*</span></label>
-                <input [(ngModel)]="runConfig.name" placeholder="Ex: Sprint 12 – Recette complète"
-                       class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Nom du site</label>
-                <input [(ngModel)]="runConfig.siteName"
-                       class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">URL du site</label>
-                <input [(ngModel)]="runConfig.siteUrl"
-                       class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Navigateur</label>
-                <select [(ngModel)]="runConfig.browser"
+                <!-- Scope selector -->
+                <div class="bg-gray-800 border border-white/10 rounded-xl p-5">
+                  <h3 class="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-teal-400" style="font-size:18px">filter_list</span>
+                    Périmètre du run
+                  </h3>
+                  <div class="flex gap-2 flex-wrap mb-4">
+                    @for (scope of scopeOptions; track scope) {
+                      <button
+                        (click)="runConfig.scope = scope.value"
+                        [class]="'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-all duration-150 ' + (runConfig.scope === scope.value ? 'bg-teal-500/20 border-teal-500/50 text-teal-300' : 'bg-gray-700 border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300')">
+                        <span class="material-symbols-outlined" style="font-size:15px">{{scope.icon}}</span>
+                        {{scope.label}}
+                      </button>
+                    }
+                  </div>
+                  <!-- scope = campaign -->
+                  @if (runConfig.scope === 'campaign') {
+                    <div class="mt-2">
+                      <select [(ngModel)]="runConfig.campaignId"
                         class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
-                  <option *ngFor="let b of browsers" [value]="b">{{b}}</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Environnement</label>
-                <select [(ngModel)]="runConfig.environment"
-                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
-                  <option *ngFor="let e of environments" [value]="e.value">{{e.label}}</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Testeur</label>
-                <input [(ngModel)]="runConfig.testerName"
-                       class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Provider IA</label>
-                <input [(ngModel)]="runConfig.aiProvider"
-                       class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-              </div>
-              <div class="col-span-2">
-                <label class="block text-xs text-gray-400 mb-1">Modèle IA</label>
-                <input [(ngModel)]="runConfig.aiModel"
-                       class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Scope selector -->
-          <div class="bg-gray-800 border border-white/10 rounded-xl p-5">
-            <h3 class="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <span class="material-symbols-outlined text-teal-400" style="font-size:18px">filter_list</span>
-              Périmètre du run
-            </h3>
-            <div class="flex gap-2 flex-wrap mb-4">
-              <button *ngFor="let scope of scopeOptions"
-                (click)="runConfig.scope = scope.value"
-                [class]="'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-all duration-150 ' + (runConfig.scope === scope.value ? 'bg-teal-500/20 border-teal-500/50 text-teal-300' : 'bg-gray-700 border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300')">
-                <span class="material-symbols-outlined" style="font-size:15px">{{scope.icon}}</span>
-                {{scope.label}}
-              </button>
-            </div>
-
-            <!-- scope = campaign -->
-            <div *ngIf="runConfig.scope === 'campaign'" class="mt-2">
-              <select [(ngModel)]="runConfig.campaignId"
-                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
-                <option value="">-- Sélectionnez une campagne --</option>
-                <option *ngFor="let c of svc.campaigns()" [value]="c.id">{{c.name}} ({{campaignTestCount(c)}} tests)</option>
-              </select>
-            </div>
-
-            <!-- scope = tags -->
-            <div *ngIf="runConfig.scope === 'tags'" class="mt-2">
-              <div class="flex flex-wrap gap-2">
-                <span *ngFor="let tag of svc.allTags()"
-                      (click)="toggleTag(tag)"
-                      class="px-2.5 py-1 text-sm rounded-full cursor-pointer border transition-all duration-150"
+                        <option value="">-- Sélectionnez une campagne --</option>
+                        @for (c of svc.campaigns(); track c) {
+                          <option [value]="c.id">{{c.name}} ({{campaignTestCount(c)}} tests)</option>
+                        }
+                      </select>
+                    </div>
+                  }
+                  <!-- scope = tags -->
+                  @if (runConfig.scope === 'tags') {
+                    <div class="mt-2">
+                      <div class="flex flex-wrap gap-2">
+                        @for (tag of svc.allTags(); track tag) {
+                          <span
+                            (click)="toggleTag(tag)"
+                            class="px-2.5 py-1 text-sm rounded-full cursor-pointer border transition-all duration-150"
                       [class]="runConfig.selectedTags.includes(tag)
                         ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
                         : 'bg-gray-700 border-gray-600 text-gray-400 hover:border-gray-500'">
-                  {{tag}}
-                </span>
-                <span *ngIf="svc.allTags().length === 0" class="text-gray-600 text-sm">Aucun tag disponible</span>
-              </div>
-            </div>
-
-            <!-- scope = selection / replay -->
-            <div *ngIf="runConfig.scope === 'selection' || runConfig.scope === 'replay'" class="mt-2">
-              <div class="relative mb-2">
-                <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" style="font-size:15px">search</span>
-                <input [(ngModel)]="runLaunchSelSearch" placeholder="Rechercher un test…"
-                       class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg pl-8 pr-3 py-1.5 text-white text-sm outline-none transition-colors" />
-              </div>
-              <div class="space-y-1 max-h-48 overflow-y-auto">
-                <label *ngFor="let t of filteredRunTests"
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors">
-                  <input type="checkbox"
-                         [checked]="runConfig.selectedTestIds.includes(t.id)"
-                         (change)="toggleTestSelection(t.id)"
-                         class="accent-teal-500 w-4 h-4" />
-                  <span class="text-sm text-gray-300 flex-1 truncate">{{t.name}}</span>
-                  <span class="text-xs" [class]="priorityBadgeCls(t.priority)">{{priorityLabel(t.priority)}}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Estimated duration + launch -->
-          <div class="flex items-center justify-between bg-gray-800 border border-white/10 rounded-xl px-5 py-4">
-            <div class="flex items-center gap-2 text-sm text-gray-400">
-              <span class="material-symbols-outlined text-teal-400" style="font-size:18px">schedule</span>
-              <span>Durée estimée :</span>
-              <span class="text-white font-semibold">~{{estimatedMinutes}} minutes</span>
-              <span class="text-gray-600">·</span>
-              <span>{{selectedTestsForRun.length}} test(s)</span>
-            </div>
-            <button (click)="launchRun()"
+                            {{tag}}
+                          </span>
+                        }
+                        @if (svc.allTags().length === 0) {
+                          <span class="text-gray-600 text-sm">Aucun tag disponible</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                  <!-- scope = selection / replay -->
+                  @if (runConfig.scope === 'selection' || runConfig.scope === 'replay') {
+                    <div class="mt-2">
+                      <div class="relative mb-2">
+                        <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" style="font-size:15px">search</span>
+                        <input [(ngModel)]="runLaunchSelSearch" placeholder="Rechercher un test…"
+                          class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg pl-8 pr-3 py-1.5 text-white text-sm outline-none transition-colors" />
+                      </div>
+                      <div class="space-y-1 max-h-48 overflow-y-auto">
+                        @for (t of filteredRunTests; track t) {
+                          <label
+                            class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors">
+                            <input type="checkbox"
+                              [checked]="runConfig.selectedTestIds.includes(t.id)"
+                              (change)="toggleTestSelection(t.id)"
+                              class="accent-teal-500 w-4 h-4" />
+                            <span class="text-sm text-gray-300 flex-1 truncate">{{t.name}}</span>
+                            <span class="text-xs" [class]="priorityBadgeCls(t.priority)">{{priorityLabel(t.priority)}}</span>
+                          </label>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+                <!-- Estimated duration + launch -->
+                <div class="flex items-center justify-between bg-gray-800 border border-white/10 rounded-xl px-5 py-4">
+                  <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <span class="material-symbols-outlined text-teal-400" style="font-size:18px">schedule</span>
+                    <span>Durée estimée :</span>
+                    <span class="text-white font-semibold">~{{estimatedMinutes}} minutes</span>
+                    <span class="text-gray-600">·</span>
+                    <span>{{selectedTestsForRun.length}} test(s)</span>
+                  </div>
+                  <button (click)="launchRun()"
                     [disabled]="svc.isRunning()"
                     class="flex items-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors">
-              <span class="material-symbols-outlined" style="font-size:20px">play_circle</span>
-              Lancer le run
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ════════════════════════════════════════════════════════════════════
-           TAB: RAPPORTS
-           ════════════════════════════════════════════════════════════════════ -->
-      <div *ngIf="tab === 'rapports'" class="flex-1 flex overflow-hidden min-h-0">
-
-        <!-- Run history list -->
-        <div class="w-72 flex-shrink-0 bg-gray-800/60 border-r border-white/10 flex flex-col overflow-hidden">
-          <div class="px-4 py-3 border-b border-white/10">
-            <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Historique</span>
-          </div>
-          <!-- Sparkline header -->
-          <div *ngIf="svc.scoreHistory().length >= 2" class="px-4 py-3 border-b border-white/10">
-            <div class="text-xs text-gray-500 mb-1.5">Évolution du score</div>
-            <svg width="160" height="32" class="overflow-visible">
-              <polyline [attr.points]="scoreSparklinePts()"
+                    <span class="material-symbols-outlined" style="font-size:20px">play_circle</span>
+                    Lancer le run
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+          <!-- ════════════════════════════════════════════════════════════════════
+          TAB: RAPPORTS
+          ════════════════════════════════════════════════════════════════════ -->
+          @if (tab === 'rapports') {
+            <div class="flex-1 flex overflow-hidden min-h-0">
+              <!-- Run history list -->
+              <div class="w-72 flex-shrink-0 bg-gray-800/60 border-r border-white/10 flex flex-col overflow-hidden">
+                <div class="px-4 py-3 border-b border-white/10">
+                  <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Historique</span>
+                </div>
+                <!-- Sparkline header -->
+                @if (svc.scoreHistory().length >= 2) {
+                  <div class="px-4 py-3 border-b border-white/10">
+                    <div class="text-xs text-gray-500 mb-1.5">Évolution du score</div>
+                    <svg width="160" height="32" class="overflow-visible">
+                      <polyline [attr.points]="scoreSparklinePts()"
                         fill="none" stroke="#14b8a6" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <div class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
-            <div *ngFor="let run of svc.runs(); trackBy: trackById"
-                 (click)="loadRunDetail(run.id)"
-                 class="group px-3 py-2.5 rounded-xl cursor-pointer border transition-all duration-150"
+                    </svg>
+                  </div>
+                }
+                <div class="flex-1 overflow-y-auto py-2 px-2 space-y-1">
+                  @for (run of svc.runs(); track trackById($index, run)) {
+                    <div
+                      (click)="loadRunDetail(run.id)"
+                      class="group px-3 py-2.5 rounded-xl cursor-pointer border transition-all duration-150"
                  [class]="selectedRun?.id === run.id
                    ? 'bg-teal-500/10 border-teal-500/30'
                    : 'border-transparent hover:bg-white/5 hover:border-white/10'">
-              <div class="flex items-start justify-between">
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-white truncate">{{run.name}}</div>
-                  <div class="text-xs text-gray-500 mt-0.5">{{formatDate(run.date)}}</div>
-                  <div class="flex items-center gap-2 mt-1.5">
-                    <span class="text-xs px-1.5 py-0.5 rounded-full font-bold"
-                          [class]="scoreBgClass(run.summary.score) + ' text-white'">
-                      {{run.summary.score}}%
-                    </span>
-                    <span class="text-xs text-gray-500">
-                      {{run.summary.passed}}/{{run.summary.total}} réussis
-                    </span>
+                      <div class="flex items-start justify-between">
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-white truncate">{{run.name}}</div>
+                          <div class="text-xs text-gray-500 mt-0.5">{{formatDate(run.date)}}</div>
+                          <div class="flex items-center gap-2 mt-1.5">
+                            <span class="text-xs px-1.5 py-0.5 rounded-full font-bold"
+                              [class]="scoreBgClass(run.summary.score) + ' text-white'">
+                              {{run.summary.score}}%
+                            </span>
+                            <span class="text-xs text-gray-500">
+                              {{run.summary.passed}}/{{run.summary.total}} réussis
+                            </span>
+                          </div>
+                        </div>
+                        <button (click)="deleteRun(run.id); $event.stopPropagation()"
+                          class="p-0.5 rounded opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all">
+                          <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  @if (svc.runs().length === 0) {
+                    <div
+                      class="text-center text-gray-600 text-xs py-8">
+                      Aucun run enregistré
+                    </div>
+                  }
+                </div>
+              </div>
+              <!-- Run detail -->
+              <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- Loading -->
+                @if (loadingRun) {
+                  <div class="flex-1 flex items-center justify-center">
+                    <div class="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
                   </div>
-                </div>
-                <button (click)="deleteRun(run.id); $event.stopPropagation()"
-                        class="p-0.5 rounded opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all">
-                  <span class="material-symbols-outlined" style="font-size:14px">delete</span>
-                </button>
-              </div>
-            </div>
-            <div *ngIf="svc.runs().length === 0"
-                 class="text-center text-gray-600 text-xs py-8">
-              Aucun run enregistré
-            </div>
-          </div>
-        </div>
-
-        <!-- Run detail -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-          <!-- Loading -->
-          <div *ngIf="loadingRun" class="flex-1 flex items-center justify-center">
-            <div class="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-
-          <!-- No run selected -->
-          <div *ngIf="!loadingRun && !selectedRun" class="flex-1 flex items-center justify-center text-gray-600">
-            <div class="text-center">
-              <span class="material-symbols-outlined text-5xl block text-gray-700 mb-2">bar_chart</span>
-              Sélectionnez un run pour voir son rapport
-            </div>
-          </div>
-
-          <!-- Run detail content -->
-          <div *ngIf="!loadingRun && selectedRun" class="flex-1 flex flex-col overflow-hidden">
-            <!-- Run header -->
-            <div class="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
-              <div>
-                <h2 class="text-white font-bold">{{selectedRun.name}}</h2>
-                <div class="text-xs text-gray-500 mt-0.5">
-                  {{formatDate(selectedRun.date)}} · {{selectedRun.environment}} · {{selectedRun.browser}} · {{selectedRun.testerName}}
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button (click)="replayRun(selectedRun)"
-                        class="flex items-center gap-1 px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors">
-                  <span class="material-symbols-outlined" style="font-size:15px">replay</span>
-                  Replay
-                </button>
-                <button (click)="exportRun('md')"
-                        class="flex items-center gap-1 px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors">
-                  <span class="material-symbols-outlined" style="font-size:15px">download</span>
-                  .md
-                </button>
-                <button (click)="exportRun('json')"
-                        class="flex items-center gap-1 px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors">
-                  <span class="material-symbols-outlined" style="font-size:15px">download</span>
-                  .json
-                </button>
-              </div>
-            </div>
-
-            <!-- Summary cards -->
-            <div class="flex gap-3 px-5 py-3 border-b border-white/10 flex-shrink-0 flex-wrap">
-              <div class="flex flex-col items-center justify-center bg-gray-800 border border-white/5 rounded-xl px-4 py-2.5 min-w-[80px]">
-                <span class="text-2xl font-bold text-white">{{selectedRun.summary.total}}</span>
-                <span class="text-xs text-gray-500">Total</span>
-              </div>
-              <div class="flex flex-col items-center justify-center bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2.5 min-w-[80px]">
-                <span class="text-2xl font-bold text-green-400">{{selectedRun.summary.passed}}</span>
-                <span class="text-xs text-green-500">Réussis</span>
-              </div>
-              <div class="flex flex-col items-center justify-center bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5 min-w-[80px]">
-                <span class="text-2xl font-bold text-red-400">{{selectedRun.summary.failed}}</span>
-                <span class="text-xs text-red-500">Échoués</span>
-              </div>
-              <div class="flex flex-col items-center justify-center bg-gray-700/50 border border-white/5 rounded-xl px-4 py-2.5 min-w-[80px]">
-                <span class="text-2xl font-bold text-gray-400">{{selectedRun.summary.skipped}}</span>
-                <span class="text-xs text-gray-500">Ignorés</span>
-              </div>
-              <div class="flex flex-col items-center justify-center bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-2.5 min-w-[80px]">
-                <span class="text-2xl font-bold text-orange-400">{{selectedRun.summary.blocked}}</span>
-                <span class="text-xs text-orange-500">Bloqués</span>
-              </div>
-              <div class="flex flex-col items-center justify-center rounded-xl px-4 py-2.5 min-w-[80px] border"
-                   [class]="selectedRun.summary.score >= 90 ? 'bg-green-500/10 border-green-500/30' : selectedRun.summary.score >= 70 ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30'">
-                <span class="text-2xl font-bold" [class]="scoreClass(selectedRun.summary.score)">{{selectedRun.summary.score}}%</span>
-                <span class="text-xs text-gray-500">Score</span>
-              </div>
-              <div class="flex flex-col items-center justify-center bg-gray-800 border border-white/5 rounded-xl px-4 py-2.5 min-w-[80px]">
-                <span class="text-lg font-bold text-gray-300">{{(selectedRun.summary.durationMs / 60000).toFixed(1)}}m</span>
-                <span class="text-xs text-gray-500">Durée</span>
-              </div>
-            </div>
-
-            <!-- Filters + result list -->
-            <div class="flex items-center gap-2 px-5 py-2 border-b border-white/10 flex-shrink-0">
-              <span class="text-xs text-gray-500">Filtrer :</span>
-              <button *ngFor="let f of resultFilters"
-                (click)="runDetailResultFilter = f.v"
-                [class]="'px-2 py-0.5 text-xs rounded-full border transition-colors ' + (runDetailResultFilter === f.v ? 'bg-teal-500/20 border-teal-500/40 text-teal-300' : 'border-gray-600 text-gray-500 hover:border-gray-500 hover:text-gray-300')">
-                {{f.label}}
-              </button>
-            </div>
-            <div class="flex-1 overflow-y-auto px-5 py-3 space-y-2">
-              <div *ngFor="let r of filteredRunDetail"
-                   class="px-4 py-3 rounded-xl border transition-colors"
-                   [class]="r.status === 'passed' ? 'bg-green-500/5 border-green-500/20' : r.status === 'failed' ? 'bg-red-500/5 border-red-500/20' : r.status === 'blocked' ? 'bg-orange-500/5 border-orange-500/20' : 'bg-gray-800 border-white/5'">
-                <div class="flex items-center gap-3">
-                  <span class="material-symbols-outlined flex-shrink-0" style="font-size:18px"
-                        [class]="r.status === 'passed' ? 'text-green-400' : r.status === 'failed' ? 'text-red-400' : r.status === 'skipped' ? 'text-gray-400' : 'text-orange-400'">
-                    {{resultIcon(r.status)}}
-                  </span>
-                  <span class="text-sm text-white font-medium flex-1 truncate">{{testNameById(r.testId)}}</span>
-                  <span class="text-xs font-bold" [class]="scoreClass(r.score)">{{r.score}}%</span>
-                  <span class="text-xs" [class]="resultBadgeCls(r.status)">{{resultLabel(r.status)}}</span>
-                  <span class="text-xs text-gray-500">{{(r.durationMs / 1000).toFixed(1)}}s</span>
-                </div>
-                <div *ngIf="r.aiComment" class="text-xs text-gray-400 mt-1.5 ml-9">{{r.aiComment}}</div>
-              </div>
-            </div>
-
-            <!-- Compare section -->
-            <div class="px-5 py-3 border-t border-white/10 flex-shrink-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-xs text-gray-500 font-medium">Comparer :</span>
-                <select [(ngModel)]="compareRunAId"
-                        class="bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg px-2 py-1 text-xs text-white outline-none">
-                  <option value="">Run A…</option>
-                  <option *ngFor="let r of svc.runs()" [value]="r.id">{{r.name}}</option>
-                </select>
-                <span class="text-gray-600">vs</span>
-                <select [(ngModel)]="compareRunBId"
-                        class="bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg px-2 py-1 text-xs text-white outline-none">
-                  <option value="">Run B…</option>
-                  <option *ngFor="let r of svc.runs()" [value]="r.id">{{r.name}}</option>
-                </select>
-                <button (click)="compareRuns()" [disabled]="loadingDiff"
-                        class="flex items-center gap-1 px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg transition-colors disabled:opacity-50">
-                  <span class="material-symbols-outlined" style="font-size:13px">compare_arrows</span>
-                  Comparer
-                </button>
-              </div>
-              <div *ngIf="runDiff" class="mt-3 grid grid-cols-2 gap-3">
-                <div>
-                  <div class="text-xs text-red-400 font-medium mb-1 flex items-center gap-1">
-                    <span class="material-symbols-outlined" style="font-size:13px">trending_down</span>
-                    Régressions ({{runDiff.regressions.length}})
+                }
+                <!-- No run selected -->
+                @if (!loadingRun && !selectedRun) {
+                  <div class="flex-1 flex items-center justify-center text-gray-600">
+                    <div class="text-center">
+                      <span class="material-symbols-outlined text-5xl block text-gray-700 mb-2">bar_chart</span>
+                      Sélectionnez un run pour voir son rapport
+                    </div>
                   </div>
-                  <div *ngFor="let id of runDiff.regressions"
-                       class="text-xs text-gray-300 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg mb-1 truncate">
-                    {{testNameById(id)}}
+                }
+                <!-- Run detail content -->
+                @if (!loadingRun && selectedRun) {
+                  <div class="flex-1 flex flex-col overflow-hidden">
+                    <!-- Run header -->
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
+                      <div>
+                        <h2 class="text-white font-bold">{{selectedRun.name}}</h2>
+                        <div class="text-xs text-gray-500 mt-0.5">
+                          {{formatDate(selectedRun.date)}} · {{selectedRun.environment}} · {{selectedRun.browser}} · {{selectedRun.testerName}}
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button (click)="replayRun(selectedRun)"
+                          class="flex items-center gap-1 px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors">
+                          <span class="material-symbols-outlined" style="font-size:15px">replay</span>
+                          Replay
+                        </button>
+                        <button (click)="exportRun('md')"
+                          class="flex items-center gap-1 px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors">
+                          <span class="material-symbols-outlined" style="font-size:15px">download</span>
+                          .md
+                        </button>
+                        <button (click)="exportRun('json')"
+                          class="flex items-center gap-1 px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors">
+                          <span class="material-symbols-outlined" style="font-size:15px">download</span>
+                          .json
+                        </button>
+                      </div>
+                    </div>
+                    <!-- Summary cards -->
+                    <div class="flex gap-3 px-5 py-3 border-b border-white/10 flex-shrink-0 flex-wrap">
+                      <div class="flex flex-col items-center justify-center bg-gray-800 border border-white/5 rounded-xl px-4 py-2.5 min-w-[80px]">
+                        <span class="text-2xl font-bold text-white">{{selectedRun.summary.total}}</span>
+                        <span class="text-xs text-gray-500">Total</span>
+                      </div>
+                      <div class="flex flex-col items-center justify-center bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2.5 min-w-[80px]">
+                        <span class="text-2xl font-bold text-green-400">{{selectedRun.summary.passed}}</span>
+                        <span class="text-xs text-green-500">Réussis</span>
+                      </div>
+                      <div class="flex flex-col items-center justify-center bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5 min-w-[80px]">
+                        <span class="text-2xl font-bold text-red-400">{{selectedRun.summary.failed}}</span>
+                        <span class="text-xs text-red-500">Échoués</span>
+                      </div>
+                      <div class="flex flex-col items-center justify-center bg-gray-700/50 border border-white/5 rounded-xl px-4 py-2.5 min-w-[80px]">
+                        <span class="text-2xl font-bold text-gray-400">{{selectedRun.summary.skipped}}</span>
+                        <span class="text-xs text-gray-500">Ignorés</span>
+                      </div>
+                      <div class="flex flex-col items-center justify-center bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-2.5 min-w-[80px]">
+                        <span class="text-2xl font-bold text-orange-400">{{selectedRun.summary.blocked}}</span>
+                        <span class="text-xs text-orange-500">Bloqués</span>
+                      </div>
+                      <div class="flex flex-col items-center justify-center rounded-xl px-4 py-2.5 min-w-[80px] border"
+                        [class]="selectedRun.summary.score >= 90 ? 'bg-green-500/10 border-green-500/30' : selectedRun.summary.score >= 70 ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30'">
+                        <span class="text-2xl font-bold" [class]="scoreClass(selectedRun.summary.score)">{{selectedRun.summary.score}}%</span>
+                        <span class="text-xs text-gray-500">Score</span>
+                      </div>
+                      <div class="flex flex-col items-center justify-center bg-gray-800 border border-white/5 rounded-xl px-4 py-2.5 min-w-[80px]">
+                        <span class="text-lg font-bold text-gray-300">{{(selectedRun.summary.durationMs / 60000).toFixed(1)}}m</span>
+                        <span class="text-xs text-gray-500">Durée</span>
+                      </div>
+                    </div>
+                    <!-- Filters + result list -->
+                    <div class="flex items-center gap-2 px-5 py-2 border-b border-white/10 flex-shrink-0">
+                      <span class="text-xs text-gray-500">Filtrer :</span>
+                      @for (f of resultFilters; track f) {
+                        <button
+                          (click)="runDetailResultFilter = f.v"
+                          [class]="'px-2 py-0.5 text-xs rounded-full border transition-colors ' + (runDetailResultFilter === f.v ? 'bg-teal-500/20 border-teal-500/40 text-teal-300' : 'border-gray-600 text-gray-500 hover:border-gray-500 hover:text-gray-300')">
+                          {{f.label}}
+                        </button>
+                      }
+                    </div>
+                    <div class="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+                      @for (r of filteredRunDetail; track r) {
+                        <div
+                          class="px-4 py-3 rounded-xl border transition-colors"
+                          [class]="r.status === 'passed' ? 'bg-green-500/5 border-green-500/20' : r.status === 'failed' ? 'bg-red-500/5 border-red-500/20' : r.status === 'blocked' ? 'bg-orange-500/5 border-orange-500/20' : 'bg-gray-800 border-white/5'">
+                          <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined flex-shrink-0" style="font-size:18px"
+                              [class]="r.status === 'passed' ? 'text-green-400' : r.status === 'failed' ? 'text-red-400' : r.status === 'skipped' ? 'text-gray-400' : 'text-orange-400'">
+                              {{resultIcon(r.status)}}
+                            </span>
+                            <span class="text-sm text-white font-medium flex-1 truncate">{{testNameById(r.testId)}}</span>
+                            <span class="text-xs font-bold" [class]="scoreClass(r.score)">{{r.score}}%</span>
+                            <span class="text-xs" [class]="resultBadgeCls(r.status)">{{resultLabel(r.status)}}</span>
+                            <span class="text-xs text-gray-500">{{(r.durationMs / 1000).toFixed(1)}}s</span>
+                          </div>
+                          @if (r.aiComment) {
+                            <div class="text-xs text-gray-400 mt-1.5 ml-9">{{r.aiComment}}</div>
+                          }
+                        </div>
+                      }
+                    </div>
+                    <!-- Compare section -->
+                    <div class="px-5 py-3 border-t border-white/10 flex-shrink-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs text-gray-500 font-medium">Comparer :</span>
+                        <select [(ngModel)]="compareRunAId"
+                          class="bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg px-2 py-1 text-xs text-white outline-none">
+                          <option value="">Run A…</option>
+                          @for (r of svc.runs(); track r) {
+                            <option [value]="r.id">{{r.name}}</option>
+                          }
+                        </select>
+                        <span class="text-gray-600">vs</span>
+                        <select [(ngModel)]="compareRunBId"
+                          class="bg-gray-800 border border-gray-600 focus:border-teal-500 rounded-lg px-2 py-1 text-xs text-white outline-none">
+                          <option value="">Run B…</option>
+                          @for (r of svc.runs(); track r) {
+                            <option [value]="r.id">{{r.name}}</option>
+                          }
+                        </select>
+                        <button (click)="compareRuns()" [disabled]="loadingDiff"
+                          class="flex items-center gap-1 px-2.5 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg transition-colors disabled:opacity-50">
+                          <span class="material-symbols-outlined" style="font-size:13px">compare_arrows</span>
+                          Comparer
+                        </button>
+                      </div>
+                      @if (runDiff) {
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                          <div>
+                            <div class="text-xs text-red-400 font-medium mb-1 flex items-center gap-1">
+                              <span class="material-symbols-outlined" style="font-size:13px">trending_down</span>
+                              Régressions ({{runDiff.regressions.length}})
+                            </div>
+                            @for (id of runDiff.regressions; track id) {
+                              <div
+                                class="text-xs text-gray-300 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg mb-1 truncate">
+                                {{testNameById(id)}}
+                              </div>
+                            }
+                            @if (runDiff.regressions.length === 0) {
+                              <div class="text-xs text-gray-600">Aucune régression</div>
+                            }
+                          </div>
+                          <div>
+                            <div class="text-xs text-green-400 font-medium mb-1 flex items-center gap-1">
+                              <span class="material-symbols-outlined" style="font-size:13px">trending_up</span>
+                              Corrections ({{runDiff.fixes.length}})
+                            </div>
+                            @for (id of runDiff.fixes; track id) {
+                              <div
+                                class="text-xs text-gray-300 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-lg mb-1 truncate">
+                                {{testNameById(id)}}
+                              </div>
+                            }
+                            @if (runDiff.fixes.length === 0) {
+                              <div class="text-xs text-gray-600">Aucune correction</div>
+                            }
+                          </div>
+                          <div class="col-span-2 text-xs text-gray-500 flex items-center gap-3">
+                            <span>Score A: <strong [class]="scoreClass(runDiff.scoreA)">{{runDiff.scoreA}}%</strong></span>
+                            <span>Score B: <strong [class]="scoreClass(runDiff.scoreB)">{{runDiff.scoreB}}%</strong></span>
+                            <span>Delta: <strong [class]="runDiff.scoreDelta >= 0 ? 'text-green-400' : 'text-red-400'">
+                              {{runDiff.scoreDelta >= 0 ? '+' : ''}}{{runDiff.scoreDelta}}%
+                            </strong></span>
+                          </div>
+                        </div>
+                      }
+                    </div>
                   </div>
-                  <div *ngIf="runDiff.regressions.length === 0" class="text-xs text-gray-600">Aucune régression</div>
-                </div>
-                <div>
-                  <div class="text-xs text-green-400 font-medium mb-1 flex items-center gap-1">
-                    <span class="material-symbols-outlined" style="font-size:13px">trending_up</span>
-                    Corrections ({{runDiff.fixes.length}})
-                  </div>
-                  <div *ngFor="let id of runDiff.fixes"
-                       class="text-xs text-gray-300 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-lg mb-1 truncate">
-                    {{testNameById(id)}}
-                  </div>
-                  <div *ngIf="runDiff.fixes.length === 0" class="text-xs text-gray-600">Aucune correction</div>
-                </div>
-                <div class="col-span-2 text-xs text-gray-500 flex items-center gap-3">
-                  <span>Score A: <strong [class]="scoreClass(runDiff.scoreA)">{{runDiff.scoreA}}%</strong></span>
-                  <span>Score B: <strong [class]="scoreClass(runDiff.scoreB)">{{runDiff.scoreB}}%</strong></span>
-                  <span>Delta: <strong [class]="runDiff.scoreDelta >= 0 ? 'text-green-400' : 'text-red-400'">
-                    {{runDiff.scoreDelta >= 0 ? '+' : ''}}{{runDiff.scoreDelta}}%
-                  </strong></span>
-                </div>
+                }
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ════════════════════════════════════════════════════════════════════
-           TAB: AVANCÉ
-           ════════════════════════════════════════════════════════════════════ -->
-      <div *ngIf="tab === 'avance'" class="flex-1 flex flex-col overflow-hidden min-h-0">
-        <!-- Sub-tab bar -->
-        <div class="flex items-center gap-1 px-4 py-2 border-b border-white/10 flex-shrink-0">
-          <button *ngFor="let st of advancedSubTabs"
-            (click)="advancedSubTab = st.id"
-            [class]="'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ' + (advancedSubTab === st.id ? 'bg-teal-500/20 text-teal-300' : 'text-gray-400 hover:text-white hover:bg-white/5')">
-            <span class="material-symbols-outlined" style="font-size:15px">{{st.icon}}</span>
-            {{st.label}}
-          </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto px-5 py-4">
-
-          <!-- ── Variables ─────────────────────────────────────────────── -->
-          <div *ngIf="advancedSubTab === 'variables'">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-white font-semibold">Variables de contexte</h3>
-                <p class="text-xs text-gray-500 mt-0.5">Utilisables dans les tests avec la syntaxe <code class="bg-gray-800 px-1 rounded text-teal-400">{{'{{'}}VAR_NAME{{'}}'}}</code></p>
-              </div>
-              <button (click)="openCreateVar()"
-                      class="flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-lg transition-colors">
-                <span class="material-symbols-outlined" style="font-size:16px">add</span>
-                Nouvelle variable
-              </button>
-            </div>
-            <div class="space-y-2">
-              <div *ngFor="let v of svc.variables(); trackBy: trackById"
-                   class="flex items-center gap-3 px-4 py-3 bg-gray-800 border border-white/5 rounded-xl group">
-                <code class="text-teal-400 text-sm font-mono flex-shrink-0">{{'{{'}}{{v.name}}{{'}}'}}</code>
-                <span class="text-gray-500 flex-shrink-0">=</span>
-                <span class="text-gray-300 text-sm flex-1 truncate font-mono">{{v.value}}</span>
-                <span *ngIf="v.description" class="text-xs text-gray-500 truncate max-w-[200px]">{{v.description}}</span>
-                <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button (click)="openEditVar(v)"
-                          class="p-1 rounded text-gray-400 hover:text-blue-400 transition-colors">
-                    <span class="material-symbols-outlined" style="font-size:15px">edit</span>
+          }
+          <!-- ════════════════════════════════════════════════════════════════════
+          TAB: AVANCÉ
+          ════════════════════════════════════════════════════════════════════ -->
+          @if (tab === 'avance') {
+            <div class="flex-1 flex flex-col overflow-hidden min-h-0">
+              <!-- Sub-tab bar -->
+              <div class="flex items-center gap-1 px-4 py-2 border-b border-white/10 flex-shrink-0">
+                @for (st of advancedSubTabs; track st) {
+                  <button
+                    (click)="advancedSubTab = st.id"
+                    [class]="'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ' + (advancedSubTab === st.id ? 'bg-teal-500/20 text-teal-300' : 'text-gray-400 hover:text-white hover:bg-white/5')">
+                    <span class="material-symbols-outlined" style="font-size:15px">{{st.icon}}</span>
+                    {{st.label}}
                   </button>
-                  <button (click)="deleteVar(v.id)"
-                          class="p-1 rounded text-gray-400 hover:text-red-400 transition-colors">
-                    <span class="material-symbols-outlined" style="font-size:15px">delete</span>
-                  </button>
-                </div>
+                }
               </div>
-              <div *ngIf="svc.variables().length === 0"
-                   class="text-center text-gray-600 text-sm py-10">Aucune variable définie</div>
-            </div>
-          </div>
-
-          <!-- ── Templates ─────────────────────────────────────────────── -->
-          <div *ngIf="advancedSubTab === 'templates'">
-            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <h3 class="text-white font-semibold">Templates de tests</h3>
-              <div class="flex gap-2 flex-wrap">
-                <button *ngFor="let cat of templateCategories"
-                        (click)="templateCategoryFilter = cat.value"
-                        class="px-2.5 py-1 text-xs rounded-full border transition-colors"
+              <div class="flex-1 overflow-y-auto px-5 py-4">
+                <!-- ── Variables ─────────────────────────────────────────────── -->
+                @if (advancedSubTab === 'variables') {
+                  <div>
+                    <div class="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 class="text-white font-semibold">Variables de contexte</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Utilisables dans les tests avec la syntaxe <code class="bg-gray-800 px-1 rounded text-teal-400">{{'{{'}}VAR_NAME{{'}}'}}</code></p>
+                      </div>
+                      <button (click)="openCreateVar()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-lg transition-colors">
+                        <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                        Nouvelle variable
+                      </button>
+                    </div>
+                    <div class="space-y-2">
+                      @for (v of svc.variables(); track trackById($index, v)) {
+                        <div
+                          class="flex items-center gap-3 px-4 py-3 bg-gray-800 border border-white/5 rounded-xl group">
+                          <code class="text-teal-400 text-sm font-mono flex-shrink-0">{{'{{'}}{{v.name}}{{'}}'}}</code>
+                          <span class="text-gray-500 flex-shrink-0">=</span>
+                          <span class="text-gray-300 text-sm flex-1 truncate font-mono">{{v.value}}</span>
+                          @if (v.description) {
+                            <span class="text-xs text-gray-500 truncate max-w-[200px]">{{v.description}}</span>
+                          }
+                          <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button (click)="openEditVar(v)"
+                              class="p-1 rounded text-gray-400 hover:text-blue-400 transition-colors">
+                              <span class="material-symbols-outlined" style="font-size:15px">edit</span>
+                            </button>
+                            <button (click)="deleteVar(v.id)"
+                              class="p-1 rounded text-gray-400 hover:text-red-400 transition-colors">
+                              <span class="material-symbols-outlined" style="font-size:15px">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      }
+                      @if (svc.variables().length === 0) {
+                        <div
+                        class="text-center text-gray-600 text-sm py-10">Aucune variable définie</div>
+                      }
+                    </div>
+                  </div>
+                }
+                <!-- ── Templates ─────────────────────────────────────────────── -->
+                @if (advancedSubTab === 'templates') {
+                  <div>
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                      <h3 class="text-white font-semibold">Templates de tests</h3>
+                      <div class="flex gap-2 flex-wrap">
+                        @for (cat of templateCategories; track cat) {
+                          <button
+                            (click)="templateCategoryFilter = cat.value"
+                            class="px-2.5 py-1 text-xs rounded-full border transition-colors"
                         [class]="templateCategoryFilter === cat.value
                           ? 'bg-teal-500/20 border-teal-500/40 text-teal-300'
                           : 'border-gray-600 text-gray-500 hover:border-gray-500 hover:text-gray-300'">
-                  {{cat.label}}
-                </button>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div *ngFor="let t of filteredTemplates; trackBy: trackById"
-                   class="bg-gray-800 border border-white/5 hover:border-teal-500/30 rounded-xl p-4 transition-colors">
-                <div class="flex items-start justify-between mb-2">
-                  <div>
-                    <div class="text-sm font-medium text-white">{{t.name}}</div>
-                    <div class="text-xs text-gray-500 mt-0.5">{{t.description}}</div>
+                            {{cat.label}}
+                          </button>
+                        }
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                      @for (t of filteredTemplates; track trackById($index, t)) {
+                        <div
+                          class="bg-gray-800 border border-white/5 hover:border-teal-500/30 rounded-xl p-4 transition-colors">
+                          <div class="flex items-start justify-between mb-2">
+                            <div>
+                              <div class="text-sm font-medium text-white">{{t.name}}</div>
+                              <div class="text-xs text-gray-500 mt-0.5">{{t.description}}</div>
+                            </div>
+                            <button (click)="importTemplate(t)"
+                              class="flex items-center gap-1 px-2 py-1 bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 rounded-lg text-xs transition-colors flex-shrink-0 ml-2">
+                              <span class="material-symbols-outlined" style="font-size:13px">download</span>
+                              Importer
+                            </button>
+                          </div>
+                          <div class="flex items-center gap-2 flex-wrap mt-2">
+                            <span class="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-400 rounded-full">{{t.category}}</span>
+                            <span class="text-xs text-gray-500 flex items-center gap-0.5">
+                              <span class="material-symbols-outlined" style="font-size:11px">schedule</span>
+                              {{t.estimatedMinutes}}min
+                            </span>
+                            <span class="text-xs text-gray-500 flex items-center gap-0.5">
+                              <span class="material-symbols-outlined" style="font-size:11px">list</span>
+                              {{t.steps.length}} étapes
+                            </span>
+                            @for (tag of t.tags.slice(0,3); track tag) {
+                              <span
+                              class="text-xs px-1.5 py-0.5 bg-teal-500/10 text-teal-400 rounded-full">{{tag}}</span>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                    @if (filteredTemplates.length === 0) {
+                      <div
+                      class="text-center text-gray-600 text-sm py-10">Aucun template disponible</div>
+                    }
                   </div>
-                  <button (click)="importTemplate(t)"
-                          class="flex items-center gap-1 px-2 py-1 bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 rounded-lg text-xs transition-colors flex-shrink-0 ml-2">
-                    <span class="material-symbols-outlined" style="font-size:13px">download</span>
-                    Importer
-                  </button>
-                </div>
-                <div class="flex items-center gap-2 flex-wrap mt-2">
-                  <span class="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-400 rounded-full">{{t.category}}</span>
-                  <span class="text-xs text-gray-500 flex items-center gap-0.5">
-                    <span class="material-symbols-outlined" style="font-size:11px">schedule</span>
-                    {{t.estimatedMinutes}}min
-                  </span>
-                  <span class="text-xs text-gray-500 flex items-center gap-0.5">
-                    <span class="material-symbols-outlined" style="font-size:11px">list</span>
-                    {{t.steps.length}} étapes
-                  </span>
-                  <span *ngFor="let tag of t.tags.slice(0,3)"
-                        class="text-xs px-1.5 py-0.5 bg-teal-500/10 text-teal-400 rounded-full">{{tag}}</span>
-                </div>
+                }
+                <!-- ── Webhook ────────────────────────────────────────────────── -->
+                @if (advancedSubTab === 'webhook') {
+                  <div class="max-w-2xl">
+                    <h3 class="text-white font-semibold mb-4">Webhook de déclenchement</h3>
+                    <div class="bg-gray-800 border border-white/5 rounded-xl p-4 mb-4">
+                      <div class="text-xs text-gray-500 mb-1.5">URL du webhook</div>
+                      <div class="flex items-center gap-2">
+                        <code class="flex-1 text-sm text-teal-400 font-mono bg-gray-900 px-3 py-2 rounded-lg border border-gray-700 break-all">
+                          {{webhookUrl()}}
+                        </code>
+                      </div>
+                    </div>
+                    <div class="bg-gray-800 border border-white/5 rounded-xl p-4 mb-4">
+                      <div class="text-xs text-gray-500 mb-3">Secret de signature</div>
+                      @if (!showWebhookSecret) {
+                        <div>
+                          <button (click)="loadWebhookSecret()" [disabled]="webhookLoading"
+                            class="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-sm text-gray-300 rounded-lg transition-colors disabled:opacity-50">
+                            <span class="material-symbols-outlined" style="font-size:16px">visibility</span>
+                            Afficher le secret
+                          </button>
+                        </div>
+                      }
+                      @if (showWebhookSecret) {
+                        <div class="space-y-3">
+                          <div class="flex items-center gap-2">
+                            <code class="flex-1 text-sm text-yellow-400 font-mono bg-gray-900 px-3 py-2 rounded-lg border border-gray-700 break-all">
+                              {{webhookSecret}}
+                            </code>
+                          </div>
+                          <button (click)="regenerateWebhookSecret()" [disabled]="webhookLoading"
+                            class="flex items-center gap-2 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-sm rounded-lg transition-colors disabled:opacity-50">
+                            <span class="material-symbols-outlined" style="font-size:15px">refresh</span>
+                            Régénérer le secret
+                          </button>
+                        </div>
+                      }
+                    </div>
+                    <div class="bg-gray-800 border border-white/5 rounded-xl p-4">
+                      <div class="text-xs text-gray-500 mb-2">Exemple d'appel cURL</div>
+                      <pre class="text-xs text-green-400 font-mono bg-gray-900 p-3 rounded-lg border border-gray-700 overflow-x-auto">curl -X POST {{webhookUrl()}} \
+                        -H "Content-Type: application/json" \
+                        -H "X-Webhook-Secret: &lt;votre-secret&gt;" \
+                      -d '{{"{"}} "scope": "all", "name": "Webhook Run" {{"}"}}'</pre>
+                    </div>
+                  </div>
+                }
+                <!-- ── Tags ──────────────────────────────────────────────────── -->
+                @if (advancedSubTab === 'tags') {
+                  <div>
+                    <h3 class="text-white font-semibold mb-4">Tous les tags</h3>
+                    <p class="text-sm text-gray-500 mb-4">Cliquez sur un tag pour filtrer le catalogue.</p>
+                    <div class="flex flex-wrap gap-2">
+                      @for (tag of svc.allTags(); track tag) {
+                        <span
+                          (click)="switchTab('catalogue'); tagFilter = tag"
+                          class="px-3 py-1.5 bg-gray-800 border border-gray-600 hover:border-teal-500 text-gray-300 hover:text-teal-300 rounded-full text-sm cursor-pointer transition-colors">
+                          {{tag}}
+                        </span>
+                      }
+                      @if (svc.allTags().length === 0) {
+                        <span
+                        class="text-gray-600 text-sm">Aucun tag</span>
+                      }
+                    </div>
+                  </div>
+                }
               </div>
             </div>
-            <div *ngIf="filteredTemplates.length === 0"
-                 class="text-center text-gray-600 text-sm py-10">Aucun template disponible</div>
-          </div>
-
-          <!-- ── Webhook ────────────────────────────────────────────────── -->
-          <div *ngIf="advancedSubTab === 'webhook'" class="max-w-2xl">
-            <h3 class="text-white font-semibold mb-4">Webhook de déclenchement</h3>
-
-            <div class="bg-gray-800 border border-white/5 rounded-xl p-4 mb-4">
-              <div class="text-xs text-gray-500 mb-1.5">URL du webhook</div>
-              <div class="flex items-center gap-2">
-                <code class="flex-1 text-sm text-teal-400 font-mono bg-gray-900 px-3 py-2 rounded-lg border border-gray-700 break-all">
-                  {{webhookUrl()}}
-                </code>
-              </div>
-            </div>
-
-            <div class="bg-gray-800 border border-white/5 rounded-xl p-4 mb-4">
-              <div class="text-xs text-gray-500 mb-3">Secret de signature</div>
-              <div *ngIf="!showWebhookSecret">
-                <button (click)="loadWebhookSecret()" [disabled]="webhookLoading"
-                        class="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-sm text-gray-300 rounded-lg transition-colors disabled:opacity-50">
-                  <span class="material-symbols-outlined" style="font-size:16px">visibility</span>
-                  Afficher le secret
+          }
+        </div>
+        }<!-- end content area -->
+        <!-- ═══════════════════════════════════════════════════════════════════════
+        INNER MODALS (absolute over the main panel)
+        ═══════════════════════════════════════════════════════════════════════ -->
+        <!-- ── Category modal ──────────────────────────────────────────────────── -->
+        @if (showCatModal) {
+          <div
+            class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
+            <div class="w-full max-w-md bg-gray-800 border border-white/10 rounded-2xl p-6 shadow-2xl mx-4">
+              <div class="flex items-center justify-between mb-5">
+                <h3 class="text-white font-bold">{{catEditing ? 'Modifier la catégorie' : 'Nouvelle catégorie'}}</h3>
+                <button (click)="showCatModal = false" class="text-gray-500 hover:text-white transition-colors">
+                  <span class="material-symbols-outlined" style="font-size:20px">close</span>
                 </button>
               </div>
-              <div *ngIf="showWebhookSecret" class="space-y-3">
-                <div class="flex items-center gap-2">
-                  <code class="flex-1 text-sm text-yellow-400 font-mono bg-gray-900 px-3 py-2 rounded-lg border border-gray-700 break-all">
-                    {{webhookSecret}}
-                  </code>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Nom <span class="text-red-400">*</span></label>
+                  <input [(ngModel)]="catForm.name" placeholder="Ex: Authentification"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
                 </div>
-                <button (click)="regenerateWebhookSecret()" [disabled]="webhookLoading"
-                        class="flex items-center gap-2 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-sm rounded-lg transition-colors disabled:opacity-50">
-                  <span class="material-symbols-outlined" style="font-size:15px">refresh</span>
-                  Régénérer le secret
-                </button>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Description</label>
+                  <input [(ngModel)]="catForm.description"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-2">Icône</label>
+                  <div class="flex flex-wrap gap-1.5">
+                    @for (icon of categoryIcons; track icon) {
+                      <button
+                        (click)="catForm.icon = icon"
+                        class="p-1.5 rounded-lg border transition-colors"
+                        [class]="catForm.icon === icon ? 'border-teal-500 bg-teal-500/20' : 'border-gray-600 hover:border-gray-500'">
+                        <span class="material-symbols-outlined text-gray-300" style="font-size:18px">{{icon}}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-2">Couleur</label>
+                  <div class="flex flex-wrap gap-1.5">
+                    @for (color of categoryColors; track color) {
+                      <button
+                        (click)="catForm.color = color"
+                        class="w-7 h-7 rounded-full border-2 transition-all"
+                        [class]="catForm.color === color ? 'border-white scale-110' : 'border-transparent hover:border-gray-400'"
+                        [style.background]="color === 'teal' ? '#14b8a6' : color === 'blue' ? '#3b82f6' : color === 'green' ? '#22c55e' : color === 'violet' ? '#8b5cf6' : color === 'amber' ? '#f59e0b' : color === 'red' ? '#ef4444' : color === 'orange' ? '#f97316' : color === 'cyan' ? '#06b6d4' : color === 'purple' ? '#a855f7' : '#ec4899'">
+                      </button>
+                    }
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <div class="bg-gray-800 border border-white/5 rounded-xl p-4">
-              <div class="text-xs text-gray-500 mb-2">Exemple d'appel cURL</div>
-              <pre class="text-xs text-green-400 font-mono bg-gray-900 p-3 rounded-lg border border-gray-700 overflow-x-auto">curl -X POST {{webhookUrl()}} \
-  -H "Content-Type: application/json" \
-  -H "X-Webhook-Secret: &lt;votre-secret&gt;" \
-  -d '{{"{"}} "scope": "all", "name": "Webhook Run" {{"}"}}'</pre>
-            </div>
-          </div>
-
-          <!-- ── Tags ──────────────────────────────────────────────────── -->
-          <div *ngIf="advancedSubTab === 'tags'">
-            <h3 class="text-white font-semibold mb-4">Tous les tags</h3>
-            <p class="text-sm text-gray-500 mb-4">Cliquez sur un tag pour filtrer le catalogue.</p>
-            <div class="flex flex-wrap gap-2">
-              <span *ngFor="let tag of svc.allTags()"
-                    (click)="switchTab('catalogue'); tagFilter = tag"
-                    class="px-3 py-1.5 bg-gray-800 border border-gray-600 hover:border-teal-500 text-gray-300 hover:text-teal-300 rounded-full text-sm cursor-pointer transition-colors">
-                {{tag}}
-              </span>
-              <span *ngIf="svc.allTags().length === 0"
-                    class="text-gray-600 text-sm">Aucun tag</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-    </div><!-- end content area -->
-
-
-    <!-- ═══════════════════════════════════════════════════════════════════════
-         INNER MODALS (absolute over the main panel)
-         ═══════════════════════════════════════════════════════════════════════ -->
-
-    <!-- ── Category modal ──────────────────────────────────────────────────── -->
-    <div *ngIf="showCatModal"
-         class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
-      <div class="w-full max-w-md bg-gray-800 border border-white/10 rounded-2xl p-6 shadow-2xl mx-4">
-        <div class="flex items-center justify-between mb-5">
-          <h3 class="text-white font-bold">{{catEditing ? 'Modifier la catégorie' : 'Nouvelle catégorie'}}</h3>
-          <button (click)="showCatModal = false" class="text-gray-500 hover:text-white transition-colors">
-            <span class="material-symbols-outlined" style="font-size:20px">close</span>
-          </button>
-        </div>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Nom <span class="text-red-400">*</span></label>
-            <input [(ngModel)]="catForm.name" placeholder="Ex: Authentification"
-                   class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Description</label>
-            <input [(ngModel)]="catForm.description"
-                   class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-2">Icône</label>
-            <div class="flex flex-wrap gap-1.5">
-              <button *ngFor="let icon of categoryIcons"
-                      (click)="catForm.icon = icon"
-                      class="p-1.5 rounded-lg border transition-colors"
-                      [class]="catForm.icon === icon ? 'border-teal-500 bg-teal-500/20' : 'border-gray-600 hover:border-gray-500'">
-                <span class="material-symbols-outlined text-gray-300" style="font-size:18px">{{icon}}</span>
-              </button>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-2">Couleur</label>
-            <div class="flex flex-wrap gap-1.5">
-              <button *ngFor="let color of categoryColors"
-                      (click)="catForm.color = color"
-                      class="w-7 h-7 rounded-full border-2 transition-all"
-                      [class]="catForm.color === color ? 'border-white scale-110' : 'border-transparent hover:border-gray-400'"
-                      [style.background]="color === 'teal' ? '#14b8a6' : color === 'blue' ? '#3b82f6' : color === 'green' ? '#22c55e' : color === 'violet' ? '#8b5cf6' : color === 'amber' ? '#f59e0b' : color === 'red' ? '#ef4444' : color === 'orange' ? '#f97316' : color === 'cyan' ? '#06b6d4' : color === 'purple' ? '#a855f7' : '#ec4899'">
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 mt-6">
-          <button (click)="showCatModal = false"
+              <div class="flex justify-end gap-2 mt-6">
+                <button (click)="showCatModal = false"
                   class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-            Annuler
-          </button>
-          <button (click)="saveCategory()" [disabled]="catSaving"
-                  class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50">
-            <span *ngIf="catSaving" class="w-3.5 h-3.5 border border-white/50 border-t-white rounded-full animate-spin"></span>
-            {{catEditing ? 'Enregistrer' : 'Créer'}}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Test modal ───────────────────────────────────────────────────────── -->
-    <div *ngIf="showTestModal"
-         class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
-      <div class="w-full max-w-2xl bg-gray-800 border border-white/10 rounded-2xl shadow-2xl mx-4 flex flex-col max-h-[85vh]">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
-          <h3 class="text-white font-bold">{{testEditing ? 'Modifier le test' : 'Nouveau test'}}</h3>
-          <button (click)="showTestModal = false" class="text-gray-500 hover:text-white transition-colors">
-            <span class="material-symbols-outlined" style="font-size:20px">close</span>
-          </button>
-        </div>
-        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2">
-              <label class="block text-xs text-gray-400 mb-1">Nom <span class="text-red-400">*</span></label>
-              <input [(ngModel)]="testForm.name" placeholder="Ex: Connexion avec identifiants valides"
-                     class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-            </div>
-            <div class="col-span-2">
-              <label class="block text-xs text-gray-400 mb-1">Description</label>
-              <textarea [(ngModel)]="testForm.description" rows="2"
-                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors resize-none"></textarea>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">Priorité</label>
-              <select [(ngModel)]="testForm.priority"
-                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
-                <option value="critique">Critique</option>
-                <option value="haute">Haute</option>
-                <option value="normale">Normale</option>
-                <option value="basse">Basse</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">Statut</label>
-              <select [(ngModel)]="testForm.status"
-                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
-                <option value="active">Actif</option>
-                <option value="draft">Brouillon</option>
-                <option value="deprecated">Obsolète</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">Durée estimée (minutes)</label>
-              <input type="number" [(ngModel)]="testForm.estimatedMinutes" min="1"
-                     class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-            </div>
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">Tags</label>
-              <div class="flex gap-1 flex-wrap mb-1">
-                <span *ngFor="let tag of testForm.tags"
-                      class="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded-full">
-                  {{tag}}
-                  <button (click)="removeTag(testForm, tag)" class="ml-0.5 text-gray-500 hover:text-red-400">
-                    <span class="material-symbols-outlined" style="font-size:11px">close</span>
-                  </button>
-                </span>
-              </div>
-              <input #tagInput placeholder="Ajouter un tag + Entrée"
-                     (keydown.enter)="addTag(testForm, tagInput.value); tagInput.value = ''"
-                     class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-white text-sm outline-none transition-colors" />
-            </div>
-            <div class="col-span-2">
-              <label class="block text-xs text-gray-400 mb-1">Pages cibles</label>
-              <div class="flex gap-1 flex-wrap mb-1">
-                <span *ngFor="let page of testForm.targetPages"
-                      class="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-gray-700 text-teal-300 rounded-full font-mono">
-                  {{page}}
-                  <button (click)="removeTargetPage(testForm, page)" class="ml-0.5 text-gray-500 hover:text-red-400">
-                    <span class="material-symbols-outlined" style="font-size:11px">close</span>
-                  </button>
-                </span>
-              </div>
-              <input #pageInput placeholder="/chemin/page — Entrée pour ajouter"
-                     (keydown.enter)="addTargetPage(testForm, pageInput.value); pageInput.value = ''"
-                     class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-white text-sm outline-none transition-colors font-mono" />
-            </div>
-            <div class="col-span-2">
-              <label class="block text-xs text-gray-400 mb-1">Prérequis</label>
-              <input [(ngModel)]="testForm.preconditions"
-                     class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-            </div>
-            <div class="col-span-2">
-              <label class="block text-xs text-gray-400 mb-1">
-                Étapes
-                <span class="text-gray-600 ml-1 font-normal">— format : <code class="bg-gray-900 px-1 rounded text-teal-400 text-xs">page|action|élément|résultat attendu</code> (une par ligne)</span>
-              </label>
-              <textarea [(ngModel)]="testForm.stepsText" rows="6" placeholder="/login|Cliquer|Bouton Connexion|Formulaire affiché"
-                        class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-xs outline-none transition-colors resize-none font-mono"></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 px-6 py-4 border-t border-white/10 flex-shrink-0">
-          <button (click)="showTestModal = false"
-                  class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-            Annuler
-          </button>
-          <button (click)="saveTest()" [disabled]="testSaving"
-                  class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50">
-            <span *ngIf="testSaving" class="w-3.5 h-3.5 border border-white/50 border-t-white rounded-full animate-spin"></span>
-            {{testEditing ? 'Enregistrer' : 'Créer le test'}}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Campaign modal ───────────────────────────────────────────────────── -->
-    <div *ngIf="showCampaignModal"
-         class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
-      <div class="w-full max-w-2xl bg-gray-800 border border-white/10 rounded-2xl shadow-2xl mx-4 flex flex-col max-h-[85vh]">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
-          <h3 class="text-white font-bold">{{campaignEditing ? 'Modifier la campagne' : 'Nouvelle campagne'}}</h3>
-          <button (click)="showCampaignModal = false" class="text-gray-500 hover:text-white transition-colors">
-            <span class="material-symbols-outlined" style="font-size:20px">close</span>
-          </button>
-        </div>
-        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Nom <span class="text-red-400">*</span></label>
-            <input [(ngModel)]="campaignForm.name" placeholder="Ex: Sprint 12 — Tests critiques"
-                   class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Description</label>
-            <input [(ngModel)]="campaignForm.description"
-                   class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-2">Tags</label>
-            <div class="flex gap-1 flex-wrap mb-2">
-              <span *ngFor="let tag of campaignForm.tags"
-                    class="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded-full">
-                {{tag}}
-                <button (click)="removeCampaignTag(tag)" class="ml-0.5 text-gray-500 hover:text-red-400">
-                  <span class="material-symbols-outlined" style="font-size:11px">close</span>
+                  Annuler
                 </button>
-              </span>
+                <button (click)="saveCategory()" [disabled]="catSaving"
+                  class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50">
+                  @if (catSaving) {
+                    <span class="w-3.5 h-3.5 border border-white/50 border-t-white rounded-full animate-spin"></span>
+                  }
+                  {{catEditing ? 'Enregistrer' : 'Créer'}}
+                </button>
+              </div>
             </div>
-            <div class="flex gap-2">
-              <input [(ngModel)]="campaignTagInput" placeholder="Ajouter un tag"
-                     (keydown.enter)="addCampaignTag()"
-                     class="flex-1 bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-white text-sm outline-none transition-colors" />
-              <button (click)="addCampaignTag()"
+          </div>
+        }
+        <!-- ── Test modal ───────────────────────────────────────────────────────── -->
+        @if (showTestModal) {
+          <div
+            class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
+            <div class="w-full max-w-2xl bg-gray-800 border border-white/10 rounded-2xl shadow-2xl mx-4 flex flex-col max-h-[85vh]">
+              <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
+                <h3 class="text-white font-bold">{{testEditing ? 'Modifier le test' : 'Nouveau test'}}</h3>
+                <button (click)="showTestModal = false" class="text-gray-500 hover:text-white transition-colors">
+                  <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                </button>
+              </div>
+              <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="col-span-2">
+                    <label class="block text-xs text-gray-400 mb-1">Nom <span class="text-red-400">*</span></label>
+                    <input [(ngModel)]="testForm.name" placeholder="Ex: Connexion avec identifiants valides"
+                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-xs text-gray-400 mb-1">Description</label>
+                    <textarea [(ngModel)]="testForm.description" rows="2"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors resize-none"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Priorité</label>
+                    <select [(ngModel)]="testForm.priority"
+                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                      <option value="critique">Critique</option>
+                      <option value="haute">Haute</option>
+                      <option value="normale">Normale</option>
+                      <option value="basse">Basse</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Statut</label>
+                    <select [(ngModel)]="testForm.status"
+                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                      <option value="active">Actif</option>
+                      <option value="draft">Brouillon</option>
+                      <option value="deprecated">Obsolète</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Durée estimée (minutes)</label>
+                    <input type="number" [(ngModel)]="testForm.estimatedMinutes" min="1"
+                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Tags</label>
+                    <div class="flex gap-1 flex-wrap mb-1">
+                      @for (tag of testForm.tags; track tag) {
+                        <span
+                          class="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded-full">
+                          {{tag}}
+                          <button (click)="removeTag(testForm, tag)" class="ml-0.5 text-gray-500 hover:text-red-400">
+                            <span class="material-symbols-outlined" style="font-size:11px">close</span>
+                          </button>
+                        </span>
+                      }
+                    </div>
+                    <input #tagInput placeholder="Ajouter un tag + Entrée"
+                      (keydown.enter)="addTag(testForm, tagInput.value); tagInput.value = ''"
+                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-white text-sm outline-none transition-colors" />
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-xs text-gray-400 mb-1">Pages cibles</label>
+                    <div class="flex gap-1 flex-wrap mb-1">
+                      @for (page of testForm.targetPages; track page) {
+                        <span
+                          class="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-gray-700 text-teal-300 rounded-full font-mono">
+                          {{page}}
+                          <button (click)="removeTargetPage(testForm, page)" class="ml-0.5 text-gray-500 hover:text-red-400">
+                            <span class="material-symbols-outlined" style="font-size:11px">close</span>
+                          </button>
+                        </span>
+                      }
+                    </div>
+                    <input #pageInput placeholder="/chemin/page — Entrée pour ajouter"
+                      (keydown.enter)="addTargetPage(testForm, pageInput.value); pageInput.value = ''"
+                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-white text-sm outline-none transition-colors font-mono" />
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-xs text-gray-400 mb-1">Prérequis</label>
+                    <input [(ngModel)]="testForm.preconditions"
+                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-xs text-gray-400 mb-1">
+                      Étapes
+                      <span class="text-gray-600 ml-1 font-normal">— format : <code class="bg-gray-900 px-1 rounded text-teal-400 text-xs">page|action|élément|résultat attendu</code> (une par ligne)</span>
+                    </label>
+                    <textarea [(ngModel)]="testForm.stepsText" rows="6" placeholder="/login|Cliquer|Bouton Connexion|Formulaire affiché"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-xs outline-none transition-colors resize-none font-mono"></textarea>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-end gap-2 px-6 py-4 border-t border-white/10 flex-shrink-0">
+                <button (click)="showTestModal = false"
+                  class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+                  Annuler
+                </button>
+                <button (click)="saveTest()" [disabled]="testSaving"
+                  class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50">
+                  @if (testSaving) {
+                    <span class="w-3.5 h-3.5 border border-white/50 border-t-white rounded-full animate-spin"></span>
+                  }
+                  {{testEditing ? 'Enregistrer' : 'Créer le test'}}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        <!-- ── Campaign modal ───────────────────────────────────────────────────── -->
+        @if (showCampaignModal) {
+          <div
+            class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
+            <div class="w-full max-w-2xl bg-gray-800 border border-white/10 rounded-2xl shadow-2xl mx-4 flex flex-col max-h-[85vh]">
+              <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
+                <h3 class="text-white font-bold">{{campaignEditing ? 'Modifier la campagne' : 'Nouvelle campagne'}}</h3>
+                <button (click)="showCampaignModal = false" class="text-gray-500 hover:text-white transition-colors">
+                  <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                </button>
+              </div>
+              <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Nom <span class="text-red-400">*</span></label>
+                  <input [(ngModel)]="campaignForm.name" placeholder="Ex: Sprint 12 — Tests critiques"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Description</label>
+                  <input [(ngModel)]="campaignForm.description"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-2">Tags</label>
+                  <div class="flex gap-1 flex-wrap mb-2">
+                    @for (tag of campaignForm.tags; track tag) {
+                      <span
+                        class="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded-full">
+                        {{tag}}
+                        <button (click)="removeCampaignTag(tag)" class="ml-0.5 text-gray-500 hover:text-red-400">
+                          <span class="material-symbols-outlined" style="font-size:11px">close</span>
+                        </button>
+                      </span>
+                    }
+                  </div>
+                  <div class="flex gap-2">
+                    <input [(ngModel)]="campaignTagInput" placeholder="Ajouter un tag"
+                      (keydown.enter)="addCampaignTag()"
+                      class="flex-1 bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-1.5 text-white text-sm outline-none transition-colors" />
+                    <button (click)="addCampaignTag()"
                       class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors">
-                Ajouter
-              </button>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-2">Tests inclus ({{campaignForm.testIds.length || 0}})</label>
-            <div class="relative mb-2">
-              <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" style="font-size:14px">search</span>
-              <input [(ngModel)]="campTestSearch" placeholder="Rechercher…"
-                     class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg pl-7 pr-3 py-1.5 text-white text-sm outline-none transition-colors" />
-            </div>
-            <div class="space-y-1 max-h-52 overflow-y-auto">
-              <label *ngFor="let t of campFilteredTests"
-                     class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors">
-                <input type="checkbox"
-                       [checked]="campaignForm.testIds.includes(t.id)"
-                       (change)="toggleTestInCampaign(t.id)"
-                       class="accent-teal-500 w-4 h-4" />
-                <span class="text-sm text-gray-300 flex-1 truncate">{{t.name}}</span>
-                <span class="text-xs" [class]="priorityBadgeCls(t.priority)">{{priorityLabel(t.priority)}}</span>
-              </label>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 px-6 py-4 border-t border-white/10 flex-shrink-0">
-          <button (click)="showCampaignModal = false"
+                      Ajouter
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-2">Tests inclus ({{campaignForm.testIds.length || 0}})</label>
+                  <div class="relative mb-2">
+                    <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" style="font-size:14px">search</span>
+                    <input [(ngModel)]="campTestSearch" placeholder="Rechercher…"
+                      class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg pl-7 pr-3 py-1.5 text-white text-sm outline-none transition-colors" />
+                  </div>
+                  <div class="space-y-1 max-h-52 overflow-y-auto">
+                    @for (t of campFilteredTests; track t) {
+                      <label
+                        class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors">
+                        <input type="checkbox"
+                          [checked]="campaignForm.testIds.includes(t.id)"
+                          (change)="toggleTestInCampaign(t.id)"
+                          class="accent-teal-500 w-4 h-4" />
+                        <span class="text-sm text-gray-300 flex-1 truncate">{{t.name}}</span>
+                        <span class="text-xs" [class]="priorityBadgeCls(t.priority)">{{priorityLabel(t.priority)}}</span>
+                      </label>
+                    }
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-end gap-2 px-6 py-4 border-t border-white/10 flex-shrink-0">
+                <button (click)="showCampaignModal = false"
                   class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-            Annuler
-          </button>
-          <button (click)="saveCampaign()" [disabled]="campaignSaving"
+                  Annuler
+                </button>
+                <button (click)="saveCampaign()" [disabled]="campaignSaving"
                   class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50">
-            <span *ngIf="campaignSaving" class="w-3.5 h-3.5 border border-white/50 border-t-white rounded-full animate-spin"></span>
-            {{campaignEditing ? 'Enregistrer' : 'Créer la campagne'}}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Variable modal ───────────────────────────────────────────────────── -->
-    <div *ngIf="showVarModal"
-         class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
-      <div class="w-full max-w-md bg-gray-800 border border-white/10 rounded-2xl p-6 shadow-2xl mx-4">
-        <div class="flex items-center justify-between mb-5">
-          <h3 class="text-white font-bold">{{varEditing ? 'Modifier la variable' : 'Nouvelle variable'}}</h3>
-          <button (click)="showVarModal = false" class="text-gray-500 hover:text-white transition-colors">
-            <span class="material-symbols-outlined" style="font-size:20px">close</span>
-          </button>
-        </div>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Nom (sans accolades) <span class="text-red-400">*</span></label>
-            <input [(ngModel)]="varForm.name" placeholder="EX: BASE_URL"
-                   class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors font-mono uppercase" />
+                  @if (campaignSaving) {
+                    <span class="w-3.5 h-3.5 border border-white/50 border-t-white rounded-full animate-spin"></span>
+                  }
+                  {{campaignEditing ? 'Enregistrer' : 'Créer la campagne'}}
+                </button>
+              </div>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Valeur</label>
-            <input [(ngModel)]="varForm.value" placeholder="https://app.frankenstein.fr"
-                   class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors font-mono" />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Description</label>
-            <input [(ngModel)]="varForm.description"
-                   class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 mt-6">
-          <button (click)="showVarModal = false"
+        }
+        <!-- ── Variable modal ───────────────────────────────────────────────────── -->
+        @if (showVarModal) {
+          <div
+            class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
+            <div class="w-full max-w-md bg-gray-800 border border-white/10 rounded-2xl p-6 shadow-2xl mx-4">
+              <div class="flex items-center justify-between mb-5">
+                <h3 class="text-white font-bold">{{varEditing ? 'Modifier la variable' : 'Nouvelle variable'}}</h3>
+                <button (click)="showVarModal = false" class="text-gray-500 hover:text-white transition-colors">
+                  <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                </button>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Nom (sans accolades) <span class="text-red-400">*</span></label>
+                  <input [(ngModel)]="varForm.name" placeholder="EX: BASE_URL"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors font-mono uppercase" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Valeur</label>
+                  <input [(ngModel)]="varForm.value" placeholder="https://app.frankenstein.fr"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors font-mono" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Description</label>
+                  <input [(ngModel)]="varForm.description"
+                    class="w-full bg-gray-900 border border-gray-600 focus:border-teal-500 rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors" />
+                </div>
+              </div>
+              <div class="flex justify-end gap-2 mt-6">
+                <button (click)="showVarModal = false"
                   class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-            Annuler
-          </button>
-          <button (click)="saveVar()" [disabled]="varSaving"
+                  Annuler
+                </button>
+                <button (click)="saveVar()" [disabled]="varSaving"
                   class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50">
-            <span *ngIf="varSaving" class="w-3.5 h-3.5 border border-white/50 border-t-white rounded-full animate-spin"></span>
-            {{varEditing ? 'Enregistrer' : 'Créer'}}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Confirm delete dialogs (inline, non-browser) ────────────────────── -->
-
-    <!-- Delete category confirm -->
-    <div *ngIf="deletingCatId"
-         class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-2xl">
-      <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="material-symbols-outlined text-red-400" style="font-size:24px">warning</span>
-          <h3 class="text-white font-bold">Supprimer la catégorie ?</h3>
-        </div>
-        <p class="text-sm text-gray-400 mb-5">Cette action supprimera la catégorie. Les tests associés ne seront pas supprimés.</p>
-        <div class="flex justify-end gap-2">
-          <button (click)="deletingCatId = null"
+                  @if (varSaving) {
+                    <span class="w-3.5 h-3.5 border border-white/50 border-t-white rounded-full animate-spin"></span>
+                  }
+                  {{varEditing ? 'Enregistrer' : 'Créer'}}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        <!-- ── Confirm delete dialogs (inline, non-browser) ────────────────────── -->
+        <!-- Delete category confirm -->
+        @if (deletingCatId) {
+          <div
+            class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-2xl">
+            <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="material-symbols-outlined text-red-400" style="font-size:24px">warning</span>
+                <h3 class="text-white font-bold">Supprimer la catégorie ?</h3>
+              </div>
+              <p class="text-sm text-gray-400 mb-5">Cette action supprimera la catégorie. Les tests associés ne seront pas supprimés.</p>
+              <div class="flex justify-end gap-2">
+                <button (click)="deletingCatId = null"
                   class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-            Annuler
-          </button>
-          <button (click)="confirmDeleteCategory()"
+                  Annuler
+                </button>
+                <button (click)="confirmDeleteCategory()"
                   class="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
-            Supprimer
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete test confirm -->
-    <div *ngIf="deletingTestId"
-         class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-2xl">
-      <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="material-symbols-outlined text-red-400" style="font-size:24px">warning</span>
-          <h3 class="text-white font-bold">Supprimer le test ?</h3>
-        </div>
-        <p class="text-sm text-gray-400 mb-5">Cette action est irréversible. Le test sera définitivement supprimé.</p>
-        <div class="flex justify-end gap-2">
-          <button (click)="deletingTestId = null"
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        <!-- Delete test confirm -->
+        @if (deletingTestId) {
+          <div
+            class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-2xl">
+            <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="material-symbols-outlined text-red-400" style="font-size:24px">warning</span>
+                <h3 class="text-white font-bold">Supprimer le test ?</h3>
+              </div>
+              <p class="text-sm text-gray-400 mb-5">Cette action est irréversible. Le test sera définitivement supprimé.</p>
+              <div class="flex justify-end gap-2">
+                <button (click)="deletingTestId = null"
                   class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-            Annuler
-          </button>
-          <button (click)="confirmDeleteTest()"
+                  Annuler
+                </button>
+                <button (click)="confirmDeleteTest()"
                   class="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
-            Supprimer
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete campaign confirm -->
-    <div *ngIf="deletingCampaignId"
-         class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-2xl">
-      <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="material-symbols-outlined text-red-400" style="font-size:24px">warning</span>
-          <h3 class="text-white font-bold">Supprimer la campagne ?</h3>
-        </div>
-        <p class="text-sm text-gray-400 mb-5">La campagne sera supprimée. Les tests qu'elle contient ne le seront pas.</p>
-        <div class="flex justify-end gap-2">
-          <button (click)="deletingCampaignId = null"
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        <!-- Delete campaign confirm -->
+        @if (deletingCampaignId) {
+          <div
+            class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-2xl">
+            <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="material-symbols-outlined text-red-400" style="font-size:24px">warning</span>
+                <h3 class="text-white font-bold">Supprimer la campagne ?</h3>
+              </div>
+              <p class="text-sm text-gray-400 mb-5">La campagne sera supprimée. Les tests qu'elle contient ne le seront pas.</p>
+              <div class="flex justify-end gap-2">
+                <button (click)="deletingCampaignId = null"
                   class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-            Annuler
-          </button>
-          <button (click)="confirmDeleteCampaign()"
+                  Annuler
+                </button>
+                <button (click)="confirmDeleteCampaign()"
                   class="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
-            Supprimer
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete variable confirm -->
-    <div *ngIf="deletingVarId"
-         class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-2xl">
-      <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="material-symbols-outlined text-red-400" style="font-size:24px">warning</span>
-          <h3 class="text-white font-bold">Supprimer la variable ?</h3>
-        </div>
-        <p class="text-sm text-gray-400 mb-5">La variable sera définitivement supprimée.</p>
-        <div class="flex justify-end gap-2">
-          <button (click)="deletingVarId = null"
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        <!-- Delete variable confirm -->
+        @if (deletingVarId) {
+          <div
+            class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-2xl">
+            <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="material-symbols-outlined text-red-400" style="font-size:24px">warning</span>
+                <h3 class="text-white font-bold">Supprimer la variable ?</h3>
+              </div>
+              <p class="text-sm text-gray-400 mb-5">La variable sera définitivement supprimée.</p>
+              <div class="flex justify-end gap-2">
+                <button (click)="deletingVarId = null"
                   class="px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-            Annuler
-          </button>
-          <button (click)="confirmDeleteVar()"
+                  Annuler
+                </button>
+                <button (click)="confirmDeleteVar()"
                   class="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
-            Supprimer
-          </button>
-        </div>
-      </div>
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div><!-- end main panel -->
     </div>
-
-  </div><!-- end main panel -->
-</div><!-- end overlay -->
+    }<!-- end overlay -->

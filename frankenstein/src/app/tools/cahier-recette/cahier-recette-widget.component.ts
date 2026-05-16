@@ -10,11 +10,10 @@ import type { TestCase, PageTestSuggestion } from './cahier-recette.types';
 type WidgetPhase = 'idle' | 'popup' | 'analyzing';
 
 @Component({
-  selector: 'wo-cahier-recette-widget',
-  standalone: true,
-  imports: [CommonModule, FormsModule, CahierRecetteComponent],
-  templateUrl: './cahier-recette-widget.component.html',
-  styleUrl: './cahier-recette-widget.component.scss'
+    selector: 'wo-cahier-recette-widget',
+    imports: [CommonModule, FormsModule, CahierRecetteComponent],
+    templateUrl: './cahier-recette-widget.component.html',
+    styleUrl: './cahier-recette-widget.component.scss'
 })
 export class CahierRecetteWidgetComponent implements OnInit {
   @ViewChild('mainModal') mainModal!: CahierRecetteComponent;

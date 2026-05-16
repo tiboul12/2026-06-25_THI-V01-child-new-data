@@ -21,11 +21,10 @@ interface TabConfig {
 }
 
 @Component({
-  selector: 'wo-tools-panel',
-  standalone: true,
-  imports: [CommonModule, WoActionsComponent, WoIaLogsComponent, WoHistoryComponent, WoToolsAdminComponent],
-  templateUrl: './wo-tools-panel.component.html',
-  styleUrl: './wo-tools-panel.component.scss'
+    selector: 'wo-tools-panel',
+    imports: [CommonModule, WoActionsComponent, WoIaLogsComponent, WoHistoryComponent, WoToolsAdminComponent],
+    templateUrl: './wo-tools-panel.component.html',
+    styleUrl: './wo-tools-panel.component.scss'
 })
 export class WoToolsPanelComponent {
   public configService = inject(ConfigService);

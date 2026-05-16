@@ -42,11 +42,10 @@ interface TicketComment {
 }
 
 @Component({
-  selector: 'wo-ticket-widget',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './ticket-widget.component.html',
-  styleUrl: './ticket-widget.component.scss'
+    selector: 'wo-ticket-widget',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './ticket-widget.component.html',
+    styleUrl: './ticket-widget.component.scss'
 })
 export class TicketWidgetComponent implements OnDestroy {
   @ViewChild('bgCanvas')   bgCanvasRef!:   ElementRef<HTMLCanvasElement>;

@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -34,11 +34,10 @@ export interface DocDocument {
 }
 
 @Component({
-  selector: 'app-documents',
-  standalone: true,
-  imports: [CommonModule, FormsModule, MarkdownEditorComponent],
-  templateUrl: './documents.component.html',
-  styleUrl: './documents.component.scss'
+    selector: 'app-documents',
+    imports: [FormsModule, MarkdownEditorComponent],
+    templateUrl: './documents.component.html',
+    styleUrl: './documents.component.scss'
 })
 export class DocumentsComponent implements OnInit {
 

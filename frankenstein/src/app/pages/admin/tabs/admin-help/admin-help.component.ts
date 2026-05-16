@@ -1,5 +1,5 @@
 import { Component, OnInit, Input, Output, EventEmitter, signal, SimpleChanges, OnChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { WorgHelpTriggerComponent } from '../../../../shared/help/worg-help-trigger.component';
@@ -8,10 +8,9 @@ import { environment } from '../../../../../environments/environment';
 const API = environment.apiDataUrl;
 
 @Component({
-  selector: 'app-admin-help',
-  standalone: true,
-  imports: [CommonModule, FormsModule, WorgHelpTriggerComponent],
-  templateUrl: './admin-help.component.html',
+    selector: 'app-admin-help',
+    imports: [FormsModule, WorgHelpTriggerComponent],
+    templateUrl: './admin-help.component.html'
 })
 export class AdminHelpComponent implements OnInit, OnChanges {
   @Input() editId: number | null = null;

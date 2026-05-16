@@ -9,7 +9,7 @@
     (click)="openPopup()"
     title="Cahier de recette"
     class="fixed bottom-24 right-4 z-[100] w-12 h-12 rounded-full bg-teal-600 hover:bg-teal-500 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
-  >
+    >
     <span class="material-symbols-outlined text-xl">{{ configService.activeTool() === 'recette' ? 'close' : 'checklist' }}</span>
   </button>
 
@@ -18,10 +18,10 @@
     <div class="fixed inset-0 z-[90] flex justify-end">
       <!-- Backdrop -->
       <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" (click)="closePopup()"></div>
-      
+
       <!-- Panel (Wide max-w-5xl) -->
       <div class="relative w-full max-w-5xl bg-white dark:bg-background h-full shadow-2xl flex flex-col animate-slide-in-right">
-        
+
         <!-- Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-background/60 sticky top-0 z-10">
           <div class="flex items-center gap-3">
@@ -45,21 +45,25 @@
             <h2 class="text-xs tracking-[0.3em] text-light-text-muted dark:text-white/40 uppercase mb-6 flex items-center gap-3">
               <span class="w-8 h-[1px] bg-light-accent dark:bg-accent"></span> Tests sur cette page
             </h2>
-            
-            <div *ngIf="pageTests.length === 0" class="text-xs text-light-text-muted dark:text-white/40 italic p-4 bg-light-surface-hover dark:bg-white/5 rounded-xl border border-dashed border-light-border dark:border-white/10">
-              Aucun test spécifique n'est défini pour cette URL.
-            </div>
+
+            @if (pageTests.length === 0) {
+              <div class="text-xs text-light-text-muted dark:text-white/40 italic p-4 bg-light-surface-hover dark:bg-white/5 rounded-xl border border-dashed border-light-border dark:border-white/10">
+                Aucun test spécifique n'est défini pour cette URL.
+              </div>
+            }
 
             <div class="space-y-2">
-              <div *ngFor="let t of pageTests" class="p-3 bg-light-surface-hover dark:bg-white/5 border border-light-border dark:border-white/10 rounded-xl hover:border-teal-500/40 transition-colors">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-sm font-bold text-light-text dark:text-white">{{ t.name }}</span>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" [ngClass]="priorityBadgeCls(t.priority)">
-                    {{ priorityLabel(t.priority) }}
-                  </span>
+              @for (t of pageTests; track t) {
+                <div class="p-3 bg-light-surface-hover dark:bg-white/5 border border-light-border dark:border-white/10 rounded-xl hover:border-teal-500/40 transition-colors">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm font-bold text-light-text dark:text-white">{{ t.name }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" [ngClass]="priorityBadgeCls(t.priority)">
+                      {{ priorityLabel(t.priority) }}
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-light-text-muted dark:text-white/50 line-clamp-2">{{ t.description }}</p>
                 </div>
-                <p class="text-[11px] text-light-text-muted dark:text-white/50 line-clamp-2">{{ t.description }}</p>
-              </div>
+              }
             </div>
           </div>
 
@@ -72,133 +76,156 @@
               L'IA peut analyser le contenu actuel de la page pour vous suggérer des nouveaux cas de test pertinents.
             </p>
 
-            <div *ngIf="phase === 'analyzing'" class="flex flex-col gap-3">
-              <div class="flex items-center gap-2 text-violet-400">
-                <span class="material-symbols-outlined animate-spin text-xl">autorenew</span>
-                <span class="text-xs font-medium">Analyse en cours…</span>
+            @if (phase === 'analyzing') {
+              <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-2 text-violet-400">
+                  <span class="material-symbols-outlined animate-spin text-xl">autorenew</span>
+                  <span class="text-xs font-medium">Analyse en cours…</span>
+                </div>
+                @if (streamOutput) {
+                  <pre class="bg-black/50 border border-violet-500/20 rounded-xl p-3 text-[10px] text-green-300 font-mono overflow-auto max-h-64 whitespace-pre-wrap break-words leading-relaxed">{{ streamOutput }}</pre>
+                }
               </div>
-              <pre *ngIf="streamOutput" class="bg-black/50 border border-violet-500/20 rounded-xl p-3 text-[10px] text-green-300 font-mono overflow-auto max-h-64 whitespace-pre-wrap break-words leading-relaxed">{{ streamOutput }}</pre>
-            </div>
+            }
 
-            <div *ngIf="analyzingError" class="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl mb-4">
-              {{ analyzingError }}
-            </div>
+            @if (analyzingError) {
+              <div class="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl mb-4">
+                {{ analyzingError }}
+              </div>
+            }
 
             <!-- Réponse brute IA (debug) -->
-            <div *ngIf="analyzingRaw" class="mb-4">
-              <button (click)="showRaw = !showRaw" class="flex items-center gap-1.5 text-[10px] text-violet-400 hover:text-violet-300 transition-colors mb-1">
-                <span class="material-symbols-outlined text-xs">{{ showRaw ? 'expand_less' : 'expand_more' }}</span>
-                {{ showRaw ? 'Masquer' : 'Voir' }} la réponse brute de l'IA
-              </button>
-              <pre *ngIf="showRaw" class="bg-black/40 border border-white/10 rounded-xl p-3 text-[10px] text-green-300 overflow-auto max-h-72 whitespace-pre-wrap break-words font-mono">{{ analyzingRaw }}</pre>
-            </div>
+            @if (analyzingRaw) {
+              <div class="mb-4">
+                <button (click)="showRaw = !showRaw" class="flex items-center gap-1.5 text-[10px] text-violet-400 hover:text-violet-300 transition-colors mb-1">
+                  <span class="material-symbols-outlined text-xs">{{ showRaw ? 'expand_less' : 'expand_more' }}</span>
+                  {{ showRaw ? 'Masquer' : 'Voir' }} la réponse brute de l'IA
+                </button>
+                @if (showRaw) {
+                  <pre class="bg-black/40 border border-white/10 rounded-xl p-3 text-[10px] text-green-300 overflow-auto max-h-72 whitespace-pre-wrap break-words font-mono">{{ analyzingRaw }}</pre>
+                }
+              </div>
+            }
 
             <!-- Options d'exclusion -->
-            <div *ngIf="phase !== 'analyzing'" class="mb-4 p-4 bg-light-surface-hover dark:bg-white/[0.03] border border-light-border dark:border-white/10 rounded-xl">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-light-text-muted dark:text-white/40 mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">block</span>
-                Exclure de l'analyse
-              </p>
-              <div class="grid grid-cols-2 gap-2">
-                <label *ngFor="let opt of exclusionOptions"
-                       class="flex items-center gap-2 cursor-pointer group select-none">
-                  <input type="checkbox"
-                         [(ngModel)]="exclusions[opt.key]"
-                         (ngModelChange)="saveExclusions()"
-                         class="w-3.5 h-3.5 rounded accent-violet-500 cursor-pointer flex-shrink-0">
-                  <span class="material-symbols-outlined text-[13px] text-light-text-muted dark:text-white/30 group-hover:text-violet-400 transition-colors">{{ opt.icon }}</span>
-                  <span class="text-[11px] text-light-text dark:text-white/60 group-hover:text-light-text dark:group-hover:text-white transition-colors">{{ opt.label }}</span>
-                </label>
+            @if (phase !== 'analyzing') {
+              <div class="mb-4 p-4 bg-light-surface-hover dark:bg-white/[0.03] border border-light-border dark:border-white/10 rounded-xl">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-light-text-muted dark:text-white/40 mb-3 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-sm">block</span>
+                  Exclure de l'analyse
+                </p>
+                <div class="grid grid-cols-2 gap-2">
+                  @for (opt of exclusionOptions; track opt) {
+                    <label
+                      class="flex items-center gap-2 cursor-pointer group select-none">
+                      <input type="checkbox"
+                        [(ngModel)]="exclusions[opt.key]"
+                        (ngModelChange)="saveExclusions()"
+                        class="w-3.5 h-3.5 rounded accent-violet-500 cursor-pointer flex-shrink-0">
+                      <span class="material-symbols-outlined text-[13px] text-light-text-muted dark:text-white/30 group-hover:text-violet-400 transition-colors">{{ opt.icon }}</span>
+                      <span class="text-[11px] text-light-text dark:text-white/60 group-hover:text-light-text dark:group-hover:text-white transition-colors">{{ opt.label }}</span>
+                    </label>
+                  }
+                </div>
               </div>
-            </div>
+            }
 
             <!-- Info IA + bouton -->
-            <div *ngIf="phase !== 'analyzing' && suggestions.length === 0">
-              <div class="flex items-center gap-2 mb-3 px-3 py-2 bg-violet-500/10 border border-violet-500/20 rounded-lg">
-                <span class="material-symbols-outlined text-violet-400 text-sm">psychology</span>
-                <span class="text-[11px] font-bold text-violet-400">{{ currentAiInfo.providerLabel }}</span>
-                <span class="text-[10px] text-light-text-muted dark:text-white/30">·</span>
-                <span class="text-[11px] text-light-text-muted dark:text-white/50 font-mono">{{ currentAiInfo.model }}</span>
-              </div>
-              <button
-                (click)="analyzePage()"
-                class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2"
-              >
-                <span class="material-symbols-outlined text-sm">psychology</span>
-                Analyser cette page
-              </button>
-            </div>
-
-            <!-- Suggestions IA -->
-            <div *ngIf="suggestions.length > 0" class="space-y-4">
-
-              <!-- Header suggestions -->
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-violet-400">
-                  {{ suggestions.length }} suggestion{{ suggestions.length > 1 ? 's' : '' }}
-                </span>
-                <button (click)="suggestions = []; importStatus = 'idle'" class="text-[10px] text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white transition-colors">
-                  Effacer
-                </button>
-              </div>
-
-              <!-- Liste suggestions -->
-              <div class="space-y-2">
-                <div *ngFor="let s of suggestions; let i = index"
-                     class="p-3 bg-light-surface-hover dark:bg-background border border-light-border dark:border-white/10 rounded-xl">
-                  <div class="flex items-start justify-between gap-2 mb-1">
-                    <span class="text-xs font-bold text-light-text dark:text-white leading-tight">{{ s.name }}</span>
-                    <span class="text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase flex-shrink-0" [ngClass]="priorityBadgeCls(s.priority)">
-                      {{ s.priority }}
-                    </span>
-                  </div>
-                  <p class="text-[10px] text-light-text-muted dark:text-white/50 mb-1.5">{{ s.description }}</p>
-                  <div class="flex flex-wrap gap-1">
-                    <span *ngFor="let tag of s.tags" class="text-[9px] px-1.5 py-0.5 rounded-md bg-white dark:bg-white/5 text-light-text-muted dark:text-white/40">
-                      #{{ tag }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Enregistrement groupé -->
-              <div *ngIf="importStatus !== 'saved'" class="pt-2 border-t border-light-border dark:border-white/10">
-                <p class="text-[10px] text-light-text-muted dark:text-white/40 mb-2">
-                  Enregistrer les {{ suggestions.length }} tests dans le cahier de recette
-                </p>
-                <input
-                  type="text"
-                  [(ngModel)]="importCategoryName"
-                  placeholder="Nom de la catégorie…"
-                  class="w-full mb-2 px-3 py-2 text-xs bg-white dark:bg-white/5 border border-light-border dark:border-white/10 rounded-lg text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 focus:outline-none focus:border-violet-500 transition-colors"
-                />
-                <div *ngIf="importStatus === 'error'" class="mb-2 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] rounded-lg">
-                  {{ importSaveError }}
+            @if (phase !== 'analyzing' && suggestions.length === 0) {
+              <div>
+                <div class="flex items-center gap-2 mb-3 px-3 py-2 bg-violet-500/10 border border-violet-500/20 rounded-lg">
+                  <span class="material-symbols-outlined text-violet-400 text-sm">psychology</span>
+                  <span class="text-[11px] font-bold text-violet-400">{{ currentAiInfo.providerLabel }}</span>
+                  <span class="text-[10px] text-light-text-muted dark:text-white/30">·</span>
+                  <span class="text-[11px] text-light-text-muted dark:text-white/50 font-mono">{{ currentAiInfo.model }}</span>
                 </div>
                 <button
-                  (click)="saveAllSuggestions()"
-                  [disabled]="!importCategoryName.trim() || importStatus === 'saving'"
-                  class="w-full py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  [ngClass]="importStatus === 'saving' ? 'bg-violet-600/60 text-white' : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/20'"
-                >
-                  <span class="material-symbols-outlined text-sm" [class.animate-spin]="importStatus === 'saving'">
-                    {{ importStatus === 'saving' ? 'autorenew' : 'save' }}
+                  (click)="analyzePage()"
+                  class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2"
+                  >
+                  <span class="material-symbols-outlined text-sm">psychology</span>
+                  Analyser cette page
+                </button>
+              </div>
+            }
+
+            <!-- Suggestions IA -->
+            @if (suggestions.length > 0) {
+              <div class="space-y-4">
+                <!-- Header suggestions -->
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-widest text-violet-400">
+                    {{ suggestions.length }} suggestion{{ suggestions.length > 1 ? 's' : '' }}
                   </span>
-                  {{ importStatus === 'saving' ? 'Enregistrement…' : 'Enregistrer tous les tests' }}
-                </button>
+                  <button (click)="suggestions = []; importStatus = 'idle'" class="text-[10px] text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white transition-colors">
+                    Effacer
+                  </button>
+                </div>
+                <!-- Liste suggestions -->
+                <div class="space-y-2">
+                  @for (s of suggestions; track s; let i = $index) {
+                    <div
+                      class="p-3 bg-light-surface-hover dark:bg-background border border-light-border dark:border-white/10 rounded-xl">
+                      <div class="flex items-start justify-between gap-2 mb-1">
+                        <span class="text-xs font-bold text-light-text dark:text-white leading-tight">{{ s.name }}</span>
+                        <span class="text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase flex-shrink-0" [ngClass]="priorityBadgeCls(s.priority)">
+                          {{ s.priority }}
+                        </span>
+                      </div>
+                      <p class="text-[10px] text-light-text-muted dark:text-white/50 mb-1.5">{{ s.description }}</p>
+                      <div class="flex flex-wrap gap-1">
+                        @for (tag of s.tags; track tag) {
+                          <span class="text-[9px] px-1.5 py-0.5 rounded-md bg-white dark:bg-white/5 text-light-text-muted dark:text-white/40">
+                            #{{ tag }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+                <!-- Enregistrement groupé -->
+                @if (importStatus !== 'saved') {
+                  <div class="pt-2 border-t border-light-border dark:border-white/10">
+                    <p class="text-[10px] text-light-text-muted dark:text-white/40 mb-2">
+                      Enregistrer les {{ suggestions.length }} tests dans le cahier de recette
+                    </p>
+                    <input
+                      type="text"
+                      [(ngModel)]="importCategoryName"
+                      placeholder="Nom de la catégorie…"
+                      class="w-full mb-2 px-3 py-2 text-xs bg-white dark:bg-white/5 border border-light-border dark:border-white/10 rounded-lg text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 focus:outline-none focus:border-violet-500 transition-colors"
+                      />
+                    @if (importStatus === 'error') {
+                      <div class="mb-2 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] rounded-lg">
+                        {{ importSaveError }}
+                      </div>
+                    }
+                    <button
+                      (click)="saveAllSuggestions()"
+                      [disabled]="!importCategoryName.trim() || importStatus === 'saving'"
+                      class="w-full py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      [ngClass]="importStatus === 'saving' ? 'bg-violet-600/60 text-white' : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/20'"
+                      >
+                      <span class="material-symbols-outlined text-sm" [class.animate-spin]="importStatus === 'saving'">
+                        {{ importStatus === 'saving' ? 'autorenew' : 'save' }}
+                      </span>
+                      {{ importStatus === 'saving' ? 'Enregistrement…' : 'Enregistrer tous les tests' }}
+                    </button>
+                  </div>
+                }
+                <!-- Succès -->
+                @if (importStatus === 'saved') {
+                  <div class="flex flex-col items-center gap-2 py-4 text-center">
+                    <span class="material-symbols-outlined text-green-400 text-3xl">check_circle</span>
+                    <p class="text-xs font-bold text-green-400">{{ suggestions.length }} tests enregistrés</p>
+                    <p class="text-[10px] text-light-text-muted dark:text-white/40">Catégorie : <span class="text-light-text dark:text-white/70">{{ importCategoryName }}</span></p>
+                    <button (click)="openMain()" class="mt-1 text-[10px] text-violet-400 hover:text-violet-300 underline transition-colors">
+                      Ouvrir le cahier de recette
+                    </button>
+                  </div>
+                }
               </div>
-
-              <!-- Succès -->
-              <div *ngIf="importStatus === 'saved'" class="flex flex-col items-center gap-2 py-4 text-center">
-                <span class="material-symbols-outlined text-green-400 text-3xl">check_circle</span>
-                <p class="text-xs font-bold text-green-400">{{ suggestions.length }} tests enregistrés</p>
-                <p class="text-[10px] text-light-text-muted dark:text-white/40">Catégorie : <span class="text-light-text dark:text-white/70">{{ importCategoryName }}</span></p>
-                <button (click)="openMain()" class="mt-1 text-[10px] text-violet-400 hover:text-violet-300 underline transition-colors">
-                  Ouvrir le cahier de recette
-                </button>
-              </div>
-
-            </div>
+            }
           </div>
 
           <!-- Card 3: Actions -->
@@ -209,7 +236,7 @@
             <button
               (click)="openMain()"
               class="w-full py-4 bg-light-surface-hover dark:bg-white/5 border border-light-border dark:border-white/10 rounded-2xl hover:border-teal-500/40 text-light-text dark:text-white transition-all flex flex-col items-center gap-1 group"
-            >
+              >
               <span class="material-symbols-outlined text-2xl text-teal-500 group-hover:scale-110 transition-transform">open_in_full</span>
               <span class="text-xs font-bold uppercase tracking-widest">Ouvrir le gestionnaire</span>
             </button>

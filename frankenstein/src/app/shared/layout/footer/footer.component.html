@@ -1,64 +1,65 @@
 <!-- Footer fixe — visible uniquement si authentifié -->
-<footer *ngIf="auth.currentUser()"
-        class="fixed bottom-0 left-0 right-0 z-[60] h-[44px] bg-white/95 dark:bg-surface/95 backdrop-blur-sm border-t border-light-border dark:border-white/10 transition-colors duration-300">
-  <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
-
-    <!-- Copyright -->
-    <div class="flex items-center gap-3 text-[11px] text-light-text-muted dark:text-white/35">
-      <span class="font-semibold text-light-text dark:text-white/60">{{ appConfig.appName() }}</span>
-      <span class="text-light-border dark:text-white/20">·</span>
-      <!-- Versions : mode child = 2 badges (child + base), mode base = 1 badge -->
-      @if (versionStatus()?.mode === 'child') {
-        <a routerLink="/admin" [queryParams]="{tab:'deploiement'}"
-           class="flex items-center gap-1.5 transition-opacity hover:opacity-70 cursor-pointer">
-          <span class="font-mono font-semibold flex items-center gap-0.5"
-                [class]="versionStatus().child.upToDate ? 'text-yellow-400' : 'text-red-400'">
-            <span class="material-symbols-outlined text-[11px]">{{ versionStatus().child.upToDate ? 'check_circle' : 'warning' }}</span>
-            {{ versionStatus().child.localVersion }}
-          </span>
-          <span class="text-light-border dark:text-white/20">·</span>
-          <span class="font-mono font-semibold flex items-center gap-0.5"
-                [class]="versionStatus().base.upToDate ? 'text-yellow-400' : 'text-orange-400'">
-            <span class="material-symbols-outlined text-[11px]">{{ versionStatus().base.upToDate ? 'check_circle' : 'sync_problem' }}</span>
-            {{ versionStatus().base.localVersion || '—' }}
-            @if (!versionStatus().base.upToDate) {
-              <span class="font-sans font-normal text-[10px]">({{ versionStatus().base.latestVersion }} dispo)</span>
+@if (auth.currentUser()) {
+  <footer
+    class="fixed bottom-0 left-0 right-0 z-[60] h-[44px] bg-white/95 dark:bg-surface/95 backdrop-blur-sm border-t border-light-border dark:border-white/10 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
+      <!-- Copyright -->
+      <div class="flex items-center gap-3 text-[11px] text-light-text-muted dark:text-white/35">
+        <span class="font-semibold text-light-text dark:text-white/60">{{ appConfig.appName() }}</span>
+        <span class="text-light-border dark:text-white/20">·</span>
+        <!-- Versions : mode child = 2 badges (child + base), mode base = 1 badge -->
+        @if (versionStatus()?.mode === 'child') {
+          <a routerLink="/admin" [queryParams]="{tab:'deploiement'}"
+            class="flex items-center gap-1.5 transition-opacity hover:opacity-70 cursor-pointer">
+            <span class="font-mono font-semibold flex items-center gap-0.5"
+              [class]="versionStatus().child.upToDate ? 'text-yellow-400' : 'text-red-400'">
+              <span class="material-symbols-outlined text-[11px]">{{ versionStatus().child.upToDate ? 'check_circle' : 'warning' }}</span>
+              {{ versionStatus().child.localVersion }}
+            </span>
+            <span class="text-light-border dark:text-white/20">·</span>
+            <span class="font-mono font-semibold flex items-center gap-0.5"
+              [class]="versionStatus().base.upToDate ? 'text-yellow-400' : 'text-orange-400'">
+              <span class="material-symbols-outlined text-[11px]">{{ versionStatus().base.upToDate ? 'check_circle' : 'sync_problem' }}</span>
+              {{ versionStatus().base.localVersion || '—' }}
+              @if (!versionStatus().base.upToDate) {
+                <span class="font-sans font-normal text-[10px]">({{ versionStatus().base.latestVersion }} dispo)</span>
+              }
+            </span>
+          </a>
+        } @else if (versionStatus()) {
+          <a routerLink="/admin" [queryParams]="{tab:'deploiement'}"
+            class="font-mono font-semibold flex items-center gap-1 transition-opacity hover:opacity-70 cursor-pointer"
+            [class]="versionStatus().upToDate ? 'text-yellow-400' : 'text-red-400'">
+            <span class="material-symbols-outlined text-[11px]">{{ versionStatus().upToDate ? 'check_circle' : 'warning' }}</span>
+            {{ versionStatus().localVersion }}
+            @if (!versionStatus().upToDate) {
+              <span class="font-sans font-normal text-[10px]">({{ versionStatus().latestDeployment?.version }} dispo)</span>
             }
-          </span>
-        </a>
-      } @else if (versionStatus()) {
-        <a routerLink="/admin" [queryParams]="{tab:'deploiement'}"
-           class="font-mono font-semibold flex items-center gap-1 transition-opacity hover:opacity-70 cursor-pointer"
-           [class]="versionStatus().upToDate ? 'text-yellow-400' : 'text-red-400'">
-          <span class="material-symbols-outlined text-[11px]">{{ versionStatus().upToDate ? 'check_circle' : 'warning' }}</span>
-          {{ versionStatus().localVersion }}
-          @if (!versionStatus().upToDate) {
-            <span class="font-sans font-normal text-[10px]">({{ versionStatus().latestDeployment?.version }} dispo)</span>
-          }
-        </a>
-      } @else {
-        <span class="font-mono text-light-text-muted dark:text-white/30">v…</span>
-      }
-      <span class="text-light-border dark:text-white/20">·</span>
-      <span>© {{ appConfig.copyrightYear() }} {{ appConfig.copyrightHolder() }}</span>
-      <span class="text-light-border dark:text-white/20">·</span>
-      <span>{{ appConfig.copyrightTagline() }}</span>
-    </div>
-
-    <!-- Bouton Outils Externes -->
-    <button
-      (click)="openToolsPanel()"
-      class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-semibold uppercase tracking-wider"
+          </a>
+        } @else {
+          <span class="font-mono text-light-text-muted dark:text-white/30">v…</span>
+        }
+        <span class="text-light-border dark:text-white/20">·</span>
+        <span>© {{ appConfig.copyrightYear() }} {{ appConfig.copyrightHolder() }}</span>
+        <span class="text-light-border dark:text-white/20">·</span>
+        <span>{{ appConfig.copyrightTagline() }}</span>
+      </div>
+      <!-- Bouton Outils Externes -->
+      <button
+        (click)="openToolsPanel()"
+        class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[11px] font-semibold uppercase tracking-wider"
       [class]="activeToolsCount > 0
         ? 'bg-light-primary/10 dark:bg-primary/10 border-light-primary/30 dark:border-primary/30 text-light-primary dark:text-primary hover:bg-light-primary/20 dark:hover:bg-primary/20'
         : 'bg-light-surface dark:bg-surface border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:border-light-primary dark:hover:border-primary hover:text-light-primary dark:hover:text-primary'">
-      <span class="material-symbols-outlined text-sm">construction</span>
-      Outils Externes
-      <span *ngIf="activeToolsCount > 0"
+        <span class="material-symbols-outlined text-sm">construction</span>
+        Outils Externes
+        @if (activeToolsCount > 0) {
+          <span
             class="ml-0.5 w-4 h-4 rounded-full bg-light-primary dark:bg-primary text-white dark:text-btn-text text-[9px] flex items-center justify-center font-bold">
-        {{ activeToolsCount }}
-      </span>
-    </button>
-
-  </div>
-</footer>
+            {{ activeToolsCount }}
+          </span>
+        }
+      </button>
+    </div>
+  </footer>
+}

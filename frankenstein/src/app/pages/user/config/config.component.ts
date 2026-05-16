@@ -13,11 +13,10 @@ const API = environment.apiDataUrl;
 const EXECUTOR_API = environment.apiExecutorUrl;
 
 @Component({
-  selector: 'app-config',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
-  templateUrl: './config.component.html',
-  styleUrl: './config.component.scss'
+    selector: 'app-config',
+    imports: [CommonModule, FormsModule, RouterModule],
+    templateUrl: './config.component.html',
+    styleUrl: './config.component.scss'
 })
 export class ConfigComponent implements OnInit, OnDestroy {
   @Input() embeddedMode = false;
@@ -46,6 +45,20 @@ export class ConfigComponent implements OnInit, OnDestroy {
   appVersion = '';
   ticketsEnabled = false;
   recetteWidgetEnabled = false;
+
+  get cliIaEnabled(): boolean { return this.configService.cliIaEnabled(); }
+  toggleCliIa() {
+    const val = !this.cliIaEnabled;
+    this.configService.setCliIaEnabled(val);
+    this.http.post(`${API}/api/config/keys`, { cliIaEnabled: val }).subscribe();
+  }
+
+  get apiKeysEnabled(): boolean { return this.configService.apiKeysEnabled(); }
+  toggleApiKeys() {
+    const val = !this.apiKeysEnabled;
+    this.configService.setApiKeysEnabled(val);
+    this.http.post(`${API}/api/config/keys`, { apiKeysEnabled: val }).subscribe();
+  }
 
   // API Keys form
   geminiKey = '';

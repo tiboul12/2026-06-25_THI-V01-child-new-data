@@ -1,15 +1,14 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 
 const API = environment.apiDataUrl;
 
 @Component({
-  selector: 'app-deployments',
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  templateUrl: './deployments.component.html',
+    selector: 'app-deployments',
+    imports: [RouterModule],
+    templateUrl: './deployments.component.html'
 })
 export class DeploymentsComponent implements OnInit {
   deployments = signal<any[]>([]);

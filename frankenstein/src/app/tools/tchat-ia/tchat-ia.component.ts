@@ -17,10 +17,9 @@ const FORM_END = '[FORM_END]';
 const DOC_MARKER_RE = /\[DOCUMENT_CRÉÉ:\s*([^\]]+)\]/g;
 
 @Component({
-  selector: 'wo-tchat-ia',
-  standalone: true,
-  imports: [CommonModule, FormsModule, DatePipe],
-  templateUrl: './tchat-ia.component.html'
+    selector: 'wo-tchat-ia',
+    imports: [CommonModule, FormsModule, DatePipe],
+    templateUrl: './tchat-ia.component.html'
 })
 export class TchatIaComponent implements OnChanges, AfterViewChecked {
 

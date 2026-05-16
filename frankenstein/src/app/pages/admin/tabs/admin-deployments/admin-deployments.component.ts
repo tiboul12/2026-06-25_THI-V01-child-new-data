@@ -7,10 +7,9 @@ import { environment } from '../../../../../environments/environment';
 const API = environment.apiDataUrl;
 
 @Component({
-  selector: 'app-admin-deployments',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './admin-deployments.component.html',
+    selector: 'app-admin-deployments',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './admin-deployments.component.html'
 })
 export class AdminDeploymentsComponent implements OnInit {
   @Output() versionStatusChange = new EventEmitter<any>();

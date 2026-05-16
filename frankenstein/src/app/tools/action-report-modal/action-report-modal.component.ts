@@ -3,10 +3,9 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
 @Component({
-  selector: 'wo-action-report-modal',
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  templateUrl: './action-report-modal.component.html'
+    selector: 'wo-action-report-modal',
+    imports: [CommonModule, RouterModule],
+    templateUrl: './action-report-modal.component.html'
 })
 export class ActionReportModalComponent {
   @Input() action: any = null;

@@ -1,15 +1,14 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ConfigService } from '../../../core/services/config.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { TchatIaComponent } from '../../tchat-ia/tchat-ia.component';
 
 @Component({
-  selector: 'wo-tchat-ia-widget',
-  standalone: true,
-  imports: [CommonModule, TchatIaComponent],
-  templateUrl: './wo-tchat-ia-widget.component.html',
-  styleUrl: './wo-tchat-ia-widget.component.scss'
+    selector: 'wo-tchat-ia-widget',
+    imports: [TchatIaComponent],
+    templateUrl: './wo-tchat-ia-widget.component.html',
+    styleUrl: './wo-tchat-ia-widget.component.scss'
 })
 export class WoTchatIaWidgetComponent {
   public configService = inject(ConfigService);

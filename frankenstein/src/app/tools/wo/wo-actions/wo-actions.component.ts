@@ -13,11 +13,10 @@ const API = environment.apiDataUrl;
 const EXECUTOR_API = environment.apiExecutorUrl;
 
 @Component({
-  selector: 'wo-actions',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ActionReportModalComponent],
-  templateUrl: './wo-actions.component.html',
-  styleUrl: './wo-actions.component.scss'
+    selector: 'wo-actions',
+    imports: [CommonModule, FormsModule, RouterModule, ActionReportModalComponent],
+    templateUrl: './wo-actions.component.html',
+    styleUrl: './wo-actions.component.scss'
 })
 export class WoActionsComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);

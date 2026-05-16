@@ -25,11 +25,10 @@ type TimelineItem =
   | { kind: 'item'; mod: HistoryEntry };
 
 @Component({
-  selector: 'wo-history',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './wo-history.component.html',
-  styleUrl: './wo-history.component.scss'
+    selector: 'wo-history',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './wo-history.component.html',
+    styleUrl: './wo-history.component.scss'
 })
 export class WoHistoryComponent implements OnInit {
   modifications: HistoryEntry[] = [];

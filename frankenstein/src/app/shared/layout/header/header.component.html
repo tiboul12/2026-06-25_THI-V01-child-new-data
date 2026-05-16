@@ -1,139 +1,126 @@
 <!-- Header fixe — visible uniquement si authentifié -->
-<header *ngIf="auth.currentUser() && !layoutService.editorMode()"
-        class="fixed top-0 left-0 right-0 z-[70] bg-white dark:bg-surface border-b border-light-border dark:border-white/10 shadow-sm overflow-hidden transition-[height] duration-300 ease-in-out"
-        [class]="layoutService.headerExpanded() ? 'h-[120px]' : 'h-[60px]'">
-
-  <!-- ── Ligne 1 : Logo / Provider / Serveur / Boutons (toujours visible) ── -->
-  <div class="h-[60px] flex-shrink-0 max-w-7xl mx-auto px-6 flex justify-between items-center">
-
-    <!-- Logo -->
-    <div class="flex items-center gap-3">
-      <div class="w-8 h-8 neon-border flex items-center justify-center rounded">
-        <span class="material-symbols-outlined neon-text text-xl">{{ appConfig.logoIcon() }}</span>
-      </div>
-      <h1 class="text-lg font-bold text-light-text dark:text-white tracking-tight">
-        {{ appConfig.appName() }}
-      </h1>
-    </div>
-
-    <!-- Zone centrale — Provider, Modèle, Serveur (masquable) -->
-    <div *ngIf="configService.headerIaVisible()"
-         class="flex items-center gap-4 text-[10px] uppercase tracking-widest text-light-text-muted dark:text-white/40">
-
-      <!-- Fournisseur IA -->
-      <div class="flex flex-col items-end">
-        <select [(ngModel)]="aiProvider" (change)="onProviderChange()"
-                class="bg-gray-100 dark:bg-white/5 border border-light-border dark:border-white/10 rounded px-2 py-0.5 text-right text-light-primary dark:text-primary focus:outline-none focus:border-light-primary dark:focus:border-primary cursor-pointer font-bold uppercase transition-colors text-[10px]">
-          <option *ngFor="let p of activeProviders" [value]="p.value"
-                  class="bg-white dark:bg-surface text-light-text dark:text-white">
-            {{p.label}}
-          </option>
-        </select>
-        <span class="mt-1">Fournisseur</span>
-      </div>
-
-      <div class="w-[1px] h-6 bg-light-border dark:bg-white/10"></div>
-
-      <!-- Modèle IA -->
-      <div class="flex flex-col items-end">
-        <select [(ngModel)]="aiModel" (change)="onModelChange()"
-                class="bg-gray-100 dark:bg-white/5 border border-light-border dark:border-white/10 rounded px-2 py-0.5 text-right text-light-text dark:text-white focus:outline-none focus:border-light-primary dark:focus:border-primary cursor-pointer font-bold uppercase transition-colors text-[10px]">
-          <option *ngFor="let m of currentModels" [value]="m.value"
-                  class="bg-white dark:bg-surface text-light-text dark:text-white">
-            {{m.label}}
-          </option>
-        </select>
-        <div class="flex justify-between w-full mt-1 gap-2">
-          <span class="text-[10px] text-light-text-muted dark:text-white/40 tracking-wide">{{selectedModelCost}}</span>
-          <span>Modèle IA</span>
+@if (auth.currentUser() && !layoutService.editorMode()) {
+  <header
+    class="fixed top-0 left-0 right-0 z-[70] bg-white dark:bg-surface border-b border-light-border dark:border-white/10 shadow-sm overflow-hidden transition-[height] duration-300 ease-in-out"
+    [class]="layoutService.headerExpanded() ? 'h-[120px]' : 'h-[60px]'">
+    <!-- ── Ligne 1 : Logo / Provider / Serveur / Boutons (toujours visible) ── -->
+    <div class="h-[60px] flex-shrink-0 max-w-7xl mx-auto px-6 flex justify-between items-center">
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 neon-border flex items-center justify-center rounded">
+          <span class="material-symbols-outlined neon-text text-xl">{{ appConfig.logoIcon() }}</span>
         </div>
+        <h1 class="text-lg font-bold text-light-text dark:text-white tracking-tight">
+          {{ appConfig.appName() }}
+        </h1>
       </div>
-
-      <div class="w-[1px] h-6 bg-light-border dark:bg-white/10"></div>
-
-      <!-- Serveur -->
-      <div class="flex flex-col items-end">
-        <span class="font-mono text-green-600 dark:text-green-400 font-bold text-[10px]">{{serverUrl}}</span>
-        <div class="mt-1 flex items-center gap-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-          <span>Serveur Actif</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Boutons d'action -->
-    <div class="flex items-center gap-2">
-      <!-- Toggle thème -->
-      <button (click)="toggleTheme()"
-              title="Changer de thème"
-              class="p-2 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 hover:border-light-primary dark:hover:border-primary transition-all">
-        <span class="material-symbols-outlined text-light-primary dark:text-primary text-lg">{{themeIcon}}</span>
-      </button>
-
-      <!-- Logout -->
-      <button (click)="logout()"
-              title="Déconnexion"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 hover:border-red-400/50 hover:text-red-400 text-light-text-muted dark:text-white/50 transition-all text-xs font-medium">
-        <span class="material-symbols-outlined text-base">logout</span>
-        <span class="hidden sm:inline">{{ currentUsername }}</span>
-      </button>
-    </div>
-
-  </div>
-
-  <!-- ── Ligne 2 : Navigation + bannière MAJ (disparaît au scroll) ── -->
-  <div class="h-[60px] flex-shrink-0 border-t border-light-border dark:border-white/10 max-w-7xl mx-auto px-6 flex items-center justify-between gap-4">
-
-    <!-- Navigation -->
-    <app-nav />
-
-    <!-- Bannière MAJ (uniquement si version obsolète) -->
-    @if (versionStatus() && !versionStatus()!.upToDate) {
-      <div class="ml-auto overflow-hidden rounded-xl border border-red-500/20 bg-red-500/5 transition-[max-width] duration-500 ease-in-out"
-           [class]="bannerCollapsed() ? 'max-w-[215px] cursor-pointer hover:bg-red-500/10' : 'max-w-[680px]'"
-           [routerLink]="bannerCollapsed() ? ['/admin'] : null"
-           [queryParams]="bannerCollapsed() ? { tab: 'deploiement' } : null">
-        <div class="flex items-center gap-2 px-3 py-2">
-
-          <!-- Icône (toujours visible) -->
-          <span class="material-symbols-outlined text-red-400 text-lg flex-shrink-0">warning</span>
-
-          <!-- Titre + versions (toujours visible) -->
-          <div class="flex-shrink-0">
-            <p class="text-xs font-bold text-red-400 leading-tight whitespace-nowrap">Mise à jour requise</p>
-            <p class="text-[10px] font-mono text-red-400/70 whitespace-nowrap">
-              v{{ versionStatus()!.localVersion }} → v{{ versionStatus()!.latestDeployment?.version }}
-            </p>
+      <!-- Zone centrale — Provider, Modèle, Serveur (masquable) -->
+      @if (configService.headerIaVisible()) {
+        <div
+          class="flex items-center gap-4 text-[10px] uppercase tracking-widest text-light-text-muted dark:text-white/40">
+          <!-- Fournisseur IA -->
+          <div class="flex flex-col items-end">
+            <select [(ngModel)]="aiProvider" (change)="onProviderChange()"
+              class="bg-gray-100 dark:bg-white/5 border border-light-border dark:border-white/10 rounded px-2 py-0.5 text-right text-light-primary dark:text-primary focus:outline-none focus:border-light-primary dark:focus:border-primary cursor-pointer font-bold uppercase transition-colors text-[10px]">
+              @for (p of activeProviders; track p) {
+                <option [value]="p.value"
+                  class="bg-white dark:bg-surface text-light-text dark:text-white">
+                  {{p.label}}
+                </option>
+              }
+            </select>
+            <span class="mt-1">Fournisseur</span>
           </div>
-
-          <!-- Texte déploiement (disparaît après 5s) -->
-          <div class="overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out flex-shrink min-w-0"
-               [class]="bannerCollapsed() ? 'max-w-0 opacity-0' : 'max-w-[280px] opacity-100'">
-            @if (versionStatus()!.latestDeployment) {
-              <p class="text-xs text-light-text-muted dark:text-white/40 truncate pl-1">
-                Déployé le {{ formatDate(versionStatus()!.latestDeployment.deployed_at) }}
-                par {{ versionStatus()!.latestDeployment.deployed_by }}
-                @if (versionStatus()!.latestDeployment.commit_name) {
-                  — {{ versionStatus()!.latestDeployment.commit_name }}
-                }
+          <div class="w-[1px] h-6 bg-light-border dark:bg-white/10"></div>
+          <!-- Modèle IA -->
+          <div class="flex flex-col items-end">
+            <select [(ngModel)]="aiModel" (change)="onModelChange()"
+              class="bg-gray-100 dark:bg-white/5 border border-light-border dark:border-white/10 rounded px-2 py-0.5 text-right text-light-text dark:text-white focus:outline-none focus:border-light-primary dark:focus:border-primary cursor-pointer font-bold uppercase transition-colors text-[10px]">
+              @for (m of currentModels; track m) {
+                <option [value]="m.value"
+                  class="bg-white dark:bg-surface text-light-text dark:text-white">
+                  {{m.label}}
+                </option>
+              }
+            </select>
+            <div class="flex justify-between w-full mt-1 gap-2">
+              <span class="text-[10px] text-light-text-muted dark:text-white/40 tracking-wide">{{selectedModelCost}}</span>
+              <span>Modèle IA</span>
+            </div>
+          </div>
+          <div class="w-[1px] h-6 bg-light-border dark:bg-white/10"></div>
+          <!-- Serveur -->
+          <div class="flex flex-col items-end">
+            <span class="font-mono text-green-600 dark:text-green-400 font-bold text-[10px]">{{serverUrl}}</span>
+            <div class="mt-1 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+              <span>Serveur Actif</span>
+            </div>
+          </div>
+        </div>
+      }
+      <!-- Boutons d'action -->
+      <div class="flex items-center gap-2">
+        <!-- Toggle thème -->
+        <button (click)="toggleTheme()"
+          title="Changer de thème"
+          class="p-2 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 hover:border-light-primary dark:hover:border-primary transition-all">
+          <span class="material-symbols-outlined text-light-primary dark:text-primary text-lg">{{themeIcon}}</span>
+        </button>
+        <!-- Logout -->
+        <button (click)="logout()"
+          title="Déconnexion"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 hover:border-red-400/50 hover:text-red-400 text-light-text-muted dark:text-white/50 transition-all text-xs font-medium">
+          <span class="material-symbols-outlined text-base">logout</span>
+          <span class="hidden sm:inline">{{ currentUsername }}</span>
+        </button>
+      </div>
+    </div>
+    <!-- ── Ligne 2 : Navigation + bannière MAJ (disparaît au scroll) ── -->
+    <div class="h-[60px] flex-shrink-0 border-t border-light-border dark:border-white/10 max-w-7xl mx-auto px-6 flex items-center justify-between gap-4">
+      <!-- Navigation -->
+      <app-nav />
+      <!-- Bannière MAJ (uniquement si version obsolète) -->
+      @if (versionStatus() && !versionStatus()!.upToDate) {
+        <div class="ml-auto overflow-hidden rounded-xl border border-red-500/20 bg-red-500/5 transition-[max-width] duration-500 ease-in-out"
+          [class]="bannerCollapsed() ? 'max-w-[215px] cursor-pointer hover:bg-red-500/10' : 'max-w-[680px]'"
+          [routerLink]="bannerCollapsed() ? ['/admin'] : null"
+          [queryParams]="bannerCollapsed() ? { tab: 'deploiement' } : null">
+          <div class="flex items-center gap-2 px-3 py-2">
+            <!-- Icône (toujours visible) -->
+            <span class="material-symbols-outlined text-red-400 text-lg flex-shrink-0">warning</span>
+            <!-- Titre + versions (toujours visible) -->
+            <div class="flex-shrink-0">
+              <p class="text-xs font-bold text-red-400 leading-tight whitespace-nowrap">Mise à jour requise</p>
+              <p class="text-[10px] font-mono text-red-400/70 whitespace-nowrap">
+                v{{ versionStatus()!.localVersion }} → v{{ versionStatus()!.latestDeployment?.version }}
               </p>
-            }
+            </div>
+            <!-- Texte déploiement (disparaît après 5s) -->
+            <div class="overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out flex-shrink min-w-0"
+              [class]="bannerCollapsed() ? 'max-w-0 opacity-0' : 'max-w-[280px] opacity-100'">
+              @if (versionStatus()!.latestDeployment) {
+                <p class="text-xs text-light-text-muted dark:text-white/40 truncate pl-1">
+                  Déployé le {{ formatDate(versionStatus()!.latestDeployment.deployed_at) }}
+                  par {{ versionStatus()!.latestDeployment.deployed_by }}
+                  @if (versionStatus()!.latestDeployment.commit_name) {
+                    — {{ versionStatus()!.latestDeployment.commit_name }}
+                  }
+                </p>
+              }
+            </div>
+            <!-- Bouton Historique (disparaît après 5s) -->
+            <div class="overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out flex-shrink-0"
+              [class]="bannerCollapsed() ? 'max-w-0 opacity-0' : 'max-w-[120px] opacity-100'">
+              <a [routerLink]="['/admin']" [queryParams]="{ tab: 'deploiement' }"
+                class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/30 text-red-400 hover:bg-red-500/10 transition-colors whitespace-nowrap">
+                <span class="material-symbols-outlined text-sm">history</span>
+                Historique
+              </a>
+            </div>
           </div>
-
-          <!-- Bouton Historique (disparaît après 5s) -->
-          <div class="overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out flex-shrink-0"
-               [class]="bannerCollapsed() ? 'max-w-0 opacity-0' : 'max-w-[120px] opacity-100'">
-            <a [routerLink]="['/admin']" [queryParams]="{ tab: 'deploiement' }"
-               class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/30 text-red-400 hover:bg-red-500/10 transition-colors whitespace-nowrap">
-              <span class="material-symbols-outlined text-sm">history</span>
-              Historique
-            </a>
-          </div>
-
         </div>
-      </div>
-    }
-
-  </div>
-
-</header>
+      }
+    </div>
+  </header>
+}

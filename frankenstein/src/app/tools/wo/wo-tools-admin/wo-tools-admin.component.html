@@ -12,56 +12,55 @@
   </div>
 
   <!-- Tool cards -->
-  <div *ngFor="let tool of tools"
-       class="rounded-xl border border-light-border dark:border-white/8 overflow-hidden">
-
-    <!-- Tool header -->
-    <div class="flex items-center gap-3 px-4 py-3"
-         [ngClass]="tool.colorBg">
-      <span class="material-symbols-outlined text-sm" [ngClass]="tool.colorText">{{ tool.icon }}</span>
-      <span class="text-sm font-semibold text-light-text dark:text-white">{{ tool.label }}</span>
-    </div>
-
-    <!-- Toggles -->
-    <div class="divide-y divide-light-border dark:divide-white/5">
-
-      <!-- Tab visibility -->
-      <div class="flex items-center justify-between px-4 py-3 bg-light-surface dark:bg-[#0f0f17]">
-        <div class="flex items-center gap-2.5">
-          <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/30">tab</span>
-          <div>
-            <p class="text-xs font-medium text-light-text dark:text-white">Onglet dans le volet</p>
-            <p class="text-[11px] text-light-text-muted dark:text-white/40">Visible dans la navigation</p>
-          </div>
-        </div>
-        <button (click)="toggleTab(tool.id)"
-                [ngClass]="isTabEnabled(tool.id) ? 'bg-light-primary dark:bg-primary' : 'bg-gray-300 dark:bg-white/20'"
-                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0">
-          <span [ngClass]="isTabEnabled(tool.id) ? 'translate-x-6' : 'translate-x-1'"
-                class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"></span>
-        </button>
+  @for (tool of tools; track tool) {
+    <div
+      class="rounded-xl border border-light-border dark:border-white/8 overflow-hidden">
+      <!-- Tool header -->
+      <div class="flex items-center gap-3 px-4 py-3"
+        [ngClass]="tool.colorBg">
+        <span class="material-symbols-outlined text-sm" [ngClass]="tool.colorText">{{ tool.icon }}</span>
+        <span class="text-sm font-semibold text-light-text dark:text-white">{{ tool.label }}</span>
       </div>
-
-      <!-- Floating widget (only for compatible tools) -->
-      <div *ngIf="tool.hasWidget"
-           class="flex items-center justify-between px-4 py-3 bg-light-surface dark:bg-[#0f0f17]">
-        <div class="flex items-center gap-2.5">
-          <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/30">push_pin</span>
-          <div>
-            <p class="text-xs font-medium text-light-text dark:text-white">Widget flottant</p>
-            <p class="text-[11px] text-light-text-muted dark:text-white/40">Accès rapide sur toutes les pages</p>
+      <!-- Toggles -->
+      <div class="divide-y divide-light-border dark:divide-white/5">
+        <!-- Tab visibility -->
+        <div class="flex items-center justify-between px-4 py-3 bg-light-surface dark:bg-[#0f0f17]">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/30">tab</span>
+            <div>
+              <p class="text-xs font-medium text-light-text dark:text-white">Onglet dans le volet</p>
+              <p class="text-[11px] text-light-text-muted dark:text-white/40">Visible dans la navigation</p>
+            </div>
           </div>
+          <button (click)="toggleTab(tool.id)"
+            [ngClass]="isTabEnabled(tool.id) ? 'bg-light-primary dark:bg-primary' : 'bg-gray-300 dark:bg-white/20'"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0">
+            <span [ngClass]="isTabEnabled(tool.id) ? 'translate-x-6' : 'translate-x-1'"
+            class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"></span>
+          </button>
         </div>
-        <button (click)="toggleFloating(tool.id)"
-                [ngClass]="isFloatingEnabled(tool.id) ? 'bg-light-primary dark:bg-primary' : 'bg-gray-300 dark:bg-white/20'"
-                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0">
-          <span [ngClass]="isFloatingEnabled(tool.id) ? 'translate-x-6' : 'translate-x-1'"
-                class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"></span>
-        </button>
+        <!-- Floating widget (only for compatible tools) -->
+        @if (tool.hasWidget) {
+          <div
+            class="flex items-center justify-between px-4 py-3 bg-light-surface dark:bg-[#0f0f17]">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/30">push_pin</span>
+              <div>
+                <p class="text-xs font-medium text-light-text dark:text-white">Widget flottant</p>
+                <p class="text-[11px] text-light-text-muted dark:text-white/40">Accès rapide sur toutes les pages</p>
+              </div>
+            </div>
+            <button (click)="toggleFloating(tool.id)"
+              [ngClass]="isFloatingEnabled(tool.id) ? 'bg-light-primary dark:bg-primary' : 'bg-gray-300 dark:bg-white/20'"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0">
+              <span [ngClass]="isFloatingEnabled(tool.id) ? 'translate-x-6' : 'translate-x-1'"
+              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"></span>
+            </button>
+          </div>
+        }
       </div>
-
     </div>
-  </div>
+  }
 
 
 </div>

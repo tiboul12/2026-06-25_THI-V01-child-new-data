@@ -18,11 +18,10 @@ const BASE_ADMIN_TABS: AdminTabDef[] = [
 ];
 
 @Component({
-  selector: 'app-admin',
-  standalone: true,
-  imports: [CommonModule, NgComponentOutlet, AdminUsersComponent, AdminDeploymentsComponent, AdminHelpComponent, AdminThemeComponent, ConfigComponent],
-  templateUrl: './admin.component.html',
-  styleUrl: './admin.component.scss'
+    selector: 'app-admin',
+    imports: [CommonModule, NgComponentOutlet, AdminUsersComponent, AdminDeploymentsComponent, AdminHelpComponent, AdminThemeComponent, ConfigComponent],
+    templateUrl: './admin.component.html',
+    styleUrl: './admin.component.scss'
 })
 export class AdminComponent implements OnInit {
   readonly tabsRegistry = inject(AdminTabsRegistryService);
