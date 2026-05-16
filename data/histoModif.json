@@ -4055,6 +4055,26 @@
       "prompt": "dans le child il y a un pb pour partagé le projet en lui même avec d'autre user, il doit partagé via la bdd la structure du projet et via git les contenue. Alors voici 2 problèmes : Problème 1 — Zone 3 vide (arborescence) [...] Problème 2 — Filesystem local incomplet [...] Je veux que tu transfert le fichier config.json dans la bdd pour que la structure soi partagé. Les fichiers contenue et file (exemple image) sont stocker dans git, il faut que pour chaque projet le nom du git lié au projet soi stocker dans la bdd pour que le user qui ce branche au projet puisse ce connecté à git pour récupéré les fichiers. Propose moi une solution viable et fiable",
       "startedAt": "2026-05-16T15:00:00Z",
       "completedAt": "2026-05-16T17:30:00Z"
+    },
+    {
+      "id": "mod-176",
+      "version": "THI-1.00",
+      "date": "2026-05-16T18:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:projet-editor",
+      "title": "Fix migration MySQL structure vide écrasant structure locale non-vide",
+      "description": "Race condition dans getProjectConfig : si un child sans structure locale accédait le projet en premier, il migrait structure:[] en MySQL, empêchant le child principal (avec la vraie structure) de re-migrer. Fix : au retour MySQL, si structure MySQL est vide ET config.json local est non-vide → mettre à jour MySQL depuis le local. Le INSERT de migration utilise JSON_LENGTH pour ne pas écraser une structure existante plus riche.",
+      "files": [
+        "server/server-data.js",
+        "version.json"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "si je me met dans un projet user (preview d'une version du child), je ne vois toujours pas le menu du projet",
+      "startedAt": "2026-05-16T17:45:00Z",
+      "completedAt": "2026-05-16T18:00:00Z"
     }
   ]
 }

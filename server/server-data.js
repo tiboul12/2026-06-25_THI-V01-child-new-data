@@ -4035,40 +4035,54 @@ function cleanStructure(items) {
 }
 
 async function getProjectConfig(projectName) {
+    // Lire le config.json local en parallèle (peut être plus riche que MySQL si migration partielle)
+    const cfgPath = path.join(PROJECTS_DIR, projectName, 'config.json');
+    let localConfig = null;
+    if (fs.existsSync(cfgPath)) {
+        try {
+            localConfig = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+            if (localConfig.structure) localConfig.structure = cleanStructure(localConfig.structure);
+        } catch {}
+    }
+
+    let mysqlRow = null;
     try {
         const [rows] = await pool.query(
             'SELECT display_name, git_remote_url, structure, created_at, updated_at FROM file_project_meta WHERE id = ?',
             [projectName]
         );
-        if (rows.length > 0) {
-            const row = rows[0];
-            const structure = cleanStructure(typeof row.structure === 'string' ? JSON.parse(row.structure) : (row.structure || []));
-            return {
-                projectName: row.display_name,
-                gitRemoteUrl: row.git_remote_url || null,
-                createdAt: row.created_at,
-                updatedAt: row.updated_at,
-                structure
-            };
-        }
+        if (rows.length > 0) mysqlRow = rows[0];
     } catch (e) {
         console.warn('[getProjectConfig] MySQL error, fallback filesystem:', e.message);
     }
-    // Fallback filesystem + auto-migration vers MySQL
-    const cfgPath = path.join(PROJECTS_DIR, projectName, 'config.json');
-    if (!fs.existsSync(cfgPath)) return null;
+
+    if (mysqlRow) {
+        const mysqlStructure = cleanStructure(
+            typeof mysqlRow.structure === 'string' ? JSON.parse(mysqlRow.structure) : (mysqlRow.structure || [])
+        );
+        // Si MySQL a une structure vide mais que le filesystem local en a une non-vide → mettre à jour MySQL
+        const localStructure = localConfig?.structure || [];
+        if (mysqlStructure.length === 0 && localStructure.length > 0) {
+            try {
+                await pool.query(
+                    'UPDATE file_project_meta SET structure = ?, display_name = ?, updated_at = ? WHERE id = ?',
+                    [JSON.stringify(localStructure), localConfig.projectName || mysqlRow.display_name, new Date(), projectName]
+                );
+            } catch (e2) { console.warn('[getProjectConfig] MySQL structure update failed:', e2.message); }
+            return { projectName: localConfig.projectName || mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: mysqlRow.updated_at, structure: localStructure };
+        }
+        return { projectName: mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: mysqlRow.updated_at, structure: mysqlStructure };
+    }
+
+    // Pas d'entrée MySQL → migration depuis le filesystem
+    if (!localConfig) return null;
     try {
-        const config = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-        if (config.structure) config.structure = cleanStructure(config.structure);
-        // Auto-migration silencieuse
-        try {
-            await pool.query(
-                'INSERT INTO file_project_meta (id, display_name, structure, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), structure = VALUES(structure), updated_at = VALUES(updated_at)',
-                [projectName, config.projectName || projectName, JSON.stringify(config.structure || []), config.createdAt || new Date(), config.updatedAt || new Date()]
-            );
-        } catch (e2) { console.warn('[getProjectConfig] auto-migration failed:', e2.message); }
-        return config;
-    } catch { return null; }
+        await pool.query(
+            'INSERT INTO file_project_meta (id, display_name, structure, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE structure = IF(JSON_LENGTH(VALUES(structure)) > JSON_LENGTH(structure), VALUES(structure), structure), display_name = VALUES(display_name), updated_at = VALUES(updated_at)',
+            [projectName, localConfig.projectName || projectName, JSON.stringify(localConfig.structure || []), localConfig.createdAt || new Date(), localConfig.updatedAt || new Date()]
+        );
+    } catch (e2) { console.warn('[getProjectConfig] auto-migration failed:', e2.message); }
+    return localConfig;
 }
 
 async function saveProjectConfig(projectName, config) {
