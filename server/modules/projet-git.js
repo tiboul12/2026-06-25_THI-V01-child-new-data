@@ -236,8 +236,10 @@ function publishWip(projetPath, userId, nodeId, opts = {}) {
         }
     }
 
-    // Commit final sur wip (au cas où le dernier save ne serait pas committé)
-    const finalCommit = commitFile(projetPath, filePath, `pub: ${username} - ${sectionName}`);
+    // Commit final sur wip : git add -A pour inclure config.json et tout fichier
+    // modifié non encore stagehé (ex: saveProjectConfig écrit config.json à chaque
+    // auto-save mais commitFile ne le stage pas).
+    const finalCommit = commitFile(projetPath, null, `pub: ${username} - ${sectionName}`);
     if (!finalCommit.success && !finalCommit.empty) {
         warn('publish: final commit failed:', finalCommit.error);
     }

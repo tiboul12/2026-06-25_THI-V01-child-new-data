@@ -2127,11 +2127,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }
       // Save immédiat (pas scheduleSave 10s) pour que isSaving=true côté parent
       // quand refresh.emit() déclenche onRefresh, qui attend la fin du save avant loadFiles.
+      const snapshotBeforeImageSave = this.lastSavedContent;
       this.saveAll();
       // saveAll() reset localDirty à false — on le remet à true car l'image n'est pas
       // encore pushée : l'utilisateur doit cliquer "Partager" pour que les autres la reçoivent.
       this.localDirty = true;
       this.dirtyChange.emit(true);
+      // Activer la barre "Modifications en cours" pour la section focusée (mode edit)
+      if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
+        if (!this.codeSectionSnapshots.has(this.focusedHandle.id)) {
+          this.codeSectionSnapshots.set(this.focusedHandle.id, snapshotBeforeImageSave);
+        }
+        this.collab.addLocalPending(this.focusedHandle.id);
+        if (this.projectName) {
+          this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
+        }
+      }
       this.refresh.emit();
     } catch (e: any) {
       this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';
@@ -3459,6 +3470,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.dirtyVisuSectionIds.add(sectionId);
         this.localDirty = true;
         this.dirtyChange.emit(true);
+        // Activer la barre "Modifications en cours" (mode visu)
+        if (!this.visuSectionLockSnapshot.has(sectionId)) {
+          const vs = this.visuSections.find(v => v.sectionId === sectionId);
+          if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+        }
+        if (!this.editingVisuSectionId()) {
+          this.editingVisuSectionId.set(sectionId);
+        }
+        this.collab.addLocalPending(sectionId);
+        if (this.projectName) {
+          this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+        }
         this.refresh.emit();
         setTimeout(() => this.initVisuSectionHtml(), 80);
       }

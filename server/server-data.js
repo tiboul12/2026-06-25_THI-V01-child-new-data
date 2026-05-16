@@ -4542,6 +4542,14 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         try {
             if (projetGit.isRepo(projetPath)) {
                 if (publish) {
+                    // Rafraîchir l'URL remote avec le token actuel (le token baked dans l'URL
+                    // lors de la création du projet peut être expiré si github.json a été mis à jour)
+                    if (githubService.isEnabled()) {
+                        const freshUrl = githubService.buildAuthenticatedCloneUrl(
+                            githubService.buildRepoName(req.params.name, config?.title || req.params.name)
+                        );
+                        projetGit.setRemote(projetPath, freshUrl);
+                    }
                     // Commit du contenu final puis merge wip → main
                     const result = projetGit.publishWip(projetPath, user.id, gitNodeId, {
                         username: user.username || user.email || 'user',
