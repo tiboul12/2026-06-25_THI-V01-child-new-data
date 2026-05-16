@@ -834,7 +834,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     // Placeholders pour les images (rendues en HTML brut avec <figure> pour caption + align/width)
     const mainImgTokens: { token: string; html: string }[] = [];
-    let md = this.unifiedContent.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/gi, (_match, id, cap, align, width) => {
+    let md = this.unifiedContent.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?\}\}/gi, (_match, id, cap, align, width) => {
       const token = `@@MI${mainImgTokens.length}@@`;
       mainImgTokens.push({
         token,
@@ -904,7 +904,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // align : left | center | right
   // width : 100px | 50% | etc.
   parseImageMarker(text: string): { id: string; caption: string; alignment: '' | 'left' | 'center' | 'right'; width: string } | null {
-    const m = /\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/i.exec(text);
+    const m = /\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?\}\}/i.exec(text);
     if (!m) return null;
     return {
       id: m[1],
@@ -968,7 +968,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
     const url = this.svc.getImageUrl(this.projectName, encodedPath);
-    const alignClass = alignment ? ` visu-figure--${alignment}` : '';
+    const validAlignments = ['left', 'center', 'right'];
+    const safeAlign = validAlignments.includes(alignment) ? alignment : '';
+    const alignClass = safeAlign ? ` visu-figure--${safeAlign}` : '';
     const widthStyle = width ? ` style="width:${width}"` : '';
     const altText = this.escapeHtml(img.name);
     const captionHtml = caption ? `<figcaption>${this.escapeHtml(caption)}</figcaption>` : '';
@@ -1348,7 +1350,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     // Remplacer les marqueurs {{IMG:id|caption|align|width}} par <figure> HTML brut
     const previewImgTokens: { token: string; html: string }[] = [];
-    const processed = content.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/gi, (_m: string, id: string, cap: string, align: string, width: string) => {
+    const processed = content.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?\}\}/gi, (_m: string, id: string, cap: string, align: string, width: string) => {
       const token = `@@PI${previewImgTokens.length}@@`;
       previewImgTokens.push({
         token,
@@ -2126,6 +2128,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Save immédiat (pas scheduleSave 10s) pour que isSaving=true côté parent
       // quand refresh.emit() déclenche onRefresh, qui attend la fin du save avant loadFiles.
       this.saveAll();
+      // saveAll() reset localDirty à false — on le remet à true car l'image n'est pas
+      // encore pushée : l'utilisateur doit cliquer "Partager" pour que les autres la reçoivent.
+      this.localDirty = true;
+      this.dirtyChange.emit(true);
       this.refresh.emit();
     } catch (e: any) {
       this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';
@@ -2754,7 +2760,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const mdSource = `'${trimmed}\n${rawContent.trimEnd()}\n'`;
       // Traiter les {{IMG:...|caption|align|width}} à l'intérieur du bloc avant marked.parse
       const blockImgTokens: { token: string; html: string }[] = [];
-      let processedContent = rawContent.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/gi, (__: string, id: string, cap: string, align: string, width: string) => {
+      let processedContent = rawContent.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?\}\}/gi, (__: string, id: string, cap: string, align: string, width: string) => {
         const token = `@@BI${blockImgTokens.length}@@`;
         blockImgTokens.push({
           token,
@@ -2779,7 +2785,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     // Remplacer les images (placeholders) — supporte {{IMG:id|caption|align|width}}
     const imgTokens: { token: string; html: string }[] = [];
-    contentMd = contentMd.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/gi, (_m, id, cap, align, width) => {
+    contentMd = contentMd.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?\}\}/gi, (_m, id, cap, align, width) => {
       const token = `@@IM${imgTokens.length}@@`;
       imgTokens.push({
         token,
@@ -3448,6 +3454,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.recomputeAll();
         // Save immédiat pour que onRefresh attende la fin du save (évite race avec loadFiles)
         this.saveAll();
+        // saveAll() reset localDirty à false — on le remet à true car l'image n'est pas
+        // encore pushée : l'utilisateur doit cliquer "Partager" pour que les autres la reçoivent.
+        this.dirtyVisuSectionIds.add(sectionId);
+        this.localDirty = true;
+        this.dirtyChange.emit(true);
         this.refresh.emit();
         setTimeout(() => this.initVisuSectionHtml(), 80);
       }

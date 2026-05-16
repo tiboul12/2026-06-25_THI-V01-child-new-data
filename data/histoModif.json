@@ -4075,6 +4075,26 @@
       "prompt": "si je me met dans un projet user (preview d'une version du child), je ne vois toujours pas le menu du projet",
       "startedAt": "2026-05-16T17:45:00Z",
       "completedAt": "2026-05-16T18:00:00Z"
+    },
+    {
+      "id": "mod-177",
+      "version": "THI-1.01",
+      "date": "2026-05-16T18:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Upload image : maintenir dirty state jusqu'au Partager",
+      "description": "saveAll() resetait localDirty=false immédiatement après l'upload d'image, faisant disparaître le bouton 'Partager mes modifications'. Fix : après saveAll() dans onImageFileSelected et onVisuImageSelected, on remet localDirty=true et dirtyChange.emit(true). En mode visu, on ajoute aussi la section dans dirtyVisuSectionIds. L'image reste donc dans un état 'à partager' jusqu'à ce que l'utilisateur clique Partager, ce qui déclenche le push git incluant le fichier image.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "version.json"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans un projet, si je rajoute une image cela doit ce comporté comme la modification d'un texte et le mode edition/modification en cours - et le btn partager mes modifications, ainsi si on partage l'image doit aussi être gité pour être récupéré par un autre user.",
+      "startedAt": "2026-05-16T18:00:00Z",
+      "completedAt": "2026-05-16T18:30:00Z"
     }
   ]
 }
