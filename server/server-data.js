@@ -4878,6 +4878,8 @@ app.post('/api/file-projects/:name/upload-image', async (req, res) => {
         try {
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `upload_image ${uniqueName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit upload_image:', gitErr.message); }
+        // Notifier les autres users connectés pour déclencher leur auto-pull
+        broadcastToProject(req.params.name, 'structure_update', { operation: 'upload_image', payload: newNode, updatedBy: user.id });
         res.status(201).json(newNode);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -5043,12 +5045,22 @@ app.post('/api/file-projects/:name/setup-remote', async (req, res) => {
 
 // POST /api/file-projects/:name/ensure-local
 //   Vérifie que le dossier projet existe localement. Si non et que git_remote_url est connu → git clone.
+//   Si le dossier existe et a un remote → git pull pour récupérer les fichiers pushés par d'autres users.
 //   Retourne { status: 'ready' | 'cloned' | 'no-remote' }
 app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const projetPath = path.join(PROJECTS_DIR, req.params.name);
-    if (fs.existsSync(projetPath)) return res.json({ status: 'ready' });
+    if (fs.existsSync(projetPath)) {
+        // Pull silencieux pour récupérer les fichiers (images, etc.) pushés par d'autres utilisateurs
+        if (projetGit.hasRemote(projetPath)) {
+            const pullResult = projetGit.pullMain(projetPath);
+            if (!pullResult.success && !pullResult.skipped) {
+                console.warn('[ensure-local] pull warning (non-bloquant):', pullResult.error);
+            }
+        }
+        return res.json({ status: 'ready' });
+    }
     try {
         const [rows] = await pool.query('SELECT git_remote_url FROM file_project_meta WHERE id = ?', [req.params.name]);
         if (rows.length === 0) return res.status(404).json({ error: 'Projet non trouvé en BDD' });

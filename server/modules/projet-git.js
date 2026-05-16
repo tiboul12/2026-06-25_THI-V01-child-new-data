@@ -392,6 +392,12 @@ function pullMain(projetPath) {
         warn('fetch failed:', fetch.stderr);
         return { success: false, error: fetch.stderr };
     }
+    // S'assurer d'être sur main avant le merge (on peut être sur une wip branch)
+    const curBranch = getCurrentBranch(projetPath);
+    if (curBranch && curBranch !== 'main') {
+        const co = execGit('checkout main', projetPath);
+        if (!co.ok) warn('pullMain: checkout main failed:', co.stderr);
+    }
     const merge = execGit('merge --ff-only origin/main', projetPath);
     if (!merge.ok) {
         warn('pull (ff-only) failed:', merge.stderr);

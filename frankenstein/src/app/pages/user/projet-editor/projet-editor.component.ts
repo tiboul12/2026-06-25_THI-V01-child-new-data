@@ -253,9 +253,20 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         this.files.update(nodes => this.patchNodeContent(nodes, event.nodeId, event.content));
       }),
       this.collab.structureUpdate$.subscribe(() => {
-        this.loadFiles();
+        this.autoPullAndRefresh();
+      }),
+      this.collab.sectionPublished$.subscribe(() => {
+        this.autoPullAndRefresh();
       })
     );
+  }
+
+  private async autoPullAndRefresh(): Promise<void> {
+    if (!this.projectFolderName) return;
+    try {
+      await this.collab.pullProject(this.projectFolderName);
+    } catch { /* pull fail-safe — on recharge quand même */ }
+    await this.onRefresh();
   }
 
   private patchNodeContent(nodes: FileNode[], nodeId: string, content: string): FileNode[] {

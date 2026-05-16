@@ -1,6 +1,46 @@
 {
   "modifications": [
     {
+      "id": "mod-176",
+      "version": "THI-1.03",
+      "date": "2026-05-16T21:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "frankenstein"],
+      "features": "frankenstein:projet-editor,server:projet-git",
+      "title": "Sync temps réel : auto-pull sur upload image et publish section",
+      "description": "Quand un user upload une image ou publie une section, les autres users connectés reçoivent un SSE et leur version locale est mise à jour automatiquement via git pull. 3 changements : (1) server-data.js upload-image : ajout d'un broadcastToProject structure_update après le commit (aucun SSE n'était émis jusqu'ici). (2) projet-git.js pullMain() : ajout d'un checkout main avant le merge pour gérer le cas où HEAD est sur une wip branch. (3) projet-editor.component.ts subscribeToCollabEvents : abonnement à structureUpdate$ et sectionPublished$ → déclenche autoPullAndRefresh() (git pull + loadFiles) automatiquement sans action utilisateur.",
+      "files": [
+        "server/server-data.js",
+        "server/modules/projet-git.js",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Attention si on fait une modif de texte ou ajout d'image il faut que le système en informe directement les autres users et que le pull ce fasse automatiquement afin de mettre les autres version user à jour",
+      "startedAt": "2026-05-16T20:35:00Z",
+      "completedAt": "2026-05-16T21:00:00Z"
+    },
+    {
+      "id": "mod-175",
+      "version": "THI-1.02",
+      "date": "2026-05-16T20:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:projet-git",
+      "title": "Git pull au chargement projet pour synchroniser les fichiers pushés par d'autres users",
+      "description": "Correction du bug : quand un user ouvre un projet déjà cloné localement, ensure-local retournait 'ready' immédiatement sans faire de git pull. Résultat : les fichiers (images, etc.) committés et pushés par d'autres utilisateurs n'étaient jamais récupérés localement. Fix : ajout d'un pullMain() silencieux dans ensure-local quand le dossier existe et a un remote, avant de retourner 'ready'.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "maintenant l'image est bien giter dans le sous projet [Image #2], mais il n'est pas récupéré dans une autre version du child (autre user) [Image #1]",
+      "startedAt": "2026-05-16T20:25:00Z",
+      "completedAt": "2026-05-16T20:30:00Z"
+    },
+    {
       "id": "mod-174",
       "version": "THI-0.98",
       "date": "2026-05-16T16:00:00Z",
