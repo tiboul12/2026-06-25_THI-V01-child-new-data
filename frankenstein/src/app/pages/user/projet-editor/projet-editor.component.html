@@ -4,7 +4,15 @@
   </div>
 }
 
-@if (!loading()) {
+@if (!loading() && localUnavailable()) {
+  <div class="flex flex-col items-center justify-center h-[60vh] gap-4 text-center px-8">
+    <span class="material-symbols-outlined text-5xl text-yellow-500">cloud_off</span>
+    <p class="text-light-text dark:text-dark-text font-medium text-lg">Projet non disponible localement</p>
+    <p class="text-light-text-light dark:text-dark-text-light text-sm max-w-md">{{ localUnavailable() }}</p>
+  </div>
+}
+
+@if (!loading() && !localUnavailable()) {
   <div class="fixed inset-0 flex flex-col bg-white dark:bg-[#0f0f17] overflow-hidden">
 
     <app-projet-toolbar
@@ -38,12 +46,14 @@
           [saveStatus]="saveStatus()"
           [projectName]="project()?.id || ''"
           [activeNodeId]="activeNodeId()"
+          [commentCounts]="commentCounts()"
           (fileSave)="onFileSave($event)"
           (sectionsChange)="onSectionsChange($event)"
           (nodeActive)="onNodeActive($event)"
           (dragDrop)="onDragDrop($event)"
           (dirtyChange)="onDirtyChange($event)"
           (saveStarting)="onSaveStarting()"
+          (commentRequest)="onCommentRequest($event)"
           (refresh)="onRefresh()" />
       } @else {
         <app-projet-diff
@@ -110,6 +120,16 @@
       class="absolute bottom-10 left-0 right-0 z-20"
       [status]="statusLabel"
       [isDirty]="saveStatus() === 'saving'" />
+
+    <!-- F6 — Drawer des commentaires de section -->
+    <app-comments-drawer
+      [visible]="commentsDrawer().visible"
+      [projectId]="project()?.id || ''"
+      [folderId]="commentsDrawer().folderId"
+      [folderName]="commentsDrawer().folderName"
+      (close)="closeCommentsDrawer()"
+      (countsChange)="onCommentCountsChange($event)">
+    </app-comments-drawer>
 
   </div>
 }

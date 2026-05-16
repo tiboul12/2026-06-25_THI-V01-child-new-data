@@ -632,6 +632,49 @@
   border-radius: 6px;
   padding: 2px;
   transition: background-color 0.15s;
+  position: relative;
+
+  // F6 — Bouton bulle commentaire (visible au hover, sticky si commentaires existent)
+  .visu-comment-btn {
+    position: absolute;
+    top: 0.2em;
+    right: -2.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: inherit;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s, background-color 0.12s, border-color 0.12s;
+    z-index: 2;
+
+    .material-symbols-outlined { font-size: 16px; line-height: 1; }
+    .visu-comment-btn__badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      font-size: 9px;
+      font-weight: 600;
+      color: #fff;
+      background: rgb(245, 158, 11);
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    &:hover { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.4); opacity: 1; }
+    &--has { opacity: 0.7; }
+  }
+  &:hover .visu-comment-btn { opacity: 0.7; }
+  &:hover .visu-comment-btn--has { opacity: 1; }
 
   &--active { background: rgba(59, 130, 246, 0.04); }
 
@@ -892,6 +935,66 @@
       .material-symbols-outlined { font-size: 14px; line-height: 1; }
       &:hover { opacity: 1; background: rgba(239, 68, 68, 0.1); }
     }
+
+    // F2 — Callouts (blocs sémantiques INFO / WARNING / SUCCESS / DANGER)
+    .callout {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin: 1em 0;
+      padding: 0.8em 1em;
+      border-left: 4px solid var(--callout-accent, #3b82f6);
+      border-radius: 6px;
+      background: var(--callout-bg, rgba(59, 130, 246, 0.06));
+
+      .callout__header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--callout-accent, #3b82f6);
+      }
+      .callout__icon { font-size: 18px; line-height: 1; }
+      .callout__title { font-size: 0.95em; }
+      .callout__body {
+        font-size: 0.95em;
+        > *:first-child { margin-top: 0; }
+        > *:last-child  { margin-bottom: 0; }
+      }
+    }
+    .callout--info    { --callout-accent: #3b82f6; --callout-bg: rgba(59, 130, 246, 0.08); }
+    .callout--warning { --callout-accent: #f59e0b; --callout-bg: rgba(245, 158, 11, 0.10); }
+    .callout--success { --callout-accent: #10b981; --callout-bg: rgba(16, 185, 129, 0.08); }
+    .callout--danger  { --callout-accent: #ef4444; --callout-bg: rgba(239, 68, 68, 0.08); }
+
+    // F3/F5 — figure avec caption + alignement + largeur
+    .visu-figure {
+      display: block;
+      margin: 1em 0;
+      max-width: 100%;
+      cursor: pointer;
+      transition: outline 0.12s;
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+      }
+      figcaption {
+        margin-top: 0.4em;
+        font-size: 0.85em;
+        font-style: italic;
+        opacity: 0.7;
+        text-align: center;
+      }
+      &:hover { outline: 2px solid rgba(59, 130, 246, 0.35); outline-offset: 2px; border-radius: 6px; }
+
+      &.visu-figure--left  { float: left;  margin-right: 1em; clear: left;  }
+      &.visu-figure--right { float: right; margin-left: 1em;  clear: right; }
+      &.visu-figure--center { margin-left: auto; margin-right: auto; }
+    }
   }
 }
 
@@ -916,6 +1019,13 @@
     }
 
     .visu-img-wrap img { border-color: rgba(255, 255, 255, 0.1); }
+    .visu-figure img { border-color: rgba(255, 255, 255, 0.1); }
+    .visu-figure figcaption { color: rgba(255, 255, 255, 0.65); }
+
+    .callout--info    { --callout-bg: rgba(59, 130, 246, 0.12); }
+    .callout--warning { --callout-bg: rgba(245, 158, 11, 0.14); }
+    .callout--success { --callout-bg: rgba(16, 185, 129, 0.12); }
+    .callout--danger  { --callout-bg: rgba(239, 68, 68, 0.12); }
   }
 }
 
@@ -1332,6 +1442,7 @@
 .preview-wrap {
   background: #ffffff;
   font-family: 'Inter', system-ui, sans-serif;
+  position: relative;
 }
 
 :host-context(.dark) .preview-wrap {

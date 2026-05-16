@@ -1,6 +1,39 @@
 {
   "modifications": [
     {
+      "id": "mod-174",
+      "version": "THI-0.98",
+      "date": "2026-05-16T16:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:projet-editor,server:projet-comments|search",
+      "title": "Éditeur projets : 6 features UX (slash/callouts/caption/resize/search/comments)",
+      "description": "Comparaison avec Notion/GitBook/Obsidian → ajout de 6 features manquantes dans le menu /projets/. F1 Slash commands (/ pour insérer blocs image/callout/table/code/quote/list). F2 Callouts sémantiques > [!INFO/WARNING/SUCCESS/DANGER]. F3 Caption d'image {{IMG:id|Légende}}. F5 Resize image {{IMG:id|caption|align|width}} + panneau de propriétés visuel. F4 Search full-text serveur /api/search + composant de recherche dans la liste projets. F6 Commentaires inline par section : table MySQL project_comments, routes CRUD, drawer latéral + bulle bouton sur chaque section en mode Visu. Aucune modif dans shared/core/tools (tout dans pages/user/projet-editor/).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "frankenstein/src/app/pages/user/projet-editor/components/image-props-panel/image-props-panel.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/slash-command-menu/slash-command-menu.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/comments-drawer/comments-drawer.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/services/project-comments.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
+        "frankenstein/src/app/pages/user/projets/projets.component.ts",
+        "frankenstein/src/app/pages/user/projets/projets.component.html",
+        "frankenstein/src/app/pages/user/projets/search.service.ts",
+        "frankenstein/src/app/pages/user/projets/projet-search/projet-search.component.ts",
+        "server/server-data.js",
+        "frankenstein/angular.json"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "ok je voudrais que tu améliore l'UX en mettant en place le guidage à l'insertion. Ajoute aussi les améliorations pour la caption d'image. Ajoute Slash commands, Callouts / blocs sémantiques, le search full-texte, le redimenssionnement d'image et les commentaires inline par section. Fait moi un plan de mise à jour complet [puis] vas y lance les modifications",
+      "startedAt": "2026-05-16T15:30:00Z",
+      "completedAt": "2026-05-16T16:00:00Z"
+    },
+    {
       "id": "mod-173",
       "version": "THI-0.97",
       "date": "2026-05-16T14:00:00Z",
@@ -3999,6 +4032,29 @@
       "prompt": "la section est marqué comme bloqué car en cours de modif (ce qui est vrai) mais il n'y a pas l'information bleu en cour de modification et le bouton enregistré/partage",
       "startedAt": "2026-05-14T11:00:00Z",
       "completedAt": "2026-05-14T12:00:00Z"
+    },
+    {
+      "id": "mod-175",
+      "version": "THI-0.99",
+      "date": "2026-05-16T17:30:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:projet-editor,server:projet-editor",
+      "title": "Partage projet via MySQL + Git remote (structure en BDD)",
+      "description": "Migration de la structure projet (config.json local) vers MySQL (table file_project_meta) pour que tous les children partagent la même arborescence. Nouvelle table file_project_meta (id, display_name, git_remote_url, structure JSON, owner_user_id). getProjectConfig() et saveProjectConfig() deviennent async avec lecture/écriture MySQL en priorité, fallback filesystem + auto-migration silencieuse des projets existants. GET /api/file-projects lit depuis MySQL au lieu du filesystem. POST /api/file-projects insère en MySQL. DELETE supprime en MySQL. setup-remote stocke git_remote_url en BDD. Nouvelle route POST /api/file-projects/:name/ensure-local : vérifie la présence locale, clone via git_remote_url si absent, retourne status ready/cloned/no-remote. Côté Angular : ensureProjectFolder() appelle ensure-local au lieu de créer un projet vierge. Signal localUnavailable() déclenche un message UX clair si le projet n'est pas clonable.",
+      "files": [
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/project-files.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
+        "version.json"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le child il y a un pb pour partagé le projet en lui même avec d'autre user, il doit partagé via la bdd la structure du projet et via git les contenue. Alors voici 2 problèmes : Problème 1 — Zone 3 vide (arborescence) [...] Problème 2 — Filesystem local incomplet [...] Je veux que tu transfert le fichier config.json dans la bdd pour que la structure soi partagé. Les fichiers contenue et file (exemple image) sont stocker dans git, il faut que pour chaque projet le nom du git lié au projet soi stocker dans la bdd pour que le user qui ce branche au projet puisse ce connecté à git pour récupéré les fichiers. Propose moi une solution viable et fiable",
+      "startedAt": "2026-05-16T15:00:00Z",
+      "completedAt": "2026-05-16T17:30:00Z"
     }
   ]
 }

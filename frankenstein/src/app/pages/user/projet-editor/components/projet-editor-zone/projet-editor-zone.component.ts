@@ -7,6 +7,8 @@ import { marked } from 'marked';
 import { WoActionHistoryService } from '../../../../../core/services/wo-action-history.service';
 import { ProjetCollabService } from '../../../../../core/services/projet-collab.service';
 import { AuthService } from '../../../../../core/services/auth.service';
+import { ImagePropsPanelComponent, ImageProps } from '../image-props-panel/image-props-panel.component';
+import { SlashCommandMenuComponent, SlashCommand } from '../slash-command-menu/slash-command-menu.component';
 
 export interface FileSaveEvent {
   fileId: string;
@@ -122,7 +124,7 @@ interface VisuSectionState {
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent],
   templateUrl: './projet-editor-zone.component.html',
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
@@ -141,6 +143,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Output() dragDrop = new EventEmitter<DragDropEvent>();
   @Output() dirtyChange = new EventEmitter<boolean>();
   @Output() saveStarting = new EventEmitter<void>();
+  // F6 — Commentaires : demande d'ouverture du drawer pour une section
+  @Output() commentRequest = new EventEmitter<{ folderId: string; folderName: string }>();
+  // F6 — Compteurs de commentaires par folderId (alimentés par le parent)
+  @Input() commentCounts: Record<string, number> = {};
   private localDirty = false;
 
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
@@ -150,6 +156,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @ViewChild('visu') visuRef?: ElementRef<HTMLDivElement>;
   @ViewChildren('visuSectionEl') visuSectionEls!: QueryList<ElementRef<HTMLElement>>;
   @ViewChild('visuImgInput') visuImgInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('slashMenu') slashMenuRef?: SlashCommandMenuComponent;
 
   private sanitizer = inject(DomSanitizer);
   private zone = inject(NgZone);
@@ -201,6 +208,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private visuSectionLockSnapshot = new Map<string, string>();
   private visuSelectionListener: (() => void) | null = null;
   visuImageSectionId: string | null = null;
+  // F5 — panneau de propriétés d'image (mode Visu)
+  imagePropsPanel: { visible: boolean; imageId: string; caption: string; alignment: '' | 'left' | 'center' | 'right'; width: string; top: number; left: number } = {
+    visible: false, imageId: '', caption: '', alignment: '', width: '', top: 0, left: 0
+  };
+  // F1 — Slash command menu (mode Code)
+  slashMenuState: { visible: boolean; top: number; left: number; query: string; anchorPos: number } = {
+    visible: false, top: 0, left: 0, query: '', anchorPos: -1
+  };
   mirrorLines: MirrorLine[] = [];
   renderedHtml: SafeHtml = '';
   // Fold/collapse par section (mode Code)
@@ -370,7 +385,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const imageIdsInSectionText = new Set<string>();
       for (const child of nodeChildren) {
         if (child.type === 'file' && !this.isImageFile(child.name) && child.content) {
-          const matches = child.content.matchAll(/\{\{IMG:([a-z0-9-]+)\}\}/gi);
+          const matches = child.content.matchAll(/\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}/gi);
           for (const m of matches) {
             imageIdsInSectionText.add(m[1]);
           }
@@ -759,7 +774,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Exclut les images uploadées tout récemment (pas encore propagées dans this.files)
     const orphanIndexes = new Set<number>();
     lines.forEach((line, i) => {
-      const m = /^\{\{IMG:([a-z0-9-]+)\}\}\s*$/i.exec(line.trim());
+      const m = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}\s*$/i.exec(line.trim());
       if (m && !this.allImages.find(im => im.id === m[1]) && !this.recentlyAddedImageIds.has(m[1])) {
         orphanIndexes.add(i);
       }
@@ -781,7 +796,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.mirrorLines = cleanLines.map((line, i) => {
       const kind: 'folder' | 'file' | null = fileHl.has(i) ? 'file' : (folderHl.has(i) ? 'folder' : null);
       const ib = inlineBlockMap.get(i) || null;
-      const m = /^\{\{IMG:([a-z0-9-]+)\}\}\s*$/i.exec(line.trim());
+      const m = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}\s*$/i.exec(line.trim());
       if (m) {
         const img = this.allImages.find(im => im.id === m[1]);
         return {
@@ -817,13 +832,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.renderedHtml = '';
       return;
     }
-    let md = this.unifiedContent.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (_, id) => {
-      const img = this.allImages.find(im => im.id === id);
-      if (!img) return `\n\n*[image manquante]*\n\n`;
-      const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
-      const url = this.svc.getImageUrl(this.projectName, encodedPath);
-      return `\n\n![${this.escapeAlt(img.name)}](${url})\n\n`;
+    // Placeholders pour les images (rendues en HTML brut avec <figure> pour caption + align/width)
+    const mainImgTokens: { token: string; html: string }[] = [];
+    let md = this.unifiedContent.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/gi, (_match, id, cap, align, width) => {
+      const token = `@@MI${mainImgTokens.length}@@`;
+      mainImgTokens.push({
+        token,
+        html: this.renderImageMarkerHtml(id, (cap || '').trim(), align || '', width || '')
+      });
+      return `\n\n${token}\n\n`;
     });
+
+    // F2 — Pré-traitement des callouts (avant les blocs fichiers et marked)
+    const calloutRes = this.processCallouts(md);
+    md = calloutRes.md;
+    const mainCalloutTokens = calloutRes.tokens;
 
     // Extraire les blocs de fichiers, les rendre séparément, remplacer par un placeholder
     const placeholders: { token: string; html: string }[] = [];
@@ -847,6 +870,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const wrapped = new RegExp(`<p>\\s*${ph.token}\\s*</p>`, 'g');
       html = html.replace(wrapped, ph.html).replace(ph.token, ph.html);
     }
+    for (const ph of mainImgTokens) {
+      const wrapped = new RegExp(`<p>\\s*${ph.token}\\s*</p>`, 'g');
+      html = html.replace(wrapped, ph.html).replace(ph.token, ph.html);
+    }
+    for (const ph of mainCalloutTokens) {
+      const wrapped = new RegExp(`<p>\\s*${ph.token}\\s*</p>`, 'g');
+      html = html.replace(wrapped, ph.html).replace(ph.token, ph.html);
+    }
     // Marquer chaque heading avec data-section-id pour scroll/highlight
     for (const sec of this.docSections) {
       const tag = `h${sec.level}`;
@@ -866,6 +897,85 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   private escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ── Image marker helpers (F3 caption + F5 resize) ────────────
+  // Syntaxe : {{IMG:id|caption|align|width}}  — tous les params après id optionnels
+  // align : left | center | right
+  // width : 100px | 50% | etc.
+  parseImageMarker(text: string): { id: string; caption: string; alignment: '' | 'left' | 'center' | 'right'; width: string } | null {
+    const m = /\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/i.exec(text);
+    if (!m) return null;
+    return {
+      id: m[1],
+      caption: (m[2] || '').trim(),
+      alignment: ((m[3] || '') as '' | 'left' | 'center' | 'right'),
+      width: m[4] || ''
+    };
+  }
+
+  buildImageMarker(props: { id: string; caption?: string; alignment?: string; width?: string }): string {
+    const parts = [props.id];
+    const cap = (props.caption || '').trim();
+    const al = props.alignment || '';
+    const w = props.width || '';
+    if (cap || al || w) parts.push(cap);
+    if (al || w) parts.push(al);
+    if (w) parts.push(w);
+    return `{{IMG:${parts.join('|')}}}`;
+  }
+
+  // F2 — Callouts : pré-traitement des blocs > [!TYPE] avant marked.parse()
+  // Retourne le markdown avec placeholders @@CO<n>@@ + la liste des HTML à réinjecter ensuite
+  private processCallouts(md: string): { md: string; tokens: { token: string; html: string }[] } {
+    const tokens: { token: string; html: string }[] = [];
+    const iconMap: Record<string, string> = {
+      INFO: 'info',
+      WARNING: 'warning',
+      SUCCESS: 'check_circle',
+      DANGER: 'error'
+    };
+    // Bloc multi-ligne : 1 ligne d'en-tête `> [!TYPE] Titre?` puis lignes suivantes commençant par `> `
+    const re = /^> \[!(INFO|WARNING|SUCCESS|DANGER)\][ \t]*([^\n]*)((?:\n>[ \t]?[^\n]*)*)/gmi;
+    const out = md.replace(re, (_match, typeRaw: string, title: string, bodyLines: string) => {
+      const type = typeRaw.toUpperCase();
+      const icon = iconMap[type] || 'info';
+      // Retirer le préfixe "> " de chaque ligne du body
+      const body = (bodyLines || '')
+        .split('\n')
+        .filter(l => l.length > 0)
+        .map(l => l.replace(/^>[ \t]?/, ''))
+        .join('\n')
+        .trim();
+      const titleHtml = (title || '').trim()
+        ? `<span class="callout__title">${this.escapeHtml((title || '').trim())}</span>`
+        : `<span class="callout__title">${type.charAt(0) + type.slice(1).toLowerCase()}</span>`;
+      const bodyHtml = body ? (marked.parse(body, { async: false }) as string) : '';
+      const token = `@@CO${tokens.length}@@`;
+      tokens.push({
+        token,
+        html: `<div class="callout callout--${type.toLowerCase()}" data-callout-type="${type}"><div class="callout__header"><span class="material-symbols-outlined callout__icon">${icon}</span>${titleHtml}</div><div class="callout__body">${bodyHtml}</div></div>`
+      });
+      return `\n\n${token}\n\n`;
+    });
+    return { md: out, tokens };
+  }
+
+  private renderImageMarkerHtml(id: string, caption: string, alignment: string, width: string, opts?: { withDeleteBar?: boolean }): string {
+    const img = this.allImages.find(im => im.id === id);
+    if (!img) {
+      return `<span class="text-red-400 text-xs">[image manquante: ${this.escapeHtml(id)}]</span>`;
+    }
+    const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
+    const url = this.svc.getImageUrl(this.projectName, encodedPath);
+    const alignClass = alignment ? ` visu-figure--${alignment}` : '';
+    const widthStyle = width ? ` style="width:${width}"` : '';
+    const altText = this.escapeHtml(img.name);
+    const captionHtml = caption ? `<figcaption>${this.escapeHtml(caption)}</figcaption>` : '';
+    const delBtn = opts?.withDeleteBar
+      ? `<div class="visu-img-bar"><span class="visu-img-name">${altText}</span><button class="visu-img-del" data-img-id="${id}" type="button"><span class="material-symbols-outlined">delete</span></button></div>`
+      : '';
+    return `<figure class="visu-figure${alignClass}"${widthStyle} contenteditable="false" data-img-id="${id}" data-img-caption="${this.escapeHtml(caption)}" data-img-align="${alignment}" data-img-width="${width}"><img src="${url}" alt="${altText}">${captionHtml}${delBtn}</figure>`;
   }
 
   // ── Syntax highlighting pour le miroir Code ──────────────────
@@ -1236,16 +1346,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return { name: this.fileVisuPreviewCache.name, html: this.fileVisuPreviewCache.html };
     }
 
-    // Remplacer les marqueurs {{IMG:id}} par des URLs réelles avant rendu markdown
-    const processed = content.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (_m, id) => {
-      const img = this.allImages.find(im => im.id === id);
-      if (!img) return `*[image manquante: ${id}]*`;
-      const encodedPath = img.path.split('/').map((s: string) => encodeURIComponent(s)).join('/');
-      const url = this.svc.getImageUrl(this.projectName, encodedPath);
-      return `\n\n![${this.escapeAlt(img.name)}](${url})\n\n`;
+    // Remplacer les marqueurs {{IMG:id|caption|align|width}} par <figure> HTML brut
+    const previewImgTokens: { token: string; html: string }[] = [];
+    const processed = content.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/gi, (_m: string, id: string, cap: string, align: string, width: string) => {
+      const token = `@@PI${previewImgTokens.length}@@`;
+      previewImgTokens.push({
+        token,
+        html: this.renderImageMarkerHtml(id, (cap || '').trim(), align || '', width || '')
+      });
+      return `\n\n${token}\n\n`;
     });
 
-    const html = marked.parse(processed, { async: false }) as string;
+    let html = marked.parse(processed, { async: false }) as string;
+    for (const ph of previewImgTokens) {
+      const wrapped = new RegExp(`<p>\\s*${ph.token}\\s*</p>`, 'g');
+      html = html.replace(wrapped, ph.html).replace(ph.token, ph.html);
+    }
     const name = node.name.replace(/\.md$/, '');
     this.fileVisuPreviewCache = { fileId: node.id, rawContent: content, html, name };
     return { name, html };
@@ -1260,6 +1376,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.recomputeMirrorLines();
     this.recomputeHandles();
     this.scheduleSave();
+    // F1 — détection slash command
+    this.updateSlashMenu(ta);
     if (!this.localDirty) {
       this.localDirty = true;
       this.dirtyChange.emit(true);
@@ -1411,6 +1529,136 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   onTextareaBlur() {
     this.saveAll();
+    // Fermer le slash menu sur blur (avec léger délai pour permettre le clic sur le menu)
+    setTimeout(() => this.hideSlashMenu(), 150);
+  }
+
+  // ── F1 — Slash command menu ──────────────────────────────────
+  onTextareaKeydown(ev: KeyboardEvent) {
+    if (!this.slashMenuState.visible) return;
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); this.slashMenuRef?.moveNext(); }
+    else if (ev.key === 'ArrowUp') { ev.preventDefault(); this.slashMenuRef?.movePrev(); }
+    else if (ev.key === 'Enter')   { ev.preventDefault(); this.slashMenuRef?.selectActive(); }
+    else if (ev.key === 'Escape')  { ev.preventDefault(); this.hideSlashMenu(); }
+  }
+
+  private updateSlashMenu(ta: HTMLTextAreaElement) {
+    const pos = ta.selectionStart;
+    const val = ta.value;
+    // Cherche le `/` le plus proche en amont, sans franchir d'espace ni de retour ligne
+    let slashIdx = -1;
+    for (let i = pos - 1; i >= 0; i--) {
+      const ch = val[i];
+      if (ch === '/') { slashIdx = i; break; }
+      if (/\s/.test(ch)) break;
+    }
+    if (slashIdx === -1) { this.hideSlashMenu(); return; }
+    // Le `/` doit être en début de ligne OU précédé d'un espace
+    const prev = slashIdx > 0 ? val[slashIdx - 1] : '\n';
+    if (prev !== '\n' && !/\s/.test(prev)) { this.hideSlashMenu(); return; }
+    // La query est ce qui est entre le / et le curseur (max 20 chars)
+    const query = val.substring(slashIdx + 1, pos);
+    if (query.length > 20) { this.hideSlashMenu(); return; }
+
+    // Calculer la position du menu (sous le curseur)
+    const coords = this.getCaretCoordinates(ta, pos);
+    this.slashMenuState = {
+      visible: true,
+      top: coords.top - ta.scrollTop + 22,
+      left: coords.left - ta.scrollLeft,
+      query,
+      anchorPos: slashIdx
+    };
+  }
+
+  hideSlashMenu() {
+    if (this.slashMenuState.visible) {
+      this.slashMenuState = { ...this.slashMenuState, visible: false, query: '', anchorPos: -1 };
+    }
+  }
+
+  onSlashCommandSelect(cmd: SlashCommand) {
+    const ta = this.textareaRef?.nativeElement;
+    if (!ta || this.slashMenuState.anchorPos < 0) { this.hideSlashMenu(); return; }
+    const anchor = this.slashMenuState.anchorPos;
+    const queryEnd = anchor + 1 + this.slashMenuState.query.length;
+    this.hideSlashMenu();
+    // Cas spécial : image → déclencher l'upload via input file
+    if (cmd.id === 'image') {
+      // Retirer le `/...` saisi
+      const newVal = ta.value.substring(0, anchor) + ta.value.substring(queryEnd);
+      ta.value = newVal;
+      this.unifiedContent = newVal;
+      ta.selectionStart = ta.selectionEnd = anchor;
+      this.recomputeAll();
+      this.scheduleSave();
+      // Trouver la section courante pour ouvrir l'upload image
+      const entity = this.getCursorEntity();
+      const sectionId = entity?.folderId || this.docSections[0]?.folderId;
+      if (sectionId) this.triggerVisuImageUpload(sectionId);
+      return;
+    }
+    // Insérer le snippet correspondant
+    const { snippet, cursorOffset } = this.snippetForCommand(cmd.id);
+    const before = ta.value.substring(0, anchor);
+    const after = ta.value.substring(queryEnd);
+    // S'assurer que le snippet commence par un newline si on n'est pas en début de ligne
+    const needsLead = anchor > 0 && before[before.length - 1] !== '\n';
+    const lead = needsLead ? '\n' : '';
+    const newVal = before + lead + snippet + after;
+    ta.value = newVal;
+    this.unifiedContent = newVal;
+    const newPos = anchor + lead.length + (cursorOffset ?? snippet.length);
+    ta.selectionStart = ta.selectionEnd = newPos;
+    ta.focus();
+    this.recomputeAll();
+    this.scheduleSave();
+    if (!this.localDirty) { this.localDirty = true; this.dirtyChange.emit(true); }
+  }
+
+  private snippetForCommand(id: string): { snippet: string; cursorOffset?: number } {
+    switch (id) {
+      case 'callout-info':    return { snippet: `> [!INFO] Titre\n> Contenu\n`,    cursorOffset: 10 };
+      case 'callout-warning': return { snippet: `> [!WARNING] Titre\n> Contenu\n`, cursorOffset: 13 };
+      case 'callout-success': return { snippet: `> [!SUCCESS] Titre\n> Contenu\n`, cursorOffset: 13 };
+      case 'callout-danger':  return { snippet: `> [!DANGER] Titre\n> Contenu\n`,  cursorOffset: 12 };
+      case 'table':           return { snippet: `| Col 1 | Col 2 |\n|-------|-------|\n|       |       |\n`, cursorOffset: 2 };
+      case 'code':            return { snippet: '```\n\n```\n', cursorOffset: 4 };
+      case 'quote':           return { snippet: `> Citation\n`, cursorOffset: 2 };
+      case 'list':            return { snippet: `- Item 1\n- Item 2\n`, cursorOffset: 2 };
+      case 'numbered':        return { snippet: `1. Item 1\n2. Item 2\n`, cursorOffset: 3 };
+      default:                return { snippet: '' };
+    }
+  }
+
+  // Calcule la position pixel du caret dans une textarea via un mirror DOM
+  private getCaretCoordinates(ta: HTMLTextAreaElement, pos: number): { top: number; left: number } {
+    const mirror = document.createElement('div');
+    const style = window.getComputedStyle(ta);
+    const props: (keyof CSSStyleDeclaration)[] = [
+      'boxSizing','width','height','overflowX','overflowY','borderTopWidth','borderRightWidth',
+      'borderBottomWidth','borderLeftWidth','paddingTop','paddingRight','paddingBottom','paddingLeft',
+      'fontStyle','fontVariant','fontWeight','fontStretch','fontSize','fontSizeAdjust','lineHeight',
+      'fontFamily','textAlign','textTransform','textIndent','textDecoration','letterSpacing','wordSpacing','tabSize'
+    ];
+    for (const p of props) (mirror.style as any)[p] = (style as any)[p];
+    mirror.style.position = 'absolute';
+    mirror.style.visibility = 'hidden';
+    mirror.style.whiteSpace = 'pre-wrap';
+    mirror.style.wordWrap = 'break-word';
+    mirror.style.top = '0';
+    mirror.style.left = '-9999px';
+    mirror.textContent = ta.value.substring(0, pos);
+    const span = document.createElement('span');
+    span.textContent = ta.value.substring(pos) || '.';
+    mirror.appendChild(span);
+    document.body.appendChild(mirror);
+    const rect = ta.getBoundingClientRect();
+    const parentRect = (ta.parentElement as HTMLElement).getBoundingClientRect();
+    const top = span.offsetTop + (rect.top - parentRect.top);
+    const left = span.offsetLeft + (rect.left - parentRect.left);
+    document.body.removeChild(mirror);
+    return { top, left };
   }
 
   // Force une sauvegarde immédiate (bouton "Non sauvegardé" cliqué)
@@ -1667,7 +1915,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         const afContent = (content as string) || '';
         const af: AdditionalFile = { name: afName, content: afContent.trimEnd(), fileId: null, orderedChildIds: [] };
         
-        const imgRegex = /\{\{IMG:([a-zA-Z0-9._-]+)\}\}/gi;
+        const imgRegex = /\{\{IMG:([a-zA-Z0-9._-]+)(?:\|[^}]*)?\}\}/gi;
         let imM;
         while ((imM = imgRegex.exec(afContent)) !== null) {
            af.orderedChildIds!.push(imM[1]);
@@ -1684,7 +1932,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       });
 
       // Extraire les images autonomes
-      const imageRegex = /\{\{IMG:([a-zA-Z0-9._-]+)\}\}/gi;
+      const imageRegex = /\{\{IMG:([a-zA-Z0-9._-]+)(?:\|[^}]*)?\}\}/gi;
       let imgM: RegExpExecArray | null;
       while ((imgM = imageRegex.exec(spacedContent)) !== null) {
         if (!nestedImageIds.has(imgM[1])) {
@@ -2349,7 +2597,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const lines = this.unifiedContent.split('\n');
     if (srcLine < 0 || srcLine >= lines.length) return;
     const marker = lines[srcLine];
-    if (!/^\{\{IMG:[a-zA-Z0-9._-]+\}\}/i.test(marker.trim())) return;
+    if (!/^\{\{IMG:[a-zA-Z0-9._-]+(?:\|[^}]*)?\}\}/i.test(marker.trim())) return;
 
     lines.splice(srcLine, 1);
     
@@ -2422,17 +2670,29 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     walkImages(this.files, 'root');
 
     for (const [imgId, correctParentId] of imgCorrectParent) {
-      const marker = `{{IMG:${imgId}}}`;
+      const escaped = imgId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const findRe = new RegExp(`\\{\\{IMG:${escaped}(?:\\|[^}]*)?\\}\\}`, 'i');
       const wrongSections = this.docSections.filter(
-        s => s.folderId !== correctParentId && s.textContent.includes(marker)
+        s => s.folderId !== correctParentId && findRe.test(s.textContent)
       );
       const correctSection = this.docSections.find(s => s.folderId === correctParentId);
-      const alreadyCorrect = !!correctSection?.textContent.includes(marker);
+      const alreadyCorrect = !!correctSection && findRe.test(correctSection.textContent);
 
       if (wrongSections.length === 0 && alreadyCorrect) continue;
 
-      const escaped = imgId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp(`\\n?\\{\\{IMG:${escaped}\\}\\}\\n?`, 'gi');
+      // Capture le marqueur existant (avec ses props éventuelles) avant déplacement
+      let existingMarker: string | null = null;
+      for (const s of wrongSections) {
+        const m = findRe.exec(s.textContent);
+        if (m) { existingMarker = m[0]; break; }
+      }
+      if (!existingMarker && correctSection) {
+        const m = findRe.exec(correctSection.textContent);
+        if (m) existingMarker = m[0];
+      }
+      const marker = existingMarker || `{{IMG:${imgId}}}`;
+
+      const re = new RegExp(`\\n?\\{\\{IMG:${escaped}(?:\\|[^}]*)?\\}\\}\\n?`, 'gi');
       for (const sec of wrongSections) {
         const before = sec.textContent;
         sec.textContent = sec.textContent.replace(re, '\n');
@@ -2492,15 +2752,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const trimmed = (name as string).trim();
       const rawContent = (content as string) || '';
       const mdSource = `'${trimmed}\n${rawContent.trimEnd()}\n'`;
-      // Traiter les {{IMG:...}} à l'intérieur du bloc avant marked.parse
-      let processedContent = rawContent.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (__, id) => {
-        const img = this.allImages.find(im => im.id === id);
-        if (!img) return `*[image manquante: ${id}]*`;
-        const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
-        const url = this.svc.getImageUrl(this.projectName, encodedPath);
-        return `\n\n![${this.escapeAlt(img.name)}](${url})\n\n`;
+      // Traiter les {{IMG:...|caption|align|width}} à l'intérieur du bloc avant marked.parse
+      const blockImgTokens: { token: string; html: string }[] = [];
+      let processedContent = rawContent.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/gi, (__: string, id: string, cap: string, align: string, width: string) => {
+        const token = `@@BI${blockImgTokens.length}@@`;
+        blockImgTokens.push({
+          token,
+          html: this.renderImageMarkerHtml(id, (cap || '').trim(), align || '', width || '')
+        });
+        return `\n\n${token}\n\n`;
       });
-      const inner = marked.parse(processedContent, { async: false }) as string;
+      let inner = marked.parse(processedContent, { async: false }) as string;
+      for (const ph of blockImgTokens) {
+        const wrapped = new RegExp(`<p>\\s*${ph.token}\\s*</p>`, 'g');
+        inner = inner.replace(wrapped, ph.html).replace(ph.token, ph.html);
+      }
       const token = `@@FB${fileBlocks.length}@@`;
       const encoded = btoa(unescape(encodeURIComponent(mdSource)));
       fileBlocks.push({
@@ -2511,23 +2777,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return `\n\n${token}\n\n`;
     });
 
-    // Remplacer les images (placeholders)
+    // Remplacer les images (placeholders) — supporte {{IMG:id|caption|align|width}}
     const imgTokens: { token: string; html: string }[] = [];
-    contentMd = contentMd.replace(/\{\{IMG:([a-z0-9-]+)\}\}/gi, (_, id) => {
-      const img = this.allImages.find(im => im.id === id);
+    contentMd = contentMd.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|(left|center|right))?(?:\|(\d+(?:px|%)?))?\}\}/gi, (_m, id, cap, align, width) => {
       const token = `@@IM${imgTokens.length}@@`;
-      if (img) {
-        const encodedPath = img.path.split('/').map(s => encodeURIComponent(s)).join('/');
-        const url = this.svc.getImageUrl(this.projectName, encodedPath);
-        imgTokens.push({
-          token,
-          html: `<div class="visu-img-wrap" contenteditable="false" data-img-id="${id}"><img src="${url}" alt="${this.escapeHtml(img.name)}"><div class="visu-img-bar"><span class="visu-img-name">${this.escapeHtml(img.name)}</span><button class="visu-img-del" data-img-id="${id}" type="button"><span class="material-symbols-outlined">delete</span></button></div></div>`,
-        });
-      } else {
-        imgTokens.push({ token, html: `<span class="text-red-400 text-xs">[image manquante: ${id}]</span>` });
-      }
+      imgTokens.push({
+        token,
+        html: this.renderImageMarkerHtml(id, (cap || '').trim(), align || '', width || '', { withDeleteBar: true })
+      });
       return `\n\n${token}\n\n`;
     });
+
+    // F2 — Pré-traitement callouts
+    const calloutRes = this.processCallouts(contentMd);
+    contentMd = calloutRes.md;
 
     let html = marked.parse(contentMd, { async: false }) as string;
 
@@ -2540,6 +2803,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     for (const im of imgTokens) {
       html = html.replace(new RegExp(`<p>\\s*${im.token}\\s*</p>`, 'g'), im.html).replace(im.token, im.html);
+    }
+    for (const co of calloutRes.tokens) {
+      html = html.replace(new RegExp(`<p>\\s*${co.token}\\s*</p>`, 'g'), co.html).replace(co.token, co.html);
     }
     return html;
   }
@@ -2883,7 +3149,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       try { return '\n' + decodeURIComponent(escape(atob(el.getAttribute('data-block-md')!))) + '\n'; } catch { return ''; }
     }
     if (el.hasAttribute('data-img-id')) {
-      return `\n{{IMG:${el.getAttribute('data-img-id')}}}\n`;
+      const id = el.getAttribute('data-img-id') || '';
+      const caption = el.getAttribute('data-img-caption') || '';
+      const align = el.getAttribute('data-img-align') || '';
+      const width = el.getAttribute('data-img-width') || '';
+      return `\n${this.buildImageMarker({ id, caption, alignment: align, width })}\n`;
     }
     // Table : via wrapper .visu-table-wrap OU balise <table> directe
     if (el.classList.contains('visu-table-wrap')) {
@@ -3054,12 +3324,77 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.visuInsertMenu && !target.closest('.visu-insert-menu') && !target.closest('.visu-insert-btn')) {
       this.visuInsertMenu = null;
     }
+    // F6 — Bouton bulle commentaires
+    const commentBtn = target.closest('.visu-comment-btn') as HTMLElement | null;
+    if (commentBtn) {
+      ev.stopPropagation();
+      const folderId = commentBtn.getAttribute('data-folder-id') || '';
+      const folderName = commentBtn.getAttribute('data-folder-name') || '';
+      if (folderId) this.commentRequest.emit({ folderId, folderName });
+      return;
+    }
     // Bouton suppression image
     const delBtn = target.closest('.visu-img-del') as HTMLElement | null;
     if (delBtn) {
       const imgId = delBtn.getAttribute('data-img-id');
       if (imgId) this.deleteVisuImage(imgId);
+      return;
     }
+    // F5 — clic sur une figure : ouvrir le panneau de propriétés
+    const fig = target.closest('.visu-figure') as HTMLElement | null;
+    if (fig && fig.hasAttribute('data-img-id')) {
+      ev.stopPropagation();
+      this.openImagePropsPanel(fig);
+      return;
+    }
+    // Fermer le panneau si clic ailleurs
+    if (this.imagePropsPanel.visible && !target.closest('.img-props-panel')) {
+      this.closeImagePropsPanel();
+    }
+  }
+
+  // F5 — Panneau de propriétés d'image
+  openImagePropsPanel(figEl: HTMLElement) {
+    const id = figEl.getAttribute('data-img-id') || '';
+    const caption = figEl.getAttribute('data-img-caption') || '';
+    const alignment = (figEl.getAttribute('data-img-align') || '') as '' | 'left' | 'center' | 'right';
+    const width = figEl.getAttribute('data-img-width') || '';
+    const rect = figEl.getBoundingClientRect();
+    const container = this.visuRef?.nativeElement;
+    const containerRect = container?.getBoundingClientRect();
+    const top = (containerRect ? rect.bottom - containerRect.top : rect.bottom) + (container?.scrollTop || 0) + 8;
+    const left = (containerRect ? rect.left - containerRect.left : rect.left) + 12;
+    this.imagePropsPanel = { visible: true, imageId: id, caption, alignment, width, top, left };
+  }
+
+  closeImagePropsPanel() {
+    this.imagePropsPanel = { ...this.imagePropsPanel, visible: false };
+  }
+
+  onImagePropsChange(evt: { imageId: string; props: ImageProps }) {
+    this.applyImagePropsToMarker(evt.imageId, evt.props);
+  }
+
+  onImagePropsDelete(imageId: string) {
+    this.closeImagePropsPanel();
+    this.deleteVisuImage(imageId);
+  }
+
+  private applyImagePropsToMarker(imageId: string, props: ImageProps) {
+    if (!imageId) return;
+    const escaped = imageId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`\\{\\{IMG:${escaped}(?:\\|[^}]*)?\\}\\}`, 'gi');
+    const newMarker = this.buildImageMarker({ id: imageId, caption: props.caption, alignment: props.alignment, width: props.width });
+    const before = this.unifiedContent;
+    const after = before.replace(re, newMarker);
+    if (after === before) return;
+    this.unifiedContent = after;
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = after;
+    // Mettre à jour les data-attr sur le panneau (state local)
+    this.imagePropsPanel = { ...this.imagePropsPanel, caption: props.caption, alignment: props.alignment, width: props.width };
+    this.recomputeAll();
+    this.saveAll();
   }
 
   // ── Visu edit : gestion images ──────────────────────────────
@@ -3136,7 +3471,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.allImages = this.allImages.filter(im => im.id !== imgId);
       // Retirer le marqueur de unifiedContent
       const lines = this.unifiedContent.split('\n');
-      const idx = lines.findIndex(l => l.trim() === `{{IMG:${imgId}}}`);
+      const idx = lines.findIndex(l => {
+        const t = l.trim();
+        const m = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}$/i.exec(t);
+        return !!m && m[1] === imgId;
+      });
       if (idx !== -1) lines.splice(idx, 1);
       this.unifiedContent = lines.join('\n');
       const ta = this.textareaRef?.nativeElement;

@@ -5,11 +5,12 @@ import { WorgHelpTriggerComponent } from '../../../shared/help/worg-help-trigger
 import { Router } from '@angular/router';
 import { ProjectService, Project } from '../../../core/services/project.service';
 import { WoActionHistoryService } from '../../../core/services/wo-action-history.service';
+import { ProjetSearchComponent } from './projet-search/projet-search.component';
 
 @Component({
   selector: 'app-projets',
   standalone: true,
-  imports: [CommonModule, FormsModule, WorgHelpTriggerComponent],
+  imports: [CommonModule, FormsModule, WorgHelpTriggerComponent, ProjetSearchComponent],
   templateUrl: './projets.component.html',
   styleUrl: './projets.component.scss'
 })
