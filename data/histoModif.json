@@ -46,7 +46,10 @@
       "date": "2026-05-16T16:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein", "server"],
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
       "features": "frankenstein:projet-editor,server:projet-comments|search",
       "title": "Éditeur projets : 6 features UX (slash/callouts/caption/resize/search/comments)",
       "description": "Comparaison avec Notion/GitBook/Obsidian → ajout de 6 features manquantes dans le menu /projets/. F1 Slash commands (/ pour insérer blocs image/callout/table/code/quote/list). F2 Callouts sémantiques > [!INFO/WARNING/SUCCESS/DANGER]. F3 Caption d'image {{IMG:id|Légende}}. F5 Resize image {{IMG:id|caption|align|width}} + panneau de propriétés visuel. F4 Search full-text serveur /api/search + composant de recherche dans la liste projets. F6 Commentaires inline par section : table MySQL project_comments, routes CRUD, drawer latéral + bulle bouton sur chaque section en mode Visu. Aucune modif dans shared/core/tools (tout dans pages/user/projet-editor/).",
@@ -79,7 +82,9 @@
       "date": "2026-05-16T14:00:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:site",
       "title": "Fix compilation Angular 20 post-sync",
       "description": "Après sync base B0.44 (migration Angular 18→20), npm install non exécuté (node_modules restés sur Angular 18). Correction des 4 appels renommés dans config.component.ts : cliIaEnabled→tchatIaEnabled, setCliIaEnabled→setTchatIaEnabled, apiKeysEnabled→ticketsEnabled, setApiKeysEnabled→setTicketsEnabled. Fix appliqué également dans worganic-base.",
@@ -98,7 +103,10 @@
       "date": "2026-05-16T00:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["server", "system"],
+      "scope": [
+        "server",
+        "system"
+      ],
       "features": "server:projet-git|github,system:workflow",
       "title": "Auto-création repos GitHub par projet",
       "description": "Création automatique d'un repo GitHub par projet à la création + setup-remote pour projets existants. Nouveau module server/modules/github-service.js (API REST GitHub : createRepo, repoExists, deleteRepo, buildRepoName avec pattern configurable, buildAuthenticatedCloneUrl). Extension de server/modules/projet-git.js : setRemote, getRemoteUrl, auto-push après publishWip et commitOnMain. Hook dans server-data.js : helper setupGithubRemoteForProject appelé automatiquement à la création de projet (POST /api/file-projects) + nouvelle route POST /api/file-projects/:name/setup-remote pour câbler les projets existants. Configuration via data/config/github.json (gitignored) avec template data/config/github.json.example. Support owner type org/user. Convention de nommage configurable (par défaut thi-projet-{uuid8}). Validé : 2 projets existants câblés et pushés vers GitHub avec succès.",
@@ -121,7 +129,10 @@
       "date": "2026-05-15T01:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["server", "frankenstein"],
+      "scope": [
+        "server",
+        "frankenstein"
+      ],
       "features": "server:projet-git,frankenstein:projet-editor",
       "title": "Partage de projet par git : POC complet phases 1-3 (sans Gitea)",
       "description": "Implémentation du système de partage de projets via git par projet. Nouveau module server/modules/projet-git.js (init, branches wip per-user/per-section, merge ff-only au publish, discard, pull, push, sync-status). Hooks dans server-data.js : git init au create-project, création branche wip à lock acquire, commit auto-save sur file PUT, merge wip→main + SSE section_published au publish, discard wip à unlock sans publish, commits direct sur main pour changements structurels (create/rename/delete/move folder/file + upload-image). Trois nouvelles routes : POST /pull, GET /sync-status, POST /push. Script server/migrate-projets-to-git.js pour initialiser les projets existants (2 projets migrés). Côté Angular : ProjetCollabService étendu avec signaux pendingUpdates et isOnline, handlers SSE section_published et project_synced, méthodes pullProject/pushProject/getSyncStatus. Nouveau composant standalone ProjetUpdateBannerComponent affichant les notifications de partage avec bouton 'Mettre à jour' (pull) et croix de dismiss, intégré en haut de la page projet-editor. Documentation docs/structure/projet-update-banner.component.md. Phase 4 (Gitea + UI collaborateurs) non incluse — nécessite installation Gitea.",
@@ -149,7 +160,9 @@
       "date": "2026-05-15T00:00:00Z",
       "type": "config",
       "commitType": "MERGE",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:workflow",
       "title": "Merge zone5-historique -> main + branche br-20260515-projet-partage",
       "description": "Fusion de la branche zone5-historique dans main (commit 1328dc0). La branche zone5-historique est conservée. Création et passage sur la nouvelle branche br-20260515-projet-partage pour les développements liés au partage de projet.",
@@ -166,7 +179,9 @@
       "date": "2026-05-14T20:30:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Zone 5 : historique figé uniquement au 'Partager', grisé pendant édition",
       "description": "Correction : flushContentModifications() était appelé depuis saveAll() (auto-save 10s), onTextareaBlur(), forceSave(), setMode() et exitFocusMode(), ce qui finalisait l'entrée zone 5 immédiatement sans attendre le bouton 'Partager'. Suppression de ces appels prématurés. flushContentModifications() reçoit désormais un filterSectionId optionnel : seul publishCodeEdit(sectionId) l'appelle avec le filtre. Côté visu, saveVisuSection() reçoit trackHistory=false par défaut, seul publishVisuSection() passe true. modifiedEntities conserve les entrées des autres sections pour leur publication ultérieure.",
@@ -185,7 +200,9 @@
       "date": "2026-05-14T19:45:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Zone 5 : historique fichier direct (sans ## Section)",
       "description": "Correction du cas où getCursorEntity() retourne null quand on édite un fichier direct (pas un dossier) — le contenu n'a pas de ## Section header donc sectionRanges est vide. Ajout d'un fallback sur focusedHandle.id (qui EST le fileId) dans onTextareaInput(), avec modifiedEntities.set(fileId, fileId) pour que flushContentModifications() et cancelCodeEdit() le traitent correctement.",
@@ -204,7 +221,9 @@
       "date": "2026-05-14T18:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Zone 5 : historique visu/code grisé en édition, figé à la publication",
       "description": "Ajout de l'entrée grisée dans l'historique zone 5 dès la première modification. Mode visu : onVisuSectionInput appelle collab.upsertPending(sectionId), cancelVisuEdit appelle collab.clearPending(sectionId). Mode code : onTextareaInput utilise entity.id (fichier) comme entityId pour upsertPending — cohérent avec activeHistoryIds qui filtre par fileId ; publishCodeEdit appelle flushContentModifications() AVANT unfoldAll() pour que les sectionRanges soient encore valides (pattern miroir de exitFocusMode) ; cancelCodeEdit itère modifiedEntities pour clearPending(entityId) sur toutes les entrées liées à la section annulée.",
@@ -223,7 +242,9 @@
       "date": "2026-05-14T17:50:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "server:file-projects",
       "title": "Upload image : nom unique par fichier, pas de remplacement par nom",
       "description": "Correction du bug où uploader la même image (même nom) plusieurs fois dans le même dossier remplaçait le nœud existant, provoquant des marqueurs {{IMG:xxx}} orphelins dans d'autres documents. Désormais chaque upload génère un nom unique (imgsoleil-2.png, imgsoleil-3.png...) et un UUID distinct, sans jamais écraser un nœud existant. cleanStructure déduplique maintenant par id plutôt que par name+type pour rester compatible.",
@@ -242,7 +263,9 @@
       "date": "2026-05-14T01:00:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Visu : section dirty toujours visible après navigation menu",
       "description": "Fix 2 : la solution précédente était incomplète car `filteredVisuSections` filtrait les sections non-actives, ce qui détruisait le DOM de la section modifiée (section A) dès que l'utilisateur cliquait sur section B dans le menu. La destruction du DOM supprimait le badge et le cadenas de zone 4. Fix : `filteredVisuSections` inclut désormais toutes les sections qui ont des modifications en attente (via `collab.localPendingSections()` — signal réactif), ce qui préserve leur DOM même lors de la navigation. `initVisuSectionHtml` est également corrigé : pour une section dirty avec un contenteditable vide (nouvelle instance DOM), le contenu modifié est réinjecté depuis `markdownBefore`.",
@@ -261,7 +284,9 @@
       "date": "2026-05-14T00:30:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Visu : section garde cadenas et badge après navigation",
       "description": "Fix : en mode Visu, quand une section est modifiée sans être partagée et que l'utilisateur navigue sur une autre section, la première section perdait son cadenas (menu) et son badge (zone 4). Correction : (1) onVisuSectionBlur ne supprime plus la section de dirtyVisuSectionIds — l'état dirty persiste jusqu'à Partager/Annuler ; (2) onVisuSectionInput appelle désormais collab.addLocalPending() pour afficher le cadenas rouge dans le menu latéral ; (3) onVisuSectionFocus protège le snapshot original contre l'écrasement lors du retour sur une section dirty ; (4) publishVisuSection et cancelVisuEdit appellent collab.removeLocalPending() et ne clearent editingVisuSectionId/localDirty que si la section traitée est bien la section active ; (5) badge template utilise collab.isLocalPending() (signal réactif) au lieu de editingVisuSectionId() pour persister entre navigations.",
@@ -4079,7 +4104,10 @@
       "date": "2026-05-16T17:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein", "server"],
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
       "features": "frankenstein:projet-editor,server:projet-editor",
       "title": "Partage projet via MySQL + Git remote (structure en BDD)",
       "description": "Migration de la structure projet (config.json local) vers MySQL (table file_project_meta) pour que tous les children partagent la même arborescence. Nouvelle table file_project_meta (id, display_name, git_remote_url, structure JSON, owner_user_id). getProjectConfig() et saveProjectConfig() deviennent async avec lecture/écriture MySQL en priorité, fallback filesystem + auto-migration silencieuse des projets existants. GET /api/file-projects lit depuis MySQL au lieu du filesystem. POST /api/file-projects insère en MySQL. DELETE supprime en MySQL. setup-remote stocke git_remote_url en BDD. Nouvelle route POST /api/file-projects/:name/ensure-local : vérifie la présence locale, clone via git_remote_url si absent, retourne status ready/cloned/no-remote. Côté Angular : ensureProjectFolder() appelle ensure-local au lieu de créer un projet vierge. Signal localUnavailable() déclenche un message UX clair si le projet n'est pas clonable.",
@@ -4102,7 +4130,9 @@
       "date": "2026-05-16T18:00:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "server:projet-editor",
       "title": "Fix migration MySQL structure vide écrasant structure locale non-vide",
       "description": "Race condition dans getProjectConfig : si un child sans structure locale accédait le projet en premier, il migrait structure:[] en MySQL, empêchant le child principal (avec la vraie structure) de re-migrer. Fix : au retour MySQL, si structure MySQL est vide ET config.json local est non-vide → mettre à jour MySQL depuis le local. Le INSERT de migration utilise JSON_LENGTH pour ne pas écraser une structure existante plus riche.",
@@ -4122,7 +4152,9 @@
       "date": "2026-05-16T18:30:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projet-editor",
       "title": "Upload image : maintenir dirty state jusqu'au Partager",
       "description": "saveAll() resetait localDirty=false immédiatement après l'upload d'image, faisant disparaître le bouton 'Partager mes modifications'. Fix : après saveAll() dans onImageFileSelected et onVisuImageSelected, on remet localDirty=true et dirtyChange.emit(true). En mode visu, on ajoute aussi la section dans dirtyVisuSectionIds. L'image reste donc dans un état 'à partager' jusqu'à ce que l'utilisateur clique Partager, ce qui déclenche le push git incluant le fichier image.",
@@ -4135,6 +4167,69 @@
       "prompt": "Dans un projet, si je rajoute une image cela doit ce comporté comme la modification d'un texte et le mode edition/modification en cours - et le btn partager mes modifications, ainsi si on partage l'image doit aussi être gité pour être récupéré par un autre user.",
       "startedAt": "2026-05-16T18:00:00Z",
       "completedAt": "2026-05-16T18:30:00Z"
+    },
+    {
+      "id": "mod-178",
+      "version": "THI-1.02",
+      "date": "2026-05-16T17:15:34.829Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projet-editor",
+      "title": "Upload image : afficher barre Modifications en cours",
+      "description": "Après upload d'une image, active la barre \"Modifications en cours\" avec Annuler/Partager. En mode visu : set editingVisuSectionId + collab.addLocalPending + lock. En mode edit (section focusée) : codeSectionSnapshots + addLocalPending + lock. Sans cette activation, la barre n'apparaissait jamais et l'image ne pouvait pas être partagée via le bouton Partager.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "cela ne fonctionne toujours pas, si je rajoute une image cela doit mettre la section en mode modification (historique plus onfo de modification) et la partagé (git) si on clique sur le bouton Partager la modification (ou l'annulé) actuellement le mode enregistrement et partage ne s'affiche pas et l'image n'est pas gité",
+      "startedAt": "2026-05-16T17:30:00.000Z",
+      "completedAt": "2026-05-16T17:15:34.830Z"
+    },
+    {
+      "id": "mod-179",
+      "version": "THI-1.02",
+      "date": "2026-05-16T17:30:11.184Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "system:workflow",
+      "title": "publishWip : config.json non commité bloquait checkout main",
+      "description": "saveProjectConfig écrit config.json à chaque auto-save mais commitFile ne le stagehait pas (seulement le contenu.md). Résultat : git checkout main dans publishWip échouait silencieusement car git refusait d écraser les changements locaux de config.json. Fix : finalCommit utilise maintenant commitFile(projetPath, null, ...) qui fait git add -A pour inclure tous les fichiers modifiés avant le merge.",
+      "files": [
+        "server/modules/projet-git.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai rajouté une image dans le menu 2-1 et j'ai appuyé sur le bouton \"Partager mes modifications\", mais cela devrait gité l'image que j'ai rajouté pour qu'on puisse ensuite le récupéré pour un autre user.",
+      "startedAt": "2026-05-16T17:45:00.000Z",
+      "completedAt": "2026-05-16T17:30:11.186Z"
+    },
+    {
+      "id": "mod-180",
+      "version": "THI-1.02",
+      "date": "2026-05-16T17:47:48.132Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "system:workflow",
+      "title": "publishWip : rafraîchir token GitHub avant push",
+      "description": "Le token PAT baked dans l URL remote lors de la création du projet était expiré alors que github.json avait été mis à jour avec un nouveau token. Avant chaque publishWip, l URL remote est maintenant reconstruite avec le token actuel de github.json (via githubService.buildAuthenticatedCloneUrl). Évite toute erreur d authentification silencieuse lors des pushes.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j ai rajouté une image et cliqué sur le bouton mais je ne vois toujours pas l image dans le dépot git",
+      "startedAt": "2026-05-16T18:00:00.000Z",
+      "completedAt": "2026-05-16T17:47:48.133Z"
     }
   ]
 }
