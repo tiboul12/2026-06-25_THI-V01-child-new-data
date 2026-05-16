@@ -1,0 +1,33 @@
+<!-- Header fixe (visible uniquement si connecté) -->
+<app-header></app-header>
+
+<!-- Contenu principal — padding-top pour le header, padding-bottom pour le footer -->
+<main [class]="auth.currentUser() ? (layoutService.headerExpanded() ? 'pt-[120px]' : 'pt-[60px]') + ' pb-[44px] min-h-screen bg-light-background dark:bg-background transition-[padding-top] duration-300 ease-in-out' : ''">
+  <router-outlet></router-outlet>
+</main>
+
+<!-- Footer fixe avec lien outils externes (visible uniquement si connecté) -->
+<app-footer [onOpenTools]="openToolsPanel.bind(this)"></app-footer>
+
+<!-- Widgets flottants (conditionnels sur feature flags) -->
+<wo-ticket-widget
+  *ngIf="configService.ticketsEnabled() && auth.currentUser()">
+</wo-ticket-widget>
+
+<wo-cahier-recette-widget
+  *ngIf="configService.recetteWidgetEnabled() && auth.currentUser()">
+</wo-cahier-recette-widget>
+
+<wo-tchat-ia-widget
+  *ngIf="configService.tchatIaEnabled() && auth.currentUser()">
+</wo-tchat-ia-widget>
+
+<wo-actions-widget
+  *ngIf="configService.actionsEnabled() && auth.currentUser()">
+</wo-actions-widget>
+
+<!-- Panneau Outils Externes (toujours présent si connecté, état géré en interne) -->
+<wo-tools-panel *ngIf="auth.currentUser()"></wo-tools-panel>
+
+<!-- Volet d'aide contextuelle (global, déclenché par worg-help) -->
+<worg-help-drawer></worg-help-drawer>

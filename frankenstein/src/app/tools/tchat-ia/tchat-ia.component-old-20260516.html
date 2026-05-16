@@ -1,0 +1,279 @@
+<!-- CASE 1: MODAL MODE (Standard) -->
+<ng-container *ngIf="mode === 'modal'">
+  <div *ngIf="visible" class="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" (click)="close()"></div>
+
+    <!-- Panel -->
+    <div class="relative bg-[#0f0f17] border border-white/10 flex flex-col shadow-2xl rounded-2xl overflow-hidden"
+         style="width:800px;max-width:calc(100vw - 2rem);height:85vh;max-height:860px;min-width:400px;min-height:400px;resize:both;">
+      
+      <div class="flex flex-col h-full w-full">
+        <!-- Header Modal -->
+        <div class="px-5 py-3 border-b border-white/10 bg-[#151520] flex items-center gap-3 flex-shrink-0">
+          <div class="w-8 h-8 rounded-full bg-violet-500/20 border border-violet-500/40 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-violet-400 text-[18px]">smart_toy</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-bold text-white text-sm leading-tight">{{title}}</h3>
+            <p class="text-[10px] text-white/30 uppercase tracking-widest leading-tight">
+              {{provider}} / {{model}}
+              <span *ngIf="totalTokens > 0" class="ml-2 text-violet-400/60">~ {{totalTokens | number}} tokens</span>
+            </p>
+          </div>
+          <button (click)="close()" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors">
+            <span class="material-symbols-outlined text-white/50 text-lg">close</span>
+          </button>
+        </div>
+
+        <!-- Navigation Modal -->
+        <div class="px-4 py-2 border-b border-white/5 bg-[#11111a] flex items-center justify-between">
+          <ng-container *ngTemplateOutlet="tplTabs"></ng-container>
+          <ng-container *ngTemplateOutlet="tplActions"></ng-container>
+        </div>
+
+        <!-- Content Modal -->
+        <div class="flex-1 overflow-hidden flex flex-col">
+          <ng-container *ngTemplateOutlet="tplMainContent"></ng-container>
+        </div>
+
+        <!-- Input Modal -->
+        <div class="border-t border-white/10 px-4 py-3 bg-[#151520] flex-shrink-0">
+          <ng-container *ngTemplateOutlet="tplInput"></ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-container>
+
+<!-- CASE 2: INLINE MODE (For side-panel widgets - CARD DESIGN) -->
+<ng-container *ngIf="mode === 'inline'">
+  <div *ngIf="visible" class="space-y-6">
+    
+    <!-- Card 1: Navigation & Controls -->
+    <div class="bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-xl shadow-sm overflow-hidden">
+      <!-- Provider / Model info -->
+      <div class="px-4 py-2 border-b border-light-border dark:border-white/5 bg-light-surface-hover dark:bg-white/5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[14px] text-violet-500">smart_toy</span>
+        <span class="text-[11px] text-light-text dark:text-white/60 uppercase tracking-widest">{{provider}}</span>
+        <span class="text-light-text-muted dark:text-white/20 text-[10px]">/</span>
+        <span class="text-[11px] text-light-text-muted dark:text-white/40 font-mono">{{model}}</span>
+        <span *ngIf="totalTokens > 0" class="ml-auto text-[10px] text-violet-400/60 font-mono">~ {{totalTokens | number}} tokens</span>
+      </div>
+      <!-- Tabs + actions -->
+      <div class="p-3 flex items-center justify-between">
+        <ng-container *ngTemplateOutlet="tplTabs"></ng-container>
+        <ng-container *ngTemplateOutlet="tplActions"></ng-container>
+      </div>
+    </div>
+
+    <!-- Card 2: Conversation / Logs / History -->
+    <div class="bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-xl flex flex-col h-[550px] overflow-hidden shadow-sm">
+      <!-- Card Header -->
+      <div class="px-5 py-3 border-b border-light-border dark:border-white/5 bg-light-surface-hover dark:bg-white/5 flex items-center justify-between">
+        <h3 class="text-xs font-bold text-light-text dark:text-white uppercase tracking-wider flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm text-violet-500">
+            {{ activeTab === 'chat' ? 'chat' : (activeTab === 'log' ? 'terminal' : 'history') }}
+          </span>
+          {{ activeTab === 'chat' ? 'Conversation' : (activeTab === 'log' ? 'Logs techniques' : 'Sessions précédentes') }}
+        </h3>
+        <div *ngIf="isAiTyping" class="flex items-center gap-0.5">
+          <span class="w-1 h-1 rounded-full bg-violet-400 animate-bounce" style="animation-delay:0ms"></span>
+          <span class="w-1 h-1 rounded-full bg-violet-400 animate-bounce" style="animation-delay:150ms"></span>
+          <span class="w-1 h-1 rounded-full bg-violet-400 animate-bounce" style="animation-delay:300ms"></span>
+        </div>
+      </div>
+      
+      <div class="flex-1 overflow-hidden flex flex-col">
+        <ng-container *ngTemplateOutlet="tplMainContent"></ng-container>
+      </div>
+    </div>
+
+    <!-- Card 3: Input Area -->
+    <div class="bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-xl p-5 shadow-sm">
+      <h3 class="text-xs font-bold text-light-text dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm text-violet-500">send</span>
+        Votre message
+      </h3>
+      <ng-container *ngTemplateOutlet="tplInput"></ng-container>
+    </div>
+
+  </div>
+</ng-container>
+
+
+<!-- ── SUB-TEMPLATES ─────────────────────────────────────────────────── -->
+
+<!-- TABS TEMPLATE -->
+<ng-template #tplTabs>
+  <div class="flex items-center gap-0.5 bg-black/5 dark:bg-white/5 rounded-lg p-0.5">
+    <button (click)="activeTab = 'chat'"
+            [ngClass]="activeTab === 'chat' ? 'bg-white dark:bg-white/10 text-violet-600 dark:text-white shadow-sm' : 'text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70'"
+            class="px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all">
+      Chat
+    </button>
+    <button (click)="activeTab = 'log'"
+            [ngClass]="activeTab === 'log' ? 'bg-white dark:bg-white/10 text-violet-600 dark:text-white shadow-sm' : 'text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70'"
+            class="px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all">
+      Logs
+    </button>
+    <button (click)="activeTab = 'history'; loadSessions()"
+            [ngClass]="activeTab === 'history' ? 'bg-white dark:bg-white/10 text-violet-600 dark:text-white shadow-sm' : 'text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70'"
+            class="px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all">
+      Sessions
+    </button>
+  </div>
+</ng-template>
+
+<!-- ACTIONS BUTTONS TEMPLATE -->
+<ng-template #tplActions>
+  <div class="flex items-center gap-2">
+    <button *ngIf="allowZoneSelection" (click)="toggleZoneMode()"
+            [ngClass]="zoneSelectionMode ? 'text-amber-500 dark:text-amber-300' : 'text-light-text-muted dark:text-white/30'"
+            class="p-1.5 hover:bg-light-surface-hover dark:hover:bg-white/5 rounded-lg transition-colors" title="Mode sélection de zone">
+      <span class="material-symbols-outlined text-[20px]">select_all</span>
+    </button>
+    <button (click)="newConversation()" class="p-1.5 text-light-text-muted dark:text-white/30 hover:text-violet-500 dark:hover:text-violet-400 hover:bg-light-surface-hover dark:hover:bg-white/5 rounded-lg transition-colors" title="Nouvelle conversation">
+      <span class="material-symbols-outlined text-[20px]">add_comment</span>
+    </button>
+  </div>
+</ng-template>
+
+<!-- MAIN CONTENT (CHAT/LOG/HISTORY) -->
+<ng-template #tplMainContent>
+  <!-- Zone selection banner -->
+  <div *ngIf="zoneSelectionMode"
+       class="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-300 flex-shrink-0">
+    <span class="material-symbols-outlined text-sm">touch_app</span>
+    Mode sélection actif (cliquez sur un texte pour le modifier)
+    <button (click)="toggleZoneMode()" class="ml-auto opacity-50 hover:opacity-100 transition-opacity">
+      <span class="material-symbols-outlined text-sm">close</span>
+    </button>
+  </div>
+
+  <!-- CHAT -->
+  <div *ngIf="activeTab === 'chat'" class="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-light-surface-hover/30 dark:bg-black/10">
+    <ng-container *ngFor="let msg of visibleMessages">
+      <!-- AI message -->
+      <div *ngIf="msg.role === 'ai'" class="group flex items-start gap-3">
+        <div class="w-7 h-7 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="material-symbols-outlined text-violet-500 dark:text-violet-400 text-[14px]">smart_toy</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div *ngIf="msg.type === 'text'"
+               (mouseup)="onMessageMouseUp($event, msg.id)"
+               [class.cursor-text]="zoneSelectionMode"
+               class="inline-block max-w-full px-4 py-3 rounded-2xl rounded-tl-sm bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 text-sm leading-relaxed text-light-text dark:text-white shadow-sm">
+            <div *ngIf="allowMarkdown" [innerHTML]="renderMarkdown(msg.content)"></div>
+            <span *ngIf="!allowMarkdown" class="whitespace-pre-wrap break-words">{{msg.content}}</span>
+            <span *ngIf="msg.streaming" class="inline-block w-1.5 h-4 bg-violet-400/70 animate-pulse rounded-sm ml-0.5 align-middle"></span>
+          </div>
+
+          <!-- Formulaire IA -->
+          <div *ngIf="msg.type === 'form' && msg.parsedForm"
+               class="bg-white dark:bg-[#1a1a2e] border border-violet-500/30 rounded-2xl rounded-tl-sm p-4 max-w-lg shadow-md">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-violet-500 text-base">dynamic_form</span>
+              <h4 class="font-bold text-light-text dark:text-white text-sm">{{msg.parsedForm.title}}</h4>
+            </div>
+            <p *ngIf="msg.parsedForm.description" class="text-xs text-light-text-muted dark:text-white/50 mb-3">{{msg.parsedForm.description}}</p>
+            <!-- ... (Champs du formulaire identiques) ... -->
+            <ng-container *ngIf="!msg.parsedForm.submitted">
+              <div *ngFor="let field of msg.parsedForm.fields" class="mb-3">
+                <label class="block text-[10px] uppercase font-bold text-light-text-muted dark:text-white/40 mb-1 tracking-wider">{{field.label}}</label>
+                <input *ngIf="['text','number','date'].includes(field.type)" [type]="field.type" [(ngModel)]="msg.parsedForm.values![field.id]" class="w-full bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 rounded-lg px-3 py-2 text-sm text-light-text dark:text-white focus:outline-none focus:border-violet-500/50 transition-colors">
+                <textarea *ngIf="field.type === 'textarea'" [(ngModel)]="msg.parsedForm.values![field.id]" rows="2" class="w-full bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 rounded-lg px-3 py-2 text-sm text-light-text dark:text-white focus:outline-none focus:border-violet-500/50 resize-none transition-colors"></textarea>
+              </div>
+              <button (click)="submitForm(msg)" class="w-full mt-1 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-bold transition-all shadow-lg shadow-violet-600/20">
+                {{msg.parsedForm.submitLabel || 'Envoyer'}}
+              </button>
+            </ng-container>
+            <div *ngIf="msg.parsedForm.submitted" class="flex items-center gap-1.5 text-xs text-green-500 font-medium">
+              <span class="material-symbols-outlined text-sm">check_circle</span> Formulaire soumis
+            </div>
+          </div>
+
+          <!-- Actions Message -->
+          <div *ngIf="!msg.streaming" class="mt-1.5 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button (click)="copyMessage(msg)" class="flex items-center gap-1 text-[10px] text-light-text-muted dark:text-white/30 hover:text-violet-500 dark:hover:text-white/60 transition-colors">
+              <span class="material-symbols-outlined text-[12px]">{{copiedMsgId === msg.id ? 'check' : 'content_copy'}}</span>
+              {{copiedMsgId === msg.id ? 'Copié' : 'Copier'}}
+            </button>
+            <button (click)="setFeedback(msg, 'up')" [ngClass]="msg.feedback === 'up' ? 'text-green-500' : 'text-light-text-muted dark:text-white/30 hover:text-green-500'" class="transition-colors">
+              <span class="material-symbols-outlined text-[14px]">thumb_up</span>
+            </button>
+            <button (click)="setFeedback(msg, 'down')" [ngClass]="msg.feedback === 'down' ? 'text-red-500' : 'text-light-text-muted dark:text-white/30 hover:text-red-500'" class="transition-colors">
+              <span class="material-symbols-outlined text-[14px]">thumb_down</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- User message -->
+      <div *ngIf="msg.role === 'user'" class="group flex items-start gap-3 justify-end">
+        <div class="flex-1 min-w-0 flex justify-end">
+          <div class="relative inline-block max-w-[85%]">
+            <div class="px-4 py-3 rounded-2xl rounded-tr-sm bg-violet-600 text-white text-sm shadow-md shadow-violet-600/10 whitespace-pre-wrap break-words">
+              {{msg.content}}
+            </div>
+            <button (click)="copyMessage(msg)" class="absolute -bottom-4 right-0 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-light-text-muted dark:text-white/30 hover:text-violet-500 flex items-center gap-0.5">
+              <span class="material-symbols-outlined text-[12px]">{{copiedMsgId === msg.id ? 'check' : 'content_copy'}}</span>
+            </button>
+          </div>
+        </div>
+        <div class="w-7 h-7 rounded-full bg-light-surface dark:bg-white/10 border border-light-border dark:border-white/20 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+          <span class="material-symbols-outlined text-light-text-muted dark:text-white/60 text-[14px]">person</span>
+        </div>
+      </div>
+    </ng-container>
+    <div #messagesEnd></div>
+  </div>
+
+  <!-- LOGS -->
+  <div *ngIf="activeTab === 'log'" class="flex-1 overflow-y-auto p-4 bg-black/90 font-mono text-[11px]">
+    <pre class="text-green-400/80 leading-relaxed whitespace-pre-wrap break-all">{{cliLog || '— En attente de logs…'}}</pre>
+    <div #cliLogEnd></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div *ngIf="activeTab === 'history'" class="flex-1 overflow-y-auto p-4 space-y-2 bg-light-surface-hover/30 dark:bg-black/10">
+    <div *ngFor="let session of sessions" (click)="restoreSession(session)"
+         class="group/s p-3 rounded-xl bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 hover:border-violet-500/40 hover:shadow-md cursor-pointer transition-all flex items-start gap-3 shadow-sm">
+      <span class="material-symbols-outlined text-violet-500/40 text-[18px] mt-0.5 flex-shrink-0">chat_bubble</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm text-light-text dark:text-white/80 font-bold truncate">{{session.title}}</p>
+        <p class="text-[10px] text-light-text-muted dark:text-white/30 mt-0.5">{{session.date | date:'dd MMM yyyy HH:mm'}}</p>
+      </div>
+      <button (click)="deleteSession(session.id, $event)" class="p-1 text-red-400 opacity-0 group-hover/s:opacity-100 transition-all">
+        <span class="material-symbols-outlined text-[16px]">delete</span>
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- INPUT TEMPLATE -->
+<ng-template #tplInput>
+  <!-- Security Notice -->
+  <div class="mb-2 px-1 flex items-center gap-2">
+    <div class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20">
+      <span class="material-symbols-outlined text-[14px] text-amber-500">shield</span>
+      <span class="text-[10px] font-bold text-amber-500/80 uppercase tracking-wider">
+        Sécurité : Accès limité au répertoire &#64;data/projets/{{projectId || 'AUCUN_PROJET'}}
+      </span>
+    </div>
+  </div>
+
+  <div *ngIf="!conversationDone || allowContinueAfterEnd" class="flex items-end gap-3">
+    <textarea [(ngModel)]="userInput" (keydown)="onKeydown($event)" [disabled]="isAiTyping"
+              placeholder="Échangez avec l'IA Frankenstein Junior…" rows="2"
+              class="flex-1 resize-none bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/15 rounded-xl px-4 py-3 text-sm text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/20 focus:outline-none focus:border-violet-500/50 transition-all shadow-inner"></textarea>
+    <button (click)="sendMessage()" [disabled]="!userInput.trim() || isAiTyping"
+            class="w-12 h-12 rounded-xl bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/20 transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0 mb-0.5">
+      <span class="material-symbols-outlined text-xl">send</span>
+    </button>
+  </div>
+  <div *ngIf="conversationDone && !allowContinueAfterEnd" class="text-center py-2 text-xs text-green-500 font-bold flex items-center justify-center gap-2">
+    <span class="material-symbols-outlined text-sm">check_circle</span> Conversation terminée
+    <button (click)="newConversation()" class="ml-4 text-violet-500 hover:underline">Démarrer une nouvelle discussion</button>
+  </div>
+</ng-template>

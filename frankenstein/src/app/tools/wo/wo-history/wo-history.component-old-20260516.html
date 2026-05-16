@@ -1,0 +1,327 @@
+<!-- Header barre -->
+<div class="flex items-center justify-between mb-5">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-amber-500/10 dark:bg-amber-500/15 flex items-center justify-center">
+      <span class="material-symbols-outlined text-amber-500 dark:text-amber-400 text-base">history</span>
+    </div>
+    <div>
+      <h3 class="text-sm font-bold text-light-text dark:text-white">Historique des modifications</h3>
+      <p class="text-[11px] text-light-text-muted dark:text-white/40">
+        <span *ngIf="!loading">
+          {{ filteredAndSorted.length }}<span *ngIf="filteredAndSorted.length !== modifications.length"> / {{ modifications.length }}</span>
+          modification{{ modifications.length > 1 ? 's' : '' }}
+        </span>
+        <span *ngIf="loading">Chargement...</span>
+      </p>
+    </div>
+  </div>
+  <button (click)="load()"
+          class="p-1.5 rounded-lg hover:bg-light-surface-hover dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-colors"
+          title="Actualiser">
+    <span class="material-symbols-outlined text-base" [class.animate-spin]="loading">refresh</span>
+  </button>
+</div>
+
+<!-- Loading -->
+<div *ngIf="loading" class="flex items-center justify-center py-16">
+  <span class="material-symbols-outlined animate-spin text-3xl text-light-text-muted dark:text-white/30">autorenew</span>
+</div>
+
+<!-- Error -->
+<div *ngIf="error && !loading"
+     class="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+  <span class="material-symbols-outlined">error</span>
+  {{ error }}
+</div>
+
+<!-- Stats Panel -->
+<div *ngIf="!loading && modifications.length > 0 && stats"
+     class="mb-4 rounded-xl border border-light-border dark:border-white/10 overflow-hidden">
+
+  <!-- Toggle header -->
+  <div class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-light-surface-hover dark:hover:bg-white/5 transition-colors select-none"
+       (click)="showStats = !showStats">
+    <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-light-text-muted dark:text-white/40">
+      <span class="material-symbols-outlined text-sm text-amber-500 dark:text-amber-400">bar_chart</span>
+      Tableau de bord
+      <span class="font-normal normal-case tracking-normal opacity-60">· {{stats.total}} modifications · {{stats.activeDaysCount}} jours actifs</span>
+    </div>
+    <span class="material-symbols-outlined text-xl text-light-text-muted dark:text-white/30 transition-transform duration-200"
+          [class.rotate-180]="showStats">expand_more</span>
+  </div>
+
+  <!-- Panel body -->
+  <div *ngIf="showStats" class="px-4 pb-4 pt-3 border-t border-light-border dark:border-white/10 flex flex-col gap-4">
+
+    <!-- Compteurs clés -->
+    <div class="grid grid-cols-4 gap-2">
+      <div class="flex flex-col items-center justify-center p-3 rounded-xl border border-light-border dark:border-white/10 bg-light-surface-hover dark:bg-white/[0.03] text-center">
+        <span class="text-2xl font-extrabold text-light-text dark:text-white leading-none mb-1">{{stats.total}}</span>
+        <span class="text-[10px] font-semibold uppercase tracking-widest text-light-text-muted dark:text-white/30">Total</span>
+      </div>
+      <div class="flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-colors"
+           [ngClass]="stats.todayCount > 0
+             ? 'border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10'
+             : 'border-light-border dark:border-white/10 bg-light-surface-hover dark:bg-white/[0.03]'">
+        <span class="text-2xl font-extrabold leading-none mb-1"
+              [ngClass]="stats.todayCount > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-light-text dark:text-white'">
+          {{stats.todayCount}}
+        </span>
+        <span class="text-[10px] font-semibold uppercase tracking-widest text-light-text-muted dark:text-white/30">Aujourd'hui</span>
+      </div>
+      <div class="flex flex-col items-center justify-center p-3 rounded-xl border border-light-border dark:border-white/10 bg-light-surface-hover dark:bg-white/[0.03] text-center">
+        <span class="text-2xl font-extrabold text-light-text dark:text-white leading-none mb-1">{{stats.thisWeekCount}}</span>
+        <span class="text-[10px] font-semibold uppercase tracking-widest text-light-text-muted dark:text-white/30">Semaine</span>
+      </div>
+      <div class="flex flex-col items-center justify-center p-3 rounded-xl border border-light-border dark:border-white/10 bg-light-surface-hover dark:bg-white/[0.03] text-center">
+        <span class="text-2xl font-extrabold text-light-text dark:text-white leading-none mb-1">{{stats.thisMonthCount}}</span>
+        <span class="text-[10px] font-semibold uppercase tracking-widest text-light-text-muted dark:text-white/30">Ce mois</span>
+      </div>
+    </div>
+
+    <!-- Répartition + Moyennes -->
+    <div class="grid grid-cols-[1fr_auto] gap-4 items-start">
+      <!-- Type bars -->
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-widest text-light-text-muted dark:text-white/30 mb-2">Répartition par type</p>
+        <div class="flex flex-col gap-2">
+          <div *ngFor="let t of typeBreakdown" class="flex items-center gap-2">
+            <span class="w-[100px] text-[11px] font-semibold text-light-text-muted dark:text-white/50 text-right shrink-0">{{t.label}}</span>
+            <div class="flex-1 h-1.5 rounded-full bg-light-surface-hover dark:bg-white/5 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500" [ngClass]="t.color" [style.width.%]="t.pct"></div>
+            </div>
+            <span class="w-5 text-right text-[11px] font-bold text-light-text-muted dark:text-white/40">{{t.count}}</span>
+          </div>
+        </div>
+      </div>
+      <!-- Moyennes -->
+      <div class="min-w-[130px]">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-light-text-muted dark:text-white/30 mb-2">Moyennes</p>
+        <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col px-3 py-2 rounded-lg border border-light-border dark:border-white/10 bg-light-surface-hover dark:bg-white/[0.03]">
+            <span class="text-lg font-bold text-light-text dark:text-white leading-tight">{{stats.avgPerDay}}</span>
+            <span class="text-[10px] font-semibold uppercase tracking-widest text-light-text-muted dark:text-white/30">/ jour actif</span>
+          </div>
+          <div class="flex flex-col px-3 py-2 rounded-lg border border-light-border dark:border-white/10 bg-light-surface-hover dark:bg-white/[0.03]">
+            <span class="text-lg font-bold text-light-text dark:text-white leading-tight">{{stats.avgPerWeek}}</span>
+            <span class="text-[10px] font-semibold uppercase tracking-widest text-light-text-muted dark:text-white/30">/ semaine</span>
+          </div>
+          <ng-container *ngIf="stats.avgDurationMs">
+            <div class="flex flex-col px-3 py-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/5">
+              <span class="text-lg font-bold text-emerald-500 dark:text-emerald-400 leading-tight">{{formatDuration(stats.avgDurationMs)}}</span>
+              <span class="text-[10px] font-semibold uppercase tracking-widest text-light-text-muted dark:text-white/30">durée moy.</span>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div *ngIf="!loading && modifications.length > 0" class="flex flex-col gap-2 mb-4">
+
+  <!-- Row 1 : type + page tag + search -->
+  <div class="flex flex-wrap gap-2 items-center">
+    <!-- Type filters -->
+    <div class="flex items-center gap-1 flex-wrap">
+      <button *ngFor="let opt of filterOptions"
+              (click)="filterType = opt.value"
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all"
+              [ngClass]="filterType === opt.value
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 dark:text-amber-400'
+                : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:border-amber-500/30'">
+        {{ opt.label }}
+        <span class="px-1.5 py-0.5 rounded-full bg-light-surface-hover dark:bg-white/5 text-[10px] font-bold">{{ countByType(opt.value) }}</span>
+      </button>
+    </div>
+
+    <!-- Active page filter tag -->
+    <div *ngIf="filterPage"
+         class="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold font-mono bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400">
+      <span class="material-symbols-outlined text-xs">code</span>
+      {{ filterPage }}
+      <button (click)="filterPage = ''" class="ml-0.5 hover:opacity-70">
+        <span class="material-symbols-outlined text-xs">close</span>
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="flex-1 min-w-[180px] flex items-center gap-1.5 bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-lg px-2.5 py-1.5 transition-colors">
+      <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/30">search</span>
+      <input [(ngModel)]="searchText" type="text" placeholder="Rechercher…"
+             class="flex-1 bg-transparent text-xs text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 outline-none min-w-0">
+      <button *ngIf="searchText" (click)="searchText = ''" class="text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white transition-colors">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Row 2 : IA + modèle -->
+  <div class="flex items-center gap-2 flex-wrap">
+    <span class="text-[11px] text-light-text-muted dark:text-white/30 flex items-center gap-1">
+      <span class="material-symbols-outlined text-sm">smart_toy</span>IA :
+    </span>
+    <button (click)="filterAi = ''; filterModel = ''"
+            class="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all"
+            [ngClass]="!filterAi
+              ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 dark:text-amber-400'
+              : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:border-amber-500/30'">
+      Tous
+    </button>
+    <button *ngFor="let ai of availableAis"
+            (click)="filterAi = ai; filterModel = ''"
+            class="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all"
+            [ngClass]="filterAi === ai
+              ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 dark:text-amber-400'
+              : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:border-amber-500/30'">
+      {{ ai }}
+    </button>
+    <ng-container *ngIf="filterAi">
+      <div class="w-px h-4 bg-light-border dark:bg-white/10 mx-0.5"></div>
+      <span class="text-[11px] text-light-text-muted dark:text-white/30">Modèle :</span>
+      <button (click)="filterModel = ''"
+              class="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all"
+              [ngClass]="!filterModel
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 dark:text-amber-400'
+                : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:border-amber-500/30'">
+        Tous
+      </button>
+      <button *ngFor="let mdl of availableModels"
+              (click)="filterModel = mdl"
+              class="px-2.5 py-1 rounded-full text-[11px] font-semibold border font-mono transition-all"
+              [ngClass]="filterModel === mdl
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 dark:text-amber-400'
+                : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:border-amber-500/30'">
+        {{ mdl }}
+      </button>
+    </ng-container>
+  </div>
+</div>
+
+<!-- Empty (filtré) -->
+<div *ngIf="!loading && !error && modifications.length > 0 && filteredAndSorted.length === 0"
+     class="flex flex-col items-center justify-center py-12 text-center">
+  <span class="material-symbols-outlined text-3xl text-light-text-muted dark:text-white/20 mb-3">search_off</span>
+  <p class="text-sm font-medium text-light-text dark:text-white mb-1">Aucun résultat</p>
+  <p class="text-xs text-light-text-muted dark:text-white/40">Modifiez ou réinitialisez les filtres.</p>
+</div>
+
+<!-- Empty (aucune modif) -->
+<div *ngIf="!loading && !error && modifications.length === 0"
+     class="flex flex-col items-center justify-center py-16 text-center">
+  <div class="w-16 h-16 rounded-2xl bg-light-surface dark:bg-white/5 flex items-center justify-center mb-4 border border-dashed border-light-border dark:border-white/10">
+    <span class="material-symbols-outlined text-3xl text-light-text-muted dark:text-white/20">history_toggle_off</span>
+  </div>
+  <p class="text-sm font-medium text-light-text dark:text-white mb-1">Aucune modification enregistrée</p>
+  <p class="text-xs text-light-text-muted dark:text-white/40">Les modifications IA seront consignées ici.</p>
+</div>
+
+<!-- Timeline -->
+<div *ngIf="!loading && filteredAndSorted.length > 0" class="timeline">
+  <ng-container *ngFor="let item of timelineItems; let last = last">
+
+    <!-- Day separator -->
+    <div *ngIf="item.kind === 'sep'" class="day-separator">
+      <div class="day-line"></div>
+      <div class="day-sep-content">
+        <span class="day-label">{{ item['day'] }}</span>
+        <span class="day-count-badge">{{ item['count'] }}</span>
+        <span *ngIf="item['totalDurationMs']" class="day-duration-badge">
+          <span class="material-symbols-outlined" style="font-size:10px">timer</span>
+          {{ formatDuration(item['totalDurationMs']) }}
+        </span>
+      </div>
+      <div class="day-line"></div>
+    </div>
+
+    <!-- Timeline item -->
+    <div *ngIf="item.kind === 'item'" class="timeline-item" [class.last]="last">
+      <!-- Dot + line -->
+      <div class="timeline-gutter">
+        <div class="timeline-dot" [ngClass]="'dot-' + getType(item['mod'].type).color">
+          <span class="material-symbols-outlined text-sm">{{ getType(item['mod'].type).icon }}</span>
+        </div>
+        <div *ngIf="!last" class="timeline-line"></div>
+      </div>
+
+      <!-- Card -->
+      <div class="timeline-card" [class.expanded]="expandedId === item['mod'].id">
+        <!-- Card header -->
+        <div class="card-header" (click)="toggle(item['mod'].id)">
+          <div class="card-header-left">
+            <!-- AI Logo -->
+            <div *ngIf="item['mod'].ai" class="ai-logo-container" [title]="item['mod'].ai">
+              <ng-container [ngSwitch]="getAiLogo(item['mod'].ai).type">
+                <img *ngSwitchCase="'img'" [src]="getAiLogo(item['mod'].ai).value" class="ai-logo-img" [alt]="item['mod'].ai">
+                <span *ngSwitchCase="'icon'" class="material-symbols-outlined ai-logo-icon">{{ getAiLogo(item['mod'].ai).value }}</span>
+              </ng-container>
+            </div>
+            <span class="type-badge" [ngClass]="'badge-' + getType(item['mod'].type).color">
+              {{ getType(item['mod'].type).label }}
+            </span>
+            <div class="card-title-block">
+              <h3 class="card-title">{{ item['mod'].title }}</h3>
+              <div *ngIf="getPageNames(item['mod'].files).length > 0" class="page-badges">
+                <button *ngFor="let p of getPageNames(item['mod'].files)"
+                        (click)="filterPage = p; $event.stopPropagation()"
+                        class="page-badge"
+                        [class.active]="filterPage === p"
+                        [title]="'Filtrer par ' + p">{{ p }}</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-header-right">
+            <label class="flex items-center gap-1.5 mr-1 cursor-pointer text-xs text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-colors" (click)="$event.stopPropagation()">
+              <input type="checkbox" [checked]="item['mod'].featured" (change)="toggleFeatured(item['mod'], $event)"
+                     class="w-3.5 h-3.5 rounded border-light-border dark:border-white/20 text-primary focus:ring-primary/30 focus:ring-offset-0 bg-transparent"
+                     title="Afficher dans les Dernières Nouveautés" />
+            </label>
+            <ng-container *ngIf="getDurationMs(item['mod']); let dur">
+              <span class="duration-chip">
+                <span class="material-symbols-outlined">timer</span>
+                {{ formatDuration(dur) }}
+              </span>
+            </ng-container>
+            <time class="card-date" [title]="formatDate(item['mod'].date)">
+              <span class="material-symbols-outlined text-xs">schedule</span>
+              {{ formatDateShort(item['mod'].date) }}
+            </time>
+            <span class="material-symbols-outlined text-xl text-light-text-muted dark:text-white/30 transition-transform duration-200"
+                  [class.rotate-180]="expandedId === item['mod'].id">expand_more</span>
+          </div>
+        </div>
+
+        <!-- Card body (expanded) -->
+        <div class="card-body" [class.open]="expandedId === item['mod'].id">
+          <div class="card-body-inner">
+            <p class="card-description" [innerHTML]="formatDescription(item['mod'].description)"></p>
+            <div *ngIf="item['mod'].files && item['mod'].files.length > 0" class="files-section">
+              <p class="files-title">
+                <span class="material-symbols-outlined text-sm">folder_open</span>
+                Fichiers modifiés ({{ item['mod'].files.length }})
+              </p>
+              <ul class="files-list">
+                <li *ngFor="let f of item['mod'].files" class="file-item">
+                  <span class="material-symbols-outlined text-xs">chevron_right</span>
+                  <code>{{ f }}</code>
+                </li>
+              </ul>
+            </div>
+            <div class="card-footer">
+              <span class="mod-id">{{ item['mod'].id }}</span>
+              <div class="card-footer-right">
+                <span *ngIf="item['mod'].ai || item['mod'].model" class="ai-badge">
+                  <span class="material-symbols-outlined text-xs">smart_toy</span>
+                  {{ item['mod'].ai }}<span *ngIf="item['mod'].ai && item['mod'].model"> · </span>{{ item['mod'].model }}
+                </span>
+                <time class="card-date-full">{{ formatDate(item['mod'].date) }}</time>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

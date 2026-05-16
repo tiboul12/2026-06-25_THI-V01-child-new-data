@@ -1,0 +1,230 @@
+<!-- Header barre -->
+<div class="flex items-center justify-between mb-5">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15 flex items-center justify-center">
+      <span class="material-symbols-outlined text-emerald-500 dark:text-emerald-400 text-base">terminal</span>
+    </div>
+    <div>
+      <h3 class="text-sm font-bold text-light-text dark:text-white">IA Logs</h3>
+      <p class="text-[11px] text-light-text-muted dark:text-white/40">
+        <span *ngIf="!loading">
+          <ng-container *ngIf="hasActiveFilter">{{ filteredLogs.length }} / {{ aiLogs.length }}</ng-container>
+          <ng-container *ngIf="!hasActiveFilter">{{ aiLogs.length }}</ng-container>
+          appel(s) enregistré(s)
+        </span>
+        <span *ngIf="loading">Chargement...</span>
+      </p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <button (click)="loadAiLogs()"
+            class="p-1.5 rounded-lg hover:bg-light-surface-hover dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-colors"
+            title="Actualiser">
+      <span class="material-symbols-outlined text-base" [class.animate-spin]="loading">refresh</span>
+    </button>
+    <button (click)="clearAiLogs()"
+            [disabled]="aiLogs.length === 0"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-500 dark:text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+      <span class="material-symbols-outlined text-sm">delete</span>
+      Vider
+    </button>
+  </div>
+</div>
+
+<!-- Barre de filtres -->
+<div *ngIf="aiLogs.length > 0 || hasActiveFilter"
+     class="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl bg-light-surface-hover/60 dark:bg-white/[0.03] border border-light-border dark:border-white/5">
+  <!-- Recherche texte -->
+  <div class="flex items-center gap-1.5 flex-1 min-w-[160px] bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-lg px-2.5 py-1.5 transition-colors">
+    <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/30">search</span>
+    <input type="text"
+           [(ngModel)]="filterSearch"
+           placeholder="Rechercher…"
+           class="flex-1 bg-transparent text-xs text-light-text dark:text-white placeholder-light-text-muted dark:placeholder-white/30 outline-none min-w-0">
+  </div>
+
+  <!-- Statut -->
+  <select [(ngModel)]="filterStatus"
+          class="px-2.5 py-1.5 text-xs bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-lg text-light-text dark:text-white focus:outline-none cursor-pointer transition-colors">
+    <option value="">Tous statuts</option>
+    <option value="success">Succès</option>
+    <option value="error">Erreur</option>
+  </select>
+
+  <!-- Provider -->
+  <select [(ngModel)]="filterProvider"
+          class="px-2.5 py-1.5 text-xs bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-lg text-light-text dark:text-white focus:outline-none cursor-pointer transition-colors">
+    <option value="">Tous providers</option>
+    <option *ngFor="let p of uniqueProviders" [value]="p">{{ p }}</option>
+  </select>
+
+  <!-- Période -->
+  <select [(ngModel)]="filterPeriod"
+          class="px-2.5 py-1.5 text-xs bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-lg text-light-text dark:text-white focus:outline-none cursor-pointer transition-colors">
+    <option value="">Toute période</option>
+    <option value="today">Aujourd'hui</option>
+    <option value="7d">7 derniers jours</option>
+    <option value="30d">30 derniers jours</option>
+  </select>
+
+  <!-- Chip filtre page actif -->
+  <div *ngIf="filterPage"
+       class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+    <span class="material-symbols-outlined text-sm">web</span>
+    {{ filterPage }}
+    <button (click)="filterPage = ''" class="ml-1 hover:opacity-70">
+      <span class="material-symbols-outlined text-sm">close</span>
+    </button>
+  </div>
+
+  <!-- Chip filtre modèle actif -->
+  <div *ngIf="filterModel"
+       class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap font-mono">
+    <span class="material-symbols-outlined text-sm">model_training</span>
+    {{ filterModel }}
+    <button (click)="filterModel = ''" class="ml-1 hover:opacity-70">
+      <span class="material-symbols-outlined text-sm">close</span>
+    </button>
+  </div>
+
+  <!-- Reset filtres -->
+  <button *ngIf="hasActiveFilter"
+          (click)="resetFilters()"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors whitespace-nowrap">
+    <span class="material-symbols-outlined text-sm">filter_alt_off</span>
+    Réinitialiser
+  </button>
+</div>
+
+<!-- Empty state -->
+<div *ngIf="!loading && aiLogs.length === 0"
+     class="flex flex-col items-center justify-center py-16 text-center">
+  <div class="w-16 h-16 rounded-2xl bg-light-surface dark:bg-white/5 flex items-center justify-center mb-4 border border-dashed border-light-border dark:border-white/10">
+    <span class="material-symbols-outlined text-3xl text-light-text-muted dark:text-white/20">terminal</span>
+  </div>
+  <p class="text-sm font-medium text-light-text dark:text-white mb-1">Aucun log IA</p>
+  <p class="text-xs text-light-text-muted dark:text-white/40">Les appels IA seront enregistrés ici automatiquement.</p>
+</div>
+
+<!-- Empty state filtre -->
+<div *ngIf="!loading && aiLogs.length > 0 && sortedLogs.length === 0"
+     class="flex flex-col items-center justify-center py-12 text-center">
+  <span class="material-symbols-outlined text-3xl text-light-text-muted dark:text-white/20 mb-3">search_off</span>
+  <p class="text-sm font-medium text-light-text dark:text-white mb-1">Aucun résultat</p>
+  <p class="text-xs text-light-text-muted dark:text-white/40">Modifiez ou réinitialisez les filtres.</p>
+</div>
+
+<!-- Loading state -->
+<div *ngIf="loading" class="flex items-center justify-center py-16">
+  <span class="material-symbols-outlined animate-spin text-3xl text-light-text-muted dark:text-white/30">autorenew</span>
+</div>
+
+<!-- Table -->
+<div *ngIf="!loading && sortedLogs.length > 0"
+     class="overflow-x-auto border border-light-border dark:border-white/10 rounded-xl">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="bg-light-surface-hover dark:bg-black/20 text-left text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40">
+        <th class="px-3 py-2.5 cursor-pointer hover:text-light-primary dark:hover:text-primary whitespace-nowrap"
+            (click)="sortAiLogs('timestamp')">
+          Date/Heure {{ sortIcon('timestamp') }}
+        </th>
+        <th class="px-3 py-2.5 cursor-pointer hover:text-light-primary dark:hover:text-primary"
+            (click)="sortAiLogs('page')">
+          Page {{ sortIcon('page') }}
+        </th>
+        <th class="px-3 py-2.5 cursor-pointer hover:text-light-primary dark:hover:text-primary"
+            (click)="sortAiLogs('section')">
+          Section {{ sortIcon('section') }}
+        </th>
+        <th class="px-3 py-2.5 cursor-pointer hover:text-light-primary dark:hover:text-primary"
+            (click)="sortAiLogs('documentName')">
+          Document {{ sortIcon('documentName') }}
+        </th>
+        <th class="px-3 py-2.5 cursor-pointer hover:text-light-primary dark:hover:text-primary"
+            (click)="sortAiLogs('provider')">
+          Provider {{ sortIcon('provider') }}
+        </th>
+        <th class="px-3 py-2.5 cursor-pointer hover:text-light-primary dark:hover:text-primary"
+            (click)="sortAiLogs('model')">
+          Modèle {{ sortIcon('model') }}
+        </th>
+        <th class="px-3 py-2.5 cursor-pointer hover:text-light-primary dark:hover:text-primary"
+            (click)="sortAiLogs('status')">
+          Status {{ sortIcon('status') }}
+        </th>
+        <th class="px-3 py-2.5 cursor-pointer hover:text-light-primary dark:hover:text-primary"
+            (click)="sortAiLogs('durationMs')">
+          Durée {{ sortIcon('durationMs') }}
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <ng-container *ngFor="let log of sortedLogs">
+        <!-- Ligne principale -->
+        <tr (click)="toggleAiLogExpand(log.id)"
+            class="border-t border-light-border dark:border-white/5 cursor-pointer hover:bg-light-surface-hover dark:hover:bg-white/5 transition-colors">
+          <td class="px-3 py-2.5 font-mono text-[11px] whitespace-nowrap text-light-text dark:text-white/70">
+            {{ formatAiLogDate(log.timestamp) }}
+          </td>
+          <td class="px-3 py-2.5 text-xs">
+            <button (click)="filterByCell('page', log.page, $event)"
+                    class="text-left hover:underline transition-colors"
+                    [ngClass]="filterPage === log.page ? 'text-emerald-500 dark:text-emerald-400 font-semibold' : 'text-light-text dark:text-white/80'">
+              {{ log.page }}
+            </button>
+          </td>
+          <td class="px-3 py-2.5 text-xs text-light-text-muted dark:text-white/50">{{ log.section }}</td>
+          <td class="px-3 py-2.5 text-xs text-light-text-muted dark:text-white/50 max-w-[120px] truncate" [title]="log.documentName">
+            {{ log.documentName || '--' }}
+          </td>
+          <td class="px-3 py-2.5 text-xs">
+            <button (click)="filterByCell('provider', log.provider, $event)"
+                    class="text-left hover:underline transition-colors"
+                    [ngClass]="filterProvider === log.provider ? 'text-emerald-500 dark:text-emerald-400 font-semibold' : 'text-light-text dark:text-white/70'">
+              {{ log.provider }}
+            </button>
+          </td>
+          <td class="px-3 py-2.5 font-mono text-[11px]">
+            <button (click)="filterByCell('model', log.model, $event)"
+                    class="text-left hover:underline transition-colors font-mono"
+                    [ngClass]="filterModel === log.model ? 'text-emerald-500 dark:text-emerald-400 font-semibold' : 'text-light-text-muted dark:text-white/50'">
+              {{ log.model }}
+            </button>
+          </td>
+          <td class="px-3 py-2.5">
+            <button (click)="filterByCell('status', log.status, $event)"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold transition-opacity"
+                    [class.opacity-50]="filterStatus && filterStatus !== log.status"
+                    [ngClass]="{
+                      'bg-green-500/15 text-green-500 dark:text-green-400': log.status === 'success',
+                      'bg-red-500/15 text-red-500 dark:text-red-400': log.status === 'error'
+                    }">
+              {{ log.status }}
+            </button>
+          </td>
+          <td class="px-3 py-2.5 font-mono text-[11px] text-light-text-muted dark:text-white/50">
+            {{ log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : '--' }}
+          </td>
+        </tr>
+
+        <!-- Ligne détail expandée -->
+        <tr *ngIf="aiLogExpanded.has(log.id)"
+            class="border-t border-light-border dark:border-white/5 bg-light-surface-hover/60 dark:bg-white/[0.02]">
+          <td colspan="8" class="px-4 py-4">
+            <div class="grid grid-cols-1 gap-3">
+              <div>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-light-text-muted dark:text-white/30 mb-1.5">Prompt</p>
+                <pre class="text-[11px] bg-black/5 dark:bg-black/40 border border-light-border dark:border-white/5 p-3 rounded-lg overflow-x-auto max-h-48 whitespace-pre-wrap break-words font-mono text-light-text dark:text-white/70 leading-relaxed">{{ log.prompt || '(vide)' }}</pre>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-light-text-muted dark:text-white/30 mb-1.5">Réponse</p>
+                <pre class="text-[11px] bg-black/5 dark:bg-black/40 border border-light-border dark:border-white/5 p-3 rounded-lg overflow-x-auto max-h-48 whitespace-pre-wrap break-words font-mono text-light-text dark:text-white/70 leading-relaxed">{{ log.response || '(vide)' }}</pre>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </ng-container>
+    </tbody>
+  </table>
+</div>

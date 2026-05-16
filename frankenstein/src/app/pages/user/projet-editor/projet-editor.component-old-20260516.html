@@ -1,0 +1,115 @@
+@if (loading()) {
+  <div class="flex items-center justify-center h-[60vh]">
+    <span class="material-symbols-outlined text-4xl text-light-primary dark:text-primary animate-spin">progress_activity</span>
+  </div>
+}
+
+@if (!loading()) {
+  <div class="fixed inset-0 flex flex-col bg-white dark:bg-[#0f0f17] overflow-hidden">
+
+    <app-projet-toolbar
+      [projectTitle]="projectTitle" />
+
+    <div class="px-4">
+      <app-projet-update-banner
+        [projectName]="project()?.id || null"
+        (pulled)="onProjectPulled($event)" />
+    </div>
+
+    <div class="flex flex-1 overflow-hidden pb-[72px]">
+
+      <app-projet-sidebar #sidebar
+        [projectName]="project()?.id || ''"
+        [projectTitle]="projectTitle"
+        [files]="files()"
+        [activeFileId]="activeNodeId()"
+        [projetId]="project()?.id || ''"
+        [nestedImagesMap]="nestedImagesMap()"
+        (fileSelect)="onNodeSelect($event)"
+        (projectSelect)="onProjectRootSelect()"
+        (folderCreated)="onFolderCreated($event)"
+        (dragDrop)="onDragDrop($event)"
+        (refresh)="onRefresh()" />
+
+      @if (!diffEntry()) {
+        <app-projet-editor-zone
+          [files]="files()"
+          [scrollToNodeId]="scrollToNodeId()"
+          [saveStatus]="saveStatus()"
+          [projectName]="project()?.id || ''"
+          [activeNodeId]="activeNodeId()"
+          (fileSave)="onFileSave($event)"
+          (sectionsChange)="onSectionsChange($event)"
+          (nodeActive)="onNodeActive($event)"
+          (dragDrop)="onDragDrop($event)"
+          (dirtyChange)="onDirtyChange($event)"
+          (saveStarting)="onSaveStarting()"
+          (refresh)="onRefresh()" />
+      } @else {
+        <app-projet-diff
+          [entry]="diffEntry()"
+          (close)="closeDiff()" />
+      }
+
+      <!-- Zone 5 : Conversation + Historique -->
+      <div class="w-80 flex-shrink-0 flex flex-col overflow-hidden border-l border-light-border dark:border-white/8 bg-white dark:bg-[#0f0f17]">
+
+        <!-- Onglets -->
+        <div class="flex-shrink-0 flex border-b border-light-border dark:border-white/8">
+          <button (click)="zone5Tab.set('conversation')"
+                  class="flex-1 text-[10px] font-bold uppercase tracking-wider py-2.5 transition-colors relative"
+                  [ngClass]="zone5Tab() === 'conversation'
+                    ? 'text-light-primary dark:text-primary'
+                    : 'text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/60'">
+            Conversation
+            @if (zone5Tab() === 'conversation') {
+              <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-light-primary dark:bg-primary"></span>
+            }
+          </button>
+          <button (click)="zone5Tab.set('history')"
+                  class="flex-1 text-[10px] font-bold uppercase tracking-wider py-2.5 transition-colors relative"
+                  [ngClass]="zone5Tab() === 'history'
+                    ? 'text-light-primary dark:text-primary'
+                    : 'text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/60'">
+            Historique
+            @if (zone5Tab() === 'history') {
+              <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-light-primary dark:bg-primary"></span>
+            }
+          </button>
+        </div>
+
+        <!-- Titre du noeud actif -->
+        @if (activeNodeInfo(); as info) {
+          <div class="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-light-border dark:border-white/8 bg-white/3">
+            <span class="material-symbols-outlined text-[14px] text-light-text-muted dark:text-white/40">{{ info.icon }}</span>
+            <span class="text-[11px] font-semibold text-light-text dark:text-white/70 truncate">{{ info.name }}</span>
+          </div>
+        }
+
+        <!-- Contenu onglet actif -->
+        <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+          @if (zone5Tab() === 'conversation') {
+            <app-projet-conversation
+              [sectionId]="activeNodeId()"
+              [projectId]="project()?.id || null"
+              (conversationAdded)="sidebar.loadConversations()" />
+          }
+          @if (zone5Tab() === 'history') {
+            <app-projet-history
+              [projetId]="project()?.id || null"
+              [activeIds]="activeHistoryIds()"
+              (entryClick)="onHistoryEntryClick($event)" />
+          }
+        </div>
+
+      </div>
+
+    </div>
+
+    <app-projet-statusbar
+      class="absolute bottom-10 left-0 right-0 z-20"
+      [status]="statusLabel"
+      [isDirty]="saveStatus() === 'saving'" />
+
+  </div>
+}
