@@ -1,6 +1,123 @@
 {
   "modifications": [
     {
+      "id": "mod-182",
+      "version": "THI-1.06",
+      "date": "2026-05-17T00:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:projet-git",
+      "title": "Push GitHub : auto pull+rebase puis force-with-lease si divergence",
+      "description": "Diagnostic : pour le projet 4aa105c7 le remote était bien configuré (push token valide), mais push origin main était REJECTED en non-fast-forward (local 23 ahead, 63 behind, pas d'ancêtre commun — repos init séparément). Le user avait sa branche locale avec d38626c struct: delete_file imgsoleil.png, mais le remote avait 2401a56 struct: upload_image imgsoleil.png. Fix : pushMain dans projet-git.js détecte maintenant le non-fast-forward → checkout main → fetch origin → rebase origin/main → re-push. Si rebase échoue (conflit ou historiques disjoints), abort rebase puis fallback push --force-with-lease. Résolution manuelle pour ce projet : git push origin main --force exécuté à la main, le remote GitHub est maintenant aligné sur le local (image bien supprimée).",
+      "files": [
+        "server/modules/projet-git.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "bon j'en ai un peu marre le fichier qui est supprimé du server local dans le projet giter worganic - thi-projet-4aa105c7, le git n'est pas mise à jour avec un commit et push, j'ai toujours l'image présente sur le dépot github et il ne l'ai plus coté local et projet, il faut que la modification du dépot du projet soi automatiquement mise à jour",
+      "startedAt": "2026-05-17T00:05:00Z",
+      "completedAt": "2026-05-17T00:30:00Z"
+    },
+    {
+      "id": "mod-181",
+      "version": "THI-1.06",
+      "date": "2026-05-17T00:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:projet-git|github",
+      "title": "Auto-setup remote GitHub pour projets pré-existants (lazy)",
+      "description": "Diagnostic : le user a activé GitHub dans data/config/github.json (mais doit aussi passer enabled:true). Les projets créés AVANT cette activation n'ont jamais eu de remote configuré (git remote -v vide) → aucun push possible. Fix : nouvelle fonction ensureGithubRemoteForProject(projectName, config) — si GitHub est activé et que le repo local n'a pas de remote, crée le repo GitHub via setupGithubRemoteForProject + set remote + push initial. Si remote existe, rafraîchit l'URL avec le token courant. Appel ajouté dans : DELETE files, POST upload-image, PUT files publish=true. Le PUT publish=true remplace l'ancien refresh URL inline. Conséquence : à la prochaine modification structurelle (upload/delete/publish), le remote sera automatiquement configuré et l'historique local poussé sur GitHub.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "j'ai bien rajouté le data/config/github.json et ajouté la clé github mais cela ne supprime toujours pas l'image sur le dépot du projet",
+      "startedAt": "2026-05-16T23:45:00Z",
+      "completedAt": "2026-05-17T00:00:00Z"
+    },
+    {
+      "id": "mod-180",
+      "version": "THI-1.06",
+      "date": "2026-05-16T23:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:projet-git",
+      "title": "Propagation immédiate wip→main + push pour modifs structurelles",
+      "description": "Diagnostic : sur le projet 4aa105c7 (test1a), git remote -v retourne vide → no push happens to GitHub regardless of Partager. Le commit struct: delete_file 621e826 existe bien en local mais ne peut pas être poussé sans remote. Fix : nouvelle fonction propagateLatestCommitToMain dans projet-git.js qui cherry-pick le dernier commit wip vers main puis push (avec stash/checkout/pop). commitOnMain modifié : quand on est sur wip, commit d'abord sur wip puis propage immédiatement à main + push. Résultat : pour les projets AVEC remote GitHub configuré, l'image add/delete/folder ops sont poussés immédiatement sans attendre Partager. Note : ce child n'a pas data/config/github.json donc aucun push ne se fait, le commit reste local.",
+      "files": [
+        "server/modules/projet-git.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "j'avais une image dans mon projet, je l'ai effacer et j'ai partager la modification, l'image est bien supprimé de l'appli local, du répertoire locel mais pas du dépot git, le dépot doit être mise à jour à chaque modification validé",
+      "startedAt": "2026-05-16T22:35:00Z",
+      "completedAt": "2026-05-16T23:30:00Z"
+    },
+    {
+      "id": "mod-179",
+      "version": "THI-1.06",
+      "date": "2026-05-16T22:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projet-editor",
+      "title": "Suppression image : dirty state + tracking BDD pour toutes actions section",
+      "description": "Fix 1 (mode edit) : après suppression d'image via confirmDeleteImage, ajout de localDirty=true et activation du pending section (lock + badge), identique au comportement de l'upload. Le retrait du marqueur {{IMG:...}} du contenu déclenche maintenant la barre Partager. Fix 2 (mode visu) : même correction dans deleteVisuImage — capture du sectionId parent avant refresh, puis activation de dirtyVisuSectionIds + pending collab + lock. Fix 3 : les publications texte (publishCodeEdit et publishVisuSection) sont désormais enregistrées dans wo_action_history via woHistory.track avec entityType='section'.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsqu'on supprime une image celle ci doit comme lorsqu'on l'ajout être giter et donc effacer du dépot, toutes action texte image ou autre sur une section doit être enregistré dans la bdd et giter (fichier, add/update/delete)",
+      "startedAt": "2026-05-16T22:10:00Z",
+      "completedAt": "2026-05-16T22:30:00Z"
+    },
+    {
+      "id": "mod-178",
+      "version": "THI-1.05",
+      "date": "2026-05-16T22:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server", "frankenstein"],
+      "features": "frankenstein:projet-editor,server:projet-git",
+      "title": "Sécurité images 0 octet : middleware serveur + état d'erreur UI",
+      "description": "Ajout de deux sécurités pour éviter l'affichage d'images cassées (0 octet) : (1) Côté serveur, middleware avant express.static qui intercepte les requêtes d'images dans /data/projets/ — si le fichier existe mais fait 0 octet (placeholder de récupération), renvoie HTTP 404 au lieu de servir un fichier vide. (2) Côté Angular, ajout de (error) sur les balises <img> : si l'image ne charge pas, onImgError() marque l'id dans brokenImages (Set) et le template remplace l'image par un bloc d'avertissement jaune 'Image non synchronisée — en attente de mise à jour' avec l'icône sync_problem.",
+      "files": [
+        "server/server-data.js",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le fichier image à bien été récupéré mais il est HS [Image #4] il faut mettre une sécurité pour ce type de problème",
+      "startedAt": "2026-05-16T21:35:00Z",
+      "completedAt": "2026-05-16T22:00:00Z"
+    },
+    {
+      "id": "mod-177",
+      "version": "THI-1.04",
+      "date": "2026-05-16T21:30:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:projet-git",
+      "title": "ensure-local : re-clone automatique pour dossiers orphelins (sans .git)",
+      "description": "Correction du cas où un projet existe localement sans dossier .git (créé avant le setup-remote GitHub). Dans ce cas, ensure-local retournait 'ready' sans tenter de pull, car isRepo() = false. Fix : détection du cas orphelin (dossier présent, pas de .git, git_remote_url connu en BDD) → suppression du dossier local et re-clone depuis GitHub pour récupérer tous les fichiers committés (images, etc.). Fail-safe : si le re-clone échoue, le dossier existant est conservé.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois toujours pas l'image et elle n'a pas été récupéré que dois je faire ou y a t-il un soucis",
+      "startedAt": "2026-05-16T21:10:00Z",
+      "completedAt": "2026-05-16T21:30:00Z"
+    },
+    {
       "id": "mod-176",
       "version": "THI-1.03",
       "date": "2026-05-16T21:00:00Z",

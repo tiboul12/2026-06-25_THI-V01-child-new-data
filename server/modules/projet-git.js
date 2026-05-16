@@ -314,16 +314,85 @@ function discardWip(projetPath, userId, nodeId) {
 }
 
 /**
+ * Cherry-pick le dernier commit de la branche courante (wip) sur main, puis push.
+ * Utilisé pour propager une modification structurelle (image add/delete, folder ops)
+ * vers le remote sans attendre la publication finale du wip.
+ *
+ * Stratégie : stash → checkout main → cherry-pick → push → checkout wip → unstash.
+ * En cas de conflit, restaure proprement et rapporte l'échec sans casser le wip.
+ */
+function propagateLatestCommitToMain(projetPath) {
+    if (!isRepo(projetPath)) return { success: false, error: 'not a repo' };
+    const cur = getCurrentBranch(projetPath);
+    if (cur === 'main') return { success: true, skipped: 'already on main' };
+    if (!cur) return { success: false, error: 'no current branch' };
+
+    const wipHead = execGit('rev-parse HEAD', projetPath);
+    if (!wipHead.ok) return { success: false, error: 'rev-parse HEAD failed' };
+
+    // Stash uncommitted changes (working tree + index + untracked)
+    const stash = execGit('stash push --include-untracked -m "auto-stash before propagate"', projetPath);
+    const stashed = stash.ok && !/(No local changes|nothing to stash)/i.test(stash.stdout + ' ' + stash.stderr);
+
+    // Checkout main
+    const coMain = execGit('checkout main', projetPath);
+    if (!coMain.ok) {
+        warn('propagate: checkout main failed:', coMain.stderr);
+        if (stashed) execGit('stash pop', projetPath);
+        return { success: false, error: coMain.stderr };
+    }
+
+    // Cherry-pick le commit wip
+    const cherry = execGit(`cherry-pick ${wipHead.stdout}`, projetPath);
+    if (!cherry.ok) {
+        execGit('cherry-pick --abort', projetPath);
+        execGit(`checkout "${cur}"`, projetPath);
+        if (stashed) execGit('stash pop', projetPath);
+        warn('propagate: cherry-pick failed:', cherry.stderr);
+        return { success: false, error: cherry.stderr };
+    }
+
+    // Push main (si remote)
+    let pushed = { success: false };
+    if (hasRemote(projetPath)) {
+        pushed = pushMain(projetPath);
+        if (!pushed.success) warn('propagate: push failed:', pushed.error);
+    }
+
+    // Retour sur wip
+    const coBack = execGit(`checkout "${cur}"`, projetPath);
+    if (!coBack.ok) warn('propagate: checkout back to wip failed:', coBack.stderr);
+
+    // Pop stash si on avait stashé
+    if (stashed) {
+        const pop = execGit('stash pop', projetPath);
+        if (!pop.ok) warn('propagate: stash pop failed:', pop.stderr);
+    }
+
+    return { success: true, pushed: pushed.success, pushedToRemote: pushed.success };
+}
+
+/**
  * Commit direct sur main (changements de structure : create folder, rename, etc.)
+ * Si on est sur une branche wip, commit d'abord sur wip puis propage à main + push.
  */
 function commitOnMain(projetPath, message, filePath = null) {
     if (!isRepo(projetPath)) return { success: false, error: 'not a repo' };
     const cur = getCurrentBranch(projetPath);
     if (cur && cur !== 'main') {
-        warn(`commitOnMain: refus, branche courante = ${cur}`);
-        // On reste sur la branche courante pour ne pas casser une wip en cours
-        // → commit silencieux sur la branche courante avec préfixe struct:
-        return commitFile(projetPath, filePath, `struct: ${message}`);
+        // Commit sur wip pour préserver l'historique de la branche de travail
+        const wipResult = commitFile(projetPath, filePath, `struct: ${message}`);
+        if (!wipResult.success && !wipResult.empty) {
+            warn(`commitOnMain: wip commit failed:`, wipResult.error);
+            return wipResult;
+        }
+        // Propager immédiatement à main + push (si commit non vide)
+        if (wipResult.success && !wipResult.empty) {
+            const prop = propagateLatestCommitToMain(projetPath);
+            if (!prop.success) warn('commitOnMain: propagation failed:', prop.error);
+            return { ...wipResult, pushedToRemote: prop.pushed === true };
+        }
+        return wipResult;
     }
     const result = commitFile(projetPath, filePath, `struct: ${message}`);
     // Auto-push si remote configuré et qu'un commit a bien été créé (pas empty)
@@ -376,12 +445,49 @@ function setRemote(projetPath, url) {
 function pushMain(projetPath) {
     if (!isRepo(projetPath)) return { success: false, error: 'not a repo' };
     if (!hasRemote(projetPath)) return { success: false, error: 'no remote', skipped: true };
-    const r = execGit('push origin main', projetPath);
-    if (!r.ok) {
+    let r = execGit('push origin main', projetPath);
+    if (r.ok) return { success: true };
+
+    // Non-fast-forward : remote a divergé. On essaie une intégration automatique.
+    const isNonFf = /non-fast-forward|rejected|failed to push some refs/i.test(r.stderr || '');
+    if (!isNonFf) {
         warn('push failed:', r.stderr);
         return { success: false, error: r.stderr };
     }
-    return { success: true };
+
+    warn('push rejected (non-ff), tentative pull --rebase puis push à nouveau');
+    // Doit être sur main pour rebase
+    const curBranch = getCurrentBranch(projetPath);
+    if (curBranch !== 'main') {
+        const co = execGit('checkout main', projetPath);
+        if (!co.ok) {
+            warn('pushMain rebase: checkout main failed:', co.stderr);
+            return { success: false, error: r.stderr };
+        }
+    }
+    const fetch = execGit('fetch origin main', projetPath);
+    if (!fetch.ok) {
+        warn('pushMain rebase: fetch failed:', fetch.stderr);
+        return { success: false, error: fetch.stderr };
+    }
+    const rebase = execGit('rebase origin/main', projetPath);
+    if (!rebase.ok) {
+        warn('pushMain rebase: conflit, abort →', rebase.stderr);
+        execGit('rebase --abort', projetPath);
+        // Dernier recours : force-with-lease pour ne pas écraser un push concurrent
+        warn('pushMain rebase: tentative push --force-with-lease');
+        const force = execGit('push origin main --force-with-lease', projetPath);
+        if (force.ok) return { success: true, forced: true };
+        warn('pushMain force-with-lease failed:', force.stderr);
+        return { success: false, error: rebase.stderr };
+    }
+    // Re-push après rebase
+    r = execGit('push origin main', projetPath);
+    if (!r.ok) {
+        warn('pushMain rebase: re-push failed:', r.stderr);
+        return { success: false, error: r.stderr };
+    }
+    return { success: true, rebased: true };
 }
 
 function pullMain(projetPath) {
@@ -453,6 +559,7 @@ module.exports = {
     publishWip,
     discardWip,
     commitOnMain,
+    propagateLatestCommitToMain,
     pushMain,
     pullMain,
     hasRemote,

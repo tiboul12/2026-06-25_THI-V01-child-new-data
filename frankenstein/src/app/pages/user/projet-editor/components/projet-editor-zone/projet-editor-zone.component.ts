@@ -228,6 +228,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // Image card interactions (edit mode)
   hoverPreview: HoverPreview | null = null;
+  // IDs des images dont le fichier local est absent ou invalide (0 octet)
+  brokenImages = new Set<string>();
   renamingImageId: string | null = null;
   renameImageValue = '';
   deleteConfirmImageId: string | null = null;
@@ -2189,6 +2191,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.hoverPreview = null;
   }
 
+  // Appelé quand une <img> ne charge pas (fichier absent ou 0 octet)
+  onImgError(event: Event, imageId?: string): void {
+    (event.target as HTMLImageElement).style.display = 'none';
+    if (imageId) {
+      this.brokenImages = new Set(this.brokenImages).add(imageId);
+    }
+  }
+
   onImageCardClick(line: MirrorLine, ev: MouseEvent) {
     ev.stopPropagation();
     const ta = this.textareaRef?.nativeElement;
@@ -2288,7 +2298,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.recomputeRanges();
       this.recomputeMirrorLines();
       // Sauvegarde immédiate (pas scheduleSave) pour éviter la race avec refresh
+      const snapshotBeforeDelete = this.lastSavedContent;
       this.saveAll();
+      // saveAll() remet localDirty à false — on le remet à true car le retrait du
+      // marqueur n'est pas encore publié : l'utilisateur doit cliquer "Partager".
+      this.localDirty = true;
+      this.dirtyChange.emit(true);
+      if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
+        if (!this.codeSectionSnapshots.has(this.focusedHandle.id)) {
+          this.codeSectionSnapshots.set(this.focusedHandle.id, snapshotBeforeDelete);
+        }
+        this.collab.addLocalPending(this.focusedHandle.id);
+        if (this.projectName) {
+          this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
+        }
+      }
       this.refresh.emit();
     } catch (e: any) {
       console.error('[Zone4] delete image failed', e);
@@ -2937,6 +2961,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.localDirty = this.dirtyVisuSectionIds.size > 0;
     this.dirtyChange.emit(this.localDirty);
     this.showPublishToast();
+    const secName = this.visuSections.find(v => v.sectionId === sectionId)?.folderName || sectionId;
+    this.woHistory.track({
+      section: 'projets/fichiers',
+      actionType: 'update',
+      label: `Publication section «${secName}»`,
+      entityType: 'section',
+      entityId: sectionId,
+      context: { projectId: this.projectName },
+      undoable: false
+    }).catch(() => {});
   }
 
   async cancelVisuEdit(sectionId: string): Promise<void> {
@@ -3031,6 +3065,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
       }
       this.showPublishToast();
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'update',
+        label: `Publication section «${this.focusedHandle?.label || sectionId}»`,
+        entityType: 'section',
+        entityId: sectionId,
+        context: { projectId: this.projectName },
+        undoable: false
+      }).catch(() => {});
     } catch (e) {
       console.warn('[PublishCode] erreur:', e);
     }
@@ -3491,13 +3534,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   private deleteVisuImage(imgId: string) {
+    // Capturer le dossier parent AVANT le refresh (files encore à jour)
+    const parentFolder = this.findParentFolder(imgId, this.files);
+    const sectionId = parentFolder?.id ?? null;
     this.svc.deleteFile(this.projectName, imgId).then(() => {
       this.woHistory.track({
         section: 'projets/fichiers',
         actionType: 'delete',
         label: `Suppression image visu`,
         entityType: 'image',
-        entityId: imgId,
+        entityId: sectionId || imgId,
         context: { projectId: this.projectName },
         undoable: false,
       }).catch(() => {});
@@ -3517,6 +3563,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.recomputeAll();
       // Save immédiat pour que onRefresh attende la fin du save (évite race avec loadFiles)
       this.saveAll();
+      // saveAll() remet localDirty à false — on le remet à true car le retrait du
+      // marqueur n'est pas encore publié : l'utilisateur doit cliquer "Partager".
+      if (sectionId) {
+        this.dirtyVisuSectionIds.add(sectionId);
+        this.localDirty = true;
+        this.dirtyChange.emit(true);
+        if (!this.visuSectionLockSnapshot.has(sectionId)) {
+          const vs = this.visuSections.find(v => v.sectionId === sectionId);
+          if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+        }
+        if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
+        this.collab.addLocalPending(sectionId);
+        if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+      }
       this.refresh.emit();
       setTimeout(() => this.initVisuSectionHtml(), 80);
     }).catch(() => {});

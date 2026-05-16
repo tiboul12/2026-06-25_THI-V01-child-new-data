@@ -2521,6 +2521,21 @@ app.get('/index.json', (req, res) => {
 // Static Files
 // ============================================================
 
+// Sécurité : intercepter les images 0 octet (placeholder de récupération) avant express.static
+// → renvoie 404 pour que le client affiche un état d'erreur clair plutôt qu'une image cassée
+const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp']);
+app.use('/data/projets', (req, res, next) => {
+    const ext = path.extname(req.path).toLowerCase();
+    if (!IMAGE_EXTS.has(ext)) return next();
+    const filePath = path.join(BASE_DIR, 'projets', req.path);
+    try {
+        if (fs.existsSync(filePath) && fs.statSync(filePath).size === 0) {
+            return res.status(404).json({ error: 'image_not_synced', path: req.path });
+        }
+    } catch (_) {}
+    next();
+});
+
 app.use('/data', express.static(BASE_DIR, { setHeaders: (res) => res.set('Cache-Control', 'no-cache') }));
 app.use(express.static(BASE_DIR, { setHeaders: (res) => res.set('Cache-Control', 'no-cache'), index: false }));
 
@@ -4368,6 +4383,39 @@ async function setupGithubRemoteForProject(projectDir, dirName, projectName) {
     }
 }
 
+/**
+ * Garantit qu'un projet a un remote GitHub configuré (lazy setup pour les projets
+ * créés avant l'activation de GitHub). Si GitHub est activé mais que le repo local
+ * n'a pas de remote, crée le repo GitHub et configure l'URL authentifiée.
+ * Rafraîchit l'URL si le remote existe déjà (au cas où le token a tourné).
+ */
+async function ensureGithubRemoteForProject(projectName, config) {
+    if (!githubService.isEnabled()) return { enabled: false };
+    const projetPath = path.join(PROJECTS_DIR, projectName);
+    if (!projetGit.isRepo(projetPath)) return { isRepo: false };
+    const displayName = config?.projectName || projectName;
+    if (!projetGit.hasRemote(projetPath)) {
+        console.log(`[ensureGithubRemote] no remote for ${projectName}, setting up`);
+        const setup = await setupGithubRemoteForProject(projetPath, projectName, displayName);
+        if (setup?.publicUrl) {
+            try {
+                await pool.query('UPDATE file_project_meta SET git_remote_url = ? WHERE id = ?', [setup.publicUrl, projectName]);
+            } catch (e) { console.warn('[ensureGithubRemote] DB update failed:', e.message); }
+        }
+        return setup;
+    }
+    try {
+        const freshUrl = githubService.buildAuthenticatedCloneUrl(
+            githubService.buildRepoName(projectName, displayName)
+        );
+        if (freshUrl) projetGit.setRemote(projetPath, freshUrl);
+        return { refreshed: true };
+    } catch (e) {
+        console.warn('[ensureGithubRemote] refresh failed:', e.message);
+        return { error: e.message };
+    }
+}
+
 // POST /api/projects
 app.post('/api/file-projects', async (req, res) => {
     const user = getSessionUser(req);
@@ -4542,14 +4590,9 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         try {
             if (projetGit.isRepo(projetPath)) {
                 if (publish) {
-                    // Rafraîchir l'URL remote avec le token actuel (le token baked dans l'URL
-                    // lors de la création du projet peut être expiré si github.json a été mis à jour)
-                    if (githubService.isEnabled()) {
-                        const freshUrl = githubService.buildAuthenticatedCloneUrl(
-                            githubService.buildRepoName(req.params.name, config?.title || req.params.name)
-                        );
-                        projetGit.setRemote(projetPath, freshUrl);
-                    }
+                    // Garantir le remote GitHub : crée le repo + remote si manquant
+                    // (cas projet créé avant activation GitHub), rafraîchit l'URL sinon.
+                    await ensureGithubRemoteForProject(req.params.name, config);
                     // Commit du contenu final puis merge wip → main
                     const result = projetGit.publishWip(projetPath, user.id, gitNodeId, {
                         username: user.username || user.email || 'user',
@@ -4657,6 +4700,7 @@ app.delete('/api/file-projects/:name/files/:id', async (req, res) => {
         removeNodeById(config.structure, req.params.id);
         await saveProjectConfig(req.params.name, config);
         try {
+            await ensureGithubRemoteForProject(req.params.name, config);
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `delete_file ${deletedName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit delete_file:', gitErr.message); }
         broadcastToProject(req.params.name, 'structure_update', { operation: 'delete_file', payload: { id: req.params.id }, updatedBy: user.id });
@@ -4884,6 +4928,7 @@ app.post('/api/file-projects/:name/upload-image', async (req, res) => {
         parentItems.push(newNode);
         await saveProjectConfig(req.params.name, config);
         try {
+            await ensureGithubRemoteForProject(req.params.name, config);
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `upload_image ${uniqueName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit upload_image:', gitErr.message); }
         // Notifier les autres users connectés pour déclencher leur auto-pull
@@ -5053,22 +5098,47 @@ app.post('/api/file-projects/:name/setup-remote', async (req, res) => {
 
 // POST /api/file-projects/:name/ensure-local
 //   Vérifie que le dossier projet existe localement. Si non et que git_remote_url est connu → git clone.
-//   Si le dossier existe et a un remote → git pull pour récupérer les fichiers pushés par d'autres users.
-//   Retourne { status: 'ready' | 'cloned' | 'no-remote' }
+//   Si le dossier existe avec un repo git et un remote → git pull pour récupérer les fichiers pushés par d'autres users.
+//   Si le dossier existe sans repo git mais qu'un remote est connu en BDD → re-clone depuis GitHub (cas d'un projet créé avant le setup-remote).
+//   Retourne { status: 'ready' | 'cloned' | 're-cloned' | 'no-remote' }
 app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    const { execSync } = require('child_process');
+
     if (fs.existsSync(projetPath)) {
-        // Pull silencieux pour récupérer les fichiers (images, etc.) pushés par d'autres utilisateurs
-        if (projetGit.hasRemote(projetPath)) {
-            const pullResult = projetGit.pullMain(projetPath);
-            if (!pullResult.success && !pullResult.skipped) {
-                console.warn('[ensure-local] pull warning (non-bloquant):', pullResult.error);
+        if (projetGit.isRepo(projetPath)) {
+            // Cas normal : dossier + git → pull silencieux pour récupérer les fichiers pushés par d'autres users
+            if (projetGit.hasRemote(projetPath)) {
+                const pullResult = projetGit.pullMain(projetPath);
+                if (!pullResult.success && !pullResult.skipped) {
+                    console.warn('[ensure-local] pull warning (non-bloquant):', pullResult.error);
+                }
             }
+            return res.json({ status: 'ready' });
         }
-        return res.json({ status: 'ready' });
+
+        // Cas orphelin : dossier local sans .git, mais un remote existe en BDD
+        // → re-clone depuis GitHub pour récupérer tous les fichiers committés (images, etc.)
+        try {
+            const [rows] = await pool.query('SELECT git_remote_url FROM file_project_meta WHERE id = ?', [req.params.name]);
+            const gitRemoteUrl = rows[0]?.git_remote_url;
+            if (!gitRemoteUrl) {
+                // Pas de remote connu, on garde le dossier local tel quel
+                return res.json({ status: 'ready' });
+            }
+            console.log(`[ensure-local] dossier orphelin (sans .git) détecté pour ${req.params.name} — re-clone depuis GitHub`);
+            fs.rmSync(projetPath, { recursive: true, force: true });
+            fs.mkdirSync(PROJECTS_DIR, { recursive: true });
+            execSync(`git clone "${gitRemoteUrl}" "${projetPath}"`, { timeout: 60000 });
+            return res.json({ status: 're-cloned', gitRemoteUrl });
+        } catch (e) {
+            console.warn('[ensure-local] re-clone error:', e.message);
+            return res.json({ status: 'ready' }); // fail-safe : on laisse le dossier tel quel
+        }
     }
+
     try {
         const [rows] = await pool.query('SELECT git_remote_url FROM file_project_meta WHERE id = ?', [req.params.name]);
         if (rows.length === 0) return res.status(404).json({ error: 'Projet non trouvé en BDD' });
@@ -5077,7 +5147,6 @@ app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
             return res.json({ status: 'no-remote', message: 'Ce projet n\'est pas disponible localement — un remote Git doit être configuré par le propriétaire.' });
         }
         // Cloner le repo
-        const { execSync } = require('child_process');
         fs.mkdirSync(PROJECTS_DIR, { recursive: true });
         execSync(`git clone "${gitRemoteUrl}" "${projetPath}"`, { timeout: 60000 });
         return res.json({ status: 'cloned', gitRemoteUrl });
