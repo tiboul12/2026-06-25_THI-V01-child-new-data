@@ -371,65 +371,6 @@ function propagateLatestCommitToMain(projetPath) {
 }
 
 /**
- * Cherry-pick le dernier commit de la branche courante (wip) sur main, puis push.
- * Utilisé pour propager une modification structurelle (image add/delete, folder ops)
- * vers le remote sans attendre la publication finale du wip.
- *
- * Stratégie : stash → checkout main → cherry-pick → push → checkout wip → unstash.
- * En cas de conflit, restaure proprement et rapporte l'échec sans casser le wip.
- */
-function propagateLatestCommitToMain(projetPath) {
-    if (!isRepo(projetPath)) return { success: false, error: 'not a repo' };
-    const cur = getCurrentBranch(projetPath);
-    if (cur === 'main') return { success: true, skipped: 'already on main' };
-    if (!cur) return { success: false, error: 'no current branch' };
-
-    const wipHead = execGit('rev-parse HEAD', projetPath);
-    if (!wipHead.ok) return { success: false, error: 'rev-parse HEAD failed' };
-
-    // Stash uncommitted changes (working tree + index + untracked)
-    const stash = execGit('stash push --include-untracked -m "auto-stash before propagate"', projetPath);
-    const stashed = stash.ok && !/(No local changes|nothing to stash)/i.test(stash.stdout + ' ' + stash.stderr);
-
-    // Checkout main
-    const coMain = execGit('checkout main', projetPath);
-    if (!coMain.ok) {
-        warn('propagate: checkout main failed:', coMain.stderr);
-        if (stashed) execGit('stash pop', projetPath);
-        return { success: false, error: coMain.stderr };
-    }
-
-    // Cherry-pick le commit wip
-    const cherry = execGit(`cherry-pick ${wipHead.stdout}`, projetPath);
-    if (!cherry.ok) {
-        execGit('cherry-pick --abort', projetPath);
-        execGit(`checkout "${cur}"`, projetPath);
-        if (stashed) execGit('stash pop', projetPath);
-        warn('propagate: cherry-pick failed:', cherry.stderr);
-        return { success: false, error: cherry.stderr };
-    }
-
-    // Push main (si remote)
-    let pushed = { success: false };
-    if (hasRemote(projetPath)) {
-        pushed = pushMain(projetPath);
-        if (!pushed.success) warn('propagate: push failed:', pushed.error);
-    }
-
-    // Retour sur wip
-    const coBack = execGit(`checkout "${cur}"`, projetPath);
-    if (!coBack.ok) warn('propagate: checkout back to wip failed:', coBack.stderr);
-
-    // Pop stash si on avait stashé
-    if (stashed) {
-        const pop = execGit('stash pop', projetPath);
-        if (!pop.ok) warn('propagate: stash pop failed:', pop.stderr);
-    }
-
-    return { success: true, pushed: pushed.success, pushedToRemote: pushed.success };
-}
-
-/**
  * Commit direct sur main (changements de structure : create folder, rename, etc.)
  * Si on est sur une branche wip, commit d'abord sur wip puis propage à main + push.
  */
