@@ -56,7 +56,7 @@ Toujours utiliser `[ngClass]` quand une classe Tailwind contient `/`.
 ```json
 {
   "id": "mod-XXX",
-  "version": "X.XX",
+  "version": "X.XXX",
   "date": "<date ISO 8601 actuelle>",
   "type": "feature | fix | refactor | config",
   "commitType": "FIX | AMELIORATION | MERGE",
@@ -141,7 +141,7 @@ Le formulaire s'arrête là. Aucune action supplémentaire.
 
 ```
 Question 1 : "Cette modification est-elle mineure ou majeure ?"
-             → Mineure (+0.01) | Majeure (+1.00)
+             → Mineure (+0.001) | Majeure (+1.000)
 Question 2 : "Type de commit ?"
              → FIX | AMELIORATION | MERGE
 Question 3 : "Titre du commit ?"
@@ -153,18 +153,18 @@ Question 3 : "Titre du commit ?"
 ## Règle obligatoire : Gestion de version
 
 ### Règles d'incrément
-- **Mineure** (+0.01) : on incrémente la partie décimale de 0.01
-  - `0.05` → `0.06` / `1.09` → `1.10` / `1.99` → `2.00`
-- **Majeure** (+1, reset décimales) : on incrémente la partie entière de 1 et on remet les décimales à `.00`
-  - `0.25` → `1.00` / `2.05` → `3.00` / `1.99` → `2.00`
+- **Mineure** (+0.001) : on incrémente la partie décimale de 0.001
+  - `0.005` → `0.006` / `1.099` → `1.100` / `1.999` → `2.000`
+- **Majeure** (+1, reset décimales) : on incrémente la partie entière de 1 et on remet les décimales à `.000`
+  - `0.025` → `1.000` / `2.005` → `3.000` / `1.999` → `2.000`
 
 ### Mise à jour de version.json
 Après décision de l'utilisateur, mettre à jour le champ `child` dans `version.json` :
 ```json
-{ "base": "BX.XX" }
+{ "base": "BX.XXX" }
 ```
-Le préfixe `B` identifie la version comme appartenant à la base. Exemples : `B0.01` → `B0.02` / `B0.99` → `B1.00`.
-Le nouveau numéro de version (ex: `B0.02`) est ensuite inclus dans le champ `version` de l'entrée histoModif.json.
+Le préfixe `B` identifie la version comme appartenant à la base. Exemples : `B0.001` → `B0.002` / `B0.999` → `B1.000`.
+Le nouveau numéro de version (ex: `B0.002`) est ensuite inclus dans le champ `version` de l'entrée histoModif.json.
 
 ---
 
@@ -198,8 +198,8 @@ Le titre doit refléter **l'ensemble des prompts depuis le dernier git**, pas se
    - `--files` : union de tous les fichiers modifiés depuis le dernier commit
 ```bash
 node server/deploy-log.js \
-  --version "BX.XX" \
-  --commit "vX.XX - YYYYMMDD - [TYPE] - Titre choisi" \
+  --version "BX.XXX" \
+  --commit "vX.XXX - YYYYMMDD - [TYPE] - Titre choisi" \
   --description "Description consolidée de TOUS les prompts depuis le dernier git" \
   --ai "Claude Code" \
   --model "claude-sonnet-4-6" \
@@ -233,7 +233,7 @@ Options  : Oui — propagation requise | Non — base uniquement
 ### Si propagation requise → ajouter une entrée dans `data/base-propagation.json`
 ```json
 {
-  "baseVersion": "BX.XX",
+  "baseVersion": "BX.XXX",
   "date": "<ISO 8601>",
   "modRef": "mod-XXX",
   "title": "Titre court de la modification",
@@ -261,7 +261,7 @@ Quand l'utilisateur confirme qu'un child a intégré la modification, mettre `pr
 **À chaque commit base**, si des fichiers "core" ont été modifiés, il est **obligatoire** d'ajouter une entrée dans `data/base-propagation.json` **avant** de committer. Sans cette entrée, les children ne sauront jamais quoi mettre à jour.
 
 ### Pourquoi cette règle est critique
-Le champ `baseSynced` dans `version.json` d'un child indique la version base référencée, **pas** que les fichiers ont été copiés. Sans entrée dans `base-propagation.json`, le child est marqué "à jour" alors que des fichiers manquent. C'est exactement ce bug qui s'est produit sur B0.26-B0.33.
+Le champ `baseSynced` dans `version.json` d'un child indique la version base référencée, **pas** que les fichiers ont été copiés. Sans entrée dans `base-propagation.json`, le child est marqué "à jour" alors que des fichiers manquent. C'est exactement ce bug qui s'est produit sur B0.026-B0.033.
 
 ### Procédure obligatoire avant tout commit base
 
@@ -272,7 +272,7 @@ Le champ `baseSynced` dans `version.json` d'un child indique la version base ré
 **Étape 3 — Créer l'entrée dans `data/base-propagation.json`** si au moins un fichier core est modifié :
 ```json
 {
-  "baseVersion": "BX.XX",
+  "baseVersion": "BX.XXX",
   "date": "<ISO 8601>",
   "modRef": "mod-XXX",
   "title": "Titre court de la modification",

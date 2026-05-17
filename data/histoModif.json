@@ -1,8 +1,8 @@
-{
+﻿{
   "modifications": [
     {
       "id": "mod-183",
-      "version": "THI-1.07",
+      "version": "THI-0.107",
       "date": "2026-05-17T08:55:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -32,7 +32,7 @@
     },
     {
       "id": "mod-182",
-      "version": "THI-1.06",
+      "version": "THI-0.106",
       "date": "2026-05-17T00:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -53,7 +53,7 @@
     },
     {
       "id": "mod-181",
-      "version": "THI-1.06",
+      "version": "THI-0.106",
       "date": "2026-05-17T00:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -74,7 +74,7 @@
     },
     {
       "id": "mod-180",
-      "version": "THI-1.06",
+      "version": "THI-0.106",
       "date": "2026-05-16T23:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -95,7 +95,7 @@
     },
     {
       "id": "mod-179",
-      "version": "THI-1.06",
+      "version": "THI-0.106",
       "date": "2026-05-16T22:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -116,7 +116,7 @@
     },
     {
       "id": "mod-178",
-      "version": "THI-1.05",
+      "version": "THI-0.105",
       "date": "2026-05-16T22:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -141,7 +141,7 @@
     },
     {
       "id": "mod-177",
-      "version": "THI-1.04",
+      "version": "THI-0.104",
       "date": "2026-05-16T21:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -162,7 +162,7 @@
     },
     {
       "id": "mod-176",
-      "version": "THI-1.03",
+      "version": "THI-0.103",
       "date": "2026-05-16T21:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -186,7 +186,7 @@
     },
     {
       "id": "mod-175",
-      "version": "THI-1.02",
+      "version": "THI-0.102",
       "date": "2026-05-16T20:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -207,7 +207,7 @@
     },
     {
       "id": "mod-174",
-      "version": "THI-0.98",
+      "version": "THI-0.098",
       "date": "2026-05-16T16:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -243,7 +243,7 @@
     },
     {
       "id": "mod-173",
-      "version": "THI-0.97",
+      "version": "THI-0.097",
       "date": "2026-05-16T14:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -264,7 +264,7 @@
     },
     {
       "id": "mod-172",
-      "version": "THI-0.96",
+      "version": "THI-0.096",
       "date": "2026-05-16T00:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -290,7 +290,7 @@
     },
     {
       "id": "mod-171",
-      "version": "THI-0.95",
+      "version": "THI-0.095",
       "date": "2026-05-15T01:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -321,7 +321,7 @@
     },
     {
       "id": "mod-170",
-      "version": "THI-0.94",
+      "version": "THI-0.094",
       "date": "2026-05-15T00:00:00Z",
       "type": "config",
       "commitType": "MERGE",
@@ -340,7 +340,7 @@
     },
     {
       "id": "mod-169",
-      "version": "THI-0.93",
+      "version": "THI-0.093",
       "date": "2026-05-14T20:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -361,7 +361,7 @@
     },
     {
       "id": "mod-168",
-      "version": "THI-0.93",
+      "version": "THI-0.093",
       "date": "2026-05-14T19:45:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -382,7 +382,7 @@
     },
     {
       "id": "mod-167",
-      "version": "THI-0.93",
+      "version": "THI-0.093",
       "date": "2026-05-14T18:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -403,7 +403,7 @@
     },
     {
       "id": "mod-166",
-      "version": "THI-0.92",
+      "version": "THI-0.092",
       "date": "2026-05-14T17:50:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -424,7 +424,7 @@
     },
     {
       "id": "mod-165",
-      "version": "THI-0.93",
+      "version": "THI-0.093",
       "date": "2026-05-14T01:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -445,7 +445,7 @@
     },
     {
       "id": "mod-164",
-      "version": "THI-0.92",
+      "version": "THI-0.092",
       "date": "2026-05-14T00:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -467,7 +467,7 @@
     },
     {
       "id": "mod-001",
-      "version": "THI-0.01",
+      "version": "THI-0.001",
       "date": "2026-04-25T00:00:00Z",
       "type": "config",
       "commitType": "AMELIORATION",
@@ -490,7 +490,7 @@
     },
     {
       "id": "mod-002",
-      "version": "THI-0.02",
+      "version": "THI-0.002",
       "date": "2026-04-25T01:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -516,7 +516,7 @@
     },
     {
       "id": "mod-003",
-      "version": "THI-0.03",
+      "version": "THI-0.003",
       "date": "2026-04-25T02:00:00Z",
       "type": "fix",
       "commitType": "MERGE",
@@ -542,7 +542,7 @@
     },
     {
       "id": "mod-004",
-      "version": "THI-0.04",
+      "version": "THI-0.004",
       "date": "2026-04-25T03:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -565,7 +565,7 @@
     },
     {
       "id": "mod-005",
-      "version": "THI-0.05",
+      "version": "THI-0.005",
       "date": "2026-04-25T04:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -589,7 +589,7 @@
     },
     {
       "id": "mod-006",
-      "version": "THI-0.05",
+      "version": "THI-0.005",
       "date": "2026-04-25T04:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -610,7 +610,7 @@
     },
     {
       "id": "mod-007",
-      "version": "THI-0.06",
+      "version": "THI-0.006",
       "date": "2026-04-25T05:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -634,7 +634,7 @@
     },
     {
       "id": "mod-008",
-      "version": "THI-0.07",
+      "version": "THI-0.007",
       "date": "2026-04-25T06:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -657,7 +657,7 @@
     },
     {
       "id": "mod-009",
-      "version": "THI-0.08",
+      "version": "THI-0.008",
       "date": "2026-04-25T12:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -706,7 +706,7 @@
     },
     {
       "id": "mod-010",
-      "version": "THI-0.09",
+      "version": "THI-0.009",
       "date": "2026-04-25T12:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -729,7 +729,7 @@
     },
     {
       "id": "mod-011",
-      "version": "THI-0.10",
+      "version": "THI-0.010",
       "date": "2026-04-25T13:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -750,7 +750,7 @@
     },
     {
       "id": "mod-012",
-      "version": "THI-0.09",
+      "version": "THI-0.009",
       "date": "2026-04-25T14:00:00Z",
       "type": "config",
       "commitType": "",
@@ -778,7 +778,7 @@
     },
     {
       "id": "mod-013",
-      "version": "THI-0.11",
+      "version": "THI-0.011",
       "date": "2026-04-25T13:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -802,7 +802,7 @@
     },
     {
       "id": "mod-014",
-      "version": "THI-0.12",
+      "version": "THI-0.012",
       "date": "2026-04-25T14:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -829,7 +829,7 @@
     },
     {
       "id": "mod-015",
-      "version": "THI-0.13",
+      "version": "THI-0.013",
       "date": "2026-04-25T14:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -853,7 +853,7 @@
     },
     {
       "id": "mod-016",
-      "version": "THI-0.14",
+      "version": "THI-0.014",
       "date": "2026-04-25T15:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -875,7 +875,7 @@
     },
     {
       "id": "mod-017",
-      "version": "THI-0.15",
+      "version": "THI-0.015",
       "date": "2026-04-25T16:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -896,7 +896,7 @@
     },
     {
       "id": "mod-018",
-      "version": "THI-0.16",
+      "version": "THI-0.016",
       "date": "2026-04-25T10:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -920,7 +920,7 @@
     },
     {
       "id": "mod-019",
-      "version": "THI-0.17",
+      "version": "THI-0.017",
       "date": "2026-04-26T00:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -943,7 +943,7 @@
     },
     {
       "id": "mod-020",
-      "version": "THI-0.18",
+      "version": "THI-0.018",
       "date": "2026-04-26T01:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -966,7 +966,7 @@
     },
     {
       "id": "mod-021",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T10:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -988,7 +988,7 @@
     },
     {
       "id": "mod-022",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T12:00:00Z",
       "type": "feature",
       "commitType": "",
@@ -1017,7 +1017,7 @@
     },
     {
       "id": "mod-023",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T14:30:00Z",
       "type": "feature",
       "commitType": "",
@@ -1042,7 +1042,7 @@
     },
     {
       "id": "mod-024",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T15:00:00Z",
       "type": "fix",
       "commitType": "",
@@ -1064,7 +1064,7 @@
     },
     {
       "id": "mod-025",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T15:30:00Z",
       "type": "fix",
       "commitType": "",
@@ -1085,7 +1085,7 @@
     },
     {
       "id": "mod-026",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T16:30:00Z",
       "type": "feature",
       "commitType": "",
@@ -1107,7 +1107,7 @@
     },
     {
       "id": "mod-027",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T17:00:00Z",
       "type": "fix",
       "commitType": "",
@@ -1128,7 +1128,7 @@
     },
     {
       "id": "mod-028",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T18:00:00Z",
       "type": "fix",
       "commitType": "",
@@ -1151,7 +1151,7 @@
     },
     {
       "id": "mod-030",
-      "version": "THI-0.21",
+      "version": "THI-0.021",
       "date": "2026-04-26T21:25:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1172,7 +1172,7 @@
     },
     {
       "id": "mod-029",
-      "version": "THI-0.19",
+      "version": "THI-0.019",
       "date": "2026-04-26T17:13:35.665Z",
       "type": "fix",
       "commitType": "",
@@ -1194,7 +1194,7 @@
     },
     {
       "id": "mod-030",
-      "version": "THI-0.20",
+      "version": "THI-0.020",
       "date": "2026-04-27T08:57:54.006Z",
       "type": "fix",
       "commitType": "",
@@ -1215,7 +1215,7 @@
     },
     {
       "id": "mod-031",
-      "version": "THI-0.22",
+      "version": "THI-0.022",
       "date": "2026-04-27T09:05:56.18Z",
       "type": "fix",
       "commitType": "AMELIORATION",
@@ -1236,7 +1236,7 @@
     },
     {
       "id": "mod-032",
-      "version": "THI-0.22",
+      "version": "THI-0.022",
       "date": "2026-04-27T09:34:13.694Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1258,7 +1258,7 @@
     },
     {
       "id": "mod-033",
-      "version": "THI-0.22",
+      "version": "THI-0.022",
       "date": "2026-04-27T10:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1282,7 +1282,7 @@
     },
     {
       "id": "mod-034",
-      "version": "THI-0.22",
+      "version": "THI-0.022",
       "date": "2026-04-27T10:50:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1303,7 +1303,7 @@
     },
     {
       "id": "mod-035",
-      "version": "THI-0.22",
+      "version": "THI-0.022",
       "date": "2026-04-27T11:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1330,7 +1330,7 @@
     },
     {
       "id": "mod-036",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T12:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1358,7 +1358,7 @@
     },
     {
       "id": "mod-037",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T13:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1380,7 +1380,7 @@
     },
     {
       "id": "mod-038",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T14:00:00Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
@@ -1402,7 +1402,7 @@
     },
     {
       "id": "mod-039",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T14:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1423,7 +1423,7 @@
     },
     {
       "id": "mod-040",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T15:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1445,7 +1445,7 @@
     },
     {
       "id": "mod-041",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T15:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1469,7 +1469,7 @@
     },
     {
       "id": "mod-042",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T16:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1492,7 +1492,7 @@
     },
     {
       "id": "mod-043",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T16:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1513,7 +1513,7 @@
     },
     {
       "id": "mod-044",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T17:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1534,7 +1534,7 @@
     },
     {
       "id": "mod-045",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T18:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1556,7 +1556,7 @@
     },
     {
       "id": "mod-046",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T18:30:00Z",
       "type": "fix",
       "commitType": "AMELIORATION",
@@ -1577,7 +1577,7 @@
     },
     {
       "id": "mod-047",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T19:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1598,7 +1598,7 @@
     },
     {
       "id": "mod-048",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T19:15:00Z",
       "type": "fix",
       "commitType": "AMELIORATION",
@@ -1619,7 +1619,7 @@
     },
     {
       "id": "mod-049",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T19:45:00Z",
       "type": "fix",
       "commitType": "AMELIORATION",
@@ -1640,7 +1640,7 @@
     },
     {
       "id": "mod-050",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T20:15:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1662,7 +1662,7 @@
     },
     {
       "id": "mod-051",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T20:30:00Z",
       "type": "fix",
       "commitType": "AMELIORATION",
@@ -1683,7 +1683,7 @@
     },
     {
       "id": "mod-052",
-      "version": "THI-0.23",
+      "version": "THI-0.023",
       "date": "2026-04-27T21:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1704,7 +1704,7 @@
     },
     {
       "id": "mod-053",
-      "version": "THI-0.24",
+      "version": "THI-0.024",
       "date": "2026-04-27T21:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1726,7 +1726,7 @@
     },
     {
       "id": "mod-054",
-      "version": "THI-0.24",
+      "version": "THI-0.024",
       "date": "2026-04-27T22:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1747,7 +1747,7 @@
     },
     {
       "id": "mod-055",
-      "version": "THI-0.25",
+      "version": "THI-0.025",
       "date": "2026-04-27T22:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1768,7 +1768,7 @@
     },
     {
       "id": "mod-056",
-      "version": "THI-0.25",
+      "version": "THI-0.025",
       "date": "2026-04-28T00:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1787,7 +1787,7 @@
     },
     {
       "id": "mod-057",
-      "version": "THI-0.26",
+      "version": "THI-0.026",
       "date": "2026-04-28T01:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1812,7 +1812,7 @@
     },
     {
       "id": "mod-058",
-      "version": "THI-0.27",
+      "version": "THI-0.027",
       "date": "2026-04-28T01:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1835,7 +1835,7 @@
     },
     {
       "id": "mod-059",
-      "version": "THI-0.28",
+      "version": "THI-0.028",
       "date": "2026-04-28T02:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1858,7 +1858,7 @@
     },
     {
       "id": "mod-060",
-      "version": "THI-0.29",
+      "version": "THI-0.029",
       "date": "2026-04-28T02:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1882,7 +1882,7 @@
     },
     {
       "id": "mod-061",
-      "version": "THI-0.26",
+      "version": "THI-0.026",
       "date": "2026-04-29T00:05:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1905,7 +1905,7 @@
     },
     {
       "id": "mod-062",
-      "version": "THI-0.27",
+      "version": "THI-0.027",
       "date": "2026-04-29T00:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1928,7 +1928,7 @@
     },
     {
       "id": "mod-063",
-      "version": "THI-0.28",
+      "version": "THI-0.028",
       "date": "2026-04-29T01:00:00Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
@@ -1951,7 +1951,7 @@
     },
     {
       "id": "mod-064",
-      "version": "THI-0.29",
+      "version": "THI-0.029",
       "date": "2026-04-29T01:15:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1972,7 +1972,7 @@
     },
     {
       "id": "mod-065",
-      "version": "THI-0.30",
+      "version": "THI-0.030",
       "date": "2026-04-30T00:00:00Z",
       "type": "fix",
       "commitType": "",
@@ -1993,7 +1993,7 @@
     },
     {
       "id": "mod-066",
-      "version": "THI-0.30",
+      "version": "THI-0.030",
       "date": "2026-04-30T00:10:00Z",
       "type": "fix",
       "commitType": "",
@@ -2014,7 +2014,7 @@
     },
     {
       "id": "mod-067",
-      "version": "THI-0.31",
+      "version": "THI-0.031",
       "date": "2026-04-30T00:20:00Z",
       "type": "fix",
       "commitType": "",
@@ -2035,7 +2035,7 @@
     },
     {
       "id": "mod-068",
-      "version": "THI-0.31",
+      "version": "THI-0.031",
       "date": "2026-05-01T00:10:00Z",
       "type": "fix",
       "commitType": "",
@@ -2056,7 +2056,7 @@
     },
     {
       "id": "mod-070",
-      "version": "THI-0.32",
+      "version": "THI-0.032",
       "date": "2026-05-01T20:30:40Z",
       "type": "feature",
       "commitType": "",
@@ -2079,7 +2079,7 @@
     },
     {
       "id": "mod-071",
-      "version": "THI-0.32",
+      "version": "THI-0.032",
       "date": "2026-05-02T00:00:00Z",
       "type": "config",
       "commitType": "",
@@ -2098,7 +2098,7 @@
     },
     {
       "id": "mod-069",
-      "version": "THI-0.32",
+      "version": "THI-0.032",
       "date": "2026-05-01T19:41:54Z",
       "type": "fix",
       "commitType": "AMELIORATION",
@@ -2123,7 +2123,7 @@
     },
     {
       "id": "mod-070",
-      "version": "THI-0.34",
+      "version": "THI-0.034",
       "date": "2026-05-02T12:30:00Z",
       "type": "config",
       "commitType": "MERGE",
@@ -2168,7 +2168,7 @@
     },
     {
       "id": "mod-071",
-      "version": "THI-0.35",
+      "version": "THI-0.035",
       "date": "2026-05-02T19:50:59.974Z",
       "type": "config",
       "commitType": "FIX",
@@ -2189,7 +2189,7 @@
     },
     {
       "id": "mod-072",
-      "version": "THI-0.36",
+      "version": "THI-0.036",
       "date": "2026-05-02T20:33:13.894Z",
       "type": "fix",
       "commitType": "MERGE",
@@ -2215,7 +2215,7 @@
     },
     {
       "id": "mod-073",
-      "version": "THI-0.37",
+      "version": "THI-0.037",
       "date": "2026-05-02T21:00:25.814Z",
       "type": "fix",
       "commitType": "MERGE",
@@ -2241,7 +2241,7 @@
     },
     {
       "id": "mod-074",
-      "version": "THI-0.38",
+      "version": "THI-0.038",
       "date": "2026-05-02T21:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2263,7 +2263,7 @@
     },
     {
       "id": "mod-075",
-      "version": "THI-0.39",
+      "version": "THI-0.039",
       "date": "2026-05-02T10:30:00Z",
       "type": "feature",
       "commitType": "FIX",
@@ -2285,7 +2285,7 @@
     },
     {
       "id": "mod-076",
-      "version": "THI-0.40",
+      "version": "THI-0.040",
       "date": "2026-05-03T12:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -2318,7 +2318,7 @@
     },
     {
       "id": "mod-077",
-      "version": "THI-0.40",
+      "version": "THI-0.040",
       "date": "2026-05-03T12:30:00Z",
       "type": "fix",
       "commitType": "MERGE",
@@ -2341,7 +2341,7 @@
     },
     {
       "id": "mod-078",
-      "version": "THI-0.41",
+      "version": "THI-0.041",
       "date": "2026-05-03T13:00:00Z",
       "type": "fix",
       "commitType": "MERGE",
@@ -2375,7 +2375,7 @@
     },
     {
       "id": "mod-079",
-      "version": "THI-0.42",
+      "version": "THI-0.042",
       "date": "2026-05-03T14:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2408,7 +2408,7 @@
       "completedAt": "2026-05-03T16:30:00Z",
       "prompt": "En prenant en compte le doc @docs/infos-action-historique.md ajoute l option historique action a toutes les fonctions de la section projets /projets, que ce soir la creation ou modification du projet mais aussi toutes les actions interne comme la creation de menu, document importation d image deplacement de section, renommage, suppression, modification de texte, conversation etc etc.",
       "model": "claude-sonnet-4-6",
-      "version": "THI-0.43",
+      "version": "THI-0.043",
       "files": [
         "frankenstein/src/app/pages/user/projets/projets.component.ts",
         "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
@@ -2438,7 +2438,7 @@
       ],
       "type": "feature",
       "id": "mod-081",
-      "version": "THI-0.43",
+      "version": "THI-0.043",
       "ai": "Claude Code",
       "startedAt": "2026-05-03T16:45:00Z",
       "commitType": "AMELIORATION",
@@ -2446,7 +2446,7 @@
     },
     {
       "id": "mod-082",
-      "version": "THI-0.43",
+      "version": "THI-0.043",
       "date": "2026-05-03T21:41:25.756Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2468,7 +2468,7 @@
     },
     {
       "id": "mod-083",
-      "version": "THI-0.44",
+      "version": "THI-0.044",
       "date": "2026-05-04T09:55:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2492,7 +2492,7 @@
     },
     {
       "id": "mod-084",
-      "version": "THI-0.45",
+      "version": "THI-0.045",
       "date": "2026-05-04T10:05:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2513,7 +2513,7 @@
     },
     {
       "id": "mod-085",
-      "version": "THI-0.46",
+      "version": "THI-0.046",
       "date": "2026-05-04T14:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2544,7 +2544,7 @@
     },
     {
       "id": "mod-086",
-      "version": "THI-0.47",
+      "version": "THI-0.047",
       "date": "2026-05-04T16:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2574,7 +2574,7 @@
     },
     {
       "id": "mod-087",
-      "version": "THI-0.48",
+      "version": "THI-0.048",
       "date": "2026-05-04T17:51:31.328Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2598,7 +2598,7 @@
     },
     {
       "id": "mod-088",
-      "version": "THI-0.49",
+      "version": "THI-0.049",
       "date": "2026-05-04T18:03:50.271Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2622,7 +2622,7 @@
     },
     {
       "id": "mod-089",
-      "version": "THI-0.50",
+      "version": "THI-0.050",
       "date": "2026-05-04T18:17:45.128Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2646,7 +2646,7 @@
     },
     {
       "id": "mod-090",
-      "version": "THI-0.51",
+      "version": "THI-0.051",
       "date": "2026-05-04T18:28:44.479Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2667,7 +2667,7 @@
     },
     {
       "id": "mod-091",
-      "version": "THI-0.52",
+      "version": "THI-0.052",
       "date": "2026-05-04T18:41:17.49Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2691,7 +2691,7 @@
     },
     {
       "id": "mod-092",
-      "version": "THI-0.53",
+      "version": "THI-0.053",
       "date": "2026-05-04T18:51:06.722Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2712,7 +2712,7 @@
     },
     {
       "id": "mod-093",
-      "version": "THI-0.54",
+      "version": "THI-0.054",
       "date": "2026-05-04T18:58:00.331Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2733,7 +2733,7 @@
     },
     {
       "id": "mod-094",
-      "version": "THI-0.55",
+      "version": "THI-0.055",
       "date": "2026-05-04T22:51:12.697Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2756,7 +2756,7 @@
     },
     {
       "id": "mod-095",
-      "version": "THI-0.56",
+      "version": "THI-0.056",
       "date": "2026-05-04T23:01:16.082Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2780,7 +2780,7 @@
     },
     {
       "id": "mod-096",
-      "version": "THI-0.57",
+      "version": "THI-0.057",
       "date": "2026-05-04T23:06:44.867Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2805,7 +2805,7 @@
     },
     {
       "id": "mod-097",
-      "version": "THI-0.58",
+      "version": "THI-0.058",
       "date": "2026-05-05T07:40:54.788Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
@@ -2829,7 +2829,7 @@
     },
     {
       "id": "mod-098",
-      "version": "THI-0.58",
+      "version": "THI-0.058",
       "date": "2026-05-05T08:35:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -2854,7 +2854,7 @@
     },
     {
       "id": "mod-099",
-      "version": "THI-0.58",
+      "version": "THI-0.058",
       "date": "2026-05-05T08:45:00Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
@@ -2876,7 +2876,7 @@
     },
     {
       "id": "mod-100",
-      "version": "THI-0.59",
+      "version": "THI-0.059",
       "date": "2026-05-05T09:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2898,7 +2898,7 @@
     },
     {
       "id": "mod-101",
-      "version": "THI-0.59",
+      "version": "THI-0.059",
       "date": "2026-05-05T09:30:00Z",
       "type": "feature",
       "commitType": "FIX",
@@ -2925,7 +2925,7 @@
     },
     {
       "id": "mod-102",
-      "version": "THI-0.60",
+      "version": "THI-0.060",
       "date": "2026-05-05T09:45:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2946,7 +2946,7 @@
     },
     {
       "id": "mod-103",
-      "version": "THI-0.61",
+      "version": "THI-0.061",
       "date": "2026-05-05T10:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2968,7 +2968,7 @@
     },
     {
       "id": "mod-104",
-      "version": "THI-0.61",
+      "version": "THI-0.061",
       "date": "2026-05-05T10:10:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -2989,7 +2989,7 @@
     },
     {
       "id": "mod-105",
-      "version": "THI-0.61",
+      "version": "THI-0.061",
       "date": "2026-05-05T10:20:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3010,7 +3010,7 @@
     },
     {
       "id": "mod-108",
-      "version": "THI-0.63",
+      "version": "THI-0.063",
       "date": "2026-05-05T12:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3032,7 +3032,7 @@
     },
     {
       "id": "mod-109",
-      "version": "THI-0.64",
+      "version": "THI-0.064",
       "date": "2026-05-05T14:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3062,7 +3062,7 @@
       "date": "2026-05-05T20:03:50Z",
       "id": "mod-110",
       "model": "claude-sonnet-4-6",
-      "version": "THI-0.65",
+      "version": "THI-0.065",
       "type": "feature",
       "title": "Edition inline en mode Visu (Option B)",
       "features": "frankenstein:projet-editor",
@@ -3078,7 +3078,7 @@
       "completedAt": "2026-05-05T20:28:39Z",
       "title": "Fix ordre sections/images : marqueurs synchro avec arborescence",
       "startedAt": "2026-05-05T00:00:00Z",
-      "version": "THI-0.65",
+      "version": "THI-0.065",
       "files": [
         "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
       ],
@@ -3110,7 +3110,7 @@
       "title": "Sync live editeur <-> sidebar : ordre identique en temps reel",
       "model": "claude-opus-4-7",
       "commitType": "FIX",
-      "version": "THI-0.66",
+      "version": "THI-0.066",
       "type": "fix",
       "files": [
         "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
@@ -3133,13 +3133,13 @@
       "model": "claude-opus-4-7",
       "ai": "Claude Code",
       "type": "fix",
-      "version": "THI-0.66",
+      "version": "THI-0.066",
       "completedAt": "2026-05-05T21:26:26Z",
       "features": "frankenstein:projet-editor"
     },
     {
       "id": "mod-114",
-      "version": "THI-0.66",
+      "version": "THI-0.066",
       "date": "2026-05-06T00:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3160,7 +3160,7 @@
     },
     {
       "id": "mod-115",
-      "version": "THI-0.66",
+      "version": "THI-0.066",
       "date": "2026-05-06T00:10:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3182,7 +3182,7 @@
     },
     {
       "id": "mod-116",
-      "version": "THI-0.66",
+      "version": "THI-0.066",
       "date": "2026-05-06T00:20:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3206,7 +3206,7 @@
     },
     {
       "id": "mod-117",
-      "version": "THI-0.66",
+      "version": "THI-0.066",
       "date": "2026-05-06T00:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3227,7 +3227,7 @@
     },
     {
       "id": "mod-118",
-      "version": "THI-0.67",
+      "version": "THI-0.067",
       "date": "2026-05-06T00:45:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3250,7 +3250,7 @@
     },
     {
       "id": "mod-119",
-      "version": "THI-0.67",
+      "version": "THI-0.067",
       "date": "2026-05-06T01:05:00Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
@@ -3271,7 +3271,7 @@
     },
     {
       "id": "mod-120",
-      "version": "THI-0.68",
+      "version": "THI-0.068",
       "date": "2026-05-06T10:00:00Z",
       "type": "config",
       "commitType": "MERGE",
@@ -3322,7 +3322,7 @@
     },
     {
       "id": "mod-121",
-      "version": "THI-0.68",
+      "version": "THI-0.068",
       "date": "2026-05-06T10:30:00Z",
       "type": "fix",
       "commitType": "",
@@ -3343,7 +3343,7 @@
     },
     {
       "id": "mod-122",
-      "version": "THI-0.69",
+      "version": "THI-0.069",
       "date": "2026-05-06T11:00:00Z",
       "type": "fix",
       "commitType": "",
@@ -3364,7 +3364,7 @@
     },
     {
       "id": "mod-123",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T11:30:00Z",
       "type": "fix",
       "commitType": "",
@@ -3386,7 +3386,7 @@
     },
     {
       "id": "mod-124",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T12:00:00Z",
       "type": "fix",
       "commitType": "",
@@ -3407,7 +3407,7 @@
     },
     {
       "id": "mod-125",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T12:30:00Z",
       "type": "fix",
       "commitType": "",
@@ -3428,7 +3428,7 @@
     },
     {
       "id": "mod-126",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T13:00:00Z",
       "type": "fix",
       "commitType": "",
@@ -3449,7 +3449,7 @@
     },
     {
       "id": "mod-127",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T13:15:00Z",
       "type": "fix",
       "commitType": "",
@@ -3470,7 +3470,7 @@
     },
     {
       "id": "mod-128",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T23:03:35Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3491,7 +3491,7 @@
     },
     {
       "id": "mod-129",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T21:19:34.174Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3512,7 +3512,7 @@
     },
     {
       "id": "mod-130",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T21:24:43.294Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3533,7 +3533,7 @@
     },
     {
       "id": "mod-131",
-      "version": "THI-0.71",
+      "version": "THI-0.071",
       "date": "2026-05-06T21:46:52.491Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3554,7 +3554,7 @@
     },
     {
       "id": "mod-132",
-      "version": "THI-0.72",
+      "version": "THI-0.072",
       "date": "2026-05-06T22:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3575,7 +3575,7 @@
     },
     {
       "id": "mod-133",
-      "version": "THI-0.73",
+      "version": "THI-0.073",
       "date": "2026-05-07T10:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3598,7 +3598,7 @@
     },
     {
       "id": "mod-134",
-      "version": "THI-0.74",
+      "version": "THI-0.074",
       "date": "2026-05-07T11:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3621,7 +3621,7 @@
     },
     {
       "id": "mod-135",
-      "version": "THI-0.75",
+      "version": "THI-0.075",
       "date": "2026-05-07T10:41:20.987Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3642,7 +3642,7 @@
     },
     {
       "id": "mod-136",
-      "version": "THI-0.76",
+      "version": "THI-0.076",
       "date": "2026-05-07T10:56:48.788Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3665,7 +3665,7 @@
     },
     {
       "id": "mod-137",
-      "version": "THI-0.77",
+      "version": "THI-0.077",
       "date": "2026-05-07T11:06:16.756Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3686,7 +3686,7 @@
     },
     {
       "id": "mod-138",
-      "version": "THI-0.78",
+      "version": "THI-0.078",
       "date": "2026-05-07T11:45:01.970Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3707,7 +3707,7 @@
     },
     {
       "id": "mod-139",
-      "version": "THI-0.79",
+      "version": "THI-0.079",
       "date": "2026-05-07T10:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3729,7 +3729,7 @@
     },
     {
       "id": "mod-140",
-      "version": "THI-0.80",
+      "version": "THI-0.080",
       "date": "2026-05-07T10:30:00Z",
       "type": "config",
       "commitType": "AMELIORATION",
@@ -3750,7 +3750,7 @@
     },
     {
       "id": "mod-141",
-      "version": "THI-0.80",
+      "version": "THI-0.080",
       "date": "2026-05-07T11:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3773,7 +3773,7 @@
     },
     {
       "id": "mod-142",
-      "version": "THI-0.81",
+      "version": "THI-0.081",
       "date": "2026-05-07T12:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3795,7 +3795,7 @@
     },
     {
       "id": "mod-143",
-      "version": "THI-0.82",
+      "version": "THI-0.082",
       "date": "2026-05-07T12:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3816,7 +3816,7 @@
     },
     {
       "id": "mod-146",
-      "version": "THI-0.84",
+      "version": "THI-0.084",
       "date": "2026-05-12T15:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3842,7 +3842,7 @@
     },
     {
       "id": "mod-145",
-      "version": "THI-0.83",
+      "version": "THI-0.083",
       "date": "2026-05-12T14:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3870,7 +3870,7 @@
     },
     {
       "id": "mod-144",
-      "version": "THI-0.83",
+      "version": "THI-0.083",
       "date": "2026-05-07T14:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3891,7 +3891,7 @@
     },
     {
       "id": "mod-147",
-      "version": "THI-0.85",
+      "version": "THI-0.085",
       "date": "2026-05-13T16:24:24.445Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3914,7 +3914,7 @@
     },
     {
       "id": "mod-148",
-      "version": "THI-0.85",
+      "version": "THI-0.085",
       "date": "2026-05-13T16:39:42.387Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3937,7 +3937,7 @@
     },
     {
       "id": "mod-149",
-      "version": "THI-0.86",
+      "version": "THI-0.086",
       "date": "2026-05-13T17:10:00.000Z",
       "type": "fix",
       "commitType": "FIX",
@@ -3959,7 +3959,7 @@
     },
     {
       "id": "mod-150",
-      "version": "THI-0.87",
+      "version": "THI-0.087",
       "date": "2026-05-13T18:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -3985,7 +3985,7 @@
     },
     {
       "id": "mod-151",
-      "version": "THI-0.87",
+      "version": "THI-0.087",
       "date": "2026-05-13T18:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4006,7 +4006,7 @@
     },
     {
       "id": "mod-152",
-      "version": "THI-0.87",
+      "version": "THI-0.087",
       "date": "2026-05-13T18:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4027,7 +4027,7 @@
     },
     {
       "id": "mod-153",
-      "version": "THI-0.87",
+      "version": "THI-0.087",
       "date": "2026-05-13T19:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4048,7 +4048,7 @@
     },
     {
       "id": "mod-154",
-      "version": "THI-0.87",
+      "version": "THI-0.087",
       "date": "2026-05-13T20:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4070,7 +4070,7 @@
     },
     {
       "id": "mod-155",
-      "version": "THI-0.87",
+      "version": "THI-0.087",
       "date": "2026-05-13T20:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4091,7 +4091,7 @@
     },
     {
       "id": "mod-156",
-      "version": "THI-0.88",
+      "version": "THI-0.088",
       "date": "2026-05-13T21:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -4114,7 +4114,7 @@
     },
     {
       "id": "mod-157",
-      "version": "THI-0.88",
+      "version": "THI-0.088",
       "date": "2026-05-13T21:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -4136,7 +4136,7 @@
     },
     {
       "id": "mod-158",
-      "version": "THI-0.88",
+      "version": "THI-0.088",
       "date": "2026-05-13T21:45:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -4157,7 +4157,7 @@
     },
     {
       "id": "mod-159",
-      "version": "THI-0.89",
+      "version": "THI-0.089",
       "date": "2026-05-13T22:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -4181,7 +4181,7 @@
     },
     {
       "id": "mod-160",
-      "version": "THI-0.90",
+      "version": "THI-0.090",
       "date": "2026-05-13T23:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -4202,7 +4202,7 @@
     },
     {
       "id": "mod-161",
-      "version": "THI-0.91",
+      "version": "THI-0.091",
       "date": "2026-05-14T15:33:30.864Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4223,7 +4223,7 @@
     },
     {
       "id": "mod-162",
-      "version": "THI-0.91",
+      "version": "THI-0.091",
       "date": "2026-05-14T15:52:09.518Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4244,7 +4244,7 @@
     },
     {
       "id": "mod-163",
-      "version": "THI-0.91",
+      "version": "THI-0.091",
       "date": "2026-05-14T12:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4265,7 +4265,7 @@
     },
     {
       "id": "mod-175",
-      "version": "THI-0.99",
+      "version": "THI-0.099",
       "date": "2026-05-16T17:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -4291,7 +4291,7 @@
     },
     {
       "id": "mod-176",
-      "version": "THI-1.00",
+      "version": "THI-0.100",
       "date": "2026-05-16T18:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4313,7 +4313,7 @@
     },
     {
       "id": "mod-177",
-      "version": "THI-1.01",
+      "version": "THI-0.101",
       "date": "2026-05-16T18:30:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4335,7 +4335,7 @@
     },
     {
       "id": "mod-178",
-      "version": "THI-1.02",
+      "version": "THI-0.102",
       "date": "2026-05-16T17:15:34.829Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4356,7 +4356,7 @@
     },
     {
       "id": "mod-179",
-      "version": "THI-1.02",
+      "version": "THI-0.102",
       "date": "2026-05-16T17:30:11.184Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4377,7 +4377,7 @@
     },
     {
       "id": "mod-180",
-      "version": "THI-1.02",
+      "version": "THI-0.102",
       "date": "2026-05-16T17:47:48.132Z",
       "type": "fix",
       "commitType": "FIX",
@@ -4398,7 +4398,7 @@
     },
     {
       "id": "mod-182",
-      "version": "THI-1.08",
+      "version": "THI-0.108",
       "date": "2026-05-17T11:29:15.607Z",
       "type": "fix",
       "commitType": "FIX",
