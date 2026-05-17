@@ -1152,6 +1152,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   ngOnDestroy() {
+    clearTimeout(this.saveTimeout);
+    if (this.unifiedContent !== this.lastSavedContent) this.saveAll();
     this.teardownVisuSelectionListener();
   }
 
@@ -1842,7 +1844,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     clearTimeout(this.saveTimeout);
     // Pas d'auto-save si des sections sont repliées (pour ne pas forcer le dépli)
     if (this.foldedContent.size > 0) return;
-    this.saveTimeout = setTimeout(() => this.saveAll(), 10000);
+    this.saveTimeout = setTimeout(() => this.saveAll(), 2000);
   }
 
   private saveAll() {
@@ -3066,7 +3068,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Flusher l'historique de CETTE section AVANT unfoldAll (ranges encore valides en mode focus)
     this.flushContentModifications(sectionId);
     this.unfoldAll();
+    // Reconstruire le document complet si on est en mode focus (sinon parseContent ne retrouve
+    // pas le folderId des sous-sections faute de contexte hiérarchique → fileId = null → aucun fichier écrit)
+    let contentToParse: string;
+    if (this.focusedHandle) {
+      const focusedLines = this.unifiedContent.split('\n');
+      const fullLines = this.fullContentBackup.split('\n');
+      fullLines.splice(this.focusedLineStart, this.focusedOriginalLineCount, ...focusedLines);
+      this.focusedOriginalLineCount = focusedLines.length;
+      this.fullContentBackup = fullLines.join('\n');
+      contentToParse = this.fullContentBackup;
+    } else {
+      contentToParse = this.unifiedContent;
+    }
+    const savedContent = this.unifiedContent;
+    this.unifiedContent = contentToParse;
     const sections = this.parseContent();
+    this.unifiedContent = savedContent;
     try {
       await Promise.all(
         sections
