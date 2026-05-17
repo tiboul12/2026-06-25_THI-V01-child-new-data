@@ -208,6 +208,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private codeSectionSnapshots = new Map<string, string>();
   private dirtyVisuSectionIds = new Set<string>();
   private visuSectionLockSnapshot = new Map<string, string>();
+  private pendingVisuDeletions = new Map<string, { node: any; sectionId: string }>();
   private visuSelectionListener: (() => void) | null = null;
   visuImageSectionId: string | null = null;
   // F5 — panneau de propriétés d'image (mode Visu)
@@ -286,7 +287,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (hasStructuralChange && this.foldedContent.size > 0) this.unfoldAll();
 
       this.docSections = this.buildDocSections(this.files, 1);
-      this.allImages = this.collectAllImages(this.files);
+      this.allImages = this.collectAllImages(this.files)
+        .filter(im => !this.pendingVisuDeletions.has(im.id));
       // Conserver les nœuds uploadés localement non encore propagés dans this.files
       for (const local of this.pendingLocalImages) {
         if (!this.allImages.find(im => im.id === local.id)) {
@@ -2270,55 +2272,41 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   async confirmDeleteImage(line: MirrorLine, ev: MouseEvent) {
     ev.stopPropagation();
-    try {
-      // Capturer le folderId parent avant refresh (this.files est encore à jour).
-      // entityId = folderId plutôt que imageId : après deletion, imageId sort de
-      // activeHistoryIds → l'entrée Suppression serait immédiatement filtrée.
-      const parentFolder = this.findParentFolder(line.imageId, this.files);
-      await this.svc.deleteFile(this.projectName, line.imageId);
-      this.woHistory.track({
-        section: 'projets/fichiers',
-        actionType: 'delete',
-        label: `Suppression d'image «${line.imageName}»`,
-        entityType: 'image',
-        entityId: parentFolder?.id || line.imageId,
-        entityLabel: line.imageName,
-        beforeState: { fileName: line.imageName, imageId: line.imageId },
-        context: { projectId: this.projectName },
-        undoable: false
-      }).catch(() => {});
-      this.deleteConfirmImageId = null;
-      this.hoverPreview = null;
-      // Retire l'image de la liste locale immédiatement pour éviter l'affichage "manquante"
-      this.allImages = this.allImages.filter(im => im.id !== line.imageId);
-      // Retire la ligne du marqueur dans unifiedContent
-      const lines = this.unifiedContent.split('\n');
-      lines.splice(line.lineIndex, 1);
-      this.unifiedContent = lines.join('\n');
-      const ta = this.textareaRef?.nativeElement;
-      if (ta) ta.value = this.unifiedContent;
-      this.recomputeRanges();
-      this.recomputeMirrorLines();
-      // Sauvegarde immédiate (pas scheduleSave) pour éviter la race avec refresh
-      const snapshotBeforeDelete = this.lastSavedContent;
-      this.saveAll();
-      // saveAll() remet localDirty à false — on le remet à true car le retrait du
-      // marqueur n'est pas encore publié : l'utilisateur doit cliquer "Partager".
-      this.localDirty = true;
-      this.dirtyChange.emit(true);
-      if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
-        if (!this.codeSectionSnapshots.has(this.focusedHandle.id)) {
-          this.codeSectionSnapshots.set(this.focusedHandle.id, snapshotBeforeDelete);
-        }
-        this.collab.addLocalPending(this.focusedHandle.id);
-        if (this.projectName) {
-          this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
-        }
-      }
-      this.refresh.emit();
-    } catch (e: any) {
-      console.error('[Zone4] delete image failed', e);
+    // Stocker la suppression en attente — exécutée au Partager, annulable via Annuler
+    const imgNode = this.allImages.find(im => im.id === line.imageId);
+    const sectionId = this.focusedHandle?.id ?? '';
+    if (imgNode) {
+      this.pendingVisuDeletions.set(line.imageId, { node: imgNode, sectionId });
     }
+    this.deleteConfirmImageId = null;
+    this.hoverPreview = null;
+    // Retire l'image de la liste locale pour éviter l'affichage "manquante"
+    this.allImages = this.allImages.filter(im => im.id !== line.imageId);
+    // Retire la ligne du marqueur dans unifiedContent
+    const lines = this.unifiedContent.split('\n');
+    lines.splice(line.lineIndex, 1);
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeRanges();
+    this.recomputeMirrorLines();
+    // Snapshot AVANT delete pour que Annuler puisse restaurer le marqueur
+    const snapshotBeforeDelete = this.lastSavedContent;
+    this.saveAll();
+    // saveAll() remet localDirty à false — on le remet à true car la suppression
+    // n'est pas encore effective : l'utilisateur doit cliquer "Partager".
+    this.localDirty = true;
+    this.dirtyChange.emit(true);
+    if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
+      if (!this.codeSectionSnapshots.has(this.focusedHandle.id)) {
+        this.codeSectionSnapshots.set(this.focusedHandle.id, snapshotBeforeDelete);
+      }
+      this.collab.addLocalPending(this.focusedHandle.id);
+      if (this.projectName) {
+        this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
+      }
+    }
+    this.refresh.emit();
   }
 
   // ── Visu interactions ──────────────────────────────────────
@@ -2960,6 +2948,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       await this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
     }
 
+    // Exécuter les suppressions d'images différées pour cette section
+    const pendingDelIds = [...this.pendingVisuDeletions.entries()]
+      .filter(([, v]) => v.sectionId === sectionId)
+      .map(([id]) => id);
+    await Promise.all(pendingDelIds.map(id =>
+      this.svc.deleteFile(this.projectName, id).catch(() => {})
+    ));
+    pendingDelIds.forEach(id => this.pendingVisuDeletions.delete(id));
+
     this.dirtyVisuSectionIds.delete(sectionId);
     this.visuSectionLockSnapshot.delete(sectionId);
     this.collab.removeLocalPending(sectionId);
@@ -3005,6 +3002,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       await this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
     }
 
+    // Restaurer les images dont la suppression est annulée pour cette section
+    const toRestore = [...this.pendingVisuDeletions.entries()]
+      .filter(([, v]) => v.sectionId === sectionId);
+    toRestore.forEach(([imgId, { node }]) => {
+      this.allImages = [...this.allImages, node];
+      this.pendingVisuDeletions.delete(imgId);
+    });
+
     this.dirtyVisuSectionIds.delete(sectionId);
     this.visuSectionLockSnapshot.delete(sectionId);
     this.collab.removeLocalPending(sectionId);
@@ -3019,6 +3024,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (!this.focusedHandle) return;
     const sectionId = this.focusedHandle.id;
     const snapshot = this.codeSectionSnapshots.get(sectionId) ?? this.lastSavedContent;
+
+    // Restaurer les images dont la suppression est annulée pour cette section
+    const toRestore = [...this.pendingVisuDeletions.entries()]
+      .filter(([, v]) => v.sectionId === sectionId);
+    toRestore.forEach(([imgId, { node }]) => {
+      this.allImages = [...this.allImages, node];
+      this.pendingVisuDeletions.delete(imgId);
+    });
 
     // Restaurer le contenu original dans la vue focusée
     this.unifiedContent = snapshot;
@@ -3063,6 +3076,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.lastSavedContent = this.unifiedContent;
       this.localDirty = false;
       this.dirtyChange.emit(false);
+
+      // Exécuter les suppressions d'images différées pour cette section
+      const pendingDelIds = [...this.pendingVisuDeletions.entries()]
+        .filter(([, v]) => v.sectionId === sectionId)
+        .map(([id]) => id);
+      await Promise.all(pendingDelIds.map(id =>
+        this.svc.deleteFile(this.projectName, id).catch(() => {})
+      ));
+      pendingDelIds.forEach(id => this.pendingVisuDeletions.delete(id));
 
       // Section partagée : retirer du pending + libérer le verrou
       this.codeSectionSnapshots.delete(sectionId);
@@ -3553,48 +3575,42 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Capturer le dossier parent AVANT le refresh (files encore à jour)
     const parentFolder = this.findParentFolder(imgId, this.files);
     const sectionId = parentFolder?.id ?? null;
-    this.svc.deleteFile(this.projectName, imgId).then(() => {
-      this.woHistory.track({
-        section: 'projets/fichiers',
-        actionType: 'delete',
-        label: `Suppression image visu`,
-        entityType: 'image',
-        entityId: sectionId || imgId,
-        context: { projectId: this.projectName },
-        undoable: false,
-      }).catch(() => {});
-      // Retrait local immédiat de allImages pour éviter affichage "manquante"
-      this.allImages = this.allImages.filter(im => im.id !== imgId);
-      // Retirer le marqueur de unifiedContent
-      const lines = this.unifiedContent.split('\n');
-      const idx = lines.findIndex(l => {
-        const t = l.trim();
-        const m = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}$/i.exec(t);
-        return !!m && m[1] === imgId;
-      });
-      if (idx !== -1) lines.splice(idx, 1);
-      this.unifiedContent = lines.join('\n');
-      const ta = this.textareaRef?.nativeElement;
-      if (ta) ta.value = this.unifiedContent;
-      this.recomputeAll();
-      // Save immédiat pour que onRefresh attende la fin du save (évite race avec loadFiles)
-      this.saveAll();
-      // saveAll() remet localDirty à false — on le remet à true car le retrait du
-      // marqueur n'est pas encore publié : l'utilisateur doit cliquer "Partager".
-      if (sectionId) {
-        this.dirtyVisuSectionIds.add(sectionId);
-        this.localDirty = true;
-        this.dirtyChange.emit(true);
-        if (!this.visuSectionLockSnapshot.has(sectionId)) {
-          const vs = this.visuSections.find(v => v.sectionId === sectionId);
-          if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
-        }
-        if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
-        this.collab.addLocalPending(sectionId);
-        if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+
+    // Stocker la suppression en attente — exécutée au Partager, annulable via Annuler
+    const imgNode = this.allImages.find(im => im.id === imgId);
+    if (imgNode) {
+      this.pendingVisuDeletions.set(imgId, { node: imgNode, sectionId: sectionId ?? '' });
+    }
+
+    // Retrait local de allImages pour éviter affichage "manquante"
+    this.allImages = this.allImages.filter(im => im.id !== imgId);
+    // Retirer le marqueur de unifiedContent
+    const lines = this.unifiedContent.split('\n');
+    const idx = lines.findIndex(l => {
+      const t = l.trim();
+      const m = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}$/i.exec(t);
+      return !!m && m[1] === imgId;
+    });
+    if (idx !== -1) lines.splice(idx, 1);
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+    this.saveAll();
+    // saveAll() remet localDirty à false — on le remet à true car la suppression
+    // n'est pas encore effective : l'utilisateur doit cliquer "Partager".
+    if (sectionId) {
+      this.dirtyVisuSectionIds.add(sectionId);
+      this.localDirty = true;
+      this.dirtyChange.emit(true);
+      if (!this.visuSectionLockSnapshot.has(sectionId)) {
+        const vs = this.visuSections.find(v => v.sectionId === sectionId);
+        if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
       }
-      this.refresh.emit();
-      setTimeout(() => this.initVisuSectionHtml(), 80);
-    }).catch(() => {});
+      if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
+      this.collab.addLocalPending(sectionId);
+      if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+    }
+    setTimeout(() => this.initVisuSectionHtml(), 80);
   }
 }
