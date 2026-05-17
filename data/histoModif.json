@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-187",
+      "version": "THI-0.111",
+      "date": "2026-05-17T19:00:00Z",
+      "type": "feature",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Loader overlay central sur Partager et upload image",
+      "description": "Ajout d'un overlay pleine zone (fond sombre + backdrop-blur) avec spinner centré et message ('Publication…' ou 'Upload en cours…') lors du clic sur 'Partager mes modifications' et lors d'un upload image. Signaux isPublishing et isUploading câblés dans publishCodeEdit(), publishVisuSection() et onImageFileSelected(). Les boutons sont désactivés pendant l'opération.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je clique sur 'Partager mes modifications' ou que je selectionne une image à inssérer il y a un temps d'attente (save/load), il faut mettre un loader pour indiqué un travail en cours et une attente.",
+      "startedAt": "2026-05-17T18:45:00Z",
+      "completedAt": "2026-05-17T19:00:00Z"
+    },
+    {
       "id": "mod-186",
       "version": "THI-0.110",
       "date": "2026-05-17T18:30:00Z",

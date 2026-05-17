@@ -203,6 +203,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   publishToastVisible = signal<boolean>(false);
   publishErrorToastVisible = signal<boolean>(false);
   publishErrorMessage = signal<string>('');
+  isPublishing = signal<boolean>(false);
+  isUploading = signal<boolean>(false);
   // Snapshots du contenu original par section (clé = sectionId / focusedHandle.id)
   // Permet de restaurer le contenu original via "Annuler" même après navigation entre sections
   private codeSectionSnapshots = new Map<string, string>();
@@ -2086,6 +2088,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Utiliser le dossier capturé au clic toolbar (avant perte de focus du textarea)
     const folderId = this.lastFolderIdForUpload ?? this.getCursorFolderId() ?? this.getActiveFolderId();
     this.lastFolderIdForUpload = null;
+    this.isUploading.set(true);
     try {
       const node = await this.svc.uploadImage(this.projectName, file, folderId);
       // entityId = folderId (pas imageId) : si l'image est supprimée, imageId sort de
@@ -2154,6 +2157,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.refresh.emit();
     } catch (e: any) {
       this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';
+    } finally {
+      this.isUploading.set(false);
     }
   }
 
@@ -2921,6 +2926,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   async publishVisuSection(sectionId: string): Promise<void> {
+    this.isPublishing.set(true);
     const idx = this.visuSections.findIndex(vs => vs.sectionId === sectionId);
     const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
     const snapshot = this.sectionFileSnapshot.get(sectionId);
@@ -2944,6 +2950,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           ? 'Sauvegardé localement — synchronisation GitHub échouée'
           : 'Erreur lors du partage des modifications';
         this.showPublishErrorToast(msg);
+        this.isPublishing.set(false);
         return;
       }
     } else if (this.projectName) {
@@ -2976,6 +2983,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       context: { projectId: this.projectName },
       undoable: false
     }).catch(() => {});
+    this.isPublishing.set(false);
   }
 
   async cancelVisuEdit(sectionId: string): Promise<void> {
@@ -3063,6 +3071,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   async publishCodeEdit(): Promise<void> {
     if (!this.projectName || !this.focusedHandle) return;
+    this.isPublishing.set(true);
     const sectionId = this.focusedHandle.id;
     clearTimeout(this.saveTimeout);
     // Flusher l'historique de CETTE section AVANT unfoldAll (ranges encore valides en mode focus)
@@ -3126,6 +3135,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         ? 'Sauvegardé localement — synchronisation GitHub échouée'
         : 'Erreur lors du partage des modifications';
       this.showPublishErrorToast(msg);
+    } finally {
+      this.isPublishing.set(false);
     }
   }
 

@@ -1,5 +1,15 @@
 <div class="h-full flex flex-col bg-white dark:bg-[#0f0f17] overflow-hidden relative">
 
+  <!-- Overlay loader (publication / upload image) -->
+  @if (isPublishing() || isUploading()) {
+    <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+      <div class="flex flex-col items-center gap-3 bg-white dark:bg-gray-800 rounded-2xl px-8 py-6 shadow-2xl">
+        <span class="material-symbols-outlined text-4xl animate-spin text-indigo-500">progress_activity</span>
+        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ isUploading() ? 'Upload en cours…' : 'Publication…' }}</span>
+      </div>
+    </div>
+  }
+
   <!-- Toast succès partage -->
   @if (publishToastVisible()) {
     <div class="publish-toast">
@@ -59,7 +69,7 @@
       </button>
       <div class="ed-tb-sep"></div>
       <!-- Image -->
-      <button type="button" class="ed-tb-btn flex items-center gap-1" title="Insérer une image" (click)="triggerImageUpload()">
+      <button type="button" class="ed-tb-btn flex items-center gap-1" title="Insérer une image" (click)="triggerImageUpload()" [disabled]="isUploading()">
         <span class="material-symbols-outlined text-sm leading-none">image</span>
       </button>
       <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
@@ -103,7 +113,7 @@
       </span>
       <div class="code-publish-bar__actions">
         <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
-        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()">
+        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
           <span class="material-symbols-outlined">share</span>
           Partager mes modifications
         </button>
@@ -124,7 +134,8 @@
           Annuler
         </button>
         <button class="visu-publish-bar__publish"
-                (mousedown)="$event.preventDefault(); publishVisuSection(editingVisuSectionId()!)">
+                (mousedown)="$event.preventDefault(); publishVisuSection(editingVisuSectionId()!)"
+                [disabled]="isPublishing()">
           <span class="material-symbols-outlined">share</span>
           Partager mes modifications
         </button>
