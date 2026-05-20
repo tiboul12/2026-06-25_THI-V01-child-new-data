@@ -32,7 +32,9 @@ export interface Project {
   updatedAt: string;
   backupType?: 'github' | 'gitlab' | 'ftp' | 'googledrive' | null;
   backupServer?: string | null;
+  backupUsername?: string | null;
   backupPassword?: string | null;
+  backupPort?: number | null;
   backupDirectory?: string | null;
   backupOwnerType?: string | null;
   backupRepoName?: string | null;
@@ -65,9 +67,15 @@ export class ProjectService {
     );
   }
 
-  updateProject(id: string, data: Partial<Pick<Project, 'title' | 'description' | 'status' | 'backupType' | 'backupServer' | 'backupPassword' | 'backupDirectory' | 'backupOwnerType' | 'backupRepoName' | 'backupVisibility'>>): Promise<Project> {
+  updateProject(id: string, data: Partial<Pick<Project, 'title' | 'description' | 'status' | 'backupType' | 'backupServer' | 'backupUsername' | 'backupPassword' | 'backupPort' | 'backupDirectory' | 'backupOwnerType' | 'backupRepoName' | 'backupVisibility'>>): Promise<Project> {
     return firstValueFrom(
       this.http.put<Project>(`${API}/api/frank/projects/${id}`, data, { headers: this.headers() })
+    );
+  }
+
+  testFtp(projectId: string, data: { host: string; username: string; password: string; port?: number | null; directory?: string | null }): Promise<{ success: boolean; message: string; directory?: { accessible: boolean; files?: number; error?: string } | null }> {
+    return firstValueFrom(
+      this.http.post<any>(`${API}/api/frank/projects/${projectId}/test-ftp`, data, { headers: this.headers() })
     );
   }
 

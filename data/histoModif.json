@@ -1,6 +1,70 @@
 {
   "modifications": [
     {
+      "id": "mod-192",
+      "version": "THI-0.113",
+      "date": "2026-05-20T01:50:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": ["frankenstein", "system"],
+      "features": "frankenstein:projets,system:workflow",
+      "title": "Fix btn-text-color dans theme.json + règle CLAUDE.md",
+      "description": "La couleur de texte des boutons primaires (dark:text-btn-text) restait blanche car --btn-text-color était absent de theme.json. app-config.service.ts applique les cssVars au démarrage, sans --btn-text-color la variable reste à 255 255 255 depuis :root. Ajout de --btn-text-color: 10 10 10 dans data/child/theme.json (primary jaune clair → texte sombre). Règle CLAUDE.md mise à jour pour expliquer le mécanisme complet.",
+      "files": [
+        "data/child/theme.json",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le bouton Enregistrer à toujours une couleur de texte blanc au lieu de noir comme on peux le voir dans le thème",
+      "startedAt": "2026-05-20T01:40:00.000Z",
+      "completedAt": "2026-05-20T01:50:00.000Z"
+    },
+    {
+      "id": "mod-191",
+      "version": "THI-0.113",
+      "date": "2026-05-20T01:30:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": ["frankenstein", "system"],
+      "features": "frankenstein:projets,system:workflow",
+      "title": "Fix couleur texte boutons primaires dark mode + règle CLAUDE.md",
+      "description": "Correction de l'oubli de dark:text-btn-text sur les boutons Enregistrer de admin-projets (2 occurrences). En dark mode, --tw-primary est une couleur claire (lavande), rendant le texte blanc illisible. Ajout d'une règle dans CLAUDE.md pour forcer le pattern text-white dark:text-btn-text sur tout bouton bg-light-primary dark:bg-primary.",
+      "files": [
+        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "de la même façon que le select tu commet toujours l'erreur de couleur de bouton avec fond clair, la couleur du texte doit être foncé, enregistre cette info dans la config claude.md comme le select",
+      "startedAt": "2026-05-20T01:25:00.000Z",
+      "completedAt": "2026-05-20T01:30:00.000Z"
+    },
+    {
+      "id": "mod-190",
+      "version": "THI-0.113",
+      "date": "2026-05-20T01:15:00.000Z",
+      "type": "feature",
+      "commitType": "",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:projets,server:workflow",
+      "title": "FTP : username, port, test connexion",
+      "description": "Ajout de backup_username (VARCHAR 128) et backup_port (INT) à frank_projects via migration BDD. Route POST /api/frank/projects/:id/test-ftp avec basic-ftp (timeout 10s, test répertoire si renseigné). Champs username/port/répertoire affichés en grid-3 pour FTP. Bouton 'Tester la connexion FTP' avec résultat inline (vert/rouge, nb fichiers si répertoire accessible).",
+      "files": [
+        "server/server-data.js",
+        "server/package.json",
+        "server/package-lock.json",
+        "frankenstein/src/app/core/services/project.service.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "pour la ftp il faudrais rajouter, le nomt d'utilisateur ftp, le port FTP, ajoute aussi un bouton pour testé la connection au ftp, test et affichage du résultat",
+      "startedAt": "2026-05-20T01:00:00.000Z",
+      "completedAt": "2026-05-20T01:15:00.000Z"
+    },
+    {
       "id": "mod-189",
       "version": "THI-0.112",
       "date": "2026-05-20T00:45:00.000Z",

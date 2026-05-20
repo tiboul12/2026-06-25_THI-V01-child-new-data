@@ -45,6 +45,26 @@ Angular `[class.xxx]` **ne supporte pas** les `/` dans les noms de classe (ex: `
 
 Toujours utiliser `[ngClass]` quand une classe Tailwind contient `/`.
 
+### Piège fréquent : couleur de texte sur boutons primaires
+Les boutons avec `bg-light-primary dark:bg-primary` doivent utiliser `text-white dark:text-btn-text`.
+
+**Mais `dark:text-btn-text` ne fonctionne que si `--btn-text-color` est défini dans `data/child/theme.json`.**  
+`app-config.service.ts` applique les `cssVars` de `theme.json` au démarrage. Si `--btn-text-color` est absent, il reste `255 255 255` (blanc) quelle que soit la couleur primaire. L'auto-calcul d'`admin-theme.component.ts` n'agit que quand la page admin/theme est visitée.
+
+**Règle** : quand `--tw-primary` est une couleur claire (ex: jaune `253 230 138`), ajouter `"--btn-text-color": "10 10 10"` dans `data/child/theme.json`.
+
+- ❌ `text-white` seul — blanc sur fond clair = illisible
+- ❌ `text-white dark:text-btn-text` sans `--btn-text-color` dans `theme.json` — variable non définie = blanc par défaut
+- ✅ `text-white dark:text-btn-text` **+ `"--btn-text-color": "10 10 10"` dans `theme.json`** — correct
+
+```html
+<button class="... bg-light-primary dark:bg-primary text-white dark:text-btn-text ...">
+```
+```json
+// data/child/theme.json
+{ "cssVars": { "--btn-text-color": "10 10 10" } }
+```
+
 ### Piège fréquent : `<select>` en dark mode
 Les `<select>` natifs ignorent le dark mode pour la liste déroulante (popup OS). Le fond devient blanc même si le select a `dark:bg-surface`.
 

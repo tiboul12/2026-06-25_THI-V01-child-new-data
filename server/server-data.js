@@ -18,6 +18,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const pool = require('./db');
+const ftp = require('basic-ftp');
 const projetGit = require('./modules/projet-git');
 const githubService = require('./modules/github-service');
 
@@ -3774,7 +3775,9 @@ function frankRowToObj(r) {
         createdAt: r.created_at, updatedAt: r.updated_at,
         backupType: r.backup_type || null,
         backupServer: r.backup_server || null,
+        backupUsername: r.backup_username || null,
         backupPassword: r.backup_password || null,
+        backupPort: r.backup_port || null,
         backupDirectory: r.backup_directory || null,
         backupOwnerType: r.backup_owner_type || null,
         backupRepoName: r.backup_repo_name || null,
@@ -3869,7 +3872,7 @@ app.put('/api/frank/projects/:id', async (req, res) => {
         const p = rows[0];
         if (user.role !== 'admin' && p.user_id !== user.id)
             return res.status(403).json({ error: 'Accès refusé' });
-        const { title, description, status, backupType, backupServer, backupPassword, backupDirectory, backupOwnerType, backupRepoName, backupVisibility } = req.body;
+        const { title, description, status, backupType, backupServer, backupUsername, backupPassword, backupPort, backupDirectory, backupOwnerType, backupRepoName, backupVisibility } = req.body;
         const updatedAt = new Date().toISOString();
         const updated = {
             title: title !== undefined ? title.trim() : p.title,
@@ -3877,21 +3880,24 @@ app.put('/api/frank/projects/:id', async (req, res) => {
             status: status !== undefined ? status : p.status,
             backup_type: backupType !== undefined ? backupType : p.backup_type,
             backup_server: backupServer !== undefined ? backupServer : p.backup_server,
+            backup_username: backupUsername !== undefined ? backupUsername : p.backup_username,
             backup_password: backupPassword !== undefined ? backupPassword : p.backup_password,
+            backup_port: backupPort !== undefined ? (backupPort ? parseInt(backupPort) : null) : p.backup_port,
             backup_directory: backupDirectory !== undefined ? backupDirectory : p.backup_directory,
             backup_owner_type: backupOwnerType !== undefined ? backupOwnerType : p.backup_owner_type,
             backup_repo_name: backupRepoName !== undefined ? backupRepoName : p.backup_repo_name,
             backup_visibility: backupVisibility !== undefined ? backupVisibility : p.backup_visibility
         };
         await pool.query(
-            `UPDATE frank_projects SET title=?, description=?, status=?, backup_type=?, backup_server=?, backup_password=?, backup_directory=?, backup_owner_type=?, backup_repo_name=?, backup_visibility=?, updated_at=? WHERE id=?`,
-            [updated.title, updated.description, updated.status, updated.backup_type, updated.backup_server, updated.backup_password, updated.backup_directory, updated.backup_owner_type, updated.backup_repo_name, updated.backup_visibility, updatedAt, req.params.id]
+            `UPDATE frank_projects SET title=?, description=?, status=?, backup_type=?, backup_server=?, backup_username=?, backup_password=?, backup_port=?, backup_directory=?, backup_owner_type=?, backup_repo_name=?, backup_visibility=?, updated_at=? WHERE id=?`,
+            [updated.title, updated.description, updated.status, updated.backup_type, updated.backup_server, updated.backup_username, updated.backup_password, updated.backup_port, updated.backup_directory, updated.backup_owner_type, updated.backup_repo_name, updated.backup_visibility, updatedAt, req.params.id]
         );
         res.json({
             id: req.params.id, title: updated.title, description: updated.description, status: updated.status,
             userId: p.user_id, linkedDocId: p.linked_doc_id || null,
             backupType: updated.backup_type || null, backupServer: updated.backup_server || null,
-            backupPassword: updated.backup_password || null, backupDirectory: updated.backup_directory || null,
+            backupUsername: updated.backup_username || null, backupPassword: updated.backup_password || null,
+            backupPort: updated.backup_port || null, backupDirectory: updated.backup_directory || null,
             backupOwnerType: updated.backup_owner_type || null, backupRepoName: updated.backup_repo_name || null,
             backupVisibility: updated.backup_visibility || null,
             createdAt: p.created_at, updatedAt, _ownerUsername: null
@@ -3916,6 +3922,40 @@ app.delete('/api/frank/projects/:id', async (req, res) => {
     } catch (e) {
         console.error('[FRANK] Delete error:', e);
         res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// POST /api/frank/projects/:id/test-ftp
+app.post('/api/frank/projects/:id/test-ftp', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { host, username, password, port, directory } = req.body;
+    if (!host || !username || !password) return res.status(400).json({ error: 'host, username et password sont requis' });
+    const client = new ftp.Client(10000);
+    client.ftp.verbose = false;
+    try {
+        await client.access({
+            host: host.trim(),
+            user: username.trim(),
+            password: password,
+            port: port ? parseInt(port) : 21,
+            secure: false
+        });
+        let dirResult = null;
+        if (directory && directory.trim()) {
+            try {
+                await client.cd(directory.trim());
+                const list = await client.list();
+                dirResult = { accessible: true, files: list.length };
+            } catch (dirErr) {
+                dirResult = { accessible: false, error: dirErr.message };
+            }
+        }
+        res.json({ success: true, message: 'Connexion FTP réussie', directory: dirResult });
+    } catch (e) {
+        res.json({ success: false, message: `Échec de connexion : ${e.message}` });
+    } finally {
+        client.close();
     }
 });
 
@@ -6300,6 +6340,8 @@ app.listen(PORT, async () => {
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_owner_type VARCHAR(50) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_owner_type:', e.message));
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_repo_name VARCHAR(255) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_repo_name:', e.message));
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_visibility VARCHAR(50) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_visibility:', e.message));
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_username VARCHAR(128) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_username:', e.message));
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_port INT DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_port:', e.message));
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS frank_project_steps (

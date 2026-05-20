@@ -28,12 +28,16 @@ export class AdminProjetsComponent implements OnInit {
   editingBackup = signal<Project | null>(null);
   backupType: 'github' | 'gitlab' | 'ftp' | 'googledrive' | '' = '';
   backupServer = '';
+  backupUsername = '';
   backupPassword = '';
+  backupPort: number | null = null;
   backupDirectory = '';
   backupOwnerType = '';
   backupRepoName = '';
   backupVisibility = '';
   savingBackup = signal(false);
+  testingFtp = signal(false);
+  ftpTestResult = signal<{ success: boolean; message: string; directory?: { accessible: boolean; files?: number; error?: string } | null } | null>(null);
 
   private woHistory = inject(WoActionHistoryService);
 
@@ -107,14 +111,20 @@ export class AdminProjetsComponent implements OnInit {
     this.editingBackup.set(project);
     this.backupType = (project.backupType as any) || '';
     this.backupServer = project.backupServer || '';
+    this.backupUsername = project.backupUsername || '';
     this.backupPassword = project.backupPassword || '';
+    this.backupPort = project.backupPort || null;
     this.backupDirectory = project.backupDirectory || '';
     this.backupOwnerType = project.backupOwnerType || '';
     this.backupRepoName = project.backupRepoName || '';
     this.backupVisibility = project.backupVisibility || '';
+    this.ftpTestResult.set(null);
   }
 
-  closeEditBackup() { this.editingBackup.set(null); }
+  closeEditBackup() {
+    this.editingBackup.set(null);
+    this.ftpTestResult.set(null);
+  }
 
   async saveBackup() {
     const proj = this.editingBackup();
@@ -124,7 +134,9 @@ export class AdminProjetsComponent implements OnInit {
       await this.projectService.updateProject(proj.id, {
         backupType: this.backupType || null,
         backupServer: this.backupServer || null,
+        backupUsername: this.backupUsername || null,
         backupPassword: this.backupPassword || null,
+        backupPort: this.backupPort || null,
         backupDirectory: this.backupDirectory || null,
         backupOwnerType: this.backupOwnerType || null,
         backupRepoName: this.backupRepoName || null,
@@ -136,6 +148,27 @@ export class AdminProjetsComponent implements OnInit {
       this.projectsError.set(e?.error?.error || 'Erreur sauvegarde backup');
     } finally {
       this.savingBackup.set(false);
+    }
+  }
+
+  async testFtpConnection() {
+    const proj = this.editingBackup();
+    if (!proj || !this.backupServer || !this.backupUsername || !this.backupPassword) return;
+    this.testingFtp.set(true);
+    this.ftpTestResult.set(null);
+    try {
+      const result = await this.projectService.testFtp(proj.id, {
+        host: this.backupServer,
+        username: this.backupUsername,
+        password: this.backupPassword,
+        port: this.backupPort,
+        directory: this.backupDirectory || null
+      });
+      this.ftpTestResult.set(result);
+    } catch (e: any) {
+      this.ftpTestResult.set({ success: false, message: e?.error?.error || 'Erreur serveur' });
+    } finally {
+      this.testingFtp.set(false);
     }
   }
 

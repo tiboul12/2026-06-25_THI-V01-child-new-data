@@ -7,6 +7,7 @@
     "--tw-accent-darker": "180 83 9",
     "--tw-background": "10 8 2",
     "--tw-surface": "20 15 4",
-    "--tw-surface-light": "28 22 6"
+    "--tw-surface-light": "28 22 6",
+    "--btn-text-color": "10 10 10"
   }
 }
