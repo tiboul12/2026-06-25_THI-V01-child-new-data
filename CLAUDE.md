@@ -45,6 +45,18 @@ Angular `[class.xxx]` **ne supporte pas** les `/` dans les noms de classe (ex: `
 
 Toujours utiliser `[ngClass]` quand une classe Tailwind contient `/`.
 
+### Piège fréquent : `<select>` en dark mode
+Les `<select>` natifs ignorent le dark mode pour la liste déroulante (popup OS). Le fond devient blanc même si le select a `dark:bg-surface`.
+
+**Fix obligatoire** : ajouter `dark:[color-scheme:dark]` sur tout `<select>` ET utiliser une couleur de fond solide (pas `dark:bg-white/5` qui est transparent).
+
+- ❌ `class="dark:bg-white/5"` — fond transparent, popup blanche
+- ✅ `class="dark:bg-surface dark:[color-scheme:dark]"` — correct
+
+```html
+<select class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors dark:[color-scheme:dark]">
+```
+
 ---
 
 ## Règle obligatoire : Historique des modifications

@@ -10,6 +10,102 @@
 
 @if (!loadingProjects()) {
 
+  <!-- Panneau édition sauvegarde -->
+  @if (editingBackup()) {
+    <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-light-primary/30 dark:border-primary/20 overflow-hidden">
+      <div class="px-5 py-3 bg-light-primary/5 dark:bg-primary/5 border-b border-light-primary/20 dark:border-primary/10 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm text-light-primary dark:text-primary">cloud_upload</span>
+          <span class="text-sm font-semibold text-light-text dark:text-white">Sauvegarde — {{ editingBackup()!.title }}</span>
+        </div>
+        <button (click)="closeEditBackup()" class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+
+      <div class="px-5 py-4 space-y-4">
+        <!-- Type -->
+        <div>
+          <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Type de sauvegarde</label>
+          <select [(ngModel)]="backupType"
+                  class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors dark:[color-scheme:dark]">
+            <option value="">— Aucun —</option>
+            <option value="github">GitHub</option>
+            <option value="gitlab">GitLab</option>
+            <option value="ftp">FTP</option>
+            <option value="googledrive">Google Drive</option>
+          </select>
+        </div>
+
+        @if (backupType) {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Serveur/IP/Owner -->
+            <div>
+              <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">
+                {{ backupType === 'ftp' ? 'Serveur / IP' : 'Owner / Email' }}
+              </label>
+              <input type="text" [(ngModel)]="backupServer" placeholder="{{ backupType === 'ftp' ? 'ex: ftp.monsite.com' : 'ex: moncompte' }}"
+                     class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+            </div>
+
+            <!-- Mot de passe / Token -->
+            <div>
+              <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Mot de passe / Token</label>
+              <input type="password" [(ngModel)]="backupPassword" placeholder="••••••••"
+                     class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+            </div>
+          </div>
+
+          <!-- FTP : Répertoire -->
+          @if (backupType === 'ftp') {
+            <div>
+              <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Répertoire</label>
+              <input type="text" [(ngModel)]="backupDirectory" placeholder="ex: /public_html/monsite"
+                     class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+            </div>
+          }
+
+          <!-- GitHub / GitLab : ownerType, repoName, visibility -->
+          @if (backupType === 'github' || backupType === 'gitlab') {
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Owner Type</label>
+                <input type="text" [(ngModel)]="backupOwnerType" placeholder="ex: user ou org"
+                       class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Nom du repo</label>
+                <input type="text" [(ngModel)]="backupRepoName" placeholder="ex: mon-projet"
+                       class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Visibilité</label>
+                <input type="text" [(ngModel)]="backupVisibility" placeholder="ex: public ou private"
+                       class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
+        <button (click)="closeEditBackup()"
+                class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+          Annuler
+        </button>
+        <button (click)="saveBackup()" [disabled]="savingBackup()"
+                class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-light-primary dark:bg-primary text-white transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-light-primary/20 dark:shadow-primary/20">
+          @if (savingBackup()) {
+            <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+          } @else {
+            <span class="material-symbols-outlined text-base">save</span>
+          }
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  }
+
   <!-- Formulaire édition projet -->
   @if (editingProject()) {
     <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-light-primary/30 dark:border-primary/20 overflow-hidden">
@@ -32,7 +128,7 @@
         <div>
           <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Statut</label>
           <select [(ngModel)]="editStatus"
-                  class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors">
+                  class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors dark:[color-scheme:dark]">
             <option value="draft">Brouillon</option>
             <option value="published">Publié</option>
           </select>
@@ -111,6 +207,13 @@
                     <button (click)="openEditProject(project)"
                             class="p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all" title="Modifier">
                       <span class="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                    <button (click)="openEditBackup(project)"
+                            [class]="project.backupType
+                              ? 'p-1.5 rounded-lg text-light-primary dark:text-primary hover:bg-light-primary/10 dark:hover:bg-primary/10 transition-all'
+                              : 'p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all'"
+                            title="{{ project.backupType ? 'Sauvegarde : ' + backupTypeLabel(project.backupType) : 'Configurer sauvegarde' }}">
+                      <span class="material-symbols-outlined text-sm">cloud_upload</span>
                     </button>
                     @if (deletingProjectId() === project.id) {
                       <div class="flex items-center gap-1">

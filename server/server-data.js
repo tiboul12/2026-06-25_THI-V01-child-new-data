@@ -3771,7 +3771,14 @@ function frankRowToObj(r) {
         status: r.status, userId: r.user_id,
         linkedDocId: r.linked_doc_id || null,
         _ownerUsername: r.owner_username || null,
-        createdAt: r.created_at, updatedAt: r.updated_at
+        createdAt: r.created_at, updatedAt: r.updated_at,
+        backupType: r.backup_type || null,
+        backupServer: r.backup_server || null,
+        backupPassword: r.backup_password || null,
+        backupDirectory: r.backup_directory || null,
+        backupOwnerType: r.backup_owner_type || null,
+        backupRepoName: r.backup_repo_name || null,
+        backupVisibility: r.backup_visibility || null
     };
 }
 
@@ -3862,20 +3869,31 @@ app.put('/api/frank/projects/:id', async (req, res) => {
         const p = rows[0];
         if (user.role !== 'admin' && p.user_id !== user.id)
             return res.status(403).json({ error: 'Accès refusé' });
-        const { title, description, status } = req.body;
+        const { title, description, status, backupType, backupServer, backupPassword, backupDirectory, backupOwnerType, backupRepoName, backupVisibility } = req.body;
         const updatedAt = new Date().toISOString();
         const updated = {
             title: title !== undefined ? title.trim() : p.title,
             description: description !== undefined ? description : p.description,
-            status: status !== undefined ? status : p.status
+            status: status !== undefined ? status : p.status,
+            backup_type: backupType !== undefined ? backupType : p.backup_type,
+            backup_server: backupServer !== undefined ? backupServer : p.backup_server,
+            backup_password: backupPassword !== undefined ? backupPassword : p.backup_password,
+            backup_directory: backupDirectory !== undefined ? backupDirectory : p.backup_directory,
+            backup_owner_type: backupOwnerType !== undefined ? backupOwnerType : p.backup_owner_type,
+            backup_repo_name: backupRepoName !== undefined ? backupRepoName : p.backup_repo_name,
+            backup_visibility: backupVisibility !== undefined ? backupVisibility : p.backup_visibility
         };
         await pool.query(
-            `UPDATE frank_projects SET title=?, description=?, status=?, updated_at=? WHERE id=?`,
-            [updated.title, updated.description, updated.status, updatedAt, req.params.id]
+            `UPDATE frank_projects SET title=?, description=?, status=?, backup_type=?, backup_server=?, backup_password=?, backup_directory=?, backup_owner_type=?, backup_repo_name=?, backup_visibility=?, updated_at=? WHERE id=?`,
+            [updated.title, updated.description, updated.status, updated.backup_type, updated.backup_server, updated.backup_password, updated.backup_directory, updated.backup_owner_type, updated.backup_repo_name, updated.backup_visibility, updatedAt, req.params.id]
         );
         res.json({
-            id: req.params.id, ...updated, userId: p.user_id,
-            linkedDocId: p.linked_doc_id || null,
+            id: req.params.id, title: updated.title, description: updated.description, status: updated.status,
+            userId: p.user_id, linkedDocId: p.linked_doc_id || null,
+            backupType: updated.backup_type || null, backupServer: updated.backup_server || null,
+            backupPassword: updated.backup_password || null, backupDirectory: updated.backup_directory || null,
+            backupOwnerType: updated.backup_owner_type || null, backupRepoName: updated.backup_repo_name || null,
+            backupVisibility: updated.backup_visibility || null,
             createdAt: p.created_at, updatedAt, _ownerUsername: null
         });
     } catch (e) {
@@ -6274,6 +6292,14 @@ app.listen(PORT, async () => {
     await pool.query(`
         ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS linked_doc_id VARCHAR(64) DEFAULT NULL
     `).catch(e => console.error('[DB] frank_projects migration linked_doc_id:', e.message));
+
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_type VARCHAR(20) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_type:', e.message));
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_server VARCHAR(255) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_server:', e.message));
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_password VARCHAR(500) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_password:', e.message));
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_directory VARCHAR(500) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_directory:', e.message));
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_owner_type VARCHAR(50) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_owner_type:', e.message));
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_repo_name VARCHAR(255) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_repo_name:', e.message));
+    await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_visibility VARCHAR(50) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_visibility:', e.message));
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS frank_project_steps (

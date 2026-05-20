@@ -1,6 +1,48 @@
 {
   "modifications": [
     {
+      "id": "mod-189",
+      "version": "THI-0.112",
+      "date": "2026-05-20T00:45:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": ["frankenstein", "system"],
+      "features": "frankenstein:projets,system:workflow",
+      "title": "Fix select dark mode : color-scheme + règle CLAUDE.md",
+      "description": "Correction du rendu des <select> en dark mode : ajout de dark:[color-scheme:dark] et remplacement de dark:bg-white/5 par dark:bg-surface sur les deux selects de admin-projets. Ajout d'une règle dans CLAUDE.md pour éviter ce piège à l'avenir.",
+      "files": [
+        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "tu as toujours un pb de graphisme avec les select corrige ça et ajoute une information dans le claude.md du projet pour ne plus te tromper",
+      "startedAt": "2026-05-20T00:40:00.000Z",
+      "completedAt": "2026-05-20T00:45:00.000Z"
+    },
+    {
+      "id": "mod-188",
+      "version": "THI-0.112",
+      "date": "2026-05-20T00:30:00.000Z",
+      "type": "feature",
+      "commitType": "",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:projets,server:workflow",
+      "title": "Config sauvegarde par projet (GitHub/GitLab/FTP/Google Drive)",
+      "description": "Ajout de champs de sauvegarde par projet dans l'admin : type (github/gitlab/ftp/googledrive), serveur/IP/owner, mot de passe/token, répertoire (FTP), ownerType/repoName/visibility (git). Migration BDD avec ALTER TABLE IF NOT EXISTS. Nouveau panneau d'édition 'Sauvegarde' dans admin-projets avec icône cloud_upload.",
+      "files": [
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/project.service.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans le menu admin/projets /admin?tab=projets je voudrais que tu rajoute des informations pour chaque projets : - Type de sauvegarde : Github ou gitlab ou ftp ou Googledriven, - Nom du server/ip/owner (input texte), mot de passe/token (input texte), - Si server : Repertoir,  - Si github ou gitlab : ownerType (input texte),  repoName (input text), visibility (input texte). Ces données sont donc lié à un projet et les données doivent être enregistré (et donc rajouté) à la bdd.",
+      "startedAt": "2026-05-20T00:00:00.000Z",
+      "completedAt": "2026-05-20T00:30:00.000Z"
+    },
+    {
       "id": "mod-187",
       "version": "THI-0.111",
       "date": "2026-05-17T19:00:00Z",

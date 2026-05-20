@@ -30,6 +30,13 @@ export interface Project {
   _ownerUsername?: string | null;
   createdAt: string;
   updatedAt: string;
+  backupType?: 'github' | 'gitlab' | 'ftp' | 'googledrive' | null;
+  backupServer?: string | null;
+  backupPassword?: string | null;
+  backupDirectory?: string | null;
+  backupOwnerType?: string | null;
+  backupRepoName?: string | null;
+  backupVisibility?: string | null;
 }
 
 const API = environment.apiDataUrl;
@@ -58,7 +65,7 @@ export class ProjectService {
     );
   }
 
-  updateProject(id: string, data: Partial<Pick<Project, 'title' | 'description' | 'status'>>): Promise<Project> {
+  updateProject(id: string, data: Partial<Pick<Project, 'title' | 'description' | 'status' | 'backupType' | 'backupServer' | 'backupPassword' | 'backupDirectory' | 'backupOwnerType' | 'backupRepoName' | 'backupVisibility'>>): Promise<Project> {
     return firstValueFrom(
       this.http.put<Project>(`${API}/api/frank/projects/${id}`, data, { headers: this.headers() })
     );
