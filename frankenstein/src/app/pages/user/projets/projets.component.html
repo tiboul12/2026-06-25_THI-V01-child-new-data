@@ -65,12 +65,19 @@
                 <div class="w-8 h-8 rounded-lg bg-light-primary/10 dark:bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <span class="material-symbols-outlined text-light-primary dark:text-primary text-base">article</span>
                 </div>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 flex-wrap justify-end">
                   @if (hasGithubWarning(project.id)) {
                     <span class="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20"
                           title="GitHub inaccessible — synchronisation impossible">
                       <span class="material-symbols-outlined text-[11px]">cloud_off</span>
                       GitHub hors ligne
+                    </span>
+                  }
+                  @if (project.backupType) {
+                    <span class="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
+                          title="Sauvegarde : {{ backupLabel(project.backupType) }}">
+                      <span class="material-symbols-outlined text-[11px]">{{ backupIcon(project.backupType) }}</span>
+                      {{ backupLabel(project.backupType) }}
                     </span>
                   }
                   <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"

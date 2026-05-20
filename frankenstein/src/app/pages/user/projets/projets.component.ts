@@ -215,4 +215,14 @@ export class ProjetsComponent implements OnInit {
   statusLabel(status: string): string {
     return status === 'published' ? 'Publié' : 'Brouillon';
   }
+
+  backupLabel(type: string | null | undefined): string {
+    const labels: Record<string, string> = { github: 'GitHub', gitlab: 'GitLab', ftp: 'FTP', googledrive: 'Google Drive' };
+    return type ? (labels[type] || type) : '';
+  }
+
+  backupIcon(type: string | null | undefined): string {
+    const icons: Record<string, string> = { github: 'code', gitlab: 'merge', ftp: 'dns', googledrive: 'add_to_drive' };
+    return type ? (icons[type] || 'cloud') : '';
+  }
 }

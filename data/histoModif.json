@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-193",
+      "version": "THI-0.114",
+      "date": "2026-05-20T02:10:00.000Z",
+      "type": "feature",
+      "commitType": "",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projets",
+      "title": "Badge type de sauvegarde sur les cartes projets",
+      "description": "Affichage du type de sauvegarde configuré (GitHub/GitLab/FTP/Google Drive) sous forme de badge dans chaque carte projet de la page /projets. Badge visible uniquement si backupType est renseigné. Helpers backupLabel() et backupIcon() ajoutés dans projets.component.ts.",
+      "files": [
+        "frankenstein/src/app/pages/user/projets/projets.component.html",
+        "frankenstein/src/app/pages/user/projets/projets.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans la page /projets dans l'encart des projets indique quel type de sauvegarde est utilisé pour chaque projet.",
+      "startedAt": "2026-05-20T02:05:00.000Z",
+      "completedAt": "2026-05-20T02:10:00.000Z"
+    },
+    {
       "id": "mod-192",
       "version": "THI-0.113",
       "date": "2026-05-20T01:50:00.000Z",
