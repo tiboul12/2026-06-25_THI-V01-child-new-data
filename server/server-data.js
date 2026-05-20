@@ -4658,28 +4658,20 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         }
 
         if (backupType === 'ftp') {
-            // Backend FTP : upload de tous les fichiers du projet vers le serveur FTP
+            // Backend FTP : upload uniquement du fichier modifié
             if (publish) {
                 try {
                     const ftpConfig = await ftpService.getFtpConfig(pool, req.params.name);
                     if (ftpConfig) {
-                        // Collecter tous les fichiers locaux à uploader
-                        const fileList = [];
-                        const collectFiles = (nodes, basePath) => {
-                            for (const node of nodes) {
-                                if (node.type === 'file' && node.path) {
-                                    const localPath = path.join(PROJECTS_DIR, req.params.name, node.path);
-                                    if (fs.existsSync(localPath)) {
-                                        fileList.push({ localPath, remotePath: `projets/${req.params.name}/${node.path}` });
-                                    }
-                                }
-                                if (node.children?.length) collectFiles(node.children, basePath);
+                        const localPath = path.join(PROJECTS_DIR, req.params.name, item.path);
+                        const fileList = fs.existsSync(localPath)
+                            ? [{ localPath, remotePath: `projets/${req.params.name}/${item.path}` }]
+                            : [];
+                        if (fileList.length > 0) {
+                            ftpPublishResult = await ftpService.uploadFiles(ftpConfig, fileList);
+                            if (ftpPublishResult.errors?.length) {
+                                console.warn('[FTP] upload partial errors:', ftpPublishResult.errors);
                             }
-                        };
-                        collectFiles(config.structure || [], '');
-                        ftpPublishResult = await ftpService.uploadFiles(ftpConfig, fileList);
-                        if (ftpPublishResult.errors?.length) {
-                            console.warn('[FTP] upload partial errors:', ftpPublishResult.errors);
                         }
                     }
                 } catch (ftpErr) {

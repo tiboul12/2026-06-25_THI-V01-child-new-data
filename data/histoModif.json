@@ -4791,6 +4791,27 @@
       "prompt": "sur le ftp les fichiers du projet doivent être dans le un dossier projets/ puis dans un dossier spécifique du projet sous le nom de référence du projet, exemple 4aa105c7-3e9f-4689-8ce9-f9cf8af08f52",
       "startedAt": "2026-05-20T12:20:00.000Z",
       "completedAt": "2026-05-20T12:30:00.000Z"
+    },
+    {
+      "id": "mod-189",
+      "version": "THI-0.121",
+      "date": "2026-05-20T12:45:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "server:workflow",
+      "title": "FTP Partager : upload uniquement du fichier modifié",
+      "description": "La route PUT files avec publish=true n upload plus tous les fichiers du projet mais uniquement le fichier modifié (item.path). La sync complète (ftp-sync) reste réservée à l ouverture du projet.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lors de la validation d un Partage des modifications en mode ftp cela ne doit sauvegarder que les contenues ou fichiers modifier et non tous le contenue du projet",
+      "startedAt": "2026-05-20T12:40:00.000Z",
+      "completedAt": "2026-05-20T12:45:00.000Z"
     }
   ]
 }
