@@ -209,10 +209,10 @@
     },
     {
       "id": "mod-184",
-      "version": "THI-0.110",
+      "version": "THI-0.116",
       "date": "2026-05-17T11:55:00Z",
       "type": "feature",
-      "commitType": "",
+      "commitType": "FIX",
       "scope": [
         "frankenstein",
         "server"
@@ -4677,6 +4677,27 @@
       "prompt": "j ai mis en place un choix de type de stockage des fichiers du projet : @data/projets ainsi lorsqu on arrive dans le projet le système doit prendre en compte le type d enregistrement des fichiers qui est lié au projet : github, gitlab, ftp, drive. Actuellement seul github est pris en compte dans le projet : exemple : /projets/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52. je voudrais qu en plus de github tu rajoute exactement le même système de sauvegarde (partage) des fichiers pour le système ftp. Utilise un système de service pour chaque système (pour le moment juste github et ftp) et met les en places sur l editor de projet en prenant comme exemple le système github déjà mise en place. Ainsi on pourra utilisé l enrejistrement des fichiers dans un ftp de la même façon que le système github. fait moi un plan complet pour les modifications et la mise en place du système ftp",
       "startedAt": "2026-05-20T08:00:00.000Z",
       "completedAt": "2026-05-20T10:00:00.000Z"
+    },
+    {
+      "id": "mod-184",
+      "version": "THI-0.115",
+      "date": "2026-05-20T10:30:00.000Z",
+      "type": "fix",
+      "commitType": "",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projets",
+      "title": "Fix badge GitHub hors ligne affiché sur projets FTP",
+      "description": "hasGithubWarning() retournait true pour les projets FTP car il ne vérifiait pas backup_type. Ajout d un guard : si le projet a un backupType autre que github, ne pas afficher le badge GitHub hors ligne.",
+      "files": [
+        "frankenstein/src/app/pages/user/projets/projets.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le projet indique github et ftp alors que dans l admin on a qu un seul choix : actuellement ftp ainsi le système github ne doit pas être utilisé seul ftp est actif",
+      "startedAt": "2026-05-20T10:20:00.000Z",
+      "completedAt": "2026-05-20T10:30:00.000Z"
     }
   ]
 }

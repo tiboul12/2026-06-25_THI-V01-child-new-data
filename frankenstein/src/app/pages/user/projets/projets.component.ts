@@ -81,6 +81,8 @@ export class ProjetsComponent implements OnInit {
   }
 
   hasGithubWarning(projectId: string): boolean {
+    const project = this.projects().find(p => p.id === projectId);
+    if (project?.backupType && project.backupType !== 'github') return false;
     return this.projectsWithRemote().has(projectId) && this.githubReachable() === false;
   }
 
