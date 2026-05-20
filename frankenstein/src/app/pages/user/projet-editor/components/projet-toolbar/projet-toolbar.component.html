@@ -30,15 +30,6 @@
   <!-- Nom du projet -->
   <span class="text-xs font-semibold text-light-text dark:text-white truncate max-w-[200px]">{{ projectTitle || 'Projet' }}</span>
 
-  <!-- Badge backend de stockage -->
-  @if (backupType && backupBadge[backupType]) {
-    <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border flex-shrink-0"
-          [ngClass]="backupBadge[backupType].css">
-      <span class="material-symbols-outlined text-[11px]">{{ backupBadge[backupType].icon }}</span>
-      {{ backupBadge[backupType].label }}
-    </span>
-  }
-
   <!-- Séparateur -->
   <div class="flex-1"></div>
 

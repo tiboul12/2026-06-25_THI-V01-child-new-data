@@ -4721,6 +4721,30 @@
       "prompt": "Dans l editor indique le système d enregistrement avec un badge (actuellement \"ftp\")",
       "startedAt": "2026-05-20T10:50:00.000Z",
       "completedAt": "2026-05-20T11:00:00.000Z"
+    },
+    {
+      "id": "mod-186",
+      "version": "THI-0.118",
+      "date": "2026-05-20T11:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projets",
+      "title": "Badge backend déplacé à droite de Sauvegardé",
+      "description": "Le badge de backend de stockage (FTP, GitHub...) est déplacé de la toolbar principale vers la barre de l éditeur, à droite de l indicateur Sauvegardé. Input backupType et map backupBadge ajoutés à ProjetEditorZoneComponent.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le badge (server, exemple ftp) doit être indiqué à droite de l information Sauvegarde",
+      "startedAt": "2026-05-20T11:15:00.000Z",
+      "completedAt": "2026-05-20T11:30:00.000Z"
     }
   ]
 }

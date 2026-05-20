@@ -91,6 +91,14 @@
     } @else {
       <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
     }
+
+    @if (backupType && backupBadge[backupType]) {
+      <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2"
+            [ngClass]="backupBadge[backupType].css">
+        <span class="material-symbols-outlined text-[11px]">{{ backupBadge[backupType].icon }}</span>
+        {{ backupBadge[backupType].label }}
+      </span>
+    }
   </div>
 
   <!-- Erreur upload image -->

@@ -48,6 +48,7 @@
           [projectName]="project()?.id || ''"
           [activeNodeId]="activeNodeId()"
           [commentCounts]="commentCounts()"
+          [backupType]="project()?.backupType ?? null"
           (fileSave)="onFileSave($event)"
           (sectionsChange)="onSectionsChange($event)"
           (nodeActive)="onNodeActive($event)"

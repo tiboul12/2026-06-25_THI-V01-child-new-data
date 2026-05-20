@@ -135,6 +135,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Input() saveStatus: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' = 'idle';
   @Input() projectName = '';
   @Input() activeNodeId: string | null = null;
+  @Input() backupType: string | null = null;
+
+  readonly backupBadge: Record<string, { icon: string; label: string; css: string }> = {
+    ftp:         { icon: 'dns',          label: 'FTP',     css: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' },
+    github:      { icon: 'code',         label: 'GitHub',  css: 'text-purple-400 border-purple-500/30 bg-purple-500/10' },
+    gitlab:      { icon: 'merge',        label: 'GitLab',  css: 'text-orange-400 border-orange-500/30 bg-orange-500/10' },
+    googledrive: { icon: 'add_to_drive', label: 'Drive',   css: 'text-green-400 border-green-500/30 bg-green-500/10' },
+  };
 
   @Output() fileSave = new EventEmitter<FileSaveEvent>();
   @Output() sectionsChange = new EventEmitter<SectionInfo[]>();
