@@ -8,6 +8,12 @@
       <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/30">expand_more</span>
     </div>
 
+    <!-- Badge backend FTP -->
+    <div *ngIf="backupType === 'ftp'" class="flex items-center gap-1 px-2 py-0.5 rounded border border-green-500/30 bg-green-500/5">
+      <span class="material-symbols-outlined text-xs text-green-500">dns</span>
+      <span class="font-semibold text-green-500">FTP</span>
+    </div>
+
     <!-- Indicateur dirty -->
     <span *ngIf="isDirty" class="text-yellow-500 font-medium">● Non sauvegardé</span>
   </div>

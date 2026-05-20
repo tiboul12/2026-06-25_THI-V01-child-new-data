@@ -119,7 +119,8 @@
     <app-projet-statusbar
       class="absolute bottom-10 left-0 right-0 z-20"
       [status]="statusLabel"
-      [isDirty]="saveStatus() === 'saving'" />
+      [isDirty]="saveStatus() === 'saving'"
+      [backupType]="project()?.backupType ?? null" />
 
     <!-- F6 — Drawer des commentaires de section -->
     <app-comments-drawer

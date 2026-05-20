@@ -11,4 +11,5 @@ export class ProjetStatusbarComponent {
   @Input() status = 'Brouillon';
   @Input() linkedDoc = '';
   @Input() isDirty = false;
+  @Input() backupType: string | null = null;
 }

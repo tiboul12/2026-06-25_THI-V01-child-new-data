@@ -6,7 +6,9 @@
       "date": "2026-05-20T02:10:00.000Z",
       "type": "feature",
       "commitType": "",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Badge type de sauvegarde sur les cartes projets",
       "description": "Affichage du type de sauvegarde configuré (GitHub/GitLab/FTP/Google Drive) sous forme de badge dans chaque carte projet de la page /projets. Badge visible uniquement si backupType est renseigné. Helpers backupLabel() et backupIcon() ajoutés dans projets.component.ts.",
@@ -26,7 +28,10 @@
       "date": "2026-05-20T01:50:00.000Z",
       "type": "fix",
       "commitType": "",
-      "scope": ["frankenstein", "system"],
+      "scope": [
+        "frankenstein",
+        "system"
+      ],
       "features": "frankenstein:projets,system:workflow",
       "title": "Fix btn-text-color dans theme.json + règle CLAUDE.md",
       "description": "La couleur de texte des boutons primaires (dark:text-btn-text) restait blanche car --btn-text-color était absent de theme.json. app-config.service.ts applique les cssVars au démarrage, sans --btn-text-color la variable reste à 255 255 255 depuis :root. Ajout de --btn-text-color: 10 10 10 dans data/child/theme.json (primary jaune clair → texte sombre). Règle CLAUDE.md mise à jour pour expliquer le mécanisme complet.",
@@ -46,7 +51,10 @@
       "date": "2026-05-20T01:30:00.000Z",
       "type": "fix",
       "commitType": "",
-      "scope": ["frankenstein", "system"],
+      "scope": [
+        "frankenstein",
+        "system"
+      ],
       "features": "frankenstein:projets,system:workflow",
       "title": "Fix couleur texte boutons primaires dark mode + règle CLAUDE.md",
       "description": "Correction de l'oubli de dark:text-btn-text sur les boutons Enregistrer de admin-projets (2 occurrences). En dark mode, --tw-primary est une couleur claire (lavande), rendant le texte blanc illisible. Ajout d'une règle dans CLAUDE.md pour forcer le pattern text-white dark:text-btn-text sur tout bouton bg-light-primary dark:bg-primary.",
@@ -66,7 +74,10 @@
       "date": "2026-05-20T01:15:00.000Z",
       "type": "feature",
       "commitType": "",
-      "scope": ["frankenstein", "server"],
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
       "features": "frankenstein:projets,server:workflow",
       "title": "FTP : username, port, test connexion",
       "description": "Ajout de backup_username (VARCHAR 128) et backup_port (INT) à frank_projects via migration BDD. Route POST /api/frank/projects/:id/test-ftp avec basic-ftp (timeout 10s, test répertoire si renseigné). Champs username/port/répertoire affichés en grid-3 pour FTP. Bouton 'Tester la connexion FTP' avec résultat inline (vert/rouge, nb fichiers si répertoire accessible).",
@@ -90,7 +101,10 @@
       "date": "2026-05-20T00:45:00.000Z",
       "type": "fix",
       "commitType": "",
-      "scope": ["frankenstein", "system"],
+      "scope": [
+        "frankenstein",
+        "system"
+      ],
       "features": "frankenstein:projets,system:workflow",
       "title": "Fix select dark mode : color-scheme + règle CLAUDE.md",
       "description": "Correction du rendu des <select> en dark mode : ajout de dark:[color-scheme:dark] et remplacement de dark:bg-white/5 par dark:bg-surface sur les deux selects de admin-projets. Ajout d'une règle dans CLAUDE.md pour éviter ce piège à l'avenir.",
@@ -110,7 +124,10 @@
       "date": "2026-05-20T00:30:00.000Z",
       "type": "feature",
       "commitType": "",
-      "scope": ["frankenstein", "server"],
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
       "features": "frankenstein:projets,server:workflow",
       "title": "Config sauvegarde par projet (GitHub/GitLab/FTP/Google Drive)",
       "description": "Ajout de champs de sauvegarde par projet dans l'admin : type (github/gitlab/ftp/googledrive), serveur/IP/owner, mot de passe/token, répertoire (FTP), ownerType/repoName/visibility (git). Migration BDD avec ALTER TABLE IF NOT EXISTS. Nouveau panneau d'édition 'Sauvegarde' dans admin-projets avec icône cloud_upload.",
@@ -132,7 +149,9 @@
       "date": "2026-05-17T19:00:00Z",
       "type": "feature",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Loader overlay central sur Partager et upload image",
       "description": "Ajout d'un overlay pleine zone (fond sombre + backdrop-blur) avec spinner centré et message ('Publication…' ou 'Upload en cours…') lors du clic sur 'Partager mes modifications' et lors d'un upload image. Signaux isPublishing et isUploading câblés dans publishCodeEdit(), publishVisuSection() et onImageFileSelected(). Les boutons sont désactivés pendant l'opération.",
@@ -152,7 +171,9 @@
       "date": "2026-05-17T18:30:00Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Fix Partager : efface le contenu au lieu de le publier",
       "description": "publishCodeEdit() appelait parseContent() sur le contenu focusé partiel (sans contexte hiérarchique parent) → les sous-sections n'avaient pas de fileId → updateFile() jamais appelé → le timer auto-save étant annulé par clearTimeout, le fichier .md gardait l'ancien contenu. Fix : reconstruction du document complet depuis fullContentBackup avant parseContent(), identique à saveAll() en mode focus.",
@@ -168,11 +189,12 @@
     {
       "id": "mod-185",
       "version": "THI-0.110",
-      "commitType": "FIX",
+      "commitType": "",
       "date": "2026-05-17T18:00:00Z",
       "type": "fix",
-      "commitType": "",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Fix sauvegarde texte dans contenu.md : debounce 10s → 2s + save au destroy",
       "description": "Le fichier .md n'était pas mis à jour après modification de texte car l'auto-save attendait 10 secondes. Correction : debounce réduit à 2s. Ajout d'un save immédiat dans ngOnDestroy pour ne pas perdre les modifications lors d'une navigation.",
@@ -215,7 +237,7 @@
     },
     {
       "id": "mod-183",
-      "version": "THI-0.107",
+      "version": "THI-0.115",
       "date": "2026-05-17T08:55:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -4629,6 +4651,32 @@
       "prompt": "nickel tu peux commiter",
       "startedAt": "2026-05-17T00:00:00Z",
       "completedAt": "2026-05-17T11:29:15.607Z"
+    },
+    {
+      "id": "mod-183",
+      "version": "THI-0.114",
+      "date": "2026-05-20T10:00:00.000Z",
+      "type": "feature",
+      "commitType": "",
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
+      "features": "frankenstein:projets,server:workflow",
+      "title": "Système FTP de synchronisation des fichiers projet",
+      "description": "Ajout du backend FTP comme alternative à GitHub pour le stockage des fichiers projet. Nouveau module server/modules/ftp-service.js (testConnection, listRemoteFiles, uploadFile, uploadFiles, downloadFile, getFtpConfig, getBackupType). Modification de 3 routes server-data.js : ensure-local (pas de git requis pour FTP), auto-sync (skip pour FTP), PUT files publish (upload FTP au lieu de git push). Badge FTP dans la statusbar de l editeur.",
+      "files": [
+        "server/modules/ftp-service.js",
+        "server/server-data.js",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j ai mis en place un choix de type de stockage des fichiers du projet : @data/projets ainsi lorsqu on arrive dans le projet le système doit prendre en compte le type d enregistrement des fichiers qui est lié au projet : github, gitlab, ftp, drive. Actuellement seul github est pris en compte dans le projet : exemple : /projets/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52. je voudrais qu en plus de github tu rajoute exactement le même système de sauvegarde (partage) des fichiers pour le système ftp. Utilise un système de service pour chaque système (pour le moment juste github et ftp) et met les en places sur l editor de projet en prenant comme exemple le système github déjà mise en place. Ainsi on pourra utilisé l enrejistrement des fichiers dans un ftp de la même façon que le système github. fait moi un plan complet pour les modifications et la mise en place du système ftp",
+      "startedAt": "2026-05-20T08:00:00.000Z",
+      "completedAt": "2026-05-20T10:00:00.000Z"
     }
   ]
 }

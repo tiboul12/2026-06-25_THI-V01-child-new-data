@@ -21,6 +21,7 @@ const pool = require('./db');
 const ftp = require('basic-ftp');
 const projetGit = require('./modules/projet-git');
 const githubService = require('./modules/github-service');
+const ftpService = require('./modules/ftp-service');
 
 // ============================================================
 // Configuration
@@ -4641,31 +4642,78 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
         fs.writeFileSync(full, content, 'utf8');
         await saveProjectConfig(req.params.name, config);
 
-        // Git : commit sur la branche wip de l'éditeur courant
+        // Git ou FTP : commit / upload selon le backend du projet
         const projetPath = path.join(PROJECTS_DIR, req.params.name);
         const gitNodeId = folderId || req.params.id;
         let publishCommitHash = null;
         let publishResult = null;
+        let ftpPublishResult = null;
+
+        // Vérifier le backend de stockage
+        let backupType = null;
         try {
-            if (projetGit.isRepo(projetPath)) {
-                if (publish) {
-                    // Garantir le remote GitHub : crée le repo + remote si manquant
-                    // (cas projet créé avant activation GitHub), rafraîchit l'URL sinon.
-                    await ensureGithubRemoteForProject(req.params.name, config);
-                    // Commit du contenu final puis merge wip → main
-                    publishResult = projetGit.publishWip(projetPath, user.id, gitNodeId, {
-                        username: user.username || user.email || 'user',
-                        sectionName: item.name || req.params.id,
-                        filePath: item.path
+            backupType = await ftpService.getBackupType(pool, req.params.name);
+        } catch (e) {
+            console.warn('[file PUT] backup_type lookup error:', e.message);
+        }
+
+        if (backupType === 'ftp') {
+            // Backend FTP : upload de tous les fichiers du projet vers le serveur FTP
+            if (publish) {
+                try {
+                    const ftpConfig = await ftpService.getFtpConfig(pool, req.params.name);
+                    if (ftpConfig) {
+                        // Collecter tous les fichiers locaux à uploader
+                        const fileList = [];
+                        const collectFiles = (nodes, basePath) => {
+                            for (const node of nodes) {
+                                if (node.type === 'file' && node.path) {
+                                    const localPath = path.join(PROJECTS_DIR, req.params.name, node.path);
+                                    if (fs.existsSync(localPath)) {
+                                        fileList.push({ localPath, remotePath: node.path });
+                                    }
+                                }
+                                if (node.children?.length) collectFiles(node.children, basePath);
+                            }
+                        };
+                        collectFiles(config.structure || [], '');
+                        ftpPublishResult = await ftpService.uploadFiles(ftpConfig, fileList);
+                        if (ftpPublishResult.errors?.length) {
+                            console.warn('[FTP] upload partial errors:', ftpPublishResult.errors);
+                        }
+                    }
+                } catch (ftpErr) {
+                    console.warn('[FTP] upload sur Partager échoué:', ftpErr.message);
+                    return res.status(502).json({
+                        error: 'Modifications sauvegardées localement mais non synchronisées avec le serveur FTP',
+                        localSaved: true,
+                        pushFailed: true
                     });
-                    publishCommitHash = publishResult?.commitHash || null;
-                } else {
-                    // Auto-save : commit silencieux sur la branche wip
-                    projetGit.commitFile(projetPath, item.path, `wip: auto-save ${item.name || req.params.id}`);
                 }
             }
-        } catch (gitErr) {
-            console.warn('[ProjetGit] commit sur file PUT échoué:', gitErr.message);
+        } else {
+            // Backend Git (GitHub par défaut)
+            try {
+                if (projetGit.isRepo(projetPath)) {
+                    if (publish) {
+                        // Garantir le remote GitHub : crée le repo + remote si manquant
+                        // (cas projet créé avant activation GitHub), rafraîchit l'URL sinon.
+                        await ensureGithubRemoteForProject(req.params.name, config);
+                        // Commit du contenu final puis merge wip → main
+                        publishResult = projetGit.publishWip(projetPath, user.id, gitNodeId, {
+                            username: user.username || user.email || 'user',
+                            sectionName: item.name || req.params.id,
+                            filePath: item.path
+                        });
+                        publishCommitHash = publishResult?.commitHash || null;
+                    } else {
+                        // Auto-save : commit silencieux sur la branche wip
+                        projetGit.commitFile(projetPath, item.path, `wip: auto-save ${item.name || req.params.id}`);
+                    }
+                }
+            } catch (gitErr) {
+                console.warn('[ProjetGit] commit sur file PUT échoué:', gitErr.message);
+            }
         }
 
         // Broadcast SSE seulement si publication explicite
@@ -4703,7 +4751,7 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
 
         // Push GitHub échoué → HTTP 502 pour bloquer le toast succès côté client
         // (la sauvegarde locale et le broadcast SSE ont eu lieu normalement)
-        if (publish && publishResult?.pushFailed) {
+        if (publish && backupType !== 'ftp' && publishResult?.pushFailed) {
             return res.status(502).json({
                 error: 'Modifications sauvegardées localement mais non synchronisées avec GitHub',
                 localSaved: true,
@@ -4712,7 +4760,7 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
             });
         }
 
-        res.json({ success: true, commitHash: publishCommitHash });
+        res.json({ success: true, commitHash: publishCommitHash, ftpUploaded: ftpPublishResult?.uploaded ?? null });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -5134,11 +5182,23 @@ app.post('/api/file-projects/:name/pull', (req, res) => {
 // POST /api/file-projects/:name/auto-sync
 //   Synchronise automatiquement le projet avec GitHub au chargement :
 //   pull si remote en avance, push si local en avance, signale la divergence sinon.
+//   Pour les projets FTP : pas de sync automatique (le sync se fait au Partager).
 app.post('/api/file-projects/:name/auto-sync', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const projetPath = path.join(PROJECTS_DIR, req.params.name);
     if (!fs.existsSync(projetPath)) return res.status(404).json({ error: 'Projet non trouvé' });
+
+    // Projets FTP : pas de sync automatique au chargement
+    try {
+        const backupType = await ftpService.getBackupType(pool, req.params.name);
+        if (backupType === 'ftp') {
+            return res.json({ success: true, status: 'ftp-no-sync' });
+        }
+    } catch (e) {
+        console.warn('[auto-sync] backup_type lookup error:', e.message);
+    }
+
     if (!projetGit.isRepo(projetPath)) return res.json({ success: true, status: 'no-repo' });
     if (!projetGit.hasRemote(projetPath)) return res.json({ success: true, status: 'no-remote' });
     try {
@@ -5228,12 +5288,30 @@ app.post('/api/file-projects/:name/setup-remote', async (req, res) => {
 //   Vérifie que le dossier projet existe localement. Si non et que git_remote_url est connu → git clone.
 //   Si le dossier existe avec un repo git et un remote → git pull pour récupérer les fichiers pushés par d'autres users.
 //   Si le dossier existe sans repo git mais qu'un remote est connu en BDD → re-clone depuis GitHub (cas d'un projet créé avant le setup-remote).
+//   Pour les projets FTP : s'assure simplement que le dossier local existe.
 //   Retourne { status: 'ready' | 'cloned' | 're-cloned' | 'no-remote' }
 app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const projetPath = path.join(PROJECTS_DIR, req.params.name);
     const { execSync } = require('child_process');
+
+    // Projets FTP : pas de remote git requis — on s'assure juste que le dossier local existe
+    try {
+        const backupType = await ftpService.getBackupType(pool, req.params.name);
+        if (backupType === 'ftp') {
+            if (!fs.existsSync(projetPath)) {
+                fs.mkdirSync(projetPath, { recursive: true });
+                const cfgPath = path.join(projetPath, 'config.json');
+                if (!fs.existsSync(cfgPath)) {
+                    fs.writeFileSync(cfgPath, JSON.stringify({ projectName: req.params.name, structure: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, null, 2), 'utf8');
+                }
+            }
+            return res.json({ status: 'ready', message: 'FTP project — local folder ready' });
+        }
+    } catch (e) {
+        console.warn('[ensure-local] backup_type lookup error:', e.message);
+    }
 
     if (fs.existsSync(projetPath)) {
         if (projetGit.isRepo(projetPath)) {
