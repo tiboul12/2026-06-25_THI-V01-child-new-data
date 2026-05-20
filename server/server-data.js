@@ -4670,7 +4670,7 @@ app.put('/api/file-projects/:name/files/:id', async (req, res) => {
                                 if (node.type === 'file' && node.path) {
                                     const localPath = path.join(PROJECTS_DIR, req.params.name, node.path);
                                     if (fs.existsSync(localPath)) {
-                                        fileList.push({ localPath, remotePath: node.path });
+                                        fileList.push({ localPath, remotePath: `projets/${req.params.name}/${node.path}` });
                                     }
                                 }
                                 if (node.children?.length) collectFiles(node.children, basePath);
@@ -5313,7 +5313,7 @@ app.post('/api/file-projects/:name/ftp-sync', async (req, res) => {
             if (node.type === 'file' && node.path) {
                 const localPath = path.join(PROJECTS_DIR, req.params.name, node.path);
                 if (fs.existsSync(localPath)) {
-                    fileList.push({ localPath, remotePath: node.path });
+                    fileList.push({ localPath, remotePath: `projets/${req.params.name}/${node.path}` });
                 }
             }
             if (node.children?.length) collectFiles(node.children);

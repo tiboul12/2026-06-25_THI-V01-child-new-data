@@ -4770,6 +4770,27 @@
       "prompt": "à chaque ouverture du projet, le système doit vérifié la connexion au système (ftp, github etc suivant le système selectionné pour le projet), pour le ftp cela doit vérifié si le dossier du projet est bien présent sur le ftp et le créé si besoin et créé tous les dossiers et transféré les fichiers du projet ci necessaire. Cela doit initialisé le projet. Il doit y avoir ainsi les mêmes dossiers et fichier qu en local.",
       "startedAt": "2026-05-20T11:40:00.000Z",
       "completedAt": "2026-05-20T12:00:00.000Z"
+    },
+    {
+      "id": "mod-188",
+      "version": "THI-0.120",
+      "date": "2026-05-20T12:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "server:workflow",
+      "title": "FTP : fichiers dans projets/{id}/ sur le serveur distant",
+      "description": "Le remotePath FTP préfixe maintenant les fichiers avec projets/{projectId}/ pour organiser les uploads dans un dossier dédié par projet sur le FTP. Corrige les deux routes : ftp-sync (init) et PUT files (Partager).",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "sur le ftp les fichiers du projet doivent être dans le un dossier projets/ puis dans un dossier spécifique du projet sous le nom de référence du projet, exemple 4aa105c7-3e9f-4689-8ce9-f9cf8af08f52",
+      "startedAt": "2026-05-20T12:20:00.000Z",
+      "completedAt": "2026-05-20T12:30:00.000Z"
     }
   ]
 }
