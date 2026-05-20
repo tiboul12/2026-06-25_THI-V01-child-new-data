@@ -5284,6 +5284,57 @@ app.post('/api/file-projects/:name/setup-remote', async (req, res) => {
     }
 });
 
+// POST /api/file-projects/:name/ftp-sync
+//   Vérifie la connexion FTP, crée la structure de répertoires distants si absente,
+//   et uploade tous les fichiers locaux vers le serveur FTP (idempotent).
+//   Appelé à chaque ouverture d'un projet FTP dans l'éditeur.
+app.post('/api/file-projects/:name/ftp-sync', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+
+    const ftpConfig = await ftpService.getFtpConfig(pool, req.params.name);
+    if (!ftpConfig) return res.status(400).json({ error: 'Ce projet n\'a pas de configuration FTP' });
+
+    // 1. Tester la connexion
+    try {
+        await ftpService.testConnection(ftpConfig);
+    } catch (e) {
+        return res.status(503).json({ error: `Connexion FTP impossible : ${e.message}`, connectionFailed: true });
+    }
+
+    // 2. Récupérer la config locale du projet
+    const config = await getProjectConfig(req.params.name);
+    if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
+
+    // 3. Collecter tous les fichiers locaux (texte + images)
+    const fileList = [];
+    const collectFiles = (nodes) => {
+        for (const node of nodes) {
+            if (node.type === 'file' && node.path) {
+                const localPath = path.join(PROJECTS_DIR, req.params.name, node.path);
+                if (fs.existsSync(localPath)) {
+                    fileList.push({ localPath, remotePath: node.path });
+                }
+            }
+            if (node.children?.length) collectFiles(node.children);
+        }
+    };
+    collectFiles(config.structure || []);
+
+    if (fileList.length === 0) {
+        return res.json({ success: true, status: 'empty', uploaded: 0, errors: [] });
+    }
+
+    // 4. Uploader tous les fichiers locaux vers FTP (crée dossiers distants au besoin)
+    try {
+        const result = await ftpService.uploadFiles(ftpConfig, fileList);
+        res.json({ success: true, status: 'synced', uploaded: result.uploaded, errors: result.errors });
+    } catch (e) {
+        console.warn('[FTP sync] upload error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // POST /api/file-projects/:name/ensure-local
 //   Vérifie que le dossier projet existe localement. Si non et que git_remote_url est connu → git clone.
 //   Si le dossier existe avec un repo git et un remote → git pull pour récupérer les fichiers pushés par d'autres users.

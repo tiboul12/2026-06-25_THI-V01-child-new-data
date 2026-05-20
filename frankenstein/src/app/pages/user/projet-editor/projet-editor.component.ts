@@ -46,6 +46,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   files = signal<FileNode[]>([]);
   loading = signal(true);
   localUnavailable = signal<string | null>(null);
+  initMessage = signal<string | null>(null);
   saveStatus = signal<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
   activeNodeId = signal<string | null>(null);
   scrollToNodeId = signal<string | null>(null);
@@ -287,14 +288,29 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     } catch { /* silencieux — pas bloquant */ }
   }
 
-  private async ensureProjectFolder(_proj: Project) {
+  private async ensureProjectFolder(proj: Project) {
     try {
       const result = await this.projectFilesService.ensureLocal(this.projectFolderName);
       if (result.status === 'no-remote') {
         this.localUnavailable.set(result.message || 'Ce projet n\'est pas disponible localement — un remote Git doit être configuré par le propriétaire.');
+        return;
       }
     } catch (e) {
       console.warn('ensureProjectFolder error:', e);
+      return;
+    }
+
+    // Synchronisation FTP à l'ouverture
+    if (proj.backupType === 'ftp') {
+      this.initMessage.set('Vérification de la connexion FTP…');
+      try {
+        await this.projectFilesService.ftpSync(this.projectFolderName);
+      } catch (e: any) {
+        const msg = e?.error?.error || e?.message || 'Erreur de connexion FTP';
+        this.localUnavailable.set(`Connexion FTP impossible : ${msg}`);
+      } finally {
+        this.initMessage.set(null);
+      }
     }
   }
 

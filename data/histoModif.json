@@ -4745,6 +4745,31 @@
       "prompt": "le badge (server, exemple ftp) doit être indiqué à droite de l information Sauvegarde",
       "startedAt": "2026-05-20T11:15:00.000Z",
       "completedAt": "2026-05-20T11:30:00.000Z"
+    },
+    {
+      "id": "mod-187",
+      "version": "THI-0.119",
+      "date": "2026-05-20T12:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
+      "features": "frankenstein:projets,server:workflow",
+      "title": "Init FTP à l ouverture : vérif connexion + sync fichiers",
+      "description": "À chaque ouverture d un projet FTP dans l éditeur : vérification de la connexion FTP, création des dossiers distants si absents, upload de tous les fichiers locaux vers le serveur (idempotent). Route POST /api/file-projects/:name/ftp-sync ajoutée. Signal initMessage pour afficher la progression. Erreur de connexion FTP affichée comme localUnavailable.",
+      "files": [
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/project-files.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "à chaque ouverture du projet, le système doit vérifié la connexion au système (ftp, github etc suivant le système selectionné pour le projet), pour le ftp cela doit vérifié si le dossier du projet est bien présent sur le ftp et le créé si besoin et créé tous les dossiers et transféré les fichiers du projet ci necessaire. Cela doit initialisé le projet. Il doit y avoir ainsi les mêmes dossiers et fichier qu en local.",
+      "startedAt": "2026-05-20T11:40:00.000Z",
+      "completedAt": "2026-05-20T12:00:00.000Z"
     }
   ]
 }

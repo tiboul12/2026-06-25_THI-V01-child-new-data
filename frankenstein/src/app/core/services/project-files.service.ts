@@ -145,6 +145,10 @@ export class ProjectFilesService {
     return firstValueFrom(this.http.post<any>(`${API}/api/file-projects/${name}/auto-sync`, {}, { headers: this.h() }));
   }
 
+  ftpSync(name: string): Promise<{ success: boolean; status: string; uploaded: number; errors: any[] }> {
+    return firstValueFrom(this.http.post<any>(`${API}/api/file-projects/${name}/ftp-sync`, {}, { headers: this.h() }));
+  }
+
   getGithubReachable(): Promise<{ reachable: boolean; reason?: string }> {
     return firstValueFrom(this.http.get<any>(`${API}/api/github/reachable`, { headers: this.h() }));
   }
