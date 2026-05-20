@@ -4698,6 +4698,29 @@
       "prompt": "le projet indique github et ftp alors que dans l admin on a qu un seul choix : actuellement ftp ainsi le système github ne doit pas être utilisé seul ftp est actif",
       "startedAt": "2026-05-20T10:20:00.000Z",
       "completedAt": "2026-05-20T10:30:00.000Z"
+    },
+    {
+      "id": "mod-185",
+      "version": "THI-0.117",
+      "date": "2026-05-20T11:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projets",
+      "title": "Badge backend de stockage dans la toolbar de l éditeur",
+      "description": "Ajout d un badge indiquant le système de stockage actif (FTP, GitHub, GitLab, Drive) dans la toolbar de l éditeur de projet. Badge coloré selon le type avec icône Material.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans l editor indique le système d enregistrement avec un badge (actuellement \"ftp\")",
+      "startedAt": "2026-05-20T10:50:00.000Z",
+      "completedAt": "2026-05-20T11:00:00.000Z"
     }
   ]
 }
