@@ -359,6 +359,19 @@
         "CLAUDE.md"
       ],
       "propagationNote": "CLAUDE.md déjà mis à jour directement dans child--THI-V01 (même migration versioning 2→3 décimales : +0.001 mineure, exemples corriges, BX.XXX partout). data/histoModif.json et data/base-propagation.json du child également migrés directement (THI-0.XX→THI-0.0XX, THI-1.XX→THI-0.1XX, B0.XX→B0.0XX). version.json child mis à jour (THI-0.108, baseSynced B0.044)."
+    },
+    {
+      "baseVersion": "B0.046",
+      "date": "2026-05-21T00:05:00.000Z",
+      "modRef": "mod-051, mod-052",
+      "title": "Fix config admin : options cliIaEnabled/apiKeysEnabled non persistées",
+      "propagationRequired": true,
+      "propagationScope": [
+        "server/server-data.js",
+        "frankenstein/src/app/core/services/config.service.ts",
+        "frankenstein/src/app/pages/user/config/config.component.ts"
+      ],
+      "propagationNote": "Deux bugs corrigés dans la page config admin. (1) server/server-data.js ligne ~754 : ajouter 'cliIaEnabled !== undefined || apiKeysEnabled !== undefined ||' dans la condition if qui déclenche l'écriture de conf.json (avant 'enabledTabs !== undefined'). Sans ce fix, les POST contenant uniquement { apiKeysEnabled } ou { cliIaEnabled } ne sauvegardent pas conf.json. (2) config.service.ts : ajout des signaux cliIaEnabled = signal<boolean>(true), apiKeysEnabled = signal<boolean>(true) et des méthodes setCliIaEnabled / setApiKeysEnabled (avec http.post interne). (3) config.component.ts : rétablir les getters cliIaEnabled→configService.cliIaEnabled() et apiKeysEnabled→configService.apiKeysEnabled(), et les toggles vers setCliIaEnabled/setApiKeysEnabled."
     }
   ]
 }
