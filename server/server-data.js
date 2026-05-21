@@ -4391,26 +4391,16 @@ function slugify(text) {
         .replace(/-+/g, '-').trim();
 }
 
-function getProjectConfig(projectName) {
-    const cfgPath = path.join(PROJECTS_DIR, projectName, 'config.json');
-    if (!fs.existsSync(cfgPath)) return null;
-    try {
-        const config = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-        
-        // Nettoyage des doublons (même nom et type au même niveau)
-        function cleanStructure(items) {
-            if (!items) return [];
-            const seen = new Set();
-            const cleaned = [];
-            for (const item of items) {
-                const key = `${item.type}:${item.name.toLowerCase()}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    if (item.children) {
-                        item.children = cleanStructure(item.children);
-                    }
-                    cleaned.push(item);
-                }
+function cleanStructure(items) {
+    if (!items) return [];
+    const seen = new Set();
+    const cleaned = [];
+    for (const item of items) {
+        const key = `${item.type}:${item.name.toLowerCase()}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            if (item.children) {
+                item.children = cleanStructure(item.children);
             }
             cleaned.push(item);
         }

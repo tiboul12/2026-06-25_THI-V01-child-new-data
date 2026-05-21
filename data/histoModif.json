@@ -1,6 +1,43 @@
 ﻿{
   "modifications": [
     {
+      "id": "mod-195",
+      "version": "THI-0.122",
+      "date": "2026-05-21T22:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:config",
+      "title": "server-data.js : conflit merge — double getProjectConfig + try sans catch",
+      "description": "Le merge base B0.048 a créé deux définitions de getProjectConfig dans server-data.js : l'ancienne version sync avec un try sans catch/finally (syntax error Node.js), et la nouvelle version async avec MySQL. Correction : suppression de l'ancienne version et extraction de cleanStructure en fonction standalone accessible par la version async.",
+      "files": ["server/server-data.js"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "SyntaxError: Missing catch or finally after try à la ligne 4417 de server-data.js",
+      "startedAt": "2026-05-21T22:25:00.000Z",
+      "completedAt": "2026-05-21T22:30:00.000Z"
+    },
+    {
+      "id": "mod-194",
+      "version": "THI-0.122",
+      "date": "2026-05-21T22:14:11.493Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein", "system"],
+      "features": "frankenstein:config,system:workflow",
+      "title": "Post-sync B0.048 : version.json + signal woActionHistoryNavEnabled",
+      "description": "Suite au sync base B0.048 : (1) version.json écrasé par le merge -X theirs, champs childId/child/baseSynced perdus — restaurés manuellement avec baseSynced=B0.048. (2) config.service.ts (base) référence woActionHistoryNavEnabled dans loadCliConfig/saveNavItems mais la déclaration du signal avait disparu — ajout de la déclaration manquante pour rétablir la compilation. Bug à corriger dans worganic-base.",
+      "files": [
+        "version.json",
+        "frankenstein/src/app/core/services/config.service.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lors de la syncrho j'ai eu une erreur Merge made by the 'ort' strategy... [ERREUR] Le backup helper a echoue... Exception lors de la définition de «baseSynced»... Et le code child ne compil pas",
+      "startedAt": "2026-05-21T22:00:00.000Z",
+      "completedAt": "2026-05-21T22:14:11.493Z"
+    },
+    {
       "id": "mod-193",
       "version": "THI-0.114",
       "date": "2026-05-20T02:10:00.000Z",
