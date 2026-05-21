@@ -1,0 +1,148 @@
+﻿{
+  "entries": [
+    {
+      "baseVersion": "B0.011",
+      "date": "2026-04-25T13:00:00Z",
+      "modRef": "mod-010",
+      "title": "Zone IA header : défaut disabled + persistance redémarrage",
+      "propagationRequired": false,
+      "syncedBy": [
+        "THI-V01"
+      ],
+      "propagationScope": [
+        "frankenstein/src/app/core/services/config.service.ts",
+        "server/server-data.js"
+      ],
+      "propagationNote": "Changer signal(true) en signal(false) dans config.service.ts. Dans server-data.js ajouter headerIaVisible dans le GET (depuis globalConf, défaut false) et dans le POST (destructurer + sauvegarder dans conf.json). Ajouter \"headerIaVisible\": false dans data/config/conf.json."
+    },
+    {
+      "baseVersion": "B0.012",
+      "date": "2026-04-25T14:30:00Z",
+      "modRef": "mod-011",
+      "title": "Admin Thème base + preset sélectionné + CSS override",
+      "propagationRequired": false,
+      "syncedBy": [
+        "THI-V01"
+      ],
+      "propagationScope": [
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.html",
+        "frankenstein/src/app/pages/admin/admin.component.ts",
+        "frankenstein/src/app/core/services/app-config.service.ts",
+        "server/server-data.js"
+      ],
+      "propagationNote": "Créer admin/tabs/admin-theme/ avec le composant. Ajouter AdminThemeComponent dans admin.component.ts (import + BASE_ADMIN_TABS order:5 + imports[]). Mettre à jour app-config.service.ts (load css). Ajouter routes GET/POST /api/child/css dans server-data.js. Dans child-admin-tabs.ts : retirer le tab Thème et son import."
+    },
+    {
+      "baseVersion": "B0.013",
+      "date": "2026-04-25T14:00:00Z",
+      "modRef": "mod-012",
+      "title": "Fix couleurs thème : neon-border, landing, contraste boutons",
+      "propagationRequired": false,
+      "syncedBy": [
+        "THI-V01"
+      ],
+      "propagationScope": [
+        "frankenstein/src/styles.scss",
+        "frankenstein/src/app/pages/public/landing/landing.component.scss",
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.html"
+      ],
+      "propagationNote": "Remplacer styles.scss (neon-border/neon-text/link-card avec CSS vars), landing.component.scss (refactoring complet couleurs hardcodées -> CSS vars), admin-theme.component.ts (ajout getter buttonTextClass + isLight), admin-theme.component.html (text-white -> [ngClass]=buttonTextClass sur les boutons save)"
+    },
+    {
+      "baseVersion": "B0.017",
+      "date": "2026-04-25T10:00:00Z",
+      "modRef": "mod-016",
+      "title": "Styles avancés admin/theme",
+      "propagationRequired": false,
+      "syncedBy": [
+        "THI-V01"
+      ],
+      "propagationScope": [
+        "frankenstein/src/styles.scss",
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.html",
+        "frankenstein/src/app/core/services/app-config.service.ts"
+      ],
+      "propagationNote": "Copier les 4 fichiers base vers le child. applyStyleSettings() dans app-config.service.ts applique les styleSettings au démarrage."
+    },
+    {
+      "baseVersion": "B0.018",
+      "date": "2026-04-26T00:00:00Z",
+      "modRef": "mod-017",
+      "title": "Admin/Thème : couleur & police titres + groupe Textes (p)",
+      "propagationRequired": false,
+      "syncedBy": [
+        "THI-V01"
+      ],
+      "propagationScope": [
+        "frankenstein/src/styles.scss",
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.html"
+      ],
+      "propagationNote": "Copier les 3 fichiers depuis la base. Nouvelles variables CSS dans :root (--h-color, --h-font-family, --p-color, --p-size, --p-font-family, --p-weight, --p-line-height). Nouveau groupe Textes (p) + type 'color' dans StyleSettingItem."
+    },
+    {
+      "baseVersion": "B0.021",
+      "date": "2026-05-02T12:00:00.000Z",
+      "modRef": "mod-020",
+      "title": "Projet-editor + ConversationService + ProjectFilesService + server-data MAJ",
+      "propagationRequired": false,
+      "syncedBy": [
+        "THI-V01"
+      ],
+      "propagationScope": [
+        "electron/main.js",
+        "electron/package.json",
+        "electron/package-lock.json",
+        "frankenstein/package.json",
+        "frankenstein/package-lock.json",
+        "frankenstein/src/app/core/services/config.service.ts",
+        "frankenstein/src/app/core/services/conversation.service.ts",
+        "frankenstein/src/app/core/services/project-files.service.ts",
+        "frankenstein/src/app/pages/admin/admin.component.html",
+        "frankenstein/src/app/pages/admin/admin.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/",
+        "frankenstein/src/index.html",
+        "server/package.json",
+        "server/package-lock.json",
+        "server/server-data.js"
+      ],
+      "propagationNote": "Copier tout le dossier frankenstein/src/app/pages/user/projet-editor/ depuis la base. Ajouter conversation.service.ts et project-files.service.ts dans core/services/. Mettre à jour server-data.js (routes /api/conversations et /api/file-projects). Mettre à jour admin.component et admin-theme. Mettre à jour electron/ et packages."
+    },
+    {
+      "baseVersion": "B0.023",
+      "date": "2026-05-02T20:36:09.747Z",
+      "modRef": "mod-022",
+      "title": "Admin deploy : routes propagation + query mode-aware",
+      "propagationRequired": false,
+      "syncedBy": [
+        "THI-V01"
+      ],
+      "propagationScope": [
+        "server/server-data.js",
+        "frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.html"
+      ],
+      "propagationNote": "Copier server-data.js (GET /api/admin/deployments mode-aware + routes GET/PATCH /api/admin/propagation). Copier admin-deployments.component.ts et .html. Copier data/base-propagation.json dans le child."
+    },
+    {
+      "baseVersion": "B0.024",
+      "date": "2026-05-02T20:59:19.004Z",
+      "modRef": "mod-023",
+      "title": "Admin deploy : colorisation ligne courante + fix propagation child-only + filter baseSynced",
+      "propagationRequired": false,
+      "syncedBy": [
+        "THI-V01"
+      ],
+      "propagationScope": [
+        "frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.html",
+        "data/base-propagation.json"
+      ],
+      "propagationNote": "Copier les 2 fichiers du composant admin-deployments. Corriger data/base-propagation.json si B0.21 a encore propagationRequired:true."
+    }
+  ]
+}

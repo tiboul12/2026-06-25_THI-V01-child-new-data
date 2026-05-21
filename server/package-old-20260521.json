@@ -1,0 +1,20 @@
+{
+  "name": "worganic-server",
+  "version": "1.0.0",
+  "description": "Express backend server for the Worganic Platform Angular migration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "start-data": "node server-data.js",
+    "dev-data": "node --watch server-data.js"
+  },
+  "dependencies": {
+    "basic-ftp": "^6.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mysql2": "^3.20.0",
+    "worganic-platform": "file:.."
+  }
+}

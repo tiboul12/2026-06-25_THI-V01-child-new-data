@@ -2,6 +2,250 @@
 
 Log des sync worganic-base -> ce child : fichiers mis a jour, fichiers renommes en backup, dates.
 
+## Sync base B0.048 - 2026-05-21 22:10
+
+### Fichiers issus de la base remplaces
+
+Les versions child precedentes ont ete sauvegardees :
+
+- `.gitignore`  ->  backup : `.gitignore-old-20260521`
+- `CLAUDE.md`  ->  backup : `CLAUDE-old-20260521.md`
+- `README.md`  ->  backup : `README-old-20260521.md`
+- `data/base-propagation.json`  ->  backup : `data/base-propagation-old-20260521.json`
+- `docs/structure/projet-editor.component.md`  ->  backup : `docs\structure/projet-editor.component-old-20260521.md`
+- `electron/executor/server-executor.js`  ->  backup : `electron\executor/server-executor-old-20260521.js`
+- `frankenstein/angular.json`  ->  backup : `frankenstein/angular-old-20260521.json`
+- `frankenstein/package-lock.json`  ->  backup : `frankenstein/package-lock-old-20260521.json`
+- `frankenstein/src/app/core/services/config.service.ts`  ->  backup : `frankenstein\src\app\core\services/config.service-old-20260521.ts`
+- `frankenstein/src/app/core/services/project-files.service.ts`  ->  backup : `frankenstein\src\app\core\services/project-files.service-old-20260521.ts`
+- `frankenstein/src/app/core/services/wo-action-history.service.ts`  ->  backup : `frankenstein\src\app\core\services/wo-action-history.service-old-20260521.ts`
+- `frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.html`  ->  backup : `frankenstein\src\app\pages\admin\tabs\admin-deployments/admin-deployments.component-old-20260521.html`
+- `frankenstein/src/app/pages/admin/tabs/admin-help/admin-help.component.html`  ->  backup : `frankenstein\src\app\pages\admin\tabs\admin-help/admin-help.component-old-20260521.html`
+- `frankenstein/src/app/pages/public/landing/landing.component.html`  ->  backup : `frankenstein\src\app\pages\public\landing/landing.component-old-20260521.html`
+- `frankenstein/src/app/pages/user/config/config.component.html`  ->  backup : `frankenstein\src\app\pages\user\config/config.component-old-20260521.html`
+- `frankenstein/src/app/pages/user/config/config.component.ts`  ->  backup : `frankenstein\src\app\pages\user\config/config.component-old-20260521.ts`
+- `frankenstein/src/app/pages/user/home/home.component.ts`  ->  backup : `frankenstein\src\app\pages\user\home/home.component-old-20260521.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.html`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-conversation/projet-conversation.component-old-20260521.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.ts`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-conversation/projet-conversation.component-old-20260521.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-editor-zone/projet-editor-zone.component-old-20260521.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-editor-zone/projet-editor-zone.component-old-20260521.scss`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-editor-zone/projet-editor-zone.component-old-20260521.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-sidebar/projet-sidebar.component-old-20260521.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-sidebar/projet-sidebar.component-old-20260521.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component.html`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-statusbar/projet-statusbar.component-old-20260521.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component.ts`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-statusbar/projet-statusbar.component-old-20260521.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-toolbar/projet-toolbar.component-old-20260521.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.ts`  ->  backup : `frankenstein\src\app\pages\user\projet-editor\components\projet-toolbar/projet-toolbar.component-old-20260521.ts`
+- `frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html`  ->  backup : `frankenstein\src\app\pages\user\projet-editor/projet-editor.component-old-20260521.html`
+- `frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts`  ->  backup : `frankenstein\src\app\pages\user\projet-editor/projet-editor.component-old-20260521.ts`
+- `frankenstein/src/app/tools/wo/wo-actions/wo-actions-widget.component.html`  ->  backup : `frankenstein\src\app\tools\wo\wo-actions/wo-actions-widget.component-old-20260521.html`
+- `frankenstein/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component.ts`  ->  backup : `frankenstein\src\app\tools\wo\wo-tools-admin/wo-tools-admin.component-old-20260521.ts`
+- `frankenstein/src/environments/environment.prod.ts`  ->  backup : `frankenstein\src\environments/environment.prod-old-20260521.ts`
+- `server/init-db.js`  ->  backup : `server/init-db-old-20260521.js`
+- `server/package-lock.json`  ->  backup : `server/package-lock-old-20260521.json`
+- `server/package.json`  ->  backup : `server/package-old-20260521.json`
+- `server/server-data.js`  ->  backup : `server/server-data-old-20260521.js`
+
+### Fichiers child preserves (merge=ours)
+
+- `data/child/app.json`
+- `data/child/home.json`
+- `data/child/landing.json`
+- `data/child/nav.json`
+- `data/child/theme.json`
+- `data/config/conf.json`
+- `data/histoModif.json`
+- `frankenstein/src/app/child/child-admin-tabs.ts`
+- `frankenstein/src/app/child/child-routes.ts`
+- `frankenstein/src/environments/environment.ts`
+- `version.json`
+
+### Fichiers presents uniquement cote child (non concernes)
+
+- `.claude/settings.local.json`
+- `.gitattributes`
+- `.gitignore-old-20260506`
+- `.gitignore-old-20260516`
+- `B0.33`
+- `B0.35`
+- `B0.36`
+- `B0.38`
+- `B0.39`
+- `B0.40`
+- `B0.41`
+- `CLAUDE-old-20260506.md`
+- `CLAUDE-old-20260516.md`
+- `README-old-20260506.md`
+- `README-old-20260516.md`
+- `REGLES_GESTION_PROJET.md`
+- `THI-2026-04-gestion-fichiers-v2.md`
+- `THI-V01`
+- `data/base-propagation-old-20260506.json`
+- `data/base-propagation-old-20260516.json`
+- `data/child/custom.css`
+- `data/config/github.json.example`
+- `data/frankenstein-projects.json`
+- `data/projets/0475514d-ed29-407d-8cbf-f837232cac46`
+- `data/projets/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52`
+- `data/projets/projet-001-worganic-platform/Aa0-prompt.md`
+- `data/projets/projet-001-worganic-platform/Bg0-Exigences_Fonctionnelles_Structurees.md`
+- `data/projets/projet-001-worganic-platform/Bg0-Prompt.md`
+- `data/projets/projet-001-worganic-platform/Cg0-Prompt.md`
+- `data/projets/projet-001-worganic-platform/Cg1-prompt-final.md`
+- `data/projets/projet-001-worganic-platform/Cg2-GUIDE_UTILISATION.md`
+- `data/projets/projet-001-worganic-platform/Cg3-INDEX.md`
+- `data/projets/projet-001-worganic-platform/Cg4-README-PROJET.md`
+- `data/projets/projet-001-worganic-platform/Dg0-Prompt.md`
+- `data/projets/projet-001-worganic-platform/Dg1-storyboard-prompt.md`
+- `data/projets/projet-001-worganic-platform/Dg1-storyboard.html`
+- `data/projets/projet-001-worganic-platform/Dg2-infographie-parcours-utilisateur.html`
+- `data/projets/projet-001-worganic-platform/Dg3-STORYBOARDS-SYNTHESE.md`
+- `data/projets/projet-001-worganic-platform/Dg4-INDEX-STORYBOARDS.md`
+- `data/projets/projet-001-worganic-platform/Dg5-LIVRABLES-COMPLETS.md`
+- `data/projets/projet-001-worganic-platform/Eg0-Prompt.md`
+- `data/projets/projet-001-worganic-platform/Eg1-mockup.html`
+- `data/projets/projet-001-worganic-platform/Eg2-GUIDE-VALIDATION-MOCKUP.md`
+- `data/projets/projet-001-worganic-platform/Eg3-SYNTHESE-MOCKUP.md`
+- `data/projets/projet-001-worganic-platform/project.json`
+- `docs/infos-synchro.md`
+- `docs/notes.txt`
+- `docs/structure/projet-editor.component-old-20260516.md`
+- `docs/structure/projet-update-banner.component.md`
+- `docs/structure/projets.component.md`
+- `frankenstein/angular-old-20260516.json`
+- `frankenstein/package-lock-old-20260516.json`
+- `frankenstein/package-old-20260516.json`
+- `frankenstein/src/app/app.component-old-20260516.html`
+- `frankenstein/src/app/app.component-old-20260516.ts`
+- `frankenstein/src/app/app.config-old-20260516.ts`
+- `frankenstein/src/app/core/services/config.service-old-20260506.ts`
+- `frankenstein/src/app/core/services/config.service-old-20260516.ts`
+- `frankenstein/src/app/core/services/project-files.service-old-20260516.ts`
+- `frankenstein/src/app/core/services/project.service.ts`
+- `frankenstein/src/app/core/services/projet-collab.service.ts`
+- `frankenstein/src/app/core/services/wo-action-history.service-old-20260506.ts`
+- `frankenstein/src/app/core/services/wo-action-history.service-old-20260516.ts`
+- `frankenstein/src/app/pages/admin/admin.component-old-20260516.ts`
+- `frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component-old-20260506.html`
+- `frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component-old-20260516.html`
+- `frankenstein/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component-old-20260516.ts`
+- `frankenstein/src/app/pages/admin/tabs/admin-help/admin-help.component-old-20260506.html`
+- `frankenstein/src/app/pages/admin/tabs/admin-help/admin-help.component-old-20260516.html`
+- `frankenstein/src/app/pages/admin/tabs/admin-help/admin-help.component-old-20260516.ts`
+- `frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html`
+- `frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts`
+- `frankenstein/src/app/pages/admin/tabs/admin-theme/admin-theme.component-old-20260516.ts`
+- `frankenstein/src/app/pages/admin/tabs/admin-users/admin-users.component-old-20260516.ts`
+- `frankenstein/src/app/pages/child/admin-theme/admin-theme.component.html`
+- `frankenstein/src/app/pages/child/admin-theme/admin-theme.component.ts`
+- `frankenstein/src/app/pages/public/landing/landing.component-old-20260506.html`
+- `frankenstein/src/app/pages/public/landing/landing.component-old-20260516.html`
+- `frankenstein/src/app/pages/public/landing/landing.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/config/config.component-old-20260506.ts`
+- `frankenstein/src/app/pages/user/config/config.component-old-20260516.html`
+- `frankenstein/src/app/pages/user/config/config.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/deployments/deployments.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/documents/documents.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/editor/editor.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/home/home.component-old-20260506.ts`
+- `frankenstein/src/app/pages/user/home/home.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/comments-drawer/comments-drawer.component.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/image-props-panel/image-props-panel.component.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260506.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260506.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260516.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-diff/projet-diff.component.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-diff/projet-diff.component.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260506.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260506.scss`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260506.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260516.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260516.scss`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260506.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260506.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260516.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260506.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260506.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260516.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.html`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.scss`
+- `frankenstein/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.ts`
+- `frankenstein/src/app/pages/user/projet-editor/components/slash-command-menu/slash-command-menu.component.ts`
+- `frankenstein/src/app/pages/user/projet-editor/projet-editor.component-old-20260506.html`
+- `frankenstein/src/app/pages/user/projet-editor/projet-editor.component-old-20260506.ts`
+- `frankenstein/src/app/pages/user/projet-editor/projet-editor.component-old-20260516.html`
+- `frankenstein/src/app/pages/user/projet-editor/projet-editor.component-old-20260516.ts`
+- `frankenstein/src/app/pages/user/projet-editor/services/project-comments.service.ts`
+- `frankenstein/src/app/pages/user/projets/projet-search/projet-search.component.ts`
+- `frankenstein/src/app/pages/user/projets/projets.component.html`
+- `frankenstein/src/app/pages/user/projets/projets.component.scss`
+- `frankenstein/src/app/pages/user/projets/projets.component.ts`
+- `frankenstein/src/app/pages/user/projets/search.service.ts`
+- `frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component-old-20260516.ts`
+- `frankenstein/src/app/shared/help/worg-help-drawer.component-old-20260516.ts`
+- `frankenstein/src/app/shared/layout/footer/footer.component-old-20260516.html`
+- `frankenstein/src/app/shared/layout/footer/footer.component-old-20260516.ts`
+- `frankenstein/src/app/shared/layout/header/header.component-old-20260516.html`
+- `frankenstein/src/app/shared/layout/header/header.component-old-20260516.ts`
+- `frankenstein/src/app/shared/layout/nav/nav.component-old-20260516.ts`
+- `frankenstein/src/app/shared/ui/markdown-editor/markdown-editor.component-old-20260516.ts`
+- `frankenstein/src/app/tools/action-report-modal/action-report-modal.component-old-20260516.html`
+- `frankenstein/src/app/tools/action-report-modal/action-report-modal.component-old-20260516.ts`
+- `frankenstein/src/app/tools/cahier-recette/cahier-recette-doc.component-old-20260516.ts`
+- `frankenstein/src/app/tools/cahier-recette/cahier-recette-widget.component-old-20260516.html`
+- `frankenstein/src/app/tools/cahier-recette/cahier-recette-widget.component-old-20260516.ts`
+- `frankenstein/src/app/tools/cahier-recette/cahier-recette.component-old-20260516.html`
+- `frankenstein/src/app/tools/cahier-recette/cahier-recette.component-old-20260516.ts`
+- `frankenstein/src/app/tools/tchat-ia/tchat-ia-doc.component-old-20260516.html`
+- `frankenstein/src/app/tools/tchat-ia/tchat-ia-doc.component-old-20260516.ts`
+- `frankenstein/src/app/tools/tchat-ia/tchat-ia.component-old-20260516.html`
+- `frankenstein/src/app/tools/tchat-ia/tchat-ia.component-old-20260516.ts`
+- `frankenstein/src/app/tools/ticket-widget/ticket-widget-doc.component-old-20260516.html`
+- `frankenstein/src/app/tools/ticket-widget/ticket-widget-doc.component-old-20260516.ts`
+- `frankenstein/src/app/tools/ticket-widget/ticket-widget.component-old-20260516.html`
+- `frankenstein/src/app/tools/ticket-widget/ticket-widget.component-old-20260516.ts`
+- `frankenstein/src/app/tools/wo/wo-actions/wo-actions-widget.component-old-20260506.html`
+- `frankenstein/src/app/tools/wo/wo-actions/wo-actions-widget.component-old-20260516.html`
+- `frankenstein/src/app/tools/wo/wo-actions/wo-actions-widget.component-old-20260516.ts`
+- `frankenstein/src/app/tools/wo/wo-actions/wo-actions.component-old-20260506.html`
+- `frankenstein/src/app/tools/wo/wo-actions/wo-actions.component-old-20260516.html`
+- `frankenstein/src/app/tools/wo/wo-actions/wo-actions.component-old-20260516.ts`
+- `frankenstein/src/app/tools/wo/wo-history/wo-history.component-old-20260516.html`
+- `frankenstein/src/app/tools/wo/wo-history/wo-history.component-old-20260516.ts`
+- `frankenstein/src/app/tools/wo/wo-ia-logs/wo-ia-logs.component-old-20260516.html`
+- `frankenstein/src/app/tools/wo/wo-ia-logs/wo-ia-logs.component-old-20260516.ts`
+- `frankenstein/src/app/tools/wo/wo-tchat-ia/wo-tchat-ia-widget.component-old-20260516.ts`
+- `frankenstein/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component-old-20260506.ts`
+- `frankenstein/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component-old-20260516.html`
+- `frankenstein/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component-old-20260516.ts`
+- `frankenstein/src/app/tools/wo/wo-tools-panel/wo-tools-panel.component-old-20260516.html`
+- `frankenstein/src/app/tools/wo/wo-tools-panel/wo-tools-panel.component-old-20260516.ts`
+- `frankenstein/src/environments/environment.prod-old-20260506.ts`
+- `frankenstein/src/environments/environment.prod-old-20260516.ts`
+- `launch-frankenstein sans IA.bat`
+- `launch-frankenstein.bat`
+- `server/init-db-old-20260506.js`
+- `server/init-db-old-20260516.js`
+- `server/migrate-projets-to-git.js`
+- `server/modules/ftp-service.js`
+- `server/modules/github-service.js`
+- `server/modules/projet-git.js`
+- `server/server-data-old-20260506.js`
+- `server/server-data-old-20260516.js`
+- `tests/TESTS_PROJET.md`
+- `tests/read_me.txt`
+- `tests/run-tests.bat`
+- `tests/test-zone-projet.js`
+- `zone.png`
+
+---
+
 ## Sync base B0.44 - 2026-05-16 13:45
 
 ### Fichiers issus de la base remplaces

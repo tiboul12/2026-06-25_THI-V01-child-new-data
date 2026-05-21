@@ -1,0 +1,410 @@
+<div class="landing-root" (keydown)="onKeydown($event)" tabindex="0">
+
+  <!-- ─── ANIMATED BACKGROUND ─── -->
+  <div class="bg-layer" aria-hidden="true">
+    <div class="grid-lines"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+    @for (p of particles; track p) {
+      <div
+        class="particle"
+        [style.left.%]="p.x"
+        [style.top.%]="p.y"
+        [style.width.px]="p.size"
+        [style.height.px]="p.size"
+        [style.animationDuration.s]="p.duration"
+        [style.animationDelay.s]="p.delay">
+      </div>
+    }
+  </div>
+
+  <!-- ─── HEADER ─── -->
+  <header class="landing-header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <span class="material-symbols-outlined">rocket_launch</span>
+        </div>
+        <span class="logo-text">{{ appName }}</span>
+      </div>
+      <nav class="header-nav">
+        <button class="btn-login" (click)="openLogin()" [disabled]="dbError">
+          <span class="material-symbols-outlined">login</span>
+          Connexion
+        </button>
+        <button class="btn-register" (click)="openRegister()" [disabled]="dbError">
+          <span class="material-symbols-outlined">person_add</span>
+          Créer un compte
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ─── HERO ─── -->
+  <section class="hero">
+    <div class="hero-badge">
+      <span class="material-symbols-outlined">auto_awesome</span>
+      Propulsé par IA · Claude &amp; Gemini
+    </div>
+
+    <!-- Bannière erreur BDD -->
+    @if (dbError) {
+      <div class="db-error-banner">
+        <span class="material-symbols-outlined">error</span>
+        <div>
+          <strong>Service indisponible</strong>
+          <p>La connexion à la base de données a échoué. Veuillez contacter l'administrateur.</p>
+          <p class="db-error-ip">IP : {{ db.clientIp() || 'non disponible' }}</p>
+          <button class="db-retry-btn" (click)="retryDb()" [disabled]="retrying">
+            <span class="material-symbols-outlined">{{ retrying ? 'hourglass_empty' : 'refresh' }}</span>
+            {{ retrying ? 'Vérification...' : 'Retester la connexion' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <h1 class="hero-title">
+      Automatisez vos<br>
+      <span class="gradient-text">workflows créatifs</span><br>
+      avec l'intelligence artificielle
+    </h1>
+
+    <p class="hero-subtitle">
+      Frankenstein Junior orchestre vos projets, génère du contenu IA à la demande
+      et pilote chaque étape de votre pipeline de création.
+    </p>
+
+    <div class="hero-cta">
+      <button class="cta-primary" (click)="openRegister()" [disabled]="dbError">
+        <span class="material-symbols-outlined">rocket_launch</span>
+        Commencer gratuitement
+      </button>
+      <button class="cta-secondary" (click)="openLogin()" [disabled]="dbError">
+        <span class="material-symbols-outlined">arrow_forward</span>
+        Se connecter
+      </button>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip">
+      <div class="stat">
+        <span class="stat-value">2</span>
+        <span class="stat-label">Providers IA</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value">12+</span>
+        <span class="stat-label">Modèles AI</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value">∞</span>
+        <span class="stat-label">Workflows</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value">100%</span>
+        <span class="stat-label">Customisable</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FEATURES ─── -->
+  <section class="features">
+    <div class="section-header">
+      <span class="section-tag">Fonctionnalités</span>
+      <h2 class="section-title">Tout ce dont vous avez besoin</h2>
+      <p class="section-desc">Une plateforme complète pour automatiser votre production de contenu</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card card-purple">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined">psychology</span>
+        </div>
+        <h3>Intelligence Artificielle</h3>
+        <p>Intégration native avec Claude (Anthropic) et Gemini (Google). Streaming SSE en temps réel pour suivre l'exécution.</p>
+        <div class="feature-tags">
+          <span>Claude</span><span>Gemini</span><span>SSE</span>
+        </div>
+      </div>
+
+      <div class="feature-card card-blue">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined">account_tree</span>
+        </div>
+        <h3>Gestion de Projets</h3>
+        <p>Créez et gérez des projets complexes avec pipeline d'étapes, validation, progression et suivi en temps réel.</p>
+        <div class="feature-tags">
+          <span>Pipeline</span><span>Steps</span><span>Progress</span>
+        </div>
+      </div>
+
+      <div class="feature-card card-green">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined">auto_fix_high</span>
+        </div>
+        <h3>Workflows Automatisés</h3>
+        <p>Définissez des modèles de workflows réutilisables. L'IA exécute chaque étape de manière autonome.</p>
+        <div class="feature-tags">
+          <span>Templates</span><span>Automation</span><span>Réutilisable</span>
+        </div>
+      </div>
+
+      <div class="feature-card card-orange">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined">manage_accounts</span>
+        </div>
+        <h3>Panel Admin Complet</h3>
+        <p>Gérez documents, étapes, rôles, catégories et modèles IA depuis un espace centralisé et puissant.</p>
+        <div class="feature-tags">
+          <span>CRUD</span><span>Rôles</span><span>Config</span>
+        </div>
+      </div>
+
+      <div class="feature-card card-pink">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined">edit_document</span>
+        </div>
+        <h3>Éditeur Markdown</h3>
+        <p>Éditez vos documents, prompts et contenus dans un éditeur Markdown intégré avec prévisualisation live.</p>
+        <div class="feature-tags">
+          <span>Markdown</span><span>Preview</span><span>Live</span>
+        </div>
+      </div>
+
+      <div class="feature-card card-teal">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined">palette</span>
+        </div>
+        <h3>Design Personnalisable</h3>
+        <p>3 thèmes intégrés (Dark, Light, Pink), système de design cohérent avec Tailwind CSS et variables CSS.</p>
+        <div class="feature-tags">
+          <span>Dark Mode</span><span>Thèmes</span><span>Tailwind</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── TECH STACK ─── -->
+  <section class="tech-section">
+    <div class="tech-inner">
+      <span class="tech-label">Stack technique</span>
+      <div class="tech-pills">
+        <span class="tech-pill">Angular 18</span>
+        <span class="tech-pill">TypeScript</span>
+        <span class="tech-pill">Tailwind CSS</span>
+        <span class="tech-pill">Express.js</span>
+        <span class="tech-pill">Electron</span>
+        <span class="tech-pill">Claude API</span>
+        <span class="tech-pill">Gemini API</span>
+        <span class="tech-pill">SSE Streaming</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CTA BOTTOM ─── -->
+  <section class="cta-section">
+    <div class="cta-card">
+      <div class="cta-glow"></div>
+      <h2>Prêt à automatiser vos workflows ?</h2>
+      <p>Rejoignez la plateforme et laissez l'IA travailler pour vous</p>
+      <div class="cta-buttons">
+        <button class="cta-primary-lg" (click)="openRegister()" [disabled]="dbError">
+          <span class="material-symbols-outlined">rocket_launch</span>
+          Créer mon compte
+        </button>
+        <button class="cta-ghost" (click)="openLogin()" [disabled]="dbError">
+          Déjà un compte ? Se connecter
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ─── -->
+  <footer class="landing-footer">
+    <span>© {{ copyrightYear }} {{ copyrightHolder }}</span>
+    <span class="footer-sep">·</span>
+    <span>{{ appName }}</span>
+  </footer>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════
+LOGIN MODAL
+════════════════════════════════════════════════ -->
+@if (showLoginModal) {
+  <div
+    class="modal-overlay"
+    (click)="onOverlayClick($event)"
+    role="dialog" aria-modal="true" aria-label="Connexion">
+    <div class="modal-box">
+      <!-- Header -->
+      <div class="modal-head">
+        <div class="modal-icon modal-icon-purple">
+          <span class="material-symbols-outlined">login</span>
+        </div>
+        <div>
+          <h2 class="modal-title">Connexion</h2>
+          <p class="modal-sub">Accédez à votre espace Frankenstein Junior</p>
+        </div>
+        <button class="modal-close" (click)="closeModals()" aria-label="Fermer">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <!-- Body -->
+      <div class="modal-body">
+        @if (loginError) {
+          <div class="modal-error">
+            <span class="material-symbols-outlined">error</span>
+            {{ loginError }}
+          </div>
+        }
+        <form autocomplete="on" (ngSubmit)="submitLogin()">
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <div class="input-wrap">
+              <span class="material-symbols-outlined input-icon">mail</span>
+              <input id="login-email"
+                type="email"
+                [(ngModel)]="loginEmail"
+                name="login-email"
+                placeholder="votre&#64;email.com"
+                (keydown.enter)="submitLogin()"
+                autocomplete="email" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="login-password">Mot de passe</label>
+              <div class="input-wrap">
+                <span class="material-symbols-outlined input-icon">lock</span>
+                <input id="login-password"
+                  type="password"
+                  [(ngModel)]="loginPassword"
+                  name="login-password"
+                  placeholder="••••••••"
+                  autocomplete="current-password" />
+                </div>
+              </div>
+              <button type="submit" class="btn-submit" [disabled]="loginLoading">
+                @if (!loginLoading) {
+                  <span class="material-symbols-outlined">login</span>
+                }
+                @if (loginLoading) {
+                  <span class="spinner"></span>
+                }
+                {{ loginLoading ? 'Connexion...' : 'Se connecter' }}
+              </button>
+            </form>
+            <p class="modal-switch">
+              Pas encore de compte ?
+              <button class="link-btn" (click)="openRegister()">Créer un compte</button>
+            </p>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ═══════════════════════════════════════════════
+    REGISTER MODAL
+    ════════════════════════════════════════════════ -->
+    @if (showRegisterModal) {
+      <div
+        class="modal-overlay"
+        (click)="onOverlayClick($event)"
+        role="dialog" aria-modal="true" aria-label="Inscription">
+        <div class="modal-box">
+          <!-- Header -->
+          <div class="modal-head">
+            <div class="modal-icon modal-icon-green">
+              <span class="material-symbols-outlined">person_add</span>
+            </div>
+            <div>
+              <h2 class="modal-title">Créer un compte</h2>
+              <p class="modal-sub">Rejoignez la plateforme Frankenstein Junior</p>
+            </div>
+            <button class="modal-close" (click)="closeModals()" aria-label="Fermer">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <!-- Body -->
+          <div class="modal-body">
+            @if (registerError) {
+              <div class="modal-error">
+                <span class="material-symbols-outlined">error</span>
+                {{ registerError }}
+              </div>
+            }
+            <form autocomplete="on" (ngSubmit)="submitRegister()">
+              <div class="form-group">
+                <label for="reg-username">Nom d'utilisateur</label>
+                <div class="input-wrap">
+                  <span class="material-symbols-outlined input-icon">person</span>
+                  <input id="reg-username"
+                    type="text"
+                    [(ngModel)]="registerUsername"
+                    name="reg-username"
+                    placeholder="johndoe"
+                    autocomplete="username" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="reg-email">Email</label>
+                  <div class="input-wrap">
+                    <span class="material-symbols-outlined input-icon">mail</span>
+                    <input id="reg-email"
+                      type="email"
+                      [(ngModel)]="registerEmail"
+                      placeholder="votre&#64;email.com"
+                      autocomplete="email" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="reg-password">Mot de passe</label>
+                      <div class="input-wrap">
+                        <span class="material-symbols-outlined input-icon">lock</span>
+                        <input id="reg-password"
+                          type="password"
+                          [(ngModel)]="registerPassword"
+                          name="reg-password"
+                          placeholder="Min. 6 caractères"
+                          autocomplete="new-password" />
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label for="reg-password2">Confirmer</label>
+                        <div class="input-wrap">
+                          <span class="material-symbols-outlined input-icon">lock_check</span>
+                          <input id="reg-password2"
+                            type="password"
+                            [(ngModel)]="registerPasswordConfirm"
+                            name="reg-password2"
+                            placeholder="Répéter le mot de passe"
+                            autocomplete="new-password" />
+                          </div>
+                        </div>
+                      </div>
+                      <div class="register-info">
+                        <span class="material-symbols-outlined">info</span>
+                        Le premier compte créé obtient automatiquement le rôle <strong>Admin</strong>
+                      </div>
+                      <button type="submit" class="btn-submit btn-green" [disabled]="registerLoading">
+                        @if (!registerLoading) {
+                          <span class="material-symbols-outlined">person_add</span>
+                        }
+                        @if (registerLoading) {
+                          <span class="spinner"></span>
+                        }
+                        {{ registerLoading ? 'Inscription...' : 'Créer mon compte' }}
+                      </button>
+                    </form>
+                    <p class="modal-switch">
+                      Déjà un compte ?
+                      <button class="link-btn" (click)="openLogin()">Se connecter</button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            }

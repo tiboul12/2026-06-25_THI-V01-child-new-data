@@ -1,0 +1,39 @@
+<div class="flex items-center justify-between h-8 px-4 border-t border-light-border dark:border-white/8 bg-light-surface dark:bg-black/20 flex-shrink-0 text-[10px]">
+
+  <div class="flex items-center gap-3">
+    <!-- Statut -->
+    <div class="flex items-center gap-1.5 px-2 py-0.5 rounded border border-light-border dark:border-white/10 cursor-pointer hover:border-light-primary dark:hover:border-primary transition-colors">
+      <span class="material-symbols-outlined text-xs">{{ status === 'Publié' ? 'check_circle' : 'edit_document' }}</span>
+      <span class="font-semibold text-light-text dark:text-white/70">{{ status }}</span>
+      <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/30">expand_more</span>
+    </div>
+
+    <!-- Badge backend FTP -->
+    <div *ngIf="backupType === 'ftp'" class="flex items-center gap-1 px-2 py-0.5 rounded border border-green-500/30 bg-green-500/5">
+      <span class="material-symbols-outlined text-xs text-green-500">dns</span>
+      <span class="font-semibold text-green-500">FTP</span>
+    </div>
+
+    <!-- Indicateur dirty -->
+    <span *ngIf="isDirty" class="text-yellow-500 font-medium">● Non sauvegardé</span>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <!-- Document lié -->
+    <div *ngIf="linkedDoc" class="flex items-center gap-1.5 px-2 py-0.5 rounded border border-light-border dark:border-white/10 cursor-pointer hover:border-light-primary dark:hover:border-primary transition-colors">
+      <span class="material-symbols-outlined text-xs text-light-primary dark:text-primary">check_circle</span>
+      <span class="font-semibold text-light-text dark:text-white/70">Doc {{ linkedDoc }}</span>
+      <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/30">expand_more</span>
+    </div>
+    <div *ngIf="!linkedDoc" class="flex items-center gap-1.5 px-2 py-0.5 rounded border border-light-border dark:border-white/10 cursor-pointer hover:border-light-primary dark:hover:border-primary transition-colors">
+      <span class="material-symbols-outlined text-xs text-light-primary dark:text-primary">check_circle</span>
+      <span class="font-semibold text-light-text dark:text-white/70">Doc Accréditation</span>
+      <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/30">expand_more</span>
+    </div>
+
+    <!-- Infos curseur -->
+    <span class="text-light-text-muted dark:text-white/30">Ln 1, Col 1</span>
+    <span class="text-light-text-muted dark:text-white/30">UTF-8</span>
+  </div>
+
+</div>

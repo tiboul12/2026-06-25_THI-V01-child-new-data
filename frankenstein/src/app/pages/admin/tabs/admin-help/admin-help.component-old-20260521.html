@@ -1,0 +1,179 @@
+@if (helpError()) {
+  <div class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{{ helpError() }}</div>
+}
+
+@if (loadingHelp()) {
+  <div class="flex items-center justify-center py-16">
+    <span class="material-symbols-outlined text-3xl text-light-primary dark:text-primary animate-spin">progress_activity</span>
+  </div>
+}
+
+@if (!loadingHelp()) {
+
+  <!-- Formulaire help (création ou édition) -->
+  @if (showNewHelpModal() || editingHelp()) {
+    <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-light-primary/30 dark:border-primary/20 overflow-hidden">
+      <div class="px-5 py-3 bg-light-primary/5 dark:bg-primary/5 border-b border-light-primary/20 dark:border-primary/10 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm text-light-primary dark:text-primary">
+            {{ editingHelp() ? 'edit' : 'add' }}
+          </span>
+          <span class="text-sm font-semibold text-light-text dark:text-white">
+            {{ editingHelp() ? 'Modifier l\'entrée #' + editingHelp()!.id : 'Nouvelle entrée d\'aide' }}
+          </span>
+        </div>
+        <button (click)="editingHelp() ? closeEditHelp() : closeNewHelpModal()"
+                class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+      <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Titre *</label>
+          @if (editingHelp()) {
+            <input type="text" [(ngModel)]="editHelpTitle"
+                   class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+          } @else {
+            <input type="text" [(ngModel)]="newHelpTitle" placeholder="ex: Comment créer un projet ?"
+                   class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+          }
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Page</label>
+          @if (editingHelp()) {
+            <input type="text" [(ngModel)]="editHelpPage" placeholder="ex: /projets, /home, /admin"
+                   class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm font-mono focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+          } @else {
+            <input type="text" [(ngModel)]="newHelpPage" placeholder="ex: /projets, /home, /admin"
+                   class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm font-mono focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+          }
+        </div>
+        @if (editingHelp()) {
+          <div>
+            <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">
+              ID du tag <span class="normal-case font-normal text-light-text-muted dark:text-white/30">(utilisé dans &lt;worg-help [helpId]="N"&gt;)</span>
+            </label>
+            <input type="number" [(ngModel)]="editHelpId" min="1"
+                   class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm font-mono focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+          </div>
+        }
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Texte *</label>
+          @if (editingHelp()) {
+            <textarea [(ngModel)]="editHelpText" rows="4"
+                      class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors resize-none"></textarea>
+          } @else {
+            <textarea [(ngModel)]="newHelpText" rows="4" placeholder="Contenu de l'aide..."
+                      class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors resize-none"></textarea>
+          }
+        </div>
+      </div>
+      <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
+        <button (click)="editingHelp() ? closeEditHelp() : closeNewHelpModal()"
+                class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+          Annuler
+        </button>
+        @if (editingHelp()) {
+          <button (click)="saveHelp()" [disabled]="!editHelpTitle.trim() || !editHelpText.trim() || savingHelp()"
+                  class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-light-primary dark:bg-primary text-white transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-light-primary/20 dark:shadow-primary/20">
+            @if (savingHelp()) { <span class="material-symbols-outlined text-base animate-spin">progress_activity</span> }
+            @else { <span class="material-symbols-outlined text-base">save</span> }
+            Enregistrer
+          </button>
+        } @else {
+          <button (click)="createHelp()" [disabled]="!newHelpTitle.trim() || !newHelpText.trim() || creatingHelp()"
+                  class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-light-primary dark:bg-primary text-white transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-light-primary/20 dark:shadow-primary/20">
+            @if (creatingHelp()) { <span class="material-symbols-outlined text-base animate-spin">progress_activity</span> }
+            @else { <span class="material-symbols-outlined text-base">add</span> }
+            Créer
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Tableau help -->
+  <div class="bg-white dark:bg-surface rounded-xl border border-light-border dark:border-white/10 overflow-hidden">
+    <div class="px-5 py-3 border-b border-light-border dark:border-white/10 flex items-center justify-between">
+      <div class="flex items-center gap-1.5">
+        <span class="text-sm font-semibold text-light-text dark:text-white">Toutes les entrées d'aide</span>
+        <worg-help [helpId]="2" />
+      </div>
+      @if (!showNewHelpModal() && !editingHelp()) {
+        <button (click)="openNewHelpModal()"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-light-primary dark:bg-primary text-white transition-all hover:scale-105 shadow-sm shadow-light-primary/20 dark:shadow-primary/20">
+          <span class="material-symbols-outlined text-sm">add</span>
+          Nouvelle entrée
+        </button>
+      }
+    </div>
+
+    @if (helpItems().length === 0) {
+      <div class="text-center py-12 text-light-text-muted dark:text-white/40 text-sm">Aucune entrée d'aide</div>
+    }
+
+    @if (helpItems().length > 0) {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-light-border dark:border-white/10 text-[11px] uppercase tracking-wider text-light-text-muted dark:text-white/30">
+              <th class="text-left px-5 py-3 w-12">ID</th>
+              <th class="text-left px-5 py-3">Titre</th>
+              <th class="text-left px-5 py-3">Page</th>
+              <th class="text-left px-5 py-3">Texte</th>
+              <th class="text-right px-5 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of helpItems(); track item.id) {
+              <tr class="border-b border-light-border/50 dark:border-white/5 transition-colors"
+                  [class]="editingHelp()?.id === item.id
+                    ? 'bg-light-primary/5 dark:bg-primary/5'
+                    : 'hover:bg-light-primary/5 dark:hover:bg-primary/5'">
+                <td class="px-5 py-3">
+                  <span class="font-mono text-xs font-bold px-2 py-1 rounded-md bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary cursor-pointer hover:bg-light-primary/20 dark:hover:bg-primary/20 transition-all"
+                        (click)="openEditHelp(item)" title="Modifier l'ID">
+                    #{{ item.id }}
+                  </span>
+                </td>
+                <td class="px-5 py-3 font-medium text-light-text dark:text-white">{{ item.title }}</td>
+                <td class="px-5 py-3">
+                  @if (item.page) {
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary border border-light-primary/20 dark:border-primary/20">
+                      {{ item.page }}
+                    </span>
+                  } @else {
+                    <span class="text-light-text-muted/40 dark:text-white/20 text-xs italic">—</span>
+                  }
+                </td>
+                <td class="px-5 py-3 text-light-text-muted dark:text-white/50 text-xs max-w-xs truncate">{{ item.text }}</td>
+                <td class="px-5 py-3">
+                  <div class="flex items-center gap-1 justify-end">
+                    <button (click)="openEditHelp(item)"
+                            class="p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all" title="Modifier">
+                      <span class="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                    @if (deletingHelpId() === item.id) {
+                      <div class="flex items-center gap-1">
+                        <span class="text-xs text-red-400">Confirmer ?</span>
+                        <button (click)="deleteHelp(item.id)"
+                                class="px-2 py-1 rounded text-xs font-bold bg-red-500 text-white hover:bg-red-600 transition-all">Oui</button>
+                        <button (click)="cancelDeleteHelp()"
+                                class="px-2 py-1 rounded text-xs font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 transition-all">Non</button>
+                      </div>
+                    } @else {
+                      <button (click)="confirmDeleteHelp(item.id)"
+                              class="p-1.5 rounded-lg hover:bg-red-500/10 text-light-text-muted dark:text-white/40 hover:text-red-400 transition-all" title="Supprimer">
+                        <span class="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+}
