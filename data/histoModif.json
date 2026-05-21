@@ -1221,6 +1221,44 @@
       "prompt": "le système commit et push automatiquement après chaque modification avec +01 pour les modification mineur et +1 pour les modifications majeur, mais lorsqu'on arrive à .99 cela pose problème car on passe à 1 qui est une version majeur. JE voudrais que tu change un peu le système et que tu mette à jour toutes les anciennes version avec 3 chiffres après la virgule au lieu de 2 et que tu mette donc à jour toutes les anciennes version (fichier d'historique des versions avec 000 exemple si on à actuellement B0.44 on aura maintenant B0.044). Il faudra donc changer pour les prochain commit mais aussi mettre à jour les anciens. Et tous ça dans la base mais aussi dans le child child principal : E:\\www\\projet creat projet 2026-01\\--projets--\\child--THI-V01 qui utilise son propre chiffrage et qui est aussi en 2 chiffres après la virgule et il faut le passé à 3, attention pour le child il est déjà passé à THI-1.08 et il faudra le mettre en THI-0.108 et idem pour les anciennent version exemple THI-0.95 en THI-0.195 etc",
       "startedAt": "2026-05-17T00:00:00.000Z",
       "completedAt": "2026-05-17T00:00:00.000Z"
+    },
+    {
+      "id": "mod-051",
+      "version": "B0.046",
+      "date": "2026-05-21T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:admin",
+      "title": "Fix config admin : options remises à zéro à la sauvegarde",
+      "description": "Correction d'un bug dans config.component.ts : les getters cliIaEnabled et apiKeysEnabled lisaient les mauvais signaux du service (tchatIaEnabled et ticketsEnabled au lieu de cliIaEnabled et apiKeysEnabled). De même, les toggles appelaient setTchatIaEnabled et setTicketsEnabled au lieu de setCliIaEnabled et setApiKeysEnabled. Ce mismatch faisait que les signaux corrects (fraîchement ajoutés dans config.service.ts) n'étaient jamais mis à jour par les toggles, et que saveKeys() envoyait les anciennes valeurs au serveur, réinitialisant les options à leur état initial.",
+      "files": [
+        "frankenstein/src/app/pages/user/config/config.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Sur le système de base dans l'admin général, lorsque je modifi des option et que je fait Sauvegarder, cela remet les options en état initial au lieu de les enregistrer, verifi ce qui ne fonctionne pas",
+      "startedAt": "2026-05-21T00:00:00.000Z",
+      "completedAt": "2026-05-21T00:00:00.000Z"
+    },
+    {
+      "id": "mod-052",
+      "version": "B0.046",
+      "date": "2026-05-21T00:05:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:config",
+      "title": "Fix : apiKeysEnabled et cliIaEnabled non persistés dans conf.json",
+      "description": "La condition de sauvegarde dans le POST /api/config/keys (server-data.js) ne listait pas cliIaEnabled ni apiKeysEnabled. Quand le toggle envoyait { apiKeysEnabled: val } seul, la condition était false et conf.json n'était jamais réécrit. La valeur était donc perdue au refresh. Ajout de cliIaEnabled !== undefined || apiKeysEnabled !== undefined dans la condition.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans les options je met sur enable \"Utiliser les IA Clés\" je fait sauvegarder. Tout est ok, mais si je réactualise la page, l'option est de nouveau activé, trouve le problème et corrige",
+      "startedAt": "2026-05-21T00:02:00.000Z",
+      "completedAt": "2026-05-21T00:05:00.000Z"
     }
   ]
 }

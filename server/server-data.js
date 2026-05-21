@@ -92,7 +92,7 @@ app.use(cors({
         // 'https://app.worganic.com'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Internal-Call']
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -672,6 +672,8 @@ app.get('/api/config/keys', (req, res) => {
             },
             appVersion: globalConf.appVersion || '',
             headerIaVisible: globalConf.headerIaVisible !== undefined ? globalConf.headerIaVisible : false,
+            cliIaEnabled: globalConf.cliIaEnabled !== undefined ? globalConf.cliIaEnabled : true,
+            apiKeysEnabled: globalConf.apiKeysEnabled !== undefined ? globalConf.apiKeysEnabled : true,
             // Préférences outils par utilisateur — stockées en DB (priorité sur flags globaux conf.json)
             enabledTools: {
                 tickets: userEnabledTools.tickets !== undefined ? userEnabledTools.tickets : (globalConf.ticketsEnabled || false),
@@ -698,7 +700,7 @@ app.post('/api/config/keys', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     try {
-        const { gemini, claude, cliConfig, appVersion, ticketsEnabled, recetteWidgetEnabled, enabledTools, headerIaVisible, enabledTabs, navItems } = req.body;
+        const { gemini, claude, cliConfig, appVersion, ticketsEnabled, recetteWidgetEnabled, enabledTools, headerIaVisible, cliIaEnabled, apiKeysEnabled, enabledTabs, navItems } = req.body;
 
         // ── Config IA propre à l'utilisateur ────────────────────────────────
         const rawCfg = user.config || {};
@@ -750,7 +752,8 @@ app.post('/api/config/keys', async (req, res) => {
 
         // ── Settings globaux (conf.json) — tous les champs peuvent être mis à jour ──
         if (appVersion !== undefined || ticketsEnabled !== undefined || recetteWidgetEnabled !== undefined ||
-            headerIaVisible !== undefined || enabledTabs !== undefined || navItems !== undefined) {
+            headerIaVisible !== undefined || cliIaEnabled !== undefined || apiKeysEnabled !== undefined ||
+            enabledTabs !== undefined || navItems !== undefined) {
             let globalConf = {};
             if (fs.existsSync(CONFIG_FILE)) {
                 try { globalConf = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch {}
@@ -761,6 +764,8 @@ app.post('/api/config/keys', async (req, res) => {
             if (ticketsEnabled !== undefined) globalConf.ticketsEnabled = ticketsEnabled;
             if (recetteWidgetEnabled !== undefined) globalConf.recetteWidgetEnabled = recetteWidgetEnabled;
             if (headerIaVisible !== undefined) globalConf.headerIaVisible = Boolean(headerIaVisible);
+            if (cliIaEnabled !== undefined) globalConf.cliIaEnabled = Boolean(cliIaEnabled);
+            if (apiKeysEnabled !== undefined) globalConf.apiKeysEnabled = Boolean(apiKeysEnabled);
             if (enabledTabs !== undefined && typeof enabledTabs === 'object') {
                 globalConf.enabledTabs = { ...(globalConf.enabledTabs || {}), ...enabledTabs };
             }
@@ -2696,6 +2701,31 @@ app.post('/api/wo-action-history', async (req, res) => {
     }
 });
 
+// Helper interne : insère une entrée de tracking dans wo_action_history
+async function insertWoActionEntry(payload) {
+    const [countRows] = await pool.query('SELECT COUNT(*) AS cnt FROM wo_action_history');
+    const nextNum = (Number(countRows[0].cnt) + 1).toString().padStart(3, '0');
+    const id = `wah-${nextNum}`;
+    const now = new Date();
+    await pool.query(
+        `INSERT INTO wo_action_history
+         (id, timestamp, section, subsection, action_type, label, entity_type, entity_id, entity_label,
+          before_state, after_state, user_id, username, context, undoable, undone, undo_action, redo_action, meta)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)`,
+        [id, now, payload.section, payload.subsection || '', payload.actionType, payload.label,
+         payload.entityType || '', payload.entityId || '', payload.entityLabel || '',
+         payload.beforeState ? JSON.stringify(payload.beforeState) : null,
+         payload.afterState  ? JSON.stringify(payload.afterState)  : null,
+         payload.userId || null, payload.username || '',
+         payload.context ? JSON.stringify(payload.context) : null,
+         payload.undoable ? 1 : 0,
+         payload.undoAction ? JSON.stringify(payload.undoAction) : null,
+         payload.redoAction ? JSON.stringify(payload.redoAction) : null,
+         payload.meta ? JSON.stringify(payload.meta) : null]
+    );
+    return { id, timestamp: now };
+}
+
 app.post('/api/wo-action-history/:id/undo', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM wo_action_history WHERE id = ?', [req.params.id]);
@@ -2719,6 +2749,7 @@ app.post('/api/wo-action-history/:id/undo', async (req, res) => {
             method: undoAction.method,
             headers: {
                 'Content-Type': 'application/json',
+                'X-Internal-Call': '1',
                 ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
                 ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {})
             }
@@ -2741,7 +2772,33 @@ app.post('/api/wo-action-history/:id/undo', async (req, res) => {
         );
 
         console.log(`[WO_ACTION_HISTORY] Undo: ${req.params.id} — ${entry.label} by ${undoneBy}`);
-        res.json({ success: true, undoneAt: undoneAt.toISOString(), undoneBy });
+
+        // Tracking de l'annulation comme nouvelle action (sauf si appel interne en cascade)
+        let trackedEntry = null;
+        if (req.headers['x-internal-call'] !== '1') {
+            try {
+                const sessionUser = getSessionUser(req);
+                trackedEntry = await insertWoActionEntry({
+                    section: entry.section,
+                    subsection: entry.subsection,
+                    actionType: 'undo',
+                    label: `Annulation : ${entry.label}`,
+                    entityType: 'history-entry',
+                    entityId: entry.id,
+                    entityLabel: entry.label,
+                    userId: sessionUser?.id || null,
+                    username: undoneBy || sessionUser?.username || '',
+                    context: { originalSection: entry.section, originalActionType: entry.action_type },
+                    undoable: true,
+                    undoAction: { endpoint: `/api/wo-action-history/${entry.id}/redo`, method: 'POST' },
+                    redoAction: { endpoint: `/api/wo-action-history/${entry.id}/undo`, method: 'POST' }
+                });
+            } catch (trackErr) {
+                console.warn('[WO_ACTION_HISTORY] Failed to track undo as new action:', trackErr.message);
+            }
+        }
+
+        res.json({ success: true, undoneAt: undoneAt.toISOString(), undoneBy, trackedActionId: trackedEntry?.id });
     } catch (e) {
         console.error('[WO_ACTION_HISTORY] Undo error:', e);
         res.status(500).json({ error: "Erreur lors de l'annulation" });
@@ -2770,6 +2827,7 @@ app.post('/api/wo-action-history/:id/redo', async (req, res) => {
             method: redoAction.method,
             headers: {
                 'Content-Type': 'application/json',
+                'X-Internal-Call': '1',
                 ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
                 ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {})
             }
@@ -2784,13 +2842,40 @@ app.post('/api/wo-action-history/:id/redo', async (req, res) => {
             return res.status(redoRes.status).json({ error: errData.error || "Erreur lors du rétablissement" });
         }
 
+        const redoneBy = req.body?.redoneBy || '';
         await pool.query(
             'UPDATE wo_action_history SET undone = 0, undone_at = NULL, undone_by = ? WHERE id = ?',
-            [req.body?.redoneBy || '', req.params.id]
+            [redoneBy, req.params.id]
         );
 
         console.log(`[WO_ACTION_HISTORY] Redo: ${req.params.id} — ${entry.label}`);
-        res.json({ success: true });
+
+        // Tracking du rétablissement comme nouvelle action (sauf si appel interne en cascade)
+        let trackedEntry = null;
+        if (req.headers['x-internal-call'] !== '1') {
+            try {
+                const sessionUser = getSessionUser(req);
+                trackedEntry = await insertWoActionEntry({
+                    section: entry.section,
+                    subsection: entry.subsection,
+                    actionType: 'redo',
+                    label: `Rétablissement : ${entry.label}`,
+                    entityType: 'history-entry',
+                    entityId: entry.id,
+                    entityLabel: entry.label,
+                    userId: sessionUser?.id || null,
+                    username: redoneBy || sessionUser?.username || '',
+                    context: { originalSection: entry.section, originalActionType: entry.action_type },
+                    undoable: true,
+                    undoAction: { endpoint: `/api/wo-action-history/${entry.id}/undo`, method: 'POST' },
+                    redoAction: { endpoint: `/api/wo-action-history/${entry.id}/redo`, method: 'POST' }
+                });
+            } catch (trackErr) {
+                console.warn('[WO_ACTION_HISTORY] Failed to track redo as new action:', trackErr.message);
+            }
+        }
+
+        res.json({ success: true, trackedActionId: trackedEntry?.id });
     } catch (e) {
         console.error('[WO_ACTION_HISTORY] Redo error:', e);
         res.status(500).json({ error: "Erreur lors du rétablissement" });
@@ -4249,7 +4334,7 @@ function getProjectConfig(projectName) {
                 const key = `${item.type}:${item.name.toLowerCase()}`;
                 if (!seen.has(key)) {
                     seen.add(key);
-                    if (item.type === 'folder' && item.children) {
+                    if (item.children) {
                         item.children = cleanStructure(item.children);
                     }
                     cleaned.push(item);
@@ -4294,10 +4379,18 @@ function isImageFile(name) {
 function attachContent(projectName, items) {
     const sortedItems = [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
     return sortedItems.map(item => {
+        const result = { ...item };
         if (item.type === 'file') {
-            if (isImageFile(item.name)) return { ...item, content: '', fileType: 'image' };
-            const full = path.join(PROJECTS_DIR, projectName, item.path);
-            return { ...item, content: fs.existsSync(full) ? fs.readFileSync(full, 'utf8') : '', fileType: 'text' };
+            if (isImageFile(item.name)) {
+                result.content = '';
+                result.fileType = 'image';
+            } else {
+                const full = path.join(PROJECTS_DIR, projectName, item.path);
+                result.content = fs.existsSync(full) ? fs.readFileSync(full, 'utf8') : '';
+                result.fileType = 'text';
+            }
+            if (item.children) result.children = attachContent(projectName, item.children);
+            return result;
         }
         return { ...item, children: attachContent(projectName, item.children || []) };
     });

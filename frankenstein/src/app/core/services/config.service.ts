@@ -36,10 +36,26 @@ export class ConfigService {
   tchatIaEnabled       = signal<boolean>(false);
   actionsEnabled       = signal<boolean>(false);
 
+  // Visibilité des sections majeures de configuration
+  cliIaEnabled   = signal<boolean>(true);
+  apiKeysEnabled = signal<boolean>(true);
+
   setTicketsEnabled(val: boolean)       { this.ticketsEnabled.set(val); }
   setRecetteWidgetEnabled(val: boolean) { this.recetteWidgetEnabled.set(val); }
   setTchatIaEnabled(val: boolean)       { this.tchatIaEnabled.set(val); }
   setActionsEnabled(val: boolean)       { this.actionsEnabled.set(val); }
+
+  setCliIaEnabled(val: boolean)   {
+    this.cliIaEnabled.set(val);
+    this.http.post(`${DATA_API}/api/config/keys`, { cliIaEnabled: val })
+      .subscribe({ error: () => console.warn('[ConfigService] Failed to save cliIaEnabled') });
+  }
+
+  setApiKeysEnabled(val: boolean) {
+    this.apiKeysEnabled.set(val);
+    this.http.post(`${DATA_API}/api/config/keys`, { apiKeysEnabled: val })
+      .subscribe({ error: () => console.warn('[ConfigService] Failed to save apiKeysEnabled') });
+  }
 
   // Affichage zone IA dans le header principal
   headerIaVisible = signal<boolean>(false);
@@ -126,6 +142,10 @@ export class ConfigService {
 
         // Zone IA header
         if (keys.headerIaVisible !== undefined) this.headerIaVisible.set(keys.headerIaVisible);
+
+        // Visibilité des sections majeures
+        if (keys.cliIaEnabled !== undefined) this.cliIaEnabled.set(keys.cliIaEnabled);
+        if (keys.apiKeysEnabled !== undefined) this.apiKeysEnabled.set(keys.apiKeysEnabled);
 
         // Widgets flottants
         if (keys.enabledTools !== undefined) {
