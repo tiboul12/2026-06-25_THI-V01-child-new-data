@@ -38,7 +38,10 @@
       "Bash(git ls-tree *)",
       "Bash(netstat -ano)",
       "Bash(curl *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(Get-Content \"E:\\\\www\\\\projet creat projet 2026-01\\\\--projets--\\\\THI-V01-child-user2\\\\frankenstein\\\\package.json\")",
+      "Bash(Select-String \"ftp|ssh|net\")",
+      "Bash(npm install *)"
     ]
   }
 }
