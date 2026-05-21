@@ -116,7 +116,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.initTheme();
     this.loadApiKeys();
-    this.loadCliStatus();
+    if (this.cliIaEnabled) {
+      this.loadCliStatus();
+    }
   }
 
   ngOnDestroy() {

@@ -1259,6 +1259,26 @@
       "prompt": "dans les options je met sur enable \"Utiliser les IA Clés\" je fait sauvegarder. Tout est ok, mais si je réactualise la page, l'option est de nouveau activé, trouve le problème et corrige",
       "startedAt": "2026-05-21T00:02:00.000Z",
       "completedAt": "2026-05-21T00:05:00.000Z"
+    },
+    {
+      "id": "mod-053",
+      "version": "B0.047",
+      "date": "2026-05-21T00:15:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:config",
+      "title": "Fix CLI IA : guard ngOnInit + message executor manquant",
+      "description": "Deux corrections dans config.component : (1) loadCliStatus() était appelé au ngOnInit même si cliIaEnabled=false, provoquant une erreur inutile sur port 3002. Ajout d'un guard if(cliIaEnabled). (2) Le message d'erreur ne donnait aucune indication sur la cause. Remplacement par un message explicatif (Electron/port 3002) + bouton Réessayer.",
+      "files": [
+        "frankenstein/src/app/pages/user/config/config.component.ts",
+        "frankenstein/src/app/pages/user/config/config.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu admin/general le système de test CLI IA ne fonctionne pas corectement j'ai le message sur le front : Impossible de contacter le serveur pour vérifier les outils CLI. et sur la console : config.service.ts:202 [ConfigService] Executor server not available\nconfig.service.ts:189\n GET http://localhost:3002/api/cli-status net::ERR_CONNECTION_REFUSED",
+      "startedAt": "2026-05-21T00:10:00.000Z",
+      "completedAt": "2026-05-21T00:15:00.000Z"
     }
   ]
 }
