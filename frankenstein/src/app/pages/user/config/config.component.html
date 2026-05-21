@@ -278,9 +278,16 @@
               </div>
               <!-- Error -->
               @if (cliError) {
-                <div class="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm mb-6">
-                  <span class="material-symbols-outlined">error</span>
-                  Impossible de contacter le serveur pour vérifier les outils CLI.
+                <div class="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm mb-6">
+                  <span class="material-symbols-outlined mt-0.5">error</span>
+                  <div class="flex-1">
+                    <p class="font-medium">Serveur executor non disponible (port 3002)</p>
+                    <p class="text-red-400 mt-1">L'application Electron doit être démarrée pour activer les outils CLI IA. Lance <code class="bg-red-500/20 px-1 rounded">launch-frankenstein.bat</code> ou démarre Electron manuellement.</p>
+                  </div>
+                  <button (click)="loadCliStatus()" class="shrink-0 flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 transition-colors">
+                    <span class="material-symbols-outlined text-base">refresh</span>
+                    Réessayer
+                  </button>
                 </div>
               }
               <!-- CLI Cards -->
@@ -368,7 +375,14 @@
                     @if (cliStatus.gemini.models.length) {
                       <div>
                         <div class="flex items-center justify-between mb-3">
-                          <p class="text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-widest">Modèles disponibles</p>
+                          <div class="flex items-center gap-2">
+                            <p class="text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-widest">Modèles disponibles ({{cliStatus.gemini.models.length}})</p>
+                            @if (cliStatus.gemini.source === 'api') {
+                              <span class="text-[9px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 font-bold uppercase tracking-wider" title="Liste récupérée en direct depuis l'API Google">API</span>
+                            } @else {
+                              <span class="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/50 font-bold uppercase tracking-wider" title="Liste statique de fallback — configure une clé API Gemini pour récupérer la liste réelle">Fallback</span>
+                            }
+                          </div>
                           <p class="text-[10px] text-light-text-muted dark:text-white/30">Visible dans le header</p>
                         </div>
                         <div class="space-y-2">
@@ -503,7 +517,14 @@
                         @if (cliStatus.claude.models.length) {
                           <div>
                             <div class="flex items-center justify-between mb-3">
-                              <p class="text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-widest">Modèles disponibles</p>
+                              <div class="flex items-center gap-2">
+                                <p class="text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-widest">Modèles disponibles ({{cliStatus.claude.models.length}})</p>
+                                @if (cliStatus.claude.source === 'api') {
+                                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 font-bold uppercase tracking-wider" title="Liste récupérée en direct depuis l'API Anthropic">API</span>
+                                } @else {
+                                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/50 font-bold uppercase tracking-wider" title="Liste statique de fallback — configure une clé API Claude pour récupérer la liste réelle">Fallback</span>
+                                }
+                              </div>
                               <p class="text-[10px] text-light-text-muted dark:text-white/30">Visible dans le header</p>
                             </div>
                             <div class="space-y-2">

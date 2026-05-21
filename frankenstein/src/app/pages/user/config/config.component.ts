@@ -73,12 +73,13 @@ export class ConfigComponent implements OnInit, OnDestroy {
   saveMessage = '';
 
   // CLI Status (models loaded from server)
+  // source: 'api' = liste fraîche depuis l'API officielle, 'default' = fallback statique
   cliStatus: {
-    gemini: { installed: boolean; version: string; lastUpdated?: string; models: { value: string; label: string; costInput?: number; costOutput?: number }[] };
-    claude: { installed: boolean; version: string; lastUpdated?: string; models: { value: string; label: string; costInput?: number; costOutput?: number }[] };
+    gemini: { installed: boolean; version: string; lastUpdated?: string; source?: 'api' | 'default'; models: { value: string; label: string; costInput?: number; costOutput?: number }[] };
+    claude: { installed: boolean; version: string; lastUpdated?: string; source?: 'api' | 'default'; models: { value: string; label: string; costInput?: number; costOutput?: number }[] };
   } = {
-    gemini: { installed: false, version: '', models: [] },
-    claude: { installed: false, version: '', models: [] }
+    gemini: { installed: false, version: '', source: 'default', models: [] },
+    claude: { installed: false, version: '', source: 'default', models: [] }
   };
   
   loadingStatus = {
@@ -100,7 +101,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.initTheme();
     this.loadApiKeys();
-    this.loadCliStatus();
+    if (this.cliIaEnabled) {
+      this.loadCliStatus();
+    }
   }
 
   ngOnDestroy() {

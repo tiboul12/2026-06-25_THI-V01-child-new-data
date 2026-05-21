@@ -1,4 +1,4 @@
-{
+﻿{
   "modifications": [
     {
       "id": "mod-193",
@@ -702,7 +702,7 @@
     },
     {
       "id": "mod-001",
-      "version": "THI-0.001",
+      "version": "B0.002",
       "date": "2026-04-25T00:00:00Z",
       "type": "config",
       "commitType": "AMELIORATION",
@@ -725,7 +725,7 @@
     },
     {
       "id": "mod-002",
-      "version": "THI-0.002",
+      "version": "B0.003",
       "date": "2026-04-25T01:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -751,7 +751,7 @@
     },
     {
       "id": "mod-003",
-      "version": "THI-0.003",
+      "version": "B0.004",
       "date": "2026-04-25T02:00:00Z",
       "type": "fix",
       "commitType": "MERGE",
@@ -777,7 +777,7 @@
     },
     {
       "id": "mod-004",
-      "version": "THI-0.004",
+      "version": "B0.005",
       "date": "2026-04-25T03:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -800,7 +800,7 @@
     },
     {
       "id": "mod-005",
-      "version": "THI-0.005",
+      "version": "B0.006",
       "date": "2026-04-25T04:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -824,28 +824,7 @@
     },
     {
       "id": "mod-006",
-      "version": "THI-0.005",
-      "date": "2026-04-25T04:30:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "system"
-      ],
-      "features": "system:workflow",
-      "title": "Fix sync-from-base.bat encodage ANSI + chemins espaces",
-      "description": "Fix encodage du fichier sync-from-base.bat : cmd.exe ne supporte pas UTF-8 BOM, fichier reconverti en ANSI (CP1252). Correction des chemins avec espaces via %~dp0. Simplification de la structure du bat pour éviter les erreurs de parsing.",
-      "files": [
-        "sync-from-base.bat"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "PS E:\\...\\child--THI-V01> .\\sync-from-base.bat — '.\\worganic-base' n'est pas reconnu en tant que commande interne",
-      "startedAt": "2026-04-25T04:30:00Z",
-      "completedAt": "2026-04-25T04:30:00Z"
-    },
-    {
-      "id": "mod-007",
-      "version": "THI-0.006",
+      "version": "B0.007",
       "date": "2026-04-25T05:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -868,8 +847,8 @@
       "completedAt": "2026-04-25T05:00:00Z"
     },
     {
-      "id": "mod-008",
-      "version": "THI-0.007",
+      "id": "mod-007",
+      "version": "B0.008",
       "date": "2026-04-25T06:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -891,9 +870,9 @@
       "completedAt": "2026-04-25T06:00:00Z"
     },
     {
-      "id": "mod-009",
-      "version": "THI-0.008",
-      "date": "2026-04-25T12:00:00Z",
+      "id": "mod-008",
+      "version": "B0.009",
+      "date": "2026-04-25T10:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
       "scope": [
@@ -923,6 +902,30 @@
         "frankenstein/src/app/shared/layout/nav/nav.component.html",
         "frankenstein/src/app/pages/public/landing/landing.component.ts",
         "frankenstein/src/app/pages/user/home/home.component.ts",
+        "frankenstein/src/app/pages/user/home/home.component.html",
+        "server/server-data.js",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "ok tu peux faire toutes les modifs dans base (qui seront répercuté ensuite dans child), l'idéal serait de regroupé tous ce qui est modifiable ou tous ce qui sera ajouté dans un repertoir spécifique dans child, afin de ne pas touché au reste, mais il faut alors que tous soi en adéquation avec le système",
+      "startedAt": "2026-04-25T08:00:00Z",
+      "completedAt": "2026-04-25T10:00:00Z"
+    },
+    {
+      "id": "mod-009",
+      "version": "B0.010",
+      "date": "2026-04-25T12:00:00Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
+      "features": "frankenstein:site,server:config",
+      "title": "Couleurs Tailwind via CSS vars — thème child overridable",
+      "description": "tailwind.config.js : les 8 couleurs dark (primary, secondary, accent, accent-dark, accent-darker, background, surface, surface-light) passent de valeurs hex hardcodées à rgb(var(--tw-XXX) / <alpha-value>). styles.scss :root : ajout des 8 variables --tw-XXX avec valeurs RGB par défaut. Pink theme : override des 8 variables --tw-XXX dans .pink {}. server-data.js : ajout route POST /api/child/config/:key (admin requis) pour écriture des configs child depuis le front. Fix import nav.component.ts (chemin relatif incorrect '../../' → '../../../').",
+      "files": [
         "frankenstein/tailwind.config.js",
         "frankenstein/src/styles.scss",
         "server/server-data.js",
@@ -941,79 +944,7 @@
     },
     {
       "id": "mod-010",
-      "version": "THI-0.009",
-      "date": "2026-04-25T12:00:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:admin",
-      "title": "Composant admin Thème — color pickers et presets",
-      "description": "Création de frankenstein/src/app/pages/child/admin-theme/admin-theme.component.ts et .html. Interface de personnalisation des 8 couleurs Tailwind (--tw-primary, --tw-secondary, --tw-accent, --tw-accent-dark, --tw-accent-darker, --tw-background, --tw-surface, --tw-surface-light) via color pickers HTML5. Presets intégrés : Violet, Cyan, Emerald, Amber. Aperçu live (CSS vars appliqués immédiatement au document). Sauvegarde via POST /api/child/config/theme. Chargement du thème actuel au démarrage. Enregistré comme onglet admin child 'Thème' (order: 5) dans child-admin-tabs.ts.",
-      "files": [
-        "frankenstein/src/app/pages/child/admin-theme/admin-theme.component.ts",
-        "frankenstein/src/app/pages/child/admin-theme/admin-theme.component.html",
-        "frankenstein/src/app/child/child-admin-tabs.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "oui",
-      "startedAt": "2026-04-25T10:00:00Z",
-      "completedAt": "2026-04-25T12:00:00Z"
-    },
-    {
-      "id": "mod-011",
-      "version": "THI-0.010",
-      "date": "2026-04-25T13:00:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:site",
-      "title": "Fix home.component.html — goToProjets → goToPrimary après synchro base",
-      "description": "La synchronisation base B0.10 avait mis à jour home.component.ts (renommage goToProjets → goToPrimary) mais pas le template HTML. Angular renvoyait NG9 : Property 'goToProjets' does not exist. Fix : remplacement du template child par la version base exacte (appConfig.logoIcon(), homeConfig(), goToPrimary()).",
-      "files": [
-        "frankenstein/src/app/pages/user/home/home.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "j'ai fait une synchro dans child, base ce lance bien mais child ne ce lance pas et angular renvois une erreur : Application bundle generation failed. [10.264 seconds]\n\n✘ [ERROR] NG9: Property 'goToProjets' does not exist on type 'HomeComponent'. [plugin angular-compiler]\n\n    src/app/pages/user/home/home.component.html:19:17:\n      19 │         (click)=\"goToProjets()\"\n         ╵                  ~~~~~~~~~~~\n\n  Error occurs in the template of component HomeComponent.",
-      "startedAt": "2026-04-25T13:00:00Z",
-      "completedAt": "2026-04-25T13:00:00Z"
-    },
-    {
-      "id": "mod-012",
-      "version": "THI-0.009",
-      "date": "2026-04-25T14:00:00Z",
-      "type": "config",
-      "commitType": "",
-      "scope": [
-        "frankenstein",
-        "system"
-      ],
-      "features": "frankenstein:site,system:workflow",
-      "title": "Renommage projet : Frankenstein Junior → Frankenstein Child",
-      "description": "Remplacement du nom 'Frankenstein Junior' par 'Frankenstein Child' dans tous les fichiers child uniquement : data/child/app.json, data/child/home.json, data/child/landing.json, frankenstein/src/environments/environment.ts, frankenstein/src/environments/environment.prod.ts, electron/main.js, frankenstein/src/index.html. Les fichiers base (tools, pages/user, pages/public/landing) n'ont pas été modifiés.",
-      "files": [
-        "data/child/app.json",
-        "data/child/home.json",
-        "data/child/landing.json",
-        "frankenstein/src/environments/environment.ts",
-        "frankenstein/src/environments/environment.prod.ts",
-        "electron/main.js",
-        "frankenstein/src/index.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans le projet child change le nom du projet de \"Frankenstein Junior\" en \"Frankenstein Child\", ne change surtout pas les elements qui provienne de base mais uniquement dans child",
-      "startedAt": "2026-04-25T14:00:00Z",
-      "completedAt": "2026-04-25T14:05:00Z"
-    },
-    {
-      "id": "mod-013",
-      "version": "THI-0.011",
+      "version": "B0.011",
       "date": "2026-04-25T13:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1036,8 +967,8 @@
       "completedAt": "2026-04-25T13:00:00Z"
     },
     {
-      "id": "mod-014",
-      "version": "THI-0.012",
+      "id": "mod-011",
+      "version": "B0.012",
       "date": "2026-04-25T14:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1063,8 +994,8 @@
       "completedAt": "2026-04-25T14:30:00Z"
     },
     {
-      "id": "mod-015",
-      "version": "THI-0.013",
+      "id": "mod-012",
+      "version": "B0.013",
       "date": "2026-04-25T14:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1087,8 +1018,8 @@
       "completedAt": "2026-04-25T14:00:00Z"
     },
     {
-      "id": "mod-016",
-      "version": "THI-0.014",
+      "id": "mod-013",
+      "version": "B0.014",
       "date": "2026-04-25T15:00:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1109,8 +1040,29 @@
       "completedAt": "2026-04-25T15:00:00Z"
     },
     {
-      "id": "mod-017",
-      "version": "THI-0.015",
+      "id": "mod-014",
+      "version": "B0.015",
+      "date": "2026-04-25T16:00:00Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "server:deployments",
+      "title": "Fix admin/déploiements : filtrage par préfixe de version",
+      "description": "Correction de deux bugs dans la base. (1) /api/version/check retournait le dernier déploiement toutes versions confondues (y compris child THI-0.xx), provoquant un faux \"mise à jour requise\" dans le header de la base. (2) /api/admin/deployments retournait tous les déploiements DB sans distinction base/child, affichant les entrées du child dans la console admin de la base. Fix : ajout de la fonction getLocalVersionInfo() qui lit version.json et extrait le préfixe de version (B pour la base, THI- pour un child). Les deux routes filtrent désormais par WHERE version LIKE 'prefix%', automatiquement adapté selon le contexte base ou child.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans la version de base on à dans admin/déploiements, les infos d'un child, on ne doit pas connaitre les childs dans la base, on à aussi en haut à droite une information de mise à jour requise alors que la base ou l'on ce trouve est bien à jour, vérifi tous ça",
+      "startedAt": "2026-04-25T15:30:00Z",
+      "completedAt": "2026-04-25T16:00:00Z"
+    },
+    {
+      "id": "mod-015",
+      "version": "B0.016",
       "date": "2026-04-25T16:30:00Z",
       "type": "feature",
       "commitType": "AMELIORATION",
@@ -1130,8 +1082,8 @@
       "completedAt": "2026-04-25T16:30:00Z"
     },
     {
-      "id": "mod-018",
-      "version": "THI-0.016",
+      "id": "mod-016",
+      "version": "B0.017",
       "date": "2026-04-25T10:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -1154,8 +1106,8 @@
       "completedAt": "2026-04-25T10:00:00Z"
     },
     {
-      "id": "mod-019",
-      "version": "THI-0.017",
+      "id": "mod-017",
+      "version": "B0.018",
       "date": "2026-04-26T00:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -1177,8 +1129,8 @@
       "completedAt": "2026-04-26T00:00:00Z"
     },
     {
-      "id": "mod-020",
-      "version": "THI-0.018",
+      "id": "mod-018",
+      "version": "B0.019",
       "date": "2026-04-26T01:00:00Z",
       "type": "feature",
       "commitType": "MERGE",
@@ -1200,8 +1152,8 @@
       "completedAt": "2026-04-26T01:00:00Z"
     },
     {
-      "id": "mod-021",
-      "version": "THI-0.019",
+      "id": "mod-019",
+      "version": "B0.020",
       "date": "2026-04-26T10:00:00Z",
       "type": "fix",
       "commitType": "FIX",
@@ -1222,324 +1174,9 @@
       "completedAt": "2026-04-26T10:00:00Z"
     },
     {
-      "id": "mod-022",
-      "version": "THI-0.019",
-      "date": "2026-04-26T12:00:00Z",
-      "type": "feature",
-      "commitType": "",
-      "scope": [
-        "server",
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets,server:projets",
-      "title": "Gestion fichiers projet : arborescence Z3 + éditeur unifié Z4",
-      "description": "Implémentation complète du système de gestion de fichiers pour le composant projet. Backend (server-data.js) : ajout des routes /api/projects/* pour CRUD dossiers/fichiers basés sur data/projets/, avec config.json par projet. Frontend : refonte ProjetSidebarComponent (arborescence réelle avec menu contextuel clic droit, renommage inline, suppression avec confirmation), refonte ProjetEditorZoneComponent (éditeur unifié multi-fichiers avec autosave 500ms debounce et indicateur de statut), nouveau ProjectFilesService, mise à jour ProjetEditorComponent (chargement et liaison des données réelles).",
-      "files": [
-        "server/server-data.js",
-        "frankenstein/src/app/core/services/project-files.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "execute les instruction du fichier @THI-2026-04-gestion-fichiers-v2.md pour le component projet",
-      "startedAt": "2026-04-26T10:30:00Z",
-      "completedAt": "2026-04-26T12:00:00Z"
-    },
-    {
-      "id": "mod-023",
-      "version": "THI-0.019",
-      "date": "2026-04-26T14:30:00Z",
-      "type": "feature",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Éditeur projet : zone 4 unifiée + navigation zone 3 synchronisée",
-      "description": "Refonte complète du comportement de l'éditeur projet. Zone 4 : passage d'un éditeur multi-textarea (un par fichier) à un seul textarea unifié. Le contenu de tous les dossiers est concaténé avec des titres Markdown H1 (# NomDossier) comme séparateurs. Zone 3 (sidebar) : cliquer sur un dossier scrolle directement vers la section correspondante dans zone 4 via setSelectionRange. Synchronisation bidirectionnelle : (1) taper '# Nouveau titre' dans zone 4 crée automatiquement le dossier + fichier content via API au bout de 600ms de debounce ; (2) créer un dossier depuis la sidebar appelle appendSection() sur zone 4 pour ajouter '# NomDossier' en fin de texte. Gestion des sections sans fichier (folderId connu mais fileId null). Suppression des dépendances FormsModule/signal inutiles dans ProjetEditorZoneComponent.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Cela ne me conviens pas parfaitement, un titre markdown doit corespondre à un dossier. Tous le contenue des documents du projet doivent être dans une seul zone de texte dans la zone 4. Les textes sont séparé par les menu. Exemple si tu à un dossier menu 1 du texte et menu 2 et du texte, dans la Z4 tu ne doit avoir qu'une zone de texte avec # Menu1  le texte du contenu.md du dossier menu1 puis # Menu 2 et le texte. la zone 3 est la représentation des différente partis de l'ensemble des textes qui est affiché dans la zone 4. lorsqu'on clique sur un dossier on doit aller direct à l'endroit du texte dans la zone 4. Si on ajoute un menu # dans la zone 4 cela doit créé automatiquement le dossier corespondant. Idem si on crait un nouveau dossier cela doit créé le menu dans la zone 4",
-      "startedAt": "2026-04-26T13:30:00Z",
-      "completedAt": "2026-04-26T14:30:00Z"
-    },
-    {
-      "id": "mod-024",
-      "version": "THI-0.019",
-      "date": "2026-04-26T15:00:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Éditeur : fix chargement zone 4 + sync suppression dossiers vers zone 3",
-      "description": "Fix 1 : zone 4 restait vide (placeholder affiché) car hasLoaded passait à true lors du premier ngOnChanges avec files=[] (valeur initiale du signal). Correction : on attend que files.length > 0 avant d'initialiser le contenu unifié. Fix 2 : la modification de zone 4 ne supprimait pas les dossiers absents dans zone 3. Ajout de la logique de suppression dans onSectionsChange : on compare les dossiers existants (this.files) avec les sections parsées de zone 4, et on supprime via API les dossiers qui ne sont plus présents dans zone 4. Après chaque changement, loadFiles() rafraîchit automatiquement la sidebar (zone 3).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "lorsque je modifi la zone 4 cela doit mettre à jour automatiquement la zone 3 hors il n'y a que 2 dossiers dans la zone 4 on ne devrait donc avoir que 2 dossier et leur fichier contenu",
-      "startedAt": "2026-04-26T14:30:00Z",
-      "completedAt": "2026-04-26T15:00:00Z"
-    },
-    {
-      "id": "mod-025",
-      "version": "THI-0.019",
-      "date": "2026-04-26T15:30:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Éditeur projet : fix doublons fichier contenu en zone 3",
-      "description": "Fix des doublons de fichiers contenu dans la sidebar (zone 3). Cause : createFile était appelé deux fois pour le même dossier en raison d'une race condition (les données du composant enfant étaient périmées au moment de la vérification fileId). Deux corrections : (1) déduplication client-side dans loadFiles() via deduplicateTree() — filtre les entrées de même nom dans les children de chaque dossier ; (2) vérification de needsFile basée sur this.files() (signal parent, source de vérité) plutôt que sur s.fileId (données de la zone enfant potentiellement périmées). Prévient toute création future de doublons.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans la zone 3 on à 2 fois le nom contenu dans chaque dossier, alors que dans les dossiers phisique on a qu'un fichier contenu.md",
-      "startedAt": "2026-04-26T15:00:00Z",
-      "completedAt": "2026-04-26T15:30:00Z"
-    },
-    {
-      "id": "mod-026",
-      "version": "THI-0.019",
-      "date": "2026-04-26T16:30:00Z",
-      "type": "feature",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Éditeur projet : sous-menus ## ### #### = sous-répertoires hiérarchiques",
-      "description": "Ajout du support de la hiérarchie complète de titres Markdown (# ## ### ####) dans la zone 4 comme représentation des dossiers et sous-dossiers. buildUnifiedContent() devient récursif avec paramètre depth (profondeur = niveau de titre). buildFolderMap() devient récursif, clé = chemin complet (ex: 'dossier1/sous-dossier') pour distinguer les homonymes. parseContent() détecte tous les niveaux de titres (regex #{1,4}), reconstruit le parentPath de chaque section en remontant les ancêtres, calcule parentFolderId. SectionInfo étendu avec level, parentPath, parentFolderId. onSectionsChange() dans le parent gère la création hiérarchique en cascade : sections triées par level, newFolderIds map dynamique pour résoudre les IDs des parents créés dans la même passe. scrollToFolderById() mise à jour pour chercher #{1,4} au lieu de # uniquement. Fix import FileNode dupliqué.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "lorsque je crait un sous menu ## dans la zone 4 cela doit me créer un sous répertoir et ainsi de suite avec ### et ####, les menus sont les repertoires et sous repertoires",
-      "startedAt": "2026-04-26T15:30:00Z",
-      "completedAt": "2026-04-26T16:30:00Z"
-    },
-    {
-      "id": "mod-027",
-      "version": "THI-0.019",
-      "date": "2026-04-26T17:00:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Éditeur projet : fix renommage dossier via zone 4 (détection rename)",
-      "description": "Fix : modifier un titre ## en zone 4 créait un nouveau dossier au lieu de renommer l'existant. Ajout de la détection de renommage dans onSectionsChange : les sections sont groupées par parentPath, et pour chaque groupe, si exactement 1 section n'a pas de folderId ET exactement 1 dossier frère n'est pas référencé dans zone 4 → c'est un renommage (pas une création). On appelle renameFolder() via API, puis on sauvegarde immédiatement le contenu dans le fichier existant. Les dossiers renommés sont exclus de toDelete (via renamedIds). La méthode getFolderChildren() permet de récupérer les enfants dossier d'un chemin donné dans l'arbre. Fonctionne à tous les niveaux de profondeur (sous-dossiers inclus).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "A chaque fois que je modifi le nom d'un sous dossier cela me crait un nouveau sous dossier au lieu de renommé le dossier",
-      "startedAt": "2026-04-26T16:30:00Z",
-      "completedAt": "2026-04-26T17:00:00Z"
-    },
-    {
-      "id": "mod-028",
-      "version": "THI-0.019",
-      "date": "2026-04-26T18:00:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Éditeur projet : fix sync complète Z3↔Z4 (suppression, création, renommage sous-dossiers)",
-      "description": "Fix 1 — Suppression sous-dossier Z4→Z3 : toDelete utilisait uniquement this.files() (racine), les sous-dossiers n'étaient jamais supprimés. Nouveau : collectAllFolderPaths() parcourt l'arbre entier, calcule les orphanPaths (chemins absents de sectionPaths), et ne supprime que le dossier le plus haut de chaque branche orpheline (la cascade API nettoie les enfants). Fix 2 — Création sous-dossier Z3→Z4 : folderCreated n'émettait que pour les dossiers racine. Nouveau type {name, parentId}. onFolderCreated() après loadFiles() appelle appendSection (racine) ou insertSectionInParent (sous-dossier via getFolderDepth). insertSectionInParent insère ## sous-titre après le bloc du parent dans la zone 4, avant le prochain titre de même niveau ou supérieur. Fix 3 — Renommage : plus robuste avec collectAllFolderPaths et sectionPaths comparaison en chemin complet.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "cela ne fonctionne pas, le nom des sous dossier ne ce mette pas à jour, si je supprime le dossier dans la Z4 il ne ce supprime pas dans la zone 3. Si je rajoute un sous dossier dans la zone 3 il ne s'affiche pas dans la zone 4",
-      "startedAt": "2026-04-26T17:00:00Z",
-      "completedAt": "2026-04-26T18:00:00Z"
-    },
-    {
-      "id": "mod-030",
-      "version": "THI-0.021",
-      "date": "2026-04-26T21:25:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Éditeur projet : fix sync arborescence après clic sidebar",
-      "description": "Fix : cliquer sur un heading ### dans la zone texte ne sélectionnait pas le nœud correspondant dans l'arborescence si l'utilisateur avait précédemment été sur cette même ligne. Cause : syncActiveNode() n'était appelée que si currentLine !== previousCursorLine. Lorsque l'utilisateur cliquait sur E 2-2-1 (→ previousCursorLine = ligne E), puis sélectionnait D 2-2 cccc via la sidebar (activeNodeId change), puis re-cliquait sur ### E 2-2-1, la condition currentLine === previousCursorLine empêchait syncActiveNode de s'exécuter, laissant la sélection sur D 2-2 cccc. Correctif : syncActiveNode est désormais appelée inconditionnellement sur chaque mouseup/keyup ; saveAll() reste conditionnel au changement de ligne.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "je voudrais que tu verifi pourquoi lorsque je clique sur le menu ### E 2-2-1 dans la zone 4 (texte markdown), cela ne selectionne pas le même menu E 2-2-1 dans la zone 3 de l'arborescence. Cela fonctionne bien avec tous les autres menu et sur les documents et je n'ai pas d'erreur dans la consol quii indiquerais un problème",
-      "startedAt": "2026-04-26T21:10:00Z",
-      "completedAt": "2026-04-26T21:25:00Z"
-    },
-    {
-      "id": "mod-029",
-      "version": "THI-0.019",
-      "date": "2026-04-26T17:13:35.665Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Éditeur projet : fix ordre dossier après renommage Z4 (race condition)",
-      "description": "Fix race condition : saveAll() émettait fileSave (updateFile concurrent) ET sectionsChange simultanément. Les appels updateFile appelaient saveProjectConfig côté serveur pendant que renameFolder tournait, écrasant le renommage dans config.json. Résultat : renameFolder retournait une erreur, le fallback delete+create s'exécutait, déplaçant le dossier renommé en bas de liste. Correctifs : (1) Suppression de l'émission fileSave dans saveAll() — les sauvegardes de contenu sont désormais gérées séquentiellement dans onSectionsChange APRÈS les changements structurels (aucune concurrence possible). (2) Suppression du fallback delete+create dans le catch du renommage — si renameFolder échoue, l'ordre des dossiers est préservé (erreur reportée sans déplacement). (3) Correction de la corruption de config.json existante (doublons contenu.md masqués par deduplicateTree).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "le renommage fonctionne bien mais si je renomme un sous dossier celui change d'ordre et passe en dessous du dossier d'en dessous",
-      "startedAt": "2026-04-26T18:00:00Z",
-      "completedAt": "2026-04-26T17:13:35.666Z"
-    },
-    {
-      "id": "mod-030",
-      "version": "THI-0.020",
-      "date": "2026-04-27T08:57:54.006Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Zone 3 : correction surlignage trop large sur fichier additionnel",
-      "description": "Correction du bug dans scrollToNodeById : endRegex manquait le flag g, lastIndex ignore, delimiter ferme trouve depuis debut du document au mauvais endroit, substring inversait les bornes.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans la section projet lorsquon selectionne un menu dans la zone 3 cela englobe une zone trop grande, seul la zone du document doit etre selectionne",
-      "startedAt": "2026-04-27T00:00:00Z",
-      "completedAt": "2026-04-27T08:57:54.006Z"
-    },
-    {
-      "id": "mod-031",
-      "version": "THI-0.022",
-      "date": "2026-04-27T09:05:56.18Z",
-      "type": "fix",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Zone 3 sidebar : masquer les fichiers contenu.md",
-      "description": "Ajout dun @if dans le template recursif treeNodes pour exclure de laffichage les fichiers nommes contenu.md dans larborescence du projet.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans la zone 3 il faudrait cache les fichiers contenu.md",
-      "startedAt": "2026-04-27T09:05:56.18Z",
-      "completedAt": "2026-04-27T09:05:56.18Z"
-    },
-    {
-      "id": "mod-032",
-      "version": "THI-0.022",
-      "date": "2026-04-27T09:34:13.694Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Zone 4 : couleur surlignage bleu menu / vert document",
-      "description": "Ajout dune propriete highlightType (folder|file) dans ProjetEditorZoneComponent. Selon le type de noeud selectionne dans la zone 3, le surlignage zone 4 est bleu pour les menus/dossiers et vert pour les fichiers additionnels.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "met une couleur differente dans la zone 4 lorsquon selectionne un menu ou un document : bleu menu et vert document",
-      "startedAt": "2026-04-27T09:34:13.694Z",
-      "completedAt": "2026-04-27T09:34:13.694Z"
-    },
-    {
-      "id": "mod-033",
-      "version": "THI-0.022",
-      "date": "2026-04-27T10:30:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Zone 3 : glisser-déposer pour réordonner les menus",
-      "description": "Ajout d'un système de drag & drop natif (HTML5) sur les dossiers de l'arborescence (zone 3). Un indicateur horizontal (ligne colorée) s'affiche avant/après le nœud cible pendant le glisser. Au dépôt, les order sont recalculés, persistés via updateStructure, puis loadFiles recharge les deux zones. Zone 4 reflète automatiquement le nouvel ordre via le tri existant sur node.order dans buildUnifiedContent.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans la zone 3 dans l'arborescence ajoute un système de glisser deposé pour la modification de l'ordre des menus. La modification dans la zone 3 doit être automatiquement appliqué dans la zone 4",
-      "startedAt": "2026-04-27T10:15:00Z",
-      "completedAt": "2026-04-27T10:30:00Z"
-    },
-    {
-      "id": "mod-034",
-      "version": "THI-0.022",
-      "date": "2026-04-27T10:50:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Zone 3 drag & drop : fix position non conservée après dépôt",
-      "description": "Correction du bug : le menu ne restait pas à la position glissée. Cause : applyOrderInStructure ne mettait à jour que les champs order sans réordonner physiquement le tableau envoyé au serveur. Le serveur renvoyait donc les nœuds dans l'ordre d'origine, et la sidebar (qui n'a pas de tri) affichait l'ancien ordre. Fix : réordonnement physique du tableau via splice dans applyOrderInStructure + tri récursif par order dans loadFiles via sortNodesByOrder.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "on arrive à deplacer un menu mais pas un document mais lorsque je lache le clique le menu ne reste pas la ou je l'ai placer",
-      "startedAt": "2026-04-27T10:40:00Z",
-      "completedAt": "2026-04-27T10:50:00Z"
-    },
-    {
-      "id": "mod-035",
-      "version": "THI-0.022",
-      "date": "2026-04-27T11:30:00Z",
+      "id": "mod-020",
+      "version": "B0.021",
+      "date": "2026-05-02T12:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
       "scope": [
@@ -2402,10 +2039,10 @@
       "completedAt": "2026-05-02T12:30:00Z"
     },
     {
-      "id": "mod-071",
-      "version": "THI-0.035",
-      "date": "2026-05-02T19:50:59.974Z",
-      "type": "config",
+      "id": "mod-021",
+      "version": "B0.022",
+      "date": "2026-05-02T12:30:00.000Z",
+      "type": "fix",
       "commitType": "FIX",
       "scope": [
         "system"
@@ -2423,9 +2060,9 @@
       "completedAt": "2026-05-02T19:50:59.974Z"
     },
     {
-      "id": "mod-072",
-      "version": "THI-0.036",
-      "date": "2026-05-02T20:33:13.894Z",
+      "id": "mod-022",
+      "version": "B0.023",
+      "date": "2026-05-02T20:20:00.853Z",
       "type": "fix",
       "commitType": "MERGE",
       "scope": [
@@ -2449,11 +2086,11 @@
       "completedAt": "2026-05-02T20:33:13.894Z"
     },
     {
-      "id": "mod-073",
-      "version": "THI-0.037",
-      "date": "2026-05-02T21:00:25.814Z",
-      "type": "fix",
-      "commitType": "MERGE",
+      "id": "mod-023",
+      "version": "B0.024",
+      "date": "2026-05-02T20:45:27.229Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
       "scope": [
         "frankenstein",
         "data"
@@ -2475,9 +2112,9 @@
       "completedAt": "2026-05-02T21:00:25.814Z"
     },
     {
-      "id": "mod-074",
-      "version": "THI-0.038",
-      "date": "2026-05-02T21:30:00Z",
+      "id": "mod-024",
+      "version": "B0.025",
+      "date": "2026-05-02T21:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -2497,9 +2134,9 @@
       "completedAt": "2026-05-02T21:30:00Z"
     },
     {
-      "id": "mod-075",
-      "version": "THI-0.039",
-      "date": "2026-05-02T10:30:00Z",
+      "id": "mod-025",
+      "version": "B0.026",
+      "date": "2026-05-03T12:00:00.000Z",
       "type": "feature",
       "commitType": "FIX",
       "scope": [
@@ -2552,9 +2189,9 @@
       "completedAt": "2026-05-03T12:00:00Z"
     },
     {
-      "id": "mod-077",
-      "version": "THI-0.040",
-      "date": "2026-05-03T12:30:00Z",
+      "id": "mod-026",
+      "version": "B0.026",
+      "date": "2026-05-03T12:30:00.000Z",
       "type": "fix",
       "commitType": "MERGE",
       "scope": [
@@ -2609,9 +2246,31 @@
       "completedAt": "2026-05-03T13:00:00Z"
     },
     {
-      "id": "mod-079",
-      "version": "THI-0.042",
-      "date": "2026-05-03T14:00:00Z",
+      "id": "mod-027",
+      "version": "B0.026",
+      "date": "2026-05-03T13:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:wo-action-history",
+      "title": "wo-action-history : panneau info outils trackés",
+      "description": "Ajout d un panneau dépliable «Outils trackés» sur la page /wo-action-history. Bouton «info» dans le header toggle le panneau. Affiche chaque outil instrumenté (admin/users, documents/catégories, documents/documents) avec ses actions enregistrées, un indicateur réversible/non-réversible et la note explicative. Légende en bas + snippet window.WoActionHistory.track() pour indiquer comment intégrer d autres outils.",
+      "files": [
+        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.ts",
+        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans l outils affichage historique action il faudrait une information sur quel outils précis et quelle action sont enregistré.",
+      "startedAt": "2026-05-03T12:50:00.000Z",
+      "completedAt": "2026-05-03T13:00:00.000Z"
+    },
+    {
+      "id": "mod-028",
+      "version": "B0.027",
+      "date": "2026-05-03T13:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -2630,59 +2289,9 @@
       "completedAt": "2026-05-03T14:00:00Z"
     },
     {
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "id": "mod-080",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "date": "2026-05-03T16:30:00Z",
-      "description": "Ajout de WoActionHistoryService dans tous les composants de la section projets : creation/modification/suppression de projet (projets.component + admin-projets), creation/renommage/suppression de sections et menus (projet-editor processSectionsChange + projet-sidebar), drag-drop de sections et fichiers (onDragDrop), upload/renommage/suppression d images (projet-editor-zone), creation de documents additionnels via sidebar, envoi de messages conversation (projet-conversation). Sections trackes : 'projets', 'projets/sections', 'projets/fichiers', 'projets/conversation'. Mise a jour de wo-action-history.component avec les 4 nouvelles entrees trackedTools, les labels de section et les labels de champs.",
-      "startedAt": "2026-05-03T15:30:00Z",
-      "completedAt": "2026-05-03T16:30:00Z",
-      "prompt": "En prenant en compte le doc @docs/infos-action-historique.md ajoute l option historique action a toutes les fonctions de la section projets /projets, que ce soir la creation ou modification du projet mais aussi toutes les actions interne comme la creation de menu, document importation d image deplacement de section, renommage, suppression, modification de texte, conversation etc etc.",
-      "model": "claude-sonnet-4-6",
-      "version": "THI-0.043",
-      "files": [
-        "frankenstein/src/app/pages/user/projets/projets.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.ts",
-        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
-        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.ts"
-      ],
-      "title": "Tracking historique actions sur toute la section projets",
-      "ai": "Claude Code"
-    },
-    {
-      "scope": [
-        "frankenstein"
-      ],
-      "title": "Tracking contenu et formatage dans l'editeur projet",
-      "description": "Ajout du tracking de modification de texte (section projets/contenu) dans projet-editor-zone : flushContentModifications() trace une entree par section modifiee lors du blur, changement de mode ou sortie du mode focus. insertAt() tracke les actions de formatage explicites depuis la toolbar : gras, italique, barre, code inline, bloc code, titres H1/H2/H3, liste. Ajout section projets/contenu dans trackedTools et sectionLabel de wo-action-history.",
-      "completedAt": "2026-05-03T17:00:00Z",
-      "date": "2026-05-03T17:00:00Z",
-      "model": "claude-sonnet-4-6",
-      "prompt": "il doit y avoir plus d action prise en compte, comme la modification des textes, l ajout de section code, texte, mise en forme etc",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.ts"
-      ],
-      "type": "feature",
-      "id": "mod-081",
-      "version": "THI-0.043",
-      "ai": "Claude Code",
-      "startedAt": "2026-05-03T16:45:00Z",
-      "commitType": "AMELIORATION",
-      "features": "frankenstein:projets"
-    },
-    {
-      "id": "mod-082",
-      "version": "THI-0.043",
-      "date": "2026-05-03T21:41:25.756Z",
+      "id": "mod-029",
+      "version": "B0.028",
+      "date": "2026-05-03T14:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
       "scope": [
@@ -2702,9 +2311,30 @@
       "completedAt": "2026-05-03T21:41:25.756Z"
     },
     {
-      "id": "mod-083",
-      "version": "THI-0.044",
-      "date": "2026-05-04T09:55:00Z",
+      "id": "mod-030",
+      "version": "B0.028",
+      "date": "2026-05-03T14:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:wo-action-history",
+      "title": "Fix affichage diff : parse JSON string before/afterState",
+      "description": "Les colonnes JSON MySQL (before_state, after_state) étaient retournées comme strings par le serveur. getDiffFields() appelait Object.keys() sur la string brute, ce qui itérait caractère par caractère. Ajout de parseState() qui détecte si la valeur est une string JSON et la parse avant utilisation.",
+      "files": [
+        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "l'affichage est incompréhensif corrige ça",
+      "startedAt": "2026-05-03T14:15:00.000Z",
+      "completedAt": "2026-05-03T14:30:00.000Z"
+    },
+    {
+      "id": "mod-031",
+      "version": "B0.029",
+      "date": "2026-05-03T15:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
       "scope": [
@@ -2726,9 +2356,9 @@
       "completedAt": "2026-05-04T09:55:00Z"
     },
     {
-      "id": "mod-084",
-      "version": "THI-0.045",
-      "date": "2026-05-04T10:05:00Z",
+      "id": "mod-032",
+      "version": "B0.029",
+      "date": "2026-05-03T16:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -2778,390 +2408,9 @@
       "completedAt": "2026-05-04T14:30:00Z"
     },
     {
-      "id": "mod-086",
-      "version": "THI-0.047",
-      "date": "2026-05-04T16:00:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein",
-        "server"
-      ],
-      "features": "frankenstein:projets|site,server:workflow",
-      "title": "Diff visuel historique + fix couleurs icônes",
-      "description": "Ajout du diff visuel côte-à-côte dans la zone 4 : clic sur une entrée de type contenu dans le panneau Historique ouvre un vue split avant/après avec algo LCS ligne par ligne (rouge = supprimé, vert = ajouté, numéros de ligne) et bouton retour à l'éditeur. Correction du tracking : afterState désormais capturé (plus de limite 500 chars), la comparaison est donc possible. Ajout route GET /api/wo-action-history/:id. Correction des icônes historique (taille text-sm + background coloré par type). Badge diff visible sur les entrées clickables.",
-      "files": [
-        "server/server-data.js",
-        "frankenstein/src/app/core/services/projet-collab.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-diff/projet-diff.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-diff/projet-diff.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "il y a un problème de couleur. Lorsqu'il y a une modification de texte, tous comme la section wo-action-history j'aurais besoin d'avoir la comparaison entre la version modifié et la version avant. Lorsqu'on clique sur une historique de modification dans la zone 5b, il faut changer la zone 4 avec le texte d'avant la modif (à gauche) et après (à droite) et il faudra aussi un bouton pour revenir à la zone 4 principal (Edition/visu)",
-      "startedAt": "2026-05-04T14:45:00Z",
-      "completedAt": "2026-05-04T16:00:00Z"
-    },
-    {
-      "id": "mod-087",
-      "version": "THI-0.048",
-      "date": "2026-05-04T17:51:31.328Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein",
-        "server"
-      ],
-      "features": "frankenstein:projets,server:projets",
-      "title": "Fix diff historique : JSON.parse + couleurs boutons",
-      "description": "Correction de 3 problemes : (1) Diff historique = Contenu non disponible car MySQL renvoie colonnes JSON comme strings - ajout JSON.parse serveur. (2) Bouton Retour blanc en dark (bg-light-surface=white non override) - classes bg-white/8. (3) Bouton Edition [class.dark:bg-primary] invalide Angular - correction [ngClass].",
-      "files": [
-        "server/server-data.js",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-diff/projet-diff.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "je n ai pas d affichage du texte avant apres dans la zone 4. Corrige la couleur du bouton [Image #2] et de ce bouton [Image #3]",
-      "startedAt": "2026-05-04T00:00:00Z",
-      "completedAt": "2026-05-04T17:51:31.328Z"
-    },
-    {
-      "id": "mod-088",
-      "version": "THI-0.049",
-      "date": "2026-05-04T18:03:50.271Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Historique filtre par section + fix boutons",
-      "description": "Historique 5b filtre par section active : seules les entrees liees au noeud actif sont affichees. Suppression du header HISTORIQUE redondant dans le panneau. Fix couleur bouton Edition/Visu : bg-primary/20 text-primary au lieu de bg-primary plein. Fix onEntryClick : fetch serveur si beforeState n est pas un objet parse.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans la partie 5b je ne veux voir que l historique lie a la section selectionne dans la zone 4. Supprime cette partie qui ne sert a rien [header historique]. Corrige la couleur des boutons [Edition/Visu]",
-      "startedAt": "2026-05-04T18:03:50.271Z",
-      "completedAt": "2026-05-04T18:03:50.271Z"
-    },
-    {
-      "id": "mod-089",
-      "version": "THI-0.050",
-      "date": "2026-05-04T18:17:45.128Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Fix filtre historique + couleurs + contenu diff complet",
-      "description": "Fix activeHistoryId : resout fileId vers parent folderId pour que le filtre historique fonctionne meme quand activeNodeId est un fichier additionnel. Fix hover couleur entree historique (bg-light-surface=blanc supprime, remplacement par bg-white/5). Fix contenu diff : ajout en-tete de section (#heading) dans beforeState/afterState. Suppression troncature 500 chars dans insertAt.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "la couleur n est pas bonne sur la selection d un historique a droite. lorsque je selectionne cela ne m affiche plus dans la zone 4 avant/apres. dans cette zone je veux tous le texte de la zone selectionne et pas juste le texte modifie.",
-      "startedAt": "2026-05-04T18:17:45.128Z",
-      "completedAt": "2026-05-04T18:17:45.128Z"
-    },
-    {
-      "id": "mod-090",
-      "version": "THI-0.051",
-      "date": "2026-05-04T18:28:44.479Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Diff historique : texte complet de la section (heading + fichiers additionnels)",
-      "description": "flushContentModifications() utilise désormais sectionFullTextSnapshot (texte complet depuis unifiedContent via sectionRanges : heading + contenu principal + blocs fichiers additionnels comme Doc 2) pour beforeState/afterState, au lieu de parseContent().content qui excluait les fichiers additionnels. Le payload undo reste sur sectionFileSnapshot (contenu.md uniquement). Correction du bug où les modifications de Doc 2 n'apparaissaient pas dans l'historique / diff.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "tu as fait des retour en arrière, Cela n'enregistre plus les modification ou la partie historique n'affiche plus les modifications. Exemple j'ai modifié le document Doc 2 et cela ne m'indique rien dans l'historique [Image #10]. la selection d'une zone ne doit afficher que l'historique lié à cette section. Tu doit afficher tous le texte de la section modifié et pas juste le texte modifié [Image #9].",
-      "startedAt": "2026-05-04T00:00:00Z",
-      "completedAt": "2026-05-04T18:28:44.479Z"
-    },
-    {
-      "id": "mod-091",
-      "version": "THI-0.052",
-      "date": "2026-05-04T18:41:17.49Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Historique : tracking par entité (fichier/dossier) + filtre descendants",
-      "description": "Tracking au niveau fichier quand le curseur est dans un bloc fichier additionnel (Doc 2, etc.) au lieu de toujours tracker au niveau dossier. Le diff stocke toujours le texte complet de la section parente (heading + main + fichiers additionnels), mais l'entityId pointe sur le fichier précis. Côté filtre historique : sélection dossier → inclut tous descendants (sous-dossiers, fichiers) ; sélection fichier additionnel → uniquement ses propres entrées ; sélection contenu.md → traité comme le dossier parent. modifiedSections renommé en modifiedEntities (Map entityId→folderId). Nouveau computed activeHistoryIds (Set) dans projet-editor remplace activeHistoryId (string).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "Cela ne fonctionne toujours pas, Zone 4 Edition/visu, le textes est divisé en menu, document ou image. Lorsque je fait une modification celle ci est enregistré et la section dans lequel elle est modifié est gardé en mémoire. Ainsi si je selectionne une section comme un document, seul les modifications de cette zone est affiché dans l'onglet historique. Si c'est une zone menu cela doit affiché toutes les sous section (sous menu et document interne à cette section). Lorsqu'une modification est enregistré elle enregistre le texte de la section avant et après et affiche dans la zone 4 en mode \"Modification\" TOUS le texte de la section selectionné, ainsi si on modifi une ligne d'un document et que celui ci est selectionné, cela doit affiché tous le texte de la section et d'indiqué les modifications.",
-      "startedAt": "2026-05-04T00:00:00Z",
-      "completedAt": "2026-05-04T18:41:17.49Z"
-    },
-    {
-      "id": "mod-092",
-      "version": "THI-0.053",
-      "date": "2026-05-04T18:51:06.722Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Historique : flush au save (latence) + diff par fichier (bloc seul)",
-      "description": "Deux corrections sur la traçabilité contenu : (1) flushContentModifications() est désormais appelé à la fin de saveAll() (debounce 800ms) au lieu d'uniquement au blur — l'entrée historique apparaît dès la pause de frappe, plus besoin d'attendre le blur du textarea. (2) Quand l'entité tracée est un fichier additionnel (Doc 2 etc.), le diff stocke et affiche uniquement le bloc du fichier (delimité par 'name ... ') et plus le texte complet de la section parente. Quand l'entité est un dossier, le diff continue à afficher le texte complet de la section. Nouveau Map fileBlockSnapshot peuplé dans updateSnapshotFromFiles à partir des fileRanges.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "lorsque je fait une modif (exemple dans un document) dés l'enregistrement, cela doit affiché la modif dans la zone historique, actuellement cela met du temps à s'afficher. Lorsque je selectionne une section exemple un document et que je clique sur la modif à droite dans la zone du centre cela ne doit affiché que le texte du document.",
-      "startedAt": "2026-05-04T00:00:00Z",
-      "completedAt": "2026-05-04T18:51:06.722Z"
-    },
-    {
-      "id": "mod-093",
-      "version": "THI-0.054",
-      "date": "2026-05-04T18:58:00.331Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Fix retour diff : signal files désynchronisé après save de contenu",
-      "description": "Bug : après modification + clic sur entrée historique + Retour à éditeur, l'éditeur réaffichait l'ancien texte (avant save). Cause : la modification de l'éditeur de zone est démontée à l'ouverture du diff, et reconstruit unifiedContent depuis le signal files au remontage. Mais ce signal n'était jamais mis à jour après une sauvegarde de contenu pure (sans changement structurel) — seul hasStructural déclenchait un loadFiles. Solution : nouveau patchFileContent() appelé après chaque updateFile pour patcher le content du FileNode dans le signal files (pas de reload serveur, pas de flicker, pas de changement de structure key).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "lorsque je fait une modif et que je clique sur l'historique de la modif, celle ci s'affiche bien mais lorsque je clique sur Retour à l'editeur, c'est l'ancienne version qui s'affiche (avant enregistrement), corrige le problème. Pour info si je reactualise la page la bonne version du texte (modifié) s'affiche bien.",
-      "startedAt": "2026-05-04T00:00:00Z",
-      "completedAt": "2026-05-04T18:58:00.331Z"
-    },
-    {
-      "id": "mod-094",
-      "version": "THI-0.055",
-      "date": "2026-05-04T22:51:12.697Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Save 10s + titre noeud actif en zone 5b",
-      "description": "Debounce d'auto-save passé de 800ms à 10s : la sauvegarde n'a lieu qu'après 10s sans frappe, ou immédiatement au blur (clic en dehors), à l'entrée/sortie du mode focus, ou au switch Edition/Visu. Ajout sous les onglets Conversation/Historique de la zone 5b d'un bandeau affichant le nom + icône (folder/image/description) du noeud actuellement sélectionné, via nouveau computed activeNodeInfo dans projet-editor.component.ts.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "lorsqu'on modifi une section dossier, document ou image, l'enregistrement ne doit ce faire que lorsqu'on clique en dehors de la zone ou si on ne fait rien sur la page plus de 10 secondes. Affiche le titre du document, du dossier ou de l'image dans la zone 5b en dessous des onglets",
-      "startedAt": "2026-05-04T23:00:00Z",
-      "completedAt": "2026-05-04T22:51:12.697Z"
-    },
-    {
-      "id": "mod-095",
-      "version": "THI-0.056",
-      "date": "2026-05-04T23:01:16.082Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Historique : entrée pending grisée live pendant la frappe",
-      "description": "Affichage immédiat dans la zone 5b historique d'une entrée \"en cours\" (opacité 40%, icône progress_activity animée, badge \"en cours\" gris) dès qu'une modification est tapée dans une section/document/image, sans attendre l'auto-save 10s. Nouveau signal pending dans ProjetCollabService avec upsertPending/clearPending. L'editor zone appelle upsertPending dans onTextareaInput. Quand le save fire et que le serveur diffuse l'entrée réelle via SSE, le handler history clearPending automatiquement (matching par entityId). L'entrée pending devient non-cliquable (pas de diff). DisplayHistoryEntry étend CollabHistoryEntry avec un flag isPending.",
-      "files": [
-        "frankenstein/src/app/core/services/projet-collab.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "si une modification à lieu dans une section, cela doit être indiqué directement dans la zone 5b historique et ce mettre à jour petit à petit en live mais grisé tans que celle ci n'a pas encore été enregistré automatiquement.",
-      "startedAt": "2026-05-04T23:30:00Z",
-      "completedAt": "2026-05-04T23:01:16.082Z"
-    },
-    {
-      "id": "mod-096",
-      "version": "THI-0.057",
-      "date": "2026-05-04T23:06:44.867Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Bouton Sauvegardé : 4 états visuels (gris/jaune/vert/rouge)",
-      "description": "Le bouton de la toolbar reflète désormais l'état de save en temps réel : gris/edit \"Non sauvegardé\" pendant la frappe, jaune/progress_activity animé \"Sauvegarde…\" pendant le save serveur, vert/check_circle \"Sauvegardé\" après save réussi, rouge/error en cas d'erreur. Nouveau type ToolbarSaveStatus avec 5 valeurs (idle/dirty/saving/saved/error). Editor zone émet un dirtyChange(true) au premier input et dirtyChange(false) dans saveAll. Le parent met saveStatus à dirty si idle/saved.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "idem le bouton Sauvegardé doit être affiché en gris des que l'utilisateur commence à modifié une section et en vert lors de l'enregistrement",
-      "startedAt": "2026-05-04T23:50:00Z",
-      "completedAt": "2026-05-04T23:06:44.867Z"
-    },
-    {
-      "id": "mod-097",
-      "version": "THI-0.058",
-      "date": "2026-05-05T07:40:54.788Z",
-      "type": "refactor",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Fusion indicateur Sauvegardé : un seul dans la barre Edition/Visu",
-      "description": "Suppression du bouton Sauvegardé en haut à droite (toolbar du header) qui doublonnait avec celui de la barre d'outils Edition/Visu/B/I/H1... L'indicateur unique conservé est celui de la barre éditeur, étendu pour gérer les 5 états (idle/saved → vert check_circle, dirty → gris edit Non sauvegardé, saving → jaune spinner, error → rouge). Suppression de saveStatus, save event, et getters saveLabel/saveIcon/saveClass/saveIconSpin du ProjetToolbarComponent.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "il y a actuellement 2 infos/bouton Sauvegardé merge les 2 en 1 seul garde celui entouré en vert, attention met les fonctionnalité de celui de droite dans celui que tu garde",
-      "startedAt": "2026-05-05T00:00:00Z",
-      "completedAt": "2026-05-05T07:40:54.788Z"
-    },
-    {
-      "id": "mod-098",
-      "version": "THI-0.058",
-      "date": "2026-05-05T08:35:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein",
-        "server"
-      ],
-      "features": "frankenstein:projets,server:projets",
-      "title": "Historique zone 5b : effacer + couleur user + masquage jours",
-      "description": "Zone 5b Historique : (1) Bouton 'Effacer l'historique' en bas avec modale de confirmation affichant le nombre d'entrées concernées, scopée à la section sélectionnée. Non-admin : seul son propre historique. Admin : choix 'mes actions' ou 'tous les utilisateurs'. (2) Couleur de fond différente pour les actions du user connecté (jaune) vs autres users (bleu) + suffixe '(moi)'. (3) Toggle pour masquer les actions des jours précédents, masqué par défaut sauf jour courant, avec compteur d'entrées masquées. Nouveau endpoint DELETE /api/collab/:projetId/history avec query params entityIds + scope (mine|all), scope all réservé aux admins.",
-      "files": [
-        "server/server-data.js",
-        "frankenstein/src/app/core/services/projet-collab.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "Dans le menu projet : Zone 5b : Ajoute un bouton en bas de la liste de l'historique qui permet d'effacer l'historique (scopé à la section sélectionnée, confirmation avec nombre, user efface seulement le sien, admin a le choix tous/mes actions). Couleur background différente pour les actions du user connecté vs autres users. Option pour cacher les actions d'un jour, cachées par défaut sauf jour courant.",
-      "startedAt": "2026-05-05T08:24:30Z",
-      "completedAt": "2026-05-05T08:35:00Z"
-    },
-    {
-      "id": "mod-099",
-      "version": "THI-0.058",
-      "date": "2026-05-05T08:45:00Z",
-      "type": "refactor",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Historique zone 5b : jours toujours visibles, contenu repliable",
-      "description": "Remplacement du toggle global 'masquer les jours précédents' : chaque ligne de jour est désormais cliquable pour déplier/replier ses entrées. Toutes les lignes de date restent toujours affichées avec un compteur d'entrées et un chevron (chevron_right replié / expand_more déplié). Par défaut, seul le jour courant est déplié, les jours précédents sont repliés. État géré par deux Sets (expandedDays / collapsedDays) pour permettre aussi de replier le jour courant.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "l'affichage ou non des jours de la zone historique ne me conviens pas, je veux que la ligne des jours apparaisse toujours, ce sont les données pour chaque jour qui doivent être caché, en cliquant sur un jour, les données s'affiche, on reclique dessus les données ce ache. Mais la liste des jours doivent resté affiché",
-      "startedAt": "2026-05-05T08:40:00Z",
-      "completedAt": "2026-05-05T08:45:00Z"
-    },
-    {
-      "id": "mod-100",
-      "version": "THI-0.059",
-      "date": "2026-05-05T09:00:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Zone 5b : pending devient définitif dès le save",
-      "description": "Les entrées 'en cours' dans l'historique (zone 5b) restaient en attente même après que le bouton Sauvegardé soit vert. Fix : ajout de clearAllPending() dans ProjetCollabService, appelé dans processSectionsChange au moment où saveStatus passe à 'saved'. Les pending sont ainsi vidés en même temps que le bouton devient vert, sans attendre l'événement SSE.",
-      "files": [
-        "frankenstein/src/app/core/services/projet-collab.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans la zone 5b l'action ne prend pas le style \"action enregistré\" terminé, elle reste en attente [Image #13], il faut que la zone devienne définitive des que le bouton \"Sauvegardé\" deviens vert [Image #14]",
-      "startedAt": "2026-05-05T08:50:00Z",
-      "completedAt": "2026-05-05T09:00:00Z"
-    },
-    {
-      "id": "mod-101",
-      "version": "THI-0.059",
-      "date": "2026-05-05T09:30:00Z",
-      "type": "feature",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Save : 3 états visuels + bouton 'Non sauvegardé' cliquable",
-      "description": "Refonte du flux save/historique zone 5b pour distinguer 3 états des entrées en attente : 'editing' (section sélectionnée, grisé) → 'saving' (déselectionné, animate-pulse + badge 'sauvegarde…') → 'saved' (entrée définitive via SSE). Ajout de l'état 'state' sur PendingHistoryEntry et de la méthode markAllPendingSaving() dans ProjetCollabService. Nouvel output saveStarting depuis projet-editor-zone, gérée par onSaveStarting() côté parent : passe saveStatus à 'saving' immédiatement (avant l'analyse async de processSectionsChange) pour rendre le 'Sauvegarde…' visible entre 'Non sauvegardé' et 'Sauvegardé'. Le bouton 'Non sauvegardé' devient un button cliquable (forceSave) avec icône save et bordure orange. La sortie tôt de processSectionsChange réinitialise correctement saveStatus à 'saved' et purge les pending.",
-      "files": [
-        "frankenstein/src/app/core/services/projet-collab.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "Cela ne fonctionne pas\nDans la zone 4, lorsque je lance une modification de texte, le bouton Sauvegarde deviens \"Non sauvegardé\" et dans l'historique on à l'information de l'action en cours (grisé) mais lorsque je désélectionne la section, le bouton reste un certain temps en \"Non sauvegardé\", il faudrait qu'il passe \"En cours de sauvegarde\" avant de passé ensuite à \"Sauvegardé\". Cela doit faire un peu la même chose pour la zone historique, en grisé lorsque la modification est en cours (section selectionné), cela doit clignoté lorsqu'on désélectionne la zone tans que cela n'est pas sauvegardé et s'affiché normalement lorsque l'action de modification est bien sauvegardé.\n- Actuellement la zone modifié ne s'affiche pas en version final dans l'historique zone 5b. \n- Ajoute l'option de pouvoir appuyé sur le bouton \"Non sauvegardé\", pour lancer l'enregistrement de la modification",
-      "startedAt": "2026-05-05T09:15:00Z",
-      "completedAt": "2026-05-05T09:30:00Z"
-    },
-    {
-      "id": "mod-102",
-      "version": "THI-0.060",
-      "date": "2026-05-05T09:45:00Z",
+      "id": "mod-033",
+      "version": "B0.030",
+      "date": "2026-05-03T16:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -3180,11 +2429,11 @@
       "completedAt": "2026-05-05T09:45:00Z"
     },
     {
-      "id": "mod-103",
-      "version": "THI-0.061",
-      "date": "2026-05-05T10:00:00Z",
-      "type": "fix",
-      "commitType": "FIX",
+      "id": "mod-034",
+      "version": "B0.031",
+      "date": "2026-05-03T15:51:42.793Z",
+      "type": "config",
+      "commitType": "AMELIORATION",
       "scope": [
         "frankenstein"
       ],
@@ -3202,73 +2451,9 @@
       "completedAt": "2026-05-05T10:00:00Z"
     },
     {
-      "id": "mod-104",
-      "version": "THI-0.061",
-      "date": "2026-05-05T10:10:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Projet editor : restauration scroll zone 3, conservation no-scroll zone 4",
-      "description": "Le fix précédent avait supprimé le scroll pour les deux zones (3 et 4). Revert de onNodeSelect pour restaurer le scroll au clic dans la sidebar (zone 3). Le no-scroll zone 4 (textarea) était déjà garanti via suppressScrollOnNextActiveChange dans onTextareaCursor.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "le scroll est desactivé lorsque je clique dans la zone d'edition mais elle à aussi été désactivé lorsqu'on clique sur le menu fichier zone 3 et il faut quelle soi activé, lorsqu'on clique sur un menu ou un document dans le menu fichier il faut scroller vers cette section",
-      "startedAt": "2026-05-05T10:05:00Z",
-      "completedAt": "2026-05-05T10:10:00Z"
-    },
-    {
-      "id": "mod-105",
-      "version": "THI-0.061",
-      "date": "2026-05-05T10:20:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Projet editor : scroll uniquement depuis zone 3, jamais depuis zone 4",
-      "description": "Suppression du scrollToActive() déclenché par le changement de activeNodeId. Le scroll n'est plus jamais déclenché par des actions dans la zone d'édition (zone 4). Seul scrollToNodeId (set par onNodeSelect depuis le menu fichier zone 3) provoque le scroll de l'éditeur. activeNodeId gère uniquement le highlight.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "si je clique dans une section dans la zone selection 4a et que je clique sur une image dans une autre section, la zone d'edition scroll vers la section selectionné avant l'image, il ne faut pas de scroll lorsque je clique dans une section de la partie edition, le scroll ne fonctionne que lorsqu'on clique dans le menu de fichier*",
-      "startedAt": "2026-05-05T10:15:00Z",
-      "completedAt": "2026-05-05T10:20:00Z"
-    },
-    {
-      "id": "mod-108",
-      "version": "THI-0.063",
-      "date": "2026-05-05T12:00:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix critique : bloc réordonnancement onSectionsChange corrupteur",
-      "description": "Le bloc ajouté en THI-0.61 dans onSectionsChange reconstruisait folder.children uniquement depuis orderedFileIds (fichiers texte seulement), excluant images standalone et sous-dossiers non listés. Sur chaque save, des noeuds disparaissaient du serveur (corruption). Suppression du bloc entier + ChangeDetectorRef inutile. Restauration du comportement stable de THI-0.60.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "version.json"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "la nouvelle version ne fonctionne pas reviens à la version précédente / le mode edition ne fonctionne plus corectement verifi avec les anciennes version pour voir ce qui à causé le soucis.",
-      "startedAt": "2026-05-05T11:45:00Z",
-      "completedAt": "2026-05-05T12:00:00Z"
-    },
-    {
-      "id": "mod-109",
-      "version": "THI-0.064",
-      "date": "2026-05-05T14:30:00Z",
+      "id": "mod-035",
+      "version": "B0.032",
+      "date": "2026-05-03T16:25:24.680Z",
       "type": "feature",
       "commitType": "AMELIORATION",
       "scope": [
@@ -3484,10 +2669,32 @@
       "completedAt": "2026-05-06T00:45:00Z"
     },
     {
-      "id": "mod-119",
-      "version": "THI-0.067",
-      "date": "2026-05-06T01:05:00Z",
-      "type": "refactor",
+      "id": "mod-036",
+      "version": "B0.033",
+      "date": "2026-05-03T16:31:02.002Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:wo-action-history",
+      "title": "Fix listes déroulantes wo-action-history en dark mode",
+      "description": "Les options des select natifs n'héritent pas des classes Tailwind dark:. Fix : ajout de styles SCSS ciblant .dark select option avec fond #13131f et texte blanc. Le fond du select lui-même passe de bg-white/5 (quasi transparent) à bg-[#13131f] (couleur solide).",
+      "files": [
+        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.scss",
+        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il y a des problème d'affichage dans les listes deroulante section historique wo-action-history",
+      "startedAt": "2026-05-03T16:31:02.003Z",
+      "completedAt": "2026-05-03T16:31:02.003Z"
+    },
+    {
+      "id": "mod-037",
+      "version": "B0.033",
+      "date": "2026-05-03T16:36:09.981Z",
+      "type": "feature",
       "commitType": "AMELIORATION",
       "scope": [
         "frankenstein"
@@ -3505,9 +2712,31 @@
       "completedAt": "2026-05-06T01:05:00Z"
     },
     {
-      "id": "mod-120",
-      "version": "THI-0.068",
-      "date": "2026-05-06T10:00:00Z",
+      "id": "mod-038",
+      "version": "B0.033",
+      "date": "2026-05-03T16:43:33.240Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:wo-action-history",
+      "title": "Fix design wo-action-history : couleurs thème au lieu de hardcodé",
+      "description": "La page wo-action-history utilisait des couleurs hardcodées (#0a0a12, #0f0f17, #13131f, indigo-500) incompatibles avec le système de thème du site. Remplacement complet par les variables Tailwind du thème : bg-background, bg-surface, bg-surface-light, text-primary/bg-primary/border-primary. Sélects et boutons de filtre date alignés. SCSS options select mis à jour avec rgb(var(--tw-surface)).",
+      "files": [
+        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.html",
+        "frankenstein/src/app/pages/user/wo-action-history/wo-action-history.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "la section wo-action-history n'a pas le même design (thème) que le reste du site, corrige le problème",
+      "startedAt": "2026-05-03T16:43:33.241Z",
+      "completedAt": "2026-05-03T16:43:33.241Z"
+    },
+    {
+      "id": "mod-039",
+      "version": "B0.034",
+      "date": "2026-05-03T17:00:00.000Z",
       "type": "config",
       "commitType": "MERGE",
       "scope": [
@@ -3556,157 +2785,9 @@
       "completedAt": "2026-05-06T10:00:00Z"
     },
     {
-      "id": "mod-121",
-      "version": "THI-0.068",
-      "date": "2026-05-06T10:30:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix suppression image : encart persistant après delete",
-      "description": "Correction de la race condition lors de la suppression d'une image : l'encart restait affiché avec \"image manquante\" car refresh.emit() déclenchait loadFiles() avant que scheduleSave() (10s) n'ait sauvegardé le contenu. Fix : filtrage immédiat de allImages après delete + saveAll() immédiat au lieu de scheduleSave(). Entrée historique déjà présente via woHistory.track.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans la zone edition la bouton supprimé l'image supprime le fichier dans le dossier data/projet mais laisse l'encart avec image manquante, il faut supprimé le fichier et l'encart et mettre dans l'historique l'action de suppression d'image",
-      "startedAt": "2026-05-06T10:10:00Z",
-      "completedAt": "2026-05-06T10:30:00Z"
-    },
-    {
-      "id": "mod-122",
-      "version": "THI-0.069",
-      "date": "2026-05-06T11:00:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Auto-purge des encarts image manquante",
-      "description": "Dans recomputeMirrorLines, si un marqueur {{IMG:xxx}} ne correspond à aucune image connue dans allImages, la ligne est automatiquement retirée du unifiedContent et un saveAll() est déclenché. Le contenu est nettoyé silencieusement sans afficher l'encart.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "lorsque l'encart indique image manquante, cela doit supprimé automatiquement l'encart image. Si l'image n'existe pas, l'encart ne doit pas être affiché",
-      "startedAt": "2026-05-06T10:50:00Z",
-      "completedAt": "2026-05-06T11:00:00Z"
-    },
-    {
-      "id": "mod-123",
-      "version": "THI-0.071",
-      "date": "2026-05-06T11:30:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix race condition image upload/delete : mauvaise position",
-      "description": "Correction de la race condition entre saveAll() (async via sectionsChange) et refresh.emit() (qui déclenche loadFiles). Avant : loadFiles lisait un contenu.md obsolète, buildDocSections plaçait les marqueurs {{IMG:xxx}} en bas du dossier au lieu de la position du curseur, et les delete demandaient un double clic. Fix : (1) onRefresh dans projet-editor attend la fin du save en cours (isSaving + pendingSections) avant loadFiles ; (2) onImageSelected utilise saveAll() au lieu de scheduleSave() (10s) pour que isSaving soit true quand refresh.emit est appelé ; (3) ajout local immédiat à allImages pour upload, et retrait pour delete (déjà fait mod-121) ; (4) idem pour les flux visu (onVisuImageSelected, deleteVisuImage).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "cela ne marche pas corectement, lorsque je rajoute une image à un endroit précis comme entre 2 texte dans un dossier, à certain moment l'image est affiché tout en bas du dossier. Autre problème lorsque je veux effacé une image celle ci ce déplace tout seul en bas du dossier et ensuite je dois recommencer une seconde fois pour supprimer l'image. Verifi le système et corrige les problèmes",
-      "startedAt": "2026-05-06T11:05:00Z",
-      "completedAt": "2026-05-06T11:30:00Z"
-    },
-    {
-      "id": "mod-124",
-      "version": "THI-0.071",
-      "date": "2026-05-06T12:00:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix encart image absent après upload (auto-purge prématurée)",
-      "description": "Cause racine identifiée : pendant processSectionsChange côté parent, patchFileContent met à jour le signal files avec le nouveau contenu.md. Cela déclenche ngOnChanges dans la zone AVANT que loadFiles n'ait propagé la nouvelle image dans this.files. Résultat : allImages = collectAllImages(files) ne contenait pas la nouvelle image, et l'auto-purge mod-122 supprimait le marqueur fraîchement inséré comme orphelin. Fix : ajout d'un Set recentlyAddedImageIds (TTL 8s) avec les IDs des images uploadées localement. L'auto-purge orphan exclut ces IDs tant que la propagation via loadFiles n'est pas terminée.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "Cela ne fonctionne pas, maintenant lorsque je rajoute une image l'encart ne s'affiche même plus.",
-      "startedAt": "2026-05-06T11:35:00Z",
-      "completedAt": "2026-05-06T12:00:00Z"
-    },
-    {
-      "id": "mod-125",
-      "version": "THI-0.071",
-      "date": "2026-05-06T12:30:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix upload image : nom manquant + mauvais dossier cible",
-      "description": "Deux corrections : (1) Nom manquant dans l'encart après upload : patchFileContent → ngOnChanges réécrivait allImages sans la nouvelle image (avant loadFiles). Fix : ajout de pendingLocalImages réinjectés dans allImages à chaque ngOnChanges tant que loadFiles n'a pas propagé le nœud. (2) Mauvais dossier cible : cliquer le bouton toolbar faisait perdre le focus au textarea → ta.selectionStart retombait à 0 → getCursorFolderId() retournait le mauvais dossier. Fix : capture du dossier cible dans triggerImageUpload() AVANT l'ouverture du file picker, stocké dans lastFolderIdForUpload.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "le rajout d'image ne fonctionne pas toujours sur la capture on peux voir l'encart mais pas le nom, le fichier n'a pas été uploader dans le repertoir data/projets/...",
-      "startedAt": "2026-05-06T12:05:00Z",
-      "completedAt": "2026-05-06T12:30:00Z"
-    },
-    {
-      "id": "mod-126",
-      "version": "THI-0.071",
-      "date": "2026-05-06T13:00:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "server"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix upload image : DELETE 404 causé par doublons dans config.json",
-      "description": "Cause : le handler upload-image pushait un nouveau nœud sans vérifier si un fichier du même nom existait déjà dans le dossier. getProjectConfig appelle cleanStructure qui déduplique par type:name — le nouveau nœud (2e occurrence) était silencieusement supprimé. Les requêtes DELETE/PUT ultérieures sur ce nouvel ID retournaient 404 (Fichier non trouvé). Fix : avant de pousser le nouveau nœud, rechercher un nœud existant avec le même nom dans parentItems et le remplacer (splice) plutôt qu'ajouter un doublon.",
-      "files": [
-        "server/server-data.js"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "{\"status\": 404, \"error\": \"Fichier non trouvé\"} — DELETE /api/file-projects/.../files/...",
-      "startedAt": "2026-05-06T12:45:00Z",
-      "completedAt": "2026-05-06T13:00:00Z"
-    },
-    {
-      "id": "mod-127",
-      "version": "THI-0.071",
-      "date": "2026-05-06T13:15:00Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "server"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix : table wo_action_history manquante dans init-db.js",
-      "description": "La table wo_action_history n'était pas déclarée dans init-db.js. Le POST /api/wo-action-history retournait 500 (table inexistante en BDD). Ajout du CREATE TABLE IF NOT EXISTS correspondant au schéma utilisé par server-data.js.",
-      "files": [
-        "server/init-db.js"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "j'ai encore des erreurs lorsque je rajoute une image : wo-action-history.service.ts:64 POST http://localhost:3001/api/wo-action-history 500",
-      "startedAt": "2026-05-06T13:10:00Z",
-      "completedAt": "2026-05-06T13:15:00Z"
-    },
-    {
-      "id": "mod-128",
-      "version": "THI-0.071",
-      "date": "2026-05-06T23:03:35Z",
+      "id": "mod-040",
+      "version": "B0.035",
+      "date": "2026-05-03T18:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -3725,30 +2806,9 @@
       "completedAt": "2026-05-06T23:03:35Z"
     },
     {
-      "id": "mod-129",
-      "version": "THI-0.071",
-      "date": "2026-05-06T21:19:34.174Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix image visible après suppression : hoverPreview non vidé",
-      "description": "Correction : après confirmDeleteImage(), le nœud ed-img-card est retiré du DOM par recomputeMirrorLines() sans déclencher mouseleave → hoverPreview reste non-null → le prévisualiseur d'image (position:fixed, fond sombre, vraie image) reste affiché. Fix : this.hoverPreview = null ajouté dans confirmDeleteImage() juste après la suppression.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "lorsque je supprime l'image, l'encart s'efface mais l'image reste affiché",
-      "startedAt": "2026-05-06T21:19:34.174Z",
-      "completedAt": "2026-05-06T21:19:34.174Z"
-    },
-    {
-      "id": "mod-130",
-      "version": "THI-0.071",
-      "date": "2026-05-06T21:24:43.294Z",
+      "id": "mod-041",
+      "version": "B0.036",
+      "date": "2026-05-03T23:34:13.973Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -3767,9 +2827,9 @@
       "completedAt": "2026-05-06T21:24:43.294Z"
     },
     {
-      "id": "mod-131",
-      "version": "THI-0.071",
-      "date": "2026-05-06T21:46:52.491Z",
+      "id": "mod-042",
+      "version": "B0.037",
+      "date": "2026-05-03T23:42:09.706Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -3788,9 +2848,9 @@
       "completedAt": "2026-05-06T21:46:52.491Z"
     },
     {
-      "id": "mod-132",
-      "version": "THI-0.072",
-      "date": "2026-05-06T22:00:00Z",
+      "id": "mod-043",
+      "version": "B0.038",
+      "date": "2026-05-03T23:48:39.967Z",
       "type": "feature",
       "commitType": "AMELIORATION",
       "scope": [
@@ -3809,55 +2869,9 @@
       "completedAt": "2026-05-06T22:00:00Z"
     },
     {
-      "id": "mod-133",
-      "version": "THI-0.073",
-      "date": "2026-05-07T10:30:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:site",
-      "title": "Editeur : tabs Code/Preview GitHub-style + syntax highlighting + preview clean",
-      "description": "Refonte edition/visualisation projet-editor-zone. Tabs Code/Preview style GitHub. Mode Code : syntax highlighting miroir (H1-H6 colores, gras, italique, code, tables, blockquotes, listes, HR), nouveaux boutons toolbar (code block, table, blockquote, HR, H4). Mode Preview : rendu read-only via marked avec typographie clean (max-width 800px, tables, dark mode complet). setMode simplifie sans appels flush/selectionListener.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Amelioration editeur Code/Preview GitHub-style avec syntax highlighting et preview read-only",
-      "startedAt": "2026-05-07T09:00:00Z",
-      "completedAt": "2026-05-07T10:30:00Z"
-    },
-    {
-      "id": "mod-134",
-      "version": "THI-0.074",
-      "date": "2026-05-07T11:30:00.000Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:site",
-      "title": "Editeur Code : numéros de ligne + fold/collapse de sections",
-      "description": "Ajout de deux fonctionnalités au mode Code de projet-editor-zone. (1) Numéros de ligne : chaque ligne du miroir affiche son numéro en gouttière gauche (absolu, police monospace, couleur discrète). La gouttière passe de 2.75rem à 3.75rem pour accommoder les numéros. Les handles, focus buttons et drop indicator sont repositionnés en conséquence. (2) Fold/collapse par section : chevron (v/>) visible au hover dans la gouttière pour chaque section ayant du contenu. Clic chevron replie le body de la section (remplace les lignes par un marker {{FOLD:id:N}}) et stocke le contenu dans foldedContent Map. Clic sur le placeholder dereplie. Auto-save pausé tant que des sections sont repliées. unfoldAll() appelé avant setMode (switch preview), forceSave, et changement structurel.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "il manque les numéros de ligne et les options pour minimisé les zones par section",
-      "startedAt": "2026-05-07T10:45:00.000Z",
-      "completedAt": "2026-05-07T11:30:00.000Z"
-    },
-    {
-      "id": "mod-135",
-      "version": "THI-0.075",
-      "date": "2026-05-07T10:41:20.987Z",
+      "id": "mod-044",
+      "version": "B0.039",
+      "date": "2026-05-04T08:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
@@ -3876,9 +2890,9 @@
       "completedAt": "2026-05-07T10:41:20.987Z"
     },
     {
-      "id": "mod-136",
-      "version": "THI-0.076",
-      "date": "2026-05-07T10:56:48.788Z",
+      "id": "mod-045",
+      "version": "B0.040",
+      "date": "2026-05-04T08:35:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
       "scope": [
@@ -3899,73 +2913,9 @@
       "completedAt": "2026-05-07T10:56:48.788Z"
     },
     {
-      "id": "mod-137",
-      "version": "THI-0.077",
-      "date": "2026-05-07T11:06:16.756Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix gouttiere : chevron repli masque par handle deplacement",
-      "description": "Le chevron de repli et le handle de deplacement se chevauchaient horizontalement (tous deux autour de 40-58px). Correction par decalage du handle et du bouton Ed. vers la droite (2.75rem->3.5rem), augmentation du padding-left (5rem->5.75rem=92px), repositionnement du chevron (2.5->2.25rem), lnum (-4.75->-5.5rem) et drop-indicator (4.75->5.5rem).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "il faut ecarte vers la droite les boutons deplacement et le texte pour laisse la place a l icone de reduction des sections, on ne vois pas l icone reduction qui passe en dessous des bouton deplacement/Edition",
-      "startedAt": "2026-05-07T00:00:00.000Z",
-      "completedAt": "2026-05-07T11:06:16.756Z"
-    },
-    {
-      "id": "mod-138",
-      "version": "THI-0.078",
-      "date": "2026-05-07T11:45:01.970Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Agrandissement icone chevron de repli",
-      "description": "Augmentation du font-size du chevron de repli de 10px a 14px (::after) et de 9px a 11px (element). La fleche vers le bas est maintenant de taille comparable aux numeros de ligne (11px).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "l icone fleche vers la bas est trop petit, grossi cette icone de la meme taille que les chiffres de gauche",
-      "startedAt": "2026-05-07T00:00:00.000Z",
-      "completedAt": "2026-05-07T11:45:01.970Z"
-    },
-    {
-      "id": "mod-139",
-      "version": "THI-0.079",
-      "date": "2026-05-07T10:00:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Historique par section (blocs inline)",
-      "description": "Chaque bloc inline (tableau, citation, code, liste) a son propre historique. Modifications, deplacements et selection filtrent le panneau historique. IDs stables par parentFolderId##kind##index. La selection dun dossier inclut aussi les blocs de ses enfants.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Chaque section doit avoir son propre historique d action, ainsi si on clique sur un section de tableau on doit avoir l historique de ce tableau uniquement, si on clique sur le dossier ou il y a le tableau, on doit avoir l historique du tableau mais aussi l historique du dossier et tous ce qu il y a dans le dossier. Ajoute toutes les sections tableau document code citation etc dans l historique. Dans l historique on doit retrouve : ajout, suppression modification des texts, ajout/suppression/deplacement des sections etc",
-      "startedAt": "2026-05-07T09:00:00Z",
-      "completedAt": "2026-05-07T10:00:00Z"
-    },
-    {
-      "id": "mod-140",
-      "version": "THI-0.080",
-      "date": "2026-05-07T10:30:00Z",
+      "id": "mod-046",
+      "version": "B0.041",
+      "date": "2026-05-06T10:00:00.000Z",
       "type": "config",
       "commitType": "AMELIORATION",
       "scope": [
@@ -3984,9 +2934,9 @@
       "completedAt": "2026-05-07T10:30:00Z"
     },
     {
-      "id": "mod-141",
-      "version": "THI-0.080",
-      "date": "2026-05-07T11:00:00Z",
+      "id": "mod-047",
+      "version": "B0.042",
+      "date": "2026-05-06T13:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
       "scope": [
@@ -3996,822 +2946,175 @@
       "title": "Mode Preview WYSIWYG : template, TS et SCSS connectés",
       "description": "Reconnexion du mode visu éditable : remplacement du bloc preview read-only par le template WYSIWYG complet (sections contenteditable, toolbar flottante fixed, menu d'insertion fixed, input image caché). Mise à jour de 5 méthodes TS : setMode (flush + lifecycle selection listener), buildVisuSections (setTimeout initVisuSectionHtml), onVisuSectionBlur (suppression param el, lookup via QueryList), onVisuSelectionChange et showVisuInsertMenu (coordonnées fixed viewport). SCSS : position fixed + z-index 200 pour .visu-format-toolbar et .visu-insert-menu, ajout .visu-content-wrap et règles de taille h1-h4.visu-sec-heading.",
       "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "I need you to make coordinated changes to 3 files to implement a WYSIWYG editable preview mode. The infrastructure already exists in the TypeScript but was disconnected from the template. Do NOT run any build or git commands — just make the file edits.",
-      "startedAt": "2026-05-07T10:30:00Z",
-      "completedAt": "2026-05-07T11:00:00Z"
-    },
-    {
-      "id": "mod-142",
-      "version": "THI-0.081",
-      "date": "2026-05-07T12:00:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix tables et images dans blocs doc (mode visu)",
-      "description": "Deux corrections dans buildVisuSectionHtml : (1) les marqueurs {{IMG:...}} à l intérieur des blocs fichier (délimiteurs quotes) sont maintenant traités avant marked.parse, (2) les tableaux générés par marked sont wrappés dans <div contenteditable=\"false\" class=\"visu-table-wrap\"> pour éviter la corruption du DOM contenteditable. Ajout de tableToMarkdown() pour sérialiser les tables en markdown pipe lors de la sauvegarde. Ajout CSS .visu-table-wrap + dark mode dans .visu-sec-content ::ng-deep.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "ta modification à cassé l affichage des tableaux et l image dans un document, corrige tous ça",
-      "startedAt": "2026-05-07T11:45:00Z",
-      "completedAt": "2026-05-07T12:00:00Z"
-    },
-    {
-      "id": "mod-143",
-      "version": "THI-0.082",
-      "date": "2026-05-07T12:30:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix sauvegarde visu : sous-sections préservées",
-      "description": "Bug critique dans saveVisuSection : range.lineEnd inclut toutes les sous-sections de la section éditée. Lors du remplacement du contenu, les sous-sections étaient écrasées. Fix : calcul d un directEnd en cherchant la première ligne heading (#{1,4}) après lineStart, pour limiter le remplacement au contenu direct de la section uniquement.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "j'ai ajouté un texte dans Menu 1 et cela à effacé tous le texte qui suit peux tu vérifié pourquoi et corrige le problème",
-      "startedAt": "2026-05-07T12:15:00Z",
-      "completedAt": "2026-05-07T12:30:00Z"
-    },
-    {
-      "id": "mod-146",
-      "version": "THI-0.084",
-      "date": "2026-05-12T15:30:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein",
-        "server"
-      ],
-      "features": "frankenstein:projet-editor,server:collab",
-      "title": "Collab visu : badge édition + boutons Annuler/Partager explicite",
-      "description": "Ajout du flux UX complet pour le partage explicite des modifications. (1) Badge bleu 'Vous éditez cette section' visible uniquement pour l'auteur du lock, badge rouge 'Édité par [user]' pour les autres users. (2) Boutons [Annuler] et [✔ Partager mes modifications] apparaissent sous la section quand l'utilisateur a le lock. (3) Annuler : restaure le contenu HTML original (snapshot capturé à l'acquisition du lock), libère le lock sans publier. (4) Partager : met à jour unifiedContent, annule le debounce, appelle updateFile(publish=true) qui diffuse content_update SSE et libère le lock côté serveur en une seule requête. (5) onVisuSectionBlur conserve le lock (save local sans publish). (6) Backend PUT files/:id : broadcast SSE et unlock DB uniquement si publish=true dans le body. (7) updateFile() expose le param publish=false par défaut.",
-      "files": [
-        "server/server-data.js",
-        "frankenstein/src/app/core/services/project-files.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Comment je sais qu'une section est verouillé pour les autres user et pour moi même et comment je fais pour validé mes modifs et que je partage mon travail ?",
-      "startedAt": "2026-05-12T14:45:00Z",
-      "completedAt": "2026-05-12T15:30:00Z"
-    },
-    {
-      "id": "mod-145",
-      "version": "THI-0.083",
-      "date": "2026-05-12T14:30:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein",
-        "server"
-      ],
-      "features": "frankenstein:projet-editor,server:collab",
-      "title": "Collaboration temps réel : hard lock, content_update SSE, structure_update SSE",
-      "description": "Implémentation de la collaboration locale avec partage sélectif. (1) Backend : vérification hard lock (HTTP 423) dans PUT /api/file-projects/:name/files/:id — la modification est refusée si la section est verrouillée par un autre user ; broadcast SSE content_update après sauvegarde réussie (contenu + auteur) ; broadcast SSE structure_update sur toutes les opérations de structure (create/rename/delete dossier et fichier, reorder). (2) Service collab : ajout des interfaces ContentUpdateEvent et StructureUpdateEvent, Subject content_update$ et structureUpdate$, handlers SSE correspondants (self-filter : les événements émis par le user courant sont ignorés). (3) Composant éditeur : abonnement aux Subjects — content_update patche le signal files sans rechargement, structure_update déclenche un loadFiles() complet. (4) Zone éditeur visu : lock automatique de la section au focus (folderId comme nodeId), refus de focus si section verrouillée par autre user (contenteditable=false + reblur), unlock automatique au blur ; badge visuel rouge 'Édité par [user]' sur les sections verrouillées. (5) ProjectFilesService.updateFile() : paramètre folderId optionnel transmis au backend pour vérification combinée fileId+folderId.",
-      "files": [
-        "server/server-data.js",
-        "frankenstein/src/app/core/services/projet-collab.service.ts",
-        "frankenstein/src/app/core/services/project-files.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "J'ai un problème et je voudrais que tu étudie mon système pour me proposé des solutions. Je voudrais que mes projets soi géré en local (sans connexion) mais qu'a un moment donné les projets (menu + documents + contenu) puisse être partagé avec d'autre user qui bosse aussi sur le projet. Je voudrais ainsi que les menu projet (nom des dossiers, documents) soi partagé en direct. Mais que les documents eux soi disponible puis bloqué par un user pour faire une edition de la section (alors impossible à edité pendant l'edition par d'autre user) puis ensuite partagé pour être récupéré par les autres user. Fait une étude propose moi des solutions et si besoin pose moi des questions",
-      "startedAt": "2026-05-12T12:00:00Z",
-      "completedAt": "2026-05-12T14:30:00Z"
-    },
-    {
-      "id": "mod-144",
-      "version": "THI-0.083",
-      "date": "2026-05-07T14:00:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix visu : bloc code, tables et séparateurs HR",
-      "description": "3 corrections dans le mode visu : (1) insertVisuBlock insère désormais au directEnd+1 (avant les sous-sections) au lieu du lineEnd+1 (après), ce qui évite que le code fence soit attribué à la mauvaise section et corrompe le document ; (2) nodeToMd vérifie data-block-md/data-img-id/visu-table-wrap par attribut/classe AVANT de vérifier contenteditable (plus robuste contre la normalisation navigateur), et ajoute un case table direct en fallback ; tableToMarkdown utilise nodesToMd (préservation du formatage inline : backticks, gras…) ; (3) case hr retourne désormais \n\n---\n\n pour éviter l interprétation setext-heading.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Il y a un problème lorsque je rajoute une section de code, des que je fait enregistré le document complet change et le tableau en dessous est totalement cassé. Il y a aussi des problèmes lorsqu il y a plusieurs Séparateurs horizontal --- Verifi tous le système et corrige les problèmes",
-      "startedAt": "2026-05-07T13:00:00Z",
-      "completedAt": "2026-05-07T14:00:00Z"
-    },
-    {
-      "id": "mod-147",
-      "version": "THI-0.085",
-      "date": "2026-05-13T16:24:24.445Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Visu collab : signal editingVisuSectionId + NgZone locks SSE",
-      "description": "Conversion de editingVisuSectionId en signal Angular pour garantir la réactivité du badge édition et des boutons Annuler/Partager en mode visu. Ajout de NgZone.run() dans les handlers SSE lock/unlock du ProjetCollabService pour que les updates du signal locks déclenchent le change detection même hors zone.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/core/services/projet-collab.service.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "lorsque je modifi une section je ne vois toujours pas d'information pour la section bloqué pour les autres users (affiché sur mon front) et de bouton pour enregistré/partagé et debloqué le partage (les autres users auront le document mise à jour directement)",
-      "startedAt": "2026-05-13T16:24:24.445Z",
-      "completedAt": "2026-05-13T16:24:24.445Z"
-    },
-    {
-      "id": "mod-148",
-      "version": "THI-0.085",
-      "date": "2026-05-13T16:39:42.387Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Visu/Code : barre Annuler/Partager + toast succès",
-      "description": "Ajout barre Annuler/Partager en mode Code (visible quand saveStatus=dirty) avec cancelCodeEdit() et publishCodeEdit() qui sauvegarde et broadcaste via SSE (publish:true). Ajout toast vert 3s après tout partage réussi, en mode Code comme en mode Preview.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "il me faudrais la même chose en mode edition, lorsque je clique sur le bouton 'partager mes modifications' il me faudrais un message indiquant que le texte est bien enregistré et partagé dans tous le projet",
-      "startedAt": "2026-05-13T16:39:42.387Z",
-      "completedAt": "2026-05-13T16:39:42.387Z"
-    },
-    {
-      "id": "mod-149",
-      "version": "THI-0.086",
-      "date": "2026-05-13T17:10:00.000Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Fix barre Code : snapshot Annuler + signal codeEditPending",
-      "description": "Fix de deux bugs : (1) Annuler ne restaurait pas le texte → ajout de codeEditSnapshot capturé au premier keystroke avant tout auto-save. (2) La barre apparaissait une fois sur deux → remplacement de saveStatus==='dirty' par le signal interne codeEditPending. Reset du signal dans setMode() lors du passage en mode visu.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "cela ne fonctionne pas corectement lorsque je rajoute du texte j'ai bien les bouton annuler/partagé mais si je fait annulé, le texte ajouté n'est pas supprimé et une fois sur 2 le boutons ne s'affiche pas",
-      "startedAt": "2026-05-13T17:00:00.000Z",
-      "completedAt": "2026-05-13T17:10:00.000Z"
-    },
-    {
-      "id": "mod-150",
-      "version": "THI-0.087",
-      "date": "2026-05-13T18:00:00.000Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Zone 3→4 : clic dossier = focus section uniquement",
-      "description": "Suppression du bouton 'Éd.' : le clic sur un dossier/fichier en zone 3 active automatiquement le mode focus pour cette section (edit) ou filtre les sections affichées (preview). Clic sur le nom du projet affiche tout le document. Ajout de filteredVisuSections, applyFocusByActiveNode(), getDescendantFolderIds(), et projectSelect sur la sidebar.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "je voudrais que tu change l'application d'une fonction d'affichage des section. Actuellement pour affiché une seul section il faut cliqué sur le bouton \"Editer uniquement ...\", je voudrais que tu supprime ce bouton et que tu utilise cette fonction simplement en cliquant sur le menu des dossiers/document. Ainsi je veux que lorsque tu clique sur un dossier tu n'affiche dans la zone 4 (Edition/preview) uniquement la section selectionné (et les sections enfants). Si on clique sur le nom du projet dans la zone 3 menu du projet, cela affichera tous le projet dans la zone 4.",
-      "startedAt": "2026-05-13T17:20:00.000Z",
-      "completedAt": "2026-05-13T18:00:00.000Z"
-    },
-    {
-      "id": "mod-151",
-      "version": "THI-0.087",
-      "date": "2026-05-13T18:15:00.000Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Fix focus : changement de section depuis zone 3",
-      "description": "Quand on était en focus mode sur section A et qu'on cliquait sur section B, les handles étaient partiels (section A uniquement) donc B n'était pas trouvé. Fix : appel exitFocusModeSync() avant la recherche du nouveau handle pour restaurer les handles complets du document.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "cela fonctionne au premier clique sur un dossier/document mais si je clique ensuite dans un autre dossier/document il faut passé à l'autre dossier/document et ne pas resté sur le premier, le dossier/document sectionné doit s'affiché dans la zone 4",
-      "startedAt": "2026-05-13T18:10:00.000Z",
-      "completedAt": "2026-05-13T18:15:00.000Z"
-    },
-    {
-      "id": "mod-152",
-      "version": "THI-0.087",
-      "date": "2026-05-13T18:30:00.000Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Fix focus preview : fichier → dossier parent",
-      "description": "En mode Preview, cliquer sur un fichier (image, doc) retournait un filteredVisuSections vide car les fichiers n'ont pas de descendants dossiers. Fix : findEffectiveFolderId() résout le dossier parent pour tout nœud de type fichier, utilisé dans filteredVisuSections et applyFocusByActiveNode.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Cela fonctionne bien dans la zone 4 edition mais cela ne fonctionne pas dans la zone 4 preview, cela doit fonctionné de la même façon",
-      "startedAt": "2026-05-13T18:20:00.000Z",
-      "completedAt": "2026-05-13T18:30:00.000Z"
-    },
-    {
-      "id": "mod-153",
-      "version": "THI-0.087",
-      "date": "2026-05-13T19:00:00.000Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Fix preview : fichier → section parent seule sans sous-sections",
-      "description": "Clic sur un fichier montrait la section parent + toutes ses sous-sections (ex: Menu 2-2 + Menu 2-2-1). Fix : pour un fichier, filteredVisuSections n'affiche que la section du dossier parent direct (sans descendants). Pour un dossier, comportement inchangé (dossier + enfants).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Cela ne fonctionne pas correctement dans le mode preview, en cliquant sur le menu cela n'affiche pas la bonne section dossier/document selectionné dans le menu",
-      "startedAt": "2026-05-13T18:50:00.000Z",
-      "completedAt": "2026-05-13T19:00:00.000Z"
-    },
-    {
-      "id": "mod-154",
-      "version": "THI-0.087",
-      "date": "2026-05-13T20:00:00.000Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Fix preview : doc rendu standalone + lookup par data-section-id",
-      "description": "Bug racine : initVisuSectionHtml/flushVisuSections itéraient visuSectionEls par index et lisaient dans this.visuSections[i], mais le template itère filteredVisuSections (sous-ensemble) → HTML injecté dans les mauvais éléments. Fix : lookup par data-section-id. Ajout de singleFileVisuPreview pour rendre un document standalone (markdown parsé) quand un fichier doc est sélectionné. filteredVisuSections retourne [] pour les documents (laisse singleFileVisuPreview gérer l'affichage). Comportement final : clic dossier → dossier + enfants ; clic doc → preview standalone du doc ; clic image → section parente ; clic projet → tout.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+        "sync-from-base.bat",
+        "sync-backup-helper.ps1",
+        "data/base-propagation.json"
       ],
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
-      "prompt": "Cela ne fonctionne toujours pas lorsque je clique sur le menu des dossiers/document zone 3 tu dois affiché la selection (section) dans la zone 4b preview, si je clique sur un autre menu exemple document, cela doit m'affiché le document, si je clique sur un dossier cela doit m'affiché tous le contenu du fichier, corrige et verifi que cela fonctionne bien",
-      "startedAt": "2026-05-13T19:30:00.000Z",
-      "completedAt": "2026-05-13T20:00:00.000Z"
+      "prompt": "dans la version de base @worganic-base\\ on a un dossier @worganic-base\\docs\\ que l'on retrouve dans github mais lorsque je met a jour un child, je ne retrouve pas le dossier structure. idem j'ai modifie le fichier @worganic-base\\CLAUDE.md qui est bien gitte, mais dans child je ne vois pas ce fichier mise a jour apres le lancement de @child--THI-V01\\sync-from-base.bat. Si les fichiers ont ete modifie dans le child et donc qui peuvent donne des conflits, il faut sauvarde la version child, exemple claude-old-20260505.md et recupere la version de base et indique dans un fichier /docs/infos-synchro.md les fichiers mise a jour et les fichiers renomme et la date.",
+      "startedAt": "2026-05-06T13:00:00.000Z",
+      "completedAt": "2026-05-06T13:30:00.000Z"
     },
     {
-      "id": "mod-155",
-      "version": "THI-0.087",
-      "date": "2026-05-13T20:30:00.000Z",
+      "id": "mod-048",
+      "version": "B0.043",
+      "date": "2026-05-06T13:50:00.000Z",
       "type": "fix",
       "commitType": "FIX",
       "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Fix preview : ré-injection innerHTML au changement de sélection",
-      "description": "Quand on changeait de dossier dans zone 3, filteredVisuSections retournait les bons éléments, les titres s'affichaient mais le contenu était vide. Cause : initVisuSectionHtml (qui injecte le innerHTML) n'était appelée qu'au changement de files ou à l'entrée en mode visu, pas au changement de activeNodeId. Fix : appel de initVisuSectionHtml dans ngOnChanges quand activeNodeId change en mode visu.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "Cela affiche bien les données au premier clique (menu) mais des que je change de dossier cela ne m'affiche plus les bonnes données (contenu)",
-      "startedAt": "2026-05-13T20:20:00.000Z",
-      "completedAt": "2026-05-13T20:30:00.000Z"
-    },
-    {
-      "id": "mod-156",
-      "version": "THI-0.088",
-      "date": "2026-05-13T21:00:00.000Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Preview image standalone : image seule + actions rename/delete",
-      "description": "Clic sur une image en zone 3 affiche en preview uniquement l'image avec son nom et les boutons Renommer/Supprimer (avec confirmation). singleImageVisuPreview construit l'URL via getImageUrl. Wrappers startRenameImageByNode, confirmRenameImageByNode, askDeleteImageByNode, confirmDeleteImageByNode délèguent aux méthodes existantes. Styles .visu-image-* ajoutés.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "quand je clique sur une image dans preview cela ne doit m'affiché que l'image et les options de l'image",
-      "startedAt": "2026-05-13T20:45:00.000Z",
-      "completedAt": "2026-05-13T21:00:00.000Z"
-    },
-    {
-      "id": "mod-157",
-      "version": "THI-0.088",
-      "date": "2026-05-13T21:30:00.000Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Code mode aligné sur Preview : focus par type de nœud + suppression Vue complète",
-      "description": "Avant : Code mode résolvait tous les fichiers vers le dossier parent (un clic sur un document affichait le dossier complet). Désormais aligné sur Preview : dossier → folder+enfants, document → juste ce bloc, image → dossier parent (marker seule inutile). Suppression du bouton 'Vue complète' et du badge focus : la navigation se fait via le menu zone 3 (clic projet = vue complète).",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "dans la zone 4 en mode edition lorsqu'on selection un dossier ou un document, cela ne doit affiché que cette section et ses enfants. supprime le menu Vue complète qui ne sert plus à rien, dans le principe l'affichage entre le mode preview et le mode edition est identique (clique sur le menu) c'est le type d'affichage (code ou preview) qui est différent",
-      "startedAt": "2026-05-13T21:15:00.000Z",
-      "completedAt": "2026-05-13T21:30:00.000Z"
-    },
-    {
-      "id": "mod-158",
-      "version": "THI-0.088",
-      "date": "2026-05-13T21:45:00.000Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Code mode image : focus sur l'image seule (carte image)",
-      "description": "Code mode pour les images utilise désormais le handle de l'image (1 ligne marker {{IMG:id}} rendue comme carte image) au lieu du dossier parent. Simplification de applyFocusByActiveNode : mapping direct nodeId → handle sans redirection.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "Dans la zone 4 mode edition lorsqu'on clique sur une image, seul l'image doit être affiché.",
-      "startedAt": "2026-05-13T21:40:00.000Z",
-      "completedAt": "2026-05-13T21:45:00.000Z"
-    },
-    {
-      "id": "mod-159",
-      "version": "THI-0.089",
-      "date": "2026-05-13T22:30:00.000Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Modifications en attente par section : menu rouge + cadena + bar",
-      "description": "Système de tracking per-section des modifications non encore partagées. ProjetCollabService.localPendingSections (Set<sectionId>) partagé entre éditeur et sidebar. À la première modification d'une section : snapshot capturé, ajout au pending set, verrou acquis. Dans le menu zone 3 : nom en rouge + cadena rouge. Bar 'Modifications en cours' visible uniquement si section focusée est dans pending. Persistance à travers les navigations entre sections. Annuler : restore snapshot + save sans publish + unlock. Partager : updateFile avec publish=true + unlock + remove pending. Remplace l'ancien codeEditPending (signal global) par codeSectionSnapshots Map per-section.",
-      "files": [
-        "frankenstein/src/app/core/services/projet-collab.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "lorsque je modifi une section il faut que le cadena s'affiche à droite du nom de la section dans le menu et que le nom soi surligné en rouge. Elle restera en rouge tans que la section ne sera pas sauvegardé et partagé. si on change de section (via le menu) la nouvelle section n'est pas affiché comme modification en cours et avec les boutons, seul si on est sur une section modifié et fermé (non partagé) l'information Modification en cours doit s'affiché. Le menu doit resté rouge tans que la section n'est pas enregistré.",
-      "startedAt": "2026-05-13T22:00:00.000Z",
-      "completedAt": "2026-05-13T22:30:00.000Z"
-    },
-    {
-      "id": "mod-160",
-      "version": "THI-0.090",
-      "date": "2026-05-13T23:00:00.000Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Barre Modifications mode Preview alignée sur mode Code",
-      "description": "La barre Annuler/Partager en mode Preview était à l'intérieur de chaque section (margin-top + border-top), alors qu'en mode Code elle est en haut full-width. Déplacée en haut de l'éditeur avec la même structure que mode Code (code-publish-bar) : info 'Modifications en cours' à gauche, actions à droite, icône share. Suppression de l'ancienne barre intra-section.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "Dans le mode preview lorsqu'on modifi un texte, il y a bien les boutons qui indique les modifications en cours, mais le design est différent du mode edition modifi le design du mode preview pour qu'il soi identique au mode edition (lorsqu'on modifi un text)",
-      "startedAt": "2026-05-13T22:45:00.000Z",
-      "completedAt": "2026-05-13T23:00:00.000Z"
-    },
-    {
-      "id": "mod-161",
-      "version": "THI-0.091",
-      "date": "2026-05-14T15:33:30.864Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Editor : images imbriquées affichées correctement au premier rendu",
-      "description": "Au premier affichage de l'éditeur (mode Preview par défaut), les images imbriquées dans des blocs documents apparaissaient à tort comme fichiers de premier niveau dans la sidebar (zone 3). Cause : nestedImagesMap n'était calculée que lors d'un sectionsChange, déclenché uniquement par saveAll (donc après une modification). Fix : la map est désormais calculée directement depuis les files dans loadFiles(), en scannant les marqueurs {{IMG:xxx}} de chaque fichier texte.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "je voudrais que tu verifi tous le système d'affichage de la zone 4 en mode preview, je remarque quelques soucis comme au premier affichage (après une reactualisation de la page par exemple), les images ne sont pas bien placé dans le menu (zone 3).",
-      "startedAt": "2026-05-14T17:23:44+02:00",
-      "completedAt": "2026-05-14T15:33:30.865Z"
-    },
-    {
-      "id": "mod-162",
-      "version": "THI-0.091",
-      "date": "2026-05-14T15:52:09.518Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:editor",
-      "title": "Editor : section ne se déplace plus en bas après validation",
-      "description": "Quand on modifiait/renommait un bloc document dans une section en mode Preview puis qu'on validait, le fichier additionnel se déplaçait en bas du dossier parent. Cause : un rename de bloc = delete+create côté serveur, le nouveau fichier reçoit order=parentItems.length+1 dans createFile (server-data.js:4196). Étape 7 de processSectionsChange ne touche pas ce fichier car son nouveau fileId n'est pas dans orderedFileIds (calculé avant la création). Fix : étape 6b injecte les af.fileId résolus dans orderedFileIds à leur position correcte (basée sur l'ordre dans s.additionalFiles) avant la sync d'order.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "Quand je modifi une section comme par exemple la test Menu 2-2-1-2 dsfqfds qui était placé avant la section test Menu 2-2-1-3 lorsque je valide la modification (+partage) la section ce déplace toute seul en bas du dossier parent. Lorsque je valide une section celle ci ne doit pas bouger.",
-      "startedAt": "2026-05-14T17:37:13+02:00",
-      "completedAt": "2026-05-14T15:52:09.519Z"
-    },
-    {
-      "id": "mod-163",
-      "version": "THI-0.091",
-      "date": "2026-05-14T12:00:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix barre Modifs en cours absente après reload en mode Code",
-      "description": "En mode Code, si une section était verrouillée par moi (verrou serveur persistant après rechargement), la barre Annuler/Partager ne s'affichait pas car localPendingSections était vide. Fix : dans enterFocusMode, si collab.isLockedByMe(handle.id) est vrai et que la section n'est pas encore en pending local, on restaure l'état pending (addLocalPending + snapshot) pour que la barre s'affiche immédiatement.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-opus-4-7",
-      "prompt": "la section est marqué comme bloqué car en cours de modif (ce qui est vrai) mais il n'y a pas l'information bleu en cour de modification et le bouton enregistré/partage",
-      "startedAt": "2026-05-14T11:00:00Z",
-      "completedAt": "2026-05-14T12:00:00Z"
-    },
-    {
-      "id": "mod-175",
-      "version": "THI-0.099",
-      "date": "2026-05-16T17:30:00Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein",
-        "server"
-      ],
-      "features": "frankenstein:projet-editor,server:projet-editor",
-      "title": "Partage projet via MySQL + Git remote (structure en BDD)",
-      "description": "Migration de la structure projet (config.json local) vers MySQL (table file_project_meta) pour que tous les children partagent la même arborescence. Nouvelle table file_project_meta (id, display_name, git_remote_url, structure JSON, owner_user_id). getProjectConfig() et saveProjectConfig() deviennent async avec lecture/écriture MySQL en priorité, fallback filesystem + auto-migration silencieuse des projets existants. GET /api/file-projects lit depuis MySQL au lieu du filesystem. POST /api/file-projects insère en MySQL. DELETE supprime en MySQL. setup-remote stocke git_remote_url en BDD. Nouvelle route POST /api/file-projects/:name/ensure-local : vérifie la présence locale, clone via git_remote_url si absent, retourne status ready/cloned/no-remote. Côté Angular : ensureProjectFolder() appelle ensure-local au lieu de créer un projet vierge. Signal localUnavailable() déclenche un message UX clair si le projet n'est pas clonable.",
-      "files": [
-        "server/server-data.js",
-        "frankenstein/src/app/core/services/project-files.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
-        "version.json"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "dans le child il y a un pb pour partagé le projet en lui même avec d'autre user, il doit partagé via la bdd la structure du projet et via git les contenue. Alors voici 2 problèmes : Problème 1 — Zone 3 vide (arborescence) [...] Problème 2 — Filesystem local incomplet [...] Je veux que tu transfert le fichier config.json dans la bdd pour que la structure soi partagé. Les fichiers contenue et file (exemple image) sont stocker dans git, il faut que pour chaque projet le nom du git lié au projet soi stocker dans la bdd pour que le user qui ce branche au projet puisse ce connecté à git pour récupéré les fichiers. Propose moi une solution viable et fiable",
-      "startedAt": "2026-05-16T15:00:00Z",
-      "completedAt": "2026-05-16T17:30:00Z"
-    },
-    {
-      "id": "mod-176",
-      "version": "THI-0.100",
-      "date": "2026-05-16T18:00:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "server"
-      ],
-      "features": "server:projet-editor",
-      "title": "Fix migration MySQL structure vide écrasant structure locale non-vide",
-      "description": "Race condition dans getProjectConfig : si un child sans structure locale accédait le projet en premier, il migrait structure:[] en MySQL, empêchant le child principal (avec la vraie structure) de re-migrer. Fix : au retour MySQL, si structure MySQL est vide ET config.json local est non-vide → mettre à jour MySQL depuis le local. Le INSERT de migration utilise JSON_LENGTH pour ne pas écraser une structure existante plus riche.",
-      "files": [
-        "server/server-data.js",
-        "version.json"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "si je me met dans un projet user (preview d'une version du child), je ne vois toujours pas le menu du projet",
-      "startedAt": "2026-05-16T17:45:00Z",
-      "completedAt": "2026-05-16T18:00:00Z"
-    },
-    {
-      "id": "mod-177",
-      "version": "THI-0.101",
-      "date": "2026-05-16T18:30:00Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Upload image : maintenir dirty state jusqu'au Partager",
-      "description": "saveAll() resetait localDirty=false immédiatement après l'upload d'image, faisant disparaître le bouton 'Partager mes modifications'. Fix : après saveAll() dans onImageFileSelected et onVisuImageSelected, on remet localDirty=true et dirtyChange.emit(true). En mode visu, on ajoute aussi la section dans dirtyVisuSectionIds. L'image reste donc dans un état 'à partager' jusqu'à ce que l'utilisateur clique Partager, ce qui déclenche le push git incluant le fichier image.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "version.json"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Dans un projet, si je rajoute une image cela doit ce comporté comme la modification d'un texte et le mode edition/modification en cours - et le btn partager mes modifications, ainsi si on partage l'image doit aussi être gité pour être récupéré par un autre user.",
-      "startedAt": "2026-05-16T18:00:00Z",
-      "completedAt": "2026-05-16T18:30:00Z"
-    },
-    {
-      "id": "mod-178",
-      "version": "THI-0.102",
-      "date": "2026-05-16T17:15:34.829Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Upload image : afficher barre Modifications en cours",
-      "description": "Après upload d'une image, active la barre \"Modifications en cours\" avec Annuler/Partager. En mode visu : set editingVisuSectionId + collab.addLocalPending + lock. En mode edit (section focusée) : codeSectionSnapshots + addLocalPending + lock. Sans cette activation, la barre n'apparaissait jamais et l'image ne pouvait pas être partagée via le bouton Partager.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "cela ne fonctionne toujours pas, si je rajoute une image cela doit mettre la section en mode modification (historique plus onfo de modification) et la partagé (git) si on clique sur le bouton Partager la modification (ou l'annulé) actuellement le mode enregistrement et partage ne s'affiche pas et l'image n'est pas gité",
-      "startedAt": "2026-05-16T17:30:00.000Z",
-      "completedAt": "2026-05-16T17:15:34.830Z"
-    },
-    {
-      "id": "mod-179",
-      "version": "THI-0.102",
-      "date": "2026-05-16T17:30:11.184Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "server"
+        "system"
       ],
       "features": "system:workflow",
-      "title": "publishWip : config.json non commité bloquait checkout main",
-      "description": "saveProjectConfig écrit config.json à chaque auto-save mais commitFile ne le stagehait pas (seulement le contenu.md). Résultat : git checkout main dans publishWip échouait silencieusement car git refusait d écraser les changements locaux de config.json. Fix : finalCommit utilise maintenant commitFile(projetPath, null, ...) qui fait git add -A pour inclure tous les fichiers modifiés avant le merge.",
+      "title": "sync-backup-helper.ps1 : filtrage diff-filter=M + naming robuste + git add -f",
+      "description": "Correction de bugs decouverts au premier test reel sur child--THI-V01. (1) Le helper utilisait git diff --name-only HEAD base/main qui retourne aussi les fichiers child-only (deleted from base perspective) et les fichiers nouveaux cote base : il essayait alors de backuper des fichiers child-specifiques (ex: B0.33-B0.41 markers, REGLES_GESTION_PROJET.md, .gitattributes). Correction : utilisation de --diff-filter=M pour les modifies-des-deux-cotes, --diff-filter=A pour les nouveaux base, --diff-filter=D pour les child-only (juste loggues). (2) Le naming des backups cassait pour les fichiers commencant par . (.gitattributes -> -old-20260506.gitattributes au lieu de .gitattributes-old-20260506) et pour les fichiers sans extension separable (B0.33 -> B0-old-20260506.33). Nouveau helper Get-BackupName qui detecte ces cas et suffixe simplement apres le nom complet. (3) git add echouait sur les backups touchant des fichiers ignores par .gitignore : ajout du flag -f. (4) ErrorActionPreference passe a Continue pour que les erreurs git non bloquantes (ex: add d'un fichier ignore) ne plantent pas le script.",
       "files": [
-        "server/modules/projet-git.js"
+        "sync-backup-helper.ps1"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "(suite mod-047) Correctifs apres test reel : filtrage des fichiers child-only et naming pour fichiers sans extension.",
+      "startedAt": "2026-05-06T13:40:00.000Z",
+      "completedAt": "2026-05-06T13:50:00.000Z"
+    },
+    {
+      "id": "mod-049",
+      "version": "B0.044",
+      "date": "2026-05-16T11:00:00Z",
+      "type": "feature",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein",
+        "system"
+      ],
+      "features": "frankenstein:site,system:workflow",
+      "title": "Migration Angular 18 → Angular 20",
+      "description": "Migration complète du projet Angular 18.2 vers Angular 20 : ng update @angular/core@19, ng update @angular/core@20, migration du builder vers @angular/build:application, TypeScript 5.9.3, zone.js 0.15.1, migration des templates vers la nouvelle syntaxe control flow (@if/@for/@switch sur 33 fichiers), remplacement de APP_INITIALIZER par provideAppInitializer, correction du bug *ngStatus (directive inexistante) en @if. Compilation finale sans erreur.",
+      "files": [
+        "frankenstein/package.json",
+        "frankenstein/angular.json",
+        "frankenstein/src/app/app.config.ts",
+        "frankenstein/src/app/child/child-admin-tabs.ts",
+        "frankenstein/src/app/tools/wo/wo-actions/wo-actions.component.html",
+        "frankenstein/src/app/app.component.html",
+        "frankenstein/src/app/app.component.ts",
+        "frankenstein/src/app/pages/user/config/config.component.html",
+        "frankenstein/src/app/pages/public/landing/landing.component.html",
+        "frankenstein/src/app/shared/layout/header/header.component.html",
+        "frankenstein/src/app/shared/layout/header/header.component.ts",
+        "frankenstein/src/app/tools/tchat-ia/tchat-ia.component.html",
+        "frankenstein/src/app/tools/ticket-widget/ticket-widget.component.html",
+        "frankenstein/src/app/tools/cahier-recette/cahier-recette.component.html"
       ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
-      "prompt": "j'ai rajouté une image dans le menu 2-1 et j'ai appuyé sur le bouton \"Partager mes modifications\", mais cela devrait gité l'image que j'ai rajouté pour qu'on puisse ensuite le récupéré pour un autre user.",
-      "startedAt": "2026-05-16T17:45:00.000Z",
-      "completedAt": "2026-05-16T17:30:11.186Z"
+      "prompt": "je voudrais en utilisant le mcp Context7 que tu analyse le projet de base avec la version actuel et que tu la compare avec la derniere version actuellement disponible (stable) et que tu m'indique tous les changements a faire pour faire evolue le code vers la derniere version",
+      "startedAt": "2026-05-16T10:30:00Z",
+      "completedAt": "2026-05-16T11:00:00Z"
     },
     {
-      "id": "mod-180",
-      "version": "THI-0.102",
-      "date": "2026-05-16T17:47:48.132Z",
-      "type": "fix",
-      "commitType": "FIX",
+      "id": "mod-050",
+      "version": "B0.045",
+      "date": "2026-05-17T00:00:00.000Z",
+      "type": "config",
+      "commitType": "AMELIORATION",
       "scope": [
-        "server"
+        "system"
       ],
       "features": "system:workflow",
-      "title": "publishWip : rafraîchir token GitHub avant push",
-      "description": "Le token PAT baked dans l URL remote lors de la création du projet était expiré alors que github.json avait été mis à jour avec un nouveau token. Avant chaque publishWip, l URL remote est maintenant reconstruite avec le token actuel de github.json (via githubService.buildAuthenticatedCloneUrl). Évite toute erreur d authentification silencieuse lors des pushes.",
+      "title": "Migration versioning 2 → 3 décimales (base + child THI-V01)",
+      "description": "Migration du système de versioning de 2 décimales à 3 décimales pour éviter le débordement au .99. Base : B0.44 → B0.044. Child : THI-1.08 → THI-0.108. Règle de conversion child : THI-X.YY → THI-0.(X*100+YY padded 3 digits). Mise à jour de tous les fichiers historiques : data/histoModif.json (49 entrées base, 183 entrées child), data/base-propagation.json (base et child), version.json (base et child), CLAUDE.md (base et child). Les nouvelles incrémentations seront +0.001 (mineure) et +1.000 reset (majeure).",
+      "files": [
+        "version.json",
+        "data/histoModif.json",
+        "data/base-propagation.json",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le système commit et push automatiquement après chaque modification avec +01 pour les modification mineur et +1 pour les modifications majeur, mais lorsqu'on arrive à .99 cela pose problème car on passe à 1 qui est une version majeur. JE voudrais que tu change un peu le système et que tu mette à jour toutes les anciennes version avec 3 chiffres après la virgule au lieu de 2 et que tu mette donc à jour toutes les anciennes version (fichier d'historique des versions avec 000 exemple si on à actuellement B0.44 on aura maintenant B0.044). Il faudra donc changer pour les prochain commit mais aussi mettre à jour les anciens. Et tous ça dans la base mais aussi dans le child child principal : E:\\www\\projet creat projet 2026-01\\--projets--\\child--THI-V01 qui utilise son propre chiffrage et qui est aussi en 2 chiffres après la virgule et il faut le passé à 3, attention pour le child il est déjà passé à THI-1.08 et il faudra le mettre en THI-0.108 et idem pour les anciennent version exemple THI-0.95 en THI-0.195 etc",
+      "startedAt": "2026-05-17T00:00:00.000Z",
+      "completedAt": "2026-05-17T00:00:00.000Z"
+    },
+    {
+      "id": "mod-051",
+      "version": "B0.046",
+      "date": "2026-05-21T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:admin",
+      "title": "Fix config admin : options remises à zéro à la sauvegarde",
+      "description": "Correction d'un bug dans config.component.ts : les getters cliIaEnabled et apiKeysEnabled lisaient les mauvais signaux du service (tchatIaEnabled et ticketsEnabled au lieu de cliIaEnabled et apiKeysEnabled). De même, les toggles appelaient setTchatIaEnabled et setTicketsEnabled au lieu de setCliIaEnabled et setApiKeysEnabled. Ce mismatch faisait que les signaux corrects (fraîchement ajoutés dans config.service.ts) n'étaient jamais mis à jour par les toggles, et que saveKeys() envoyait les anciennes valeurs au serveur, réinitialisant les options à leur état initial.",
+      "files": [
+        "frankenstein/src/app/pages/user/config/config.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Sur le système de base dans l'admin général, lorsque je modifi des option et que je fait Sauvegarder, cela remet les options en état initial au lieu de les enregistrer, verifi ce qui ne fonctionne pas",
+      "startedAt": "2026-05-21T00:00:00.000Z",
+      "completedAt": "2026-05-21T00:00:00.000Z"
+    },
+    {
+      "id": "mod-052",
+      "version": "B0.046",
+      "date": "2026-05-21T00:05:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:config",
+      "title": "Fix : apiKeysEnabled et cliIaEnabled non persistés dans conf.json",
+      "description": "La condition de sauvegarde dans le POST /api/config/keys (server-data.js) ne listait pas cliIaEnabled ni apiKeysEnabled. Quand le toggle envoyait { apiKeysEnabled: val } seul, la condition était false et conf.json n'était jamais réécrit. La valeur était donc perdue au refresh. Ajout de cliIaEnabled !== undefined || apiKeysEnabled !== undefined dans la condition.",
       "files": [
         "server/server-data.js"
       ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
-      "prompt": "j ai rajouté une image et cliqué sur le bouton mais je ne vois toujours pas l image dans le dépot git",
-      "startedAt": "2026-05-16T18:00:00.000Z",
-      "completedAt": "2026-05-16T17:47:48.133Z"
+      "prompt": "dans les options je met sur enable \"Utiliser les IA Clés\" je fait sauvegarder. Tout est ok, mais si je réactualise la page, l'option est de nouveau activé, trouve le problème et corrige",
+      "startedAt": "2026-05-21T00:02:00.000Z",
+      "completedAt": "2026-05-21T00:05:00.000Z"
     },
     {
-      "id": "mod-182",
-      "version": "THI-0.108",
-      "date": "2026-05-17T11:29:15.607Z",
+      "id": "mod-053",
+      "version": "B0.047",
+      "date": "2026-05-21T00:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projet-editor",
-      "title": "Fix suppression image différée au Partager",
-      "description": "La suppression d'une image dans l'éditeur projet (modes Code et Visu) était immédiate (appel API + suppression disque + commit git) dès le clic sur ✓. Ajout d'un système pendingVisuDeletions (Map imgId → {node, sectionId}) pour différer la suppression réelle jusqu'au clic sur \"Partager mes modifications\". Sur \"Annuler\", l'image est restaurée dans allImages et le marqueur est restauré depuis le snapshot. Correction aussi dans ngOnChanges pour filtrer les suppressions en attente lors du rechargement de la liste de fichiers.",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:config",
+      "title": "Fix CLI IA : guard ngOnInit + message executor manquant",
+      "description": "Deux corrections dans config.component : (1) loadCliStatus() était appelé au ngOnInit même si cliIaEnabled=false, provoquant une erreur inutile sur port 3002. Ajout d'un guard if(cliIaEnabled). (2) Le message d'erreur ne donnait aucune indication sur la cause. Remplacement par un message explicatif (Electron/port 3002) + bouton Réessayer.",
       "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+        "frankenstein/src/app/pages/user/config/config.component.ts",
+        "frankenstein/src/app/pages/user/config/config.component.html"
       ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
-      "prompt": "nickel tu peux commiter",
-      "startedAt": "2026-05-17T00:00:00Z",
-      "completedAt": "2026-05-17T11:29:15.607Z"
+      "prompt": "dans le menu admin/general le système de test CLI IA ne fonctionne pas corectement j'ai le message sur le front : Impossible de contacter le serveur pour vérifier les outils CLI. et sur la console : config.service.ts:202 [ConfigService] Executor server not available\nconfig.service.ts:189\n GET http://localhost:3002/api/cli-status net::ERR_CONNECTION_REFUSED",
+      "startedAt": "2026-05-21T00:10:00.000Z",
+      "completedAt": "2026-05-21T00:15:00.000Z"
     },
     {
-      "id": "mod-183",
-      "version": "THI-0.114",
-      "date": "2026-05-20T10:00:00.000Z",
-      "type": "feature",
-      "commitType": "",
-      "scope": [
-        "frankenstein",
-        "server"
-      ],
-      "features": "frankenstein:projets,server:workflow",
-      "title": "Système FTP de synchronisation des fichiers projet",
-      "description": "Ajout du backend FTP comme alternative à GitHub pour le stockage des fichiers projet. Nouveau module server/modules/ftp-service.js (testConnection, listRemoteFiles, uploadFile, uploadFiles, downloadFile, getFtpConfig, getBackupType). Modification de 3 routes server-data.js : ensure-local (pas de git requis pour FTP), auto-sync (skip pour FTP), PUT files publish (upload FTP au lieu de git push). Badge FTP dans la statusbar de l editeur.",
-      "files": [
-        "server/modules/ftp-service.js",
-        "server/server-data.js",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "j ai mis en place un choix de type de stockage des fichiers du projet : @data/projets ainsi lorsqu on arrive dans le projet le système doit prendre en compte le type d enregistrement des fichiers qui est lié au projet : github, gitlab, ftp, drive. Actuellement seul github est pris en compte dans le projet : exemple : /projets/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52. je voudrais qu en plus de github tu rajoute exactement le même système de sauvegarde (partage) des fichiers pour le système ftp. Utilise un système de service pour chaque système (pour le moment juste github et ftp) et met les en places sur l editor de projet en prenant comme exemple le système github déjà mise en place. Ainsi on pourra utilisé l enrejistrement des fichiers dans un ftp de la même façon que le système github. fait moi un plan complet pour les modifications et la mise en place du système ftp",
-      "startedAt": "2026-05-20T08:00:00.000Z",
-      "completedAt": "2026-05-20T10:00:00.000Z"
-    },
-    {
-      "id": "mod-184",
-      "version": "THI-0.115",
-      "date": "2026-05-20T10:30:00.000Z",
-      "type": "fix",
-      "commitType": "",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Fix badge GitHub hors ligne affiché sur projets FTP",
-      "description": "hasGithubWarning() retournait true pour les projets FTP car il ne vérifiait pas backup_type. Ajout d un guard : si le projet a un backupType autre que github, ne pas afficher le badge GitHub hors ligne.",
-      "files": [
-        "frankenstein/src/app/pages/user/projets/projets.component.ts"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "le projet indique github et ftp alors que dans l admin on a qu un seul choix : actuellement ftp ainsi le système github ne doit pas être utilisé seul ftp est actif",
-      "startedAt": "2026-05-20T10:20:00.000Z",
-      "completedAt": "2026-05-20T10:30:00.000Z"
-    },
-    {
-      "id": "mod-185",
-      "version": "THI-0.117",
-      "date": "2026-05-20T11:00:00.000Z",
+      "id": "mod-054",
+      "version": "B0.048",
+      "date": "2026-05-21T00:40:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Badge backend de stockage dans la toolbar de l éditeur",
-      "description": "Ajout d un badge indiquant le système de stockage actif (FTP, GitHub, GitLab, Drive) dans la toolbar de l éditeur de projet. Badge coloré selon le type avec icône Material.",
+      "scope": ["electron", "server", "frankenstein"],
+      "features": "electron:executor,server:config,frankenstein:config",
+      "title": "Modèles CLI IA : fetch dynamique API + liste à jour (Opus 4.7)",
+      "description": "Cause : la liste des modèles affichée pour Claude/Gemini venait d'un DEFAULT_MODELS codé en dur dans server-executor.js, sans relation avec les modèles réellement disponibles. Claude Opus 4.7 manquait. Corrections : (1) DEFAULT_MODELS mis à jour avec les modèles actuels (Opus 4.7, Gemini 2.5). (2) Nouvelles fonctions fetchAnthropicModels() et fetchGoogleModels() qui appellent https://api.anthropic.com/v1/models et https://generativelanguage.googleapis.com/v1beta/models. (3) refreshCliStatusCache récupère la clé API via /api/config/keys du data server, fetch la liste réelle, fallback sur DEFAULT_MODELS sinon. (4) Table MODEL_COSTS séparée pour annoter les coûts indépendamment de la source. (5) Champ source: 'api' | 'default' exposé dans cli-status. (6) Badge API/Fallback affiché dans l'UI à côté de 'Modèles disponibles' + compteur. (7) server-data.js DEFAULT_MODELS aligné pour cohérence (bouton Mettre à jour les coûts).",
       "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "Dans l editor indique le système d enregistrement avec un badge (actuellement \"ftp\")",
-      "startedAt": "2026-05-20T10:50:00.000Z",
-      "completedAt": "2026-05-20T11:00:00.000Z"
-    },
-    {
-      "id": "mod-186",
-      "version": "THI-0.118",
-      "date": "2026-05-20T11:30:00.000Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "frankenstein"
-      ],
-      "features": "frankenstein:projets",
-      "title": "Badge backend déplacé à droite de Sauvegardé",
-      "description": "Le badge de backend de stockage (FTP, GitHub...) est déplacé de la toolbar principale vers la barre de l éditeur, à droite de l indicateur Sauvegardé. Input backupType et map backupBadge ajoutés à ProjetEditorZoneComponent.",
-      "files": [
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "le badge (server, exemple ftp) doit être indiqué à droite de l information Sauvegarde",
-      "startedAt": "2026-05-20T11:15:00.000Z",
-      "completedAt": "2026-05-20T11:30:00.000Z"
-    },
-    {
-      "id": "mod-187",
-      "version": "THI-0.119",
-      "date": "2026-05-20T12:00:00.000Z",
-      "type": "feature",
-      "commitType": "AMELIORATION",
-      "scope": [
-        "frankenstein",
-        "server"
-      ],
-      "features": "frankenstein:projets,server:workflow",
-      "title": "Init FTP à l ouverture : vérif connexion + sync fichiers",
-      "description": "À chaque ouverture d un projet FTP dans l éditeur : vérification de la connexion FTP, création des dossiers distants si absents, upload de tous les fichiers locaux vers le serveur (idempotent). Route POST /api/file-projects/:name/ftp-sync ajoutée. Signal initMessage pour afficher la progression. Erreur de connexion FTP affichée comme localUnavailable.",
-      "files": [
+        "electron/executor/server-executor.js",
         "server/server-data.js",
-        "frankenstein/src/app/core/services/project-files.service.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
-        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
+        "frankenstein/src/app/pages/user/config/config.component.ts",
+        "frankenstein/src/app/pages/user/config/config.component.html"
       ],
       "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "à chaque ouverture du projet, le système doit vérifié la connexion au système (ftp, github etc suivant le système selectionné pour le projet), pour le ftp cela doit vérifié si le dossier du projet est bien présent sur le ftp et le créé si besoin et créé tous les dossiers et transféré les fichiers du projet ci necessaire. Cela doit initialisé le projet. Il doit y avoir ainsi les mêmes dossiers et fichier qu en local.",
-      "startedAt": "2026-05-20T11:40:00.000Z",
-      "completedAt": "2026-05-20T12:00:00.000Z"
-    },
-    {
-      "id": "mod-188",
-      "version": "THI-0.120",
-      "date": "2026-05-20T12:30:00.000Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "server"
-      ],
-      "features": "server:workflow",
-      "title": "FTP : fichiers dans projets/{id}/ sur le serveur distant",
-      "description": "Le remotePath FTP préfixe maintenant les fichiers avec projets/{projectId}/ pour organiser les uploads dans un dossier dédié par projet sur le FTP. Corrige les deux routes : ftp-sync (init) et PUT files (Partager).",
-      "files": [
-        "server/server-data.js"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "sur le ftp les fichiers du projet doivent être dans le un dossier projets/ puis dans un dossier spécifique du projet sous le nom de référence du projet, exemple 4aa105c7-3e9f-4689-8ce9-f9cf8af08f52",
-      "startedAt": "2026-05-20T12:20:00.000Z",
-      "completedAt": "2026-05-20T12:30:00.000Z"
-    },
-    {
-      "id": "mod-189",
-      "version": "THI-0.121",
-      "date": "2026-05-20T12:45:00.000Z",
-      "type": "fix",
-      "commitType": "FIX",
-      "scope": [
-        "server"
-      ],
-      "features": "server:workflow",
-      "title": "FTP Partager : upload uniquement du fichier modifié",
-      "description": "La route PUT files avec publish=true n upload plus tous les fichiers du projet mais uniquement le fichier modifié (item.path). La sync complète (ftp-sync) reste réservée à l ouverture du projet.",
-      "files": [
-        "server/server-data.js"
-      ],
-      "ai": "Claude Code",
-      "model": "claude-sonnet-4-6",
-      "prompt": "lors de la validation d un Partage des modifications en mode ftp cela ne doit sauvegarder que les contenues ou fichiers modifier et non tous le contenue du projet",
-      "startedAt": "2026-05-20T12:40:00.000Z",
-      "completedAt": "2026-05-20T12:45:00.000Z"
+      "model": "claude-opus-4-7",
+      "prompt": "actuellement on affiche la liste des modèles disponible pour gemini et claude, cependant si je verifi les modèles disponible dans claude cli je constate que je n'ai pas les mêmes modèle, exemple je peux mettre claude opus 4.7 qui n'est pas dans les modèles disponible affiché, regarde pourquoi et améliore le système pour affiché tous les modèles disponible dans les 2 systèmes",
+      "startedAt": "2026-05-21T00:20:00.000Z",
+      "completedAt": "2026-05-21T00:40:00.000Z"
     }
   ]
 }

@@ -28,6 +28,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const os = require('os');
+const https = require('https');
 
 // ============================================================
 // Configuration
@@ -43,33 +44,86 @@ const SETTINGS_LOCAL_FILE = path.join(os.homedir(), '.claude', 'settings.local.j
 // Store running AI processes by stepId
 const runningProcesses = new Map();
 
-// Modèles disponibles par provider (synchronisés avec server-data DEFAULT_MODELS)
+// URL du serveur data (pour récupérer les clés API utilisateur)
+const DATA_SERVER_URL = process.env.DATA_SERVER_URL || 'http://localhost:3001';
+
+// Table de coûts connus par ID de modèle (USD / 1M tokens).
+// Utilisée pour annoter les modèles récupérés via API.
+// Si un modèle n'est pas connu ici, ses coûts seront undefined (affiché "N/A" côté UI).
+const MODEL_COSTS = {
+    // Claude — famille 4.X (la plus récente)
+    'claude-opus-4-7':                   { costInput: 15.00, costOutput: 75.00 },
+    'claude-sonnet-4-6':                 { costInput: 3.00,  costOutput: 15.00 },
+    'claude-opus-4-6':                   { costInput: 15.00, costOutput: 75.00 },
+    'claude-haiku-4-5':                  { costInput: 0.80,  costOutput: 4.00 },
+    'claude-haiku-4-5-20251001':         { costInput: 0.80,  costOutput: 4.00 },
+    // Claude — famille 3.X (legacy)
+    'claude-3-7-sonnet-latest':          { costInput: 3.00,  costOutput: 15.00 },
+    'claude-3-5-sonnet-latest':          { costInput: 3.00,  costOutput: 15.00 },
+    'claude-3-5-haiku-latest':           { costInput: 0.80,  costOutput: 4.00 },
+    'claude-3-opus-latest':              { costInput: 15.00, costOutput: 75.00 },
+    // Gemini
+    'gemini-3.1-pro-preview':            { costInput: 1.25,  costOutput: 5.00 },
+    'gemini-3-flash':                    { costInput: 0.10,  costOutput: 0.40 },
+    'gemini-3-flash-preview':            { costInput: 0.10,  costOutput: 0.40 },
+    'gemini-2.5-pro':                    { costInput: 1.25,  costOutput: 5.00 },
+    'gemini-2.5-pro-preview':            { costInput: 1.25,  costOutput: 5.00 },
+    'gemini-2.5-flash':                  { costInput: 0.10,  costOutput: 0.40 },
+    'gemini-2.0-flash':                  { costInput: 0.10,  costOutput: 0.40 },
+    'gemini-2.0-pro-preview':            { costInput: 1.25,  costOutput: 5.00 },
+    'gemini-1.5-pro':                    { costInput: 1.25,  costOutput: 5.00 },
+    'gemini-1.5-flash':                  { costInput: 0.075, costOutput: 0.30 }
+};
+
+// Fallback statique quand l'API n'est pas joignable (pas de clé, hors-ligne, etc.)
 const DEFAULT_MODELS = {
     gemini: [
-        { value: 'gemini-3.1-pro-preview',  label: 'Gemini 3.1 Pro (Preview)',  costInput: 1.25,  costOutput: 5.00 },
-        { value: 'gemini-3-flash',          label: 'Gemini 3 Flash',            costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-3-flash-preview',  label: 'Gemini 3 Flash (Preview)',  costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-2.5-pro-preview',  label: 'Gemini 2.5 Pro (Preview)',  costInput: 1.25,  costOutput: 5.00 },
-        { value: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash',          costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-2.0-pro-preview',  label: 'Gemini 2.0 Pro (Preview)',  costInput: 1.25,  costOutput: 5.00 },
-        { value: 'gemini-1.5-pro',          label: 'Gemini 1.5 Pro',            costInput: 1.25,  costOutput: 5.00 },
-        { value: 'gemini-1.5-flash',        label: 'Gemini 1.5 Flash',          costInput: 0.075, costOutput: 0.30 }
+        { value: 'gemini-3.1-pro-preview',  label: 'Gemini 3.1 Pro (Preview)' },
+        { value: 'gemini-3-flash',          label: 'Gemini 3 Flash' },
+        { value: 'gemini-3-flash-preview',  label: 'Gemini 3 Flash (Preview)' },
+        { value: 'gemini-2.5-pro',          label: 'Gemini 2.5 Pro' },
+        { value: 'gemini-2.5-flash',        label: 'Gemini 2.5 Flash' },
+        { value: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash' },
+        { value: 'gemini-2.0-pro-preview',  label: 'Gemini 2.0 Pro (Preview)' },
+        { value: 'gemini-1.5-pro',          label: 'Gemini 1.5 Pro' },
+        { value: 'gemini-1.5-flash',        label: 'Gemini 1.5 Flash' }
     ],
     claude: [
-        { value: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6',          costInput: 3.00,  costOutput: 15.00 },
-        { value: 'claude-opus-4-6',              label: 'Claude Opus 4.6',            costInput: 15.00, costOutput: 75.00 },
-        { value: 'claude-haiku-4-5-20251001',    label: 'Claude Haiku 4.5',           costInput: 0.80,  costOutput: 4.00 },
-        { value: 'claude-3-7-sonnet-latest',     label: 'Claude 3.7 Sonnet (Latest)', costInput: 3.00,  costOutput: 15.00 },
-        { value: 'claude-3-5-sonnet-latest',     label: 'Claude 3.5 Sonnet',          costInput: 3.00,  costOutput: 15.00 },
-        { value: 'claude-3-5-haiku-latest',      label: 'Claude 3.5 Haiku',           costInput: 0.80,  costOutput: 4.00 },
-        { value: 'claude-3-opus-latest',         label: 'Claude 3 Opus',              costInput: 15.00, costOutput: 75.00 }
+        { value: 'claude-opus-4-7',              label: 'Claude Opus 4.7' },
+        { value: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6' },
+        { value: 'claude-opus-4-6',              label: 'Claude Opus 4.6' },
+        { value: 'claude-haiku-4-5-20251001',    label: 'Claude Haiku 4.5' },
+        { value: 'claude-3-7-sonnet-latest',     label: 'Claude 3.7 Sonnet (Latest)' },
+        { value: 'claude-3-5-sonnet-latest',     label: 'Claude 3.5 Sonnet' },
+        { value: 'claude-3-5-haiku-latest',      label: 'Claude 3.5 Haiku' },
+        { value: 'claude-3-opus-latest',         label: 'Claude 3 Opus' }
     ]
 };
 
+// Annotation : ajoute label + costs à un modèle (à partir de son value)
+function annotateModel(value, fallbackLabel) {
+    const costs = MODEL_COSTS[value] || {};
+    return {
+        value,
+        label: fallbackLabel || value,
+        costInput: costs.costInput,
+        costOutput: costs.costOutput
+    };
+}
+
+// Applique les coûts connus à une liste de modèles déjà labellisés
+function applyKnownCosts(models) {
+    return models.map(m => {
+        const costs = MODEL_COSTS[m.value] || {};
+        return { ...m, costInput: costs.costInput, costOutput: costs.costOutput };
+    });
+}
+
 // Cache for CLI status
+// source: 'api' = liste récupérée depuis l'API officielle | 'default' = fallback statique
 let cachedCliStatus = {
-    gemini: { installed: false, version: '', models: [], lastCheck: 0 },
-    claude: { installed: false, version: '', models: [], lastCheck: 0 },
+    gemini: { installed: false, version: '', models: [], source: 'default', lastCheck: 0, lastUpdated: '' },
+    claude: { installed: false, version: '', models: [], source: 'default', lastCheck: 0, lastUpdated: '' },
     loading: false
 };
 
@@ -214,6 +268,122 @@ function syncModelFromGlobal() {
 }
 
 // ============================================================
+// Dynamic model fetching (Anthropic & Google APIs)
+// ============================================================
+
+/**
+ * GET HTTPS qui résout en JSON parsé. Reject sur status ≥ 400 ou erreur réseau.
+ * Timeout 8s pour éviter de bloquer le refresh.
+ */
+function httpsGetJson(urlStr, headers = {}) {
+    return new Promise((resolve, reject) => {
+        const u = new URL(urlStr);
+        const req = https.request({
+            method: 'GET',
+            hostname: u.hostname,
+            path: u.pathname + u.search,
+            headers: { 'Accept': 'application/json', ...headers },
+            timeout: 8000
+        }, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                if (res.statusCode >= 400) {
+                    return reject(new Error(`HTTP ${res.statusCode}: ${data.slice(0, 200)}`));
+                }
+                try { resolve(JSON.parse(data)); }
+                catch (e) { reject(new Error('Invalid JSON: ' + e.message)); }
+            });
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(new Error('Timeout')); });
+        req.end();
+    });
+}
+
+/**
+ * Récupère les clés API utilisateur depuis le serveur data (cookies non transmis,
+ * donc la route doit être ouverte ou retourner un fallback).
+ * Retourne { claude: { key, active }, gemini: { key, active } } ou null.
+ */
+function fetchApiKeysFromDataServer() {
+    return new Promise((resolve) => {
+        const u = new URL(DATA_SERVER_URL + '/api/config/keys');
+        const req = (u.protocol === 'https:' ? https : require('http')).request({
+            method: 'GET',
+            hostname: u.hostname,
+            port: u.port || (u.protocol === 'https:' ? 443 : 80),
+            path: u.pathname,
+            timeout: 3000
+        }, (res) => {
+            let data = '';
+            res.on('data', (c) => { data += c; });
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(data);
+                    resolve({
+                        claude: parsed.claude || {},
+                        gemini: parsed.gemini || {}
+                    });
+                } catch { resolve(null); }
+            });
+        });
+        req.on('error', () => resolve(null));
+        req.on('timeout', () => { req.destroy(); resolve(null); });
+        req.end();
+    });
+}
+
+/**
+ * Fetch real Claude models from Anthropic API.
+ * Returns annotated models array, or null on failure.
+ */
+async function fetchAnthropicModels(apiKey) {
+    if (!apiKey) return null;
+    try {
+        const data = await httpsGetJson('https://api.anthropic.com/v1/models?limit=100', {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+        });
+        if (!Array.isArray(data?.data)) return null;
+        const models = data.data
+            .filter(m => m.id)
+            .map(m => annotateModel(m.id, m.display_name || m.id));
+        console.log(`[CLI-CACHE] Anthropic API returned ${models.length} models`);
+        return models;
+    } catch (e) {
+        console.warn('[CLI-CACHE] Anthropic API fetch failed:', e.message);
+        return null;
+    }
+}
+
+/**
+ * Fetch real Gemini models from Google Generative Language API.
+ * Filtre les modèles supportant generateContent.
+ */
+async function fetchGoogleModels(apiKey) {
+    if (!apiKey) return null;
+    try {
+        const data = await httpsGetJson(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=200`
+        );
+        if (!Array.isArray(data?.models)) return null;
+        const models = data.models
+            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => {
+                const value = (m.name || '').replace(/^models\//, '');
+                return annotateModel(value, m.displayName || value);
+            })
+            .filter(m => m.value);
+        console.log(`[CLI-CACHE] Google API returned ${models.length} models (generateContent)`);
+        return models;
+    } catch (e) {
+        console.warn('[CLI-CACHE] Google API fetch failed:', e.message);
+        return null;
+    }
+}
+
+// ============================================================
 // CLI Status Cache
 // ============================================================
 
@@ -273,12 +443,26 @@ async function refreshCliStatusCache(provider) {
         const checkGemini = !provider || provider === 'gemini';
         const checkClaude = !provider || provider === 'claude';
 
+        // Tente de récupérer les clés API (pour fetch dynamique des modèles)
+        const keys = await fetchApiKeysFromDataServer();
+
         if (checkGemini) {
             const gVer = await checkCli(['gemini', 'gemini-cli', 'gemini.cmd']);
             cachedCliStatus.gemini.installed = !!gVer;
             cachedCliStatus.gemini.version = gVer || '';
             cachedCliStatus.gemini.lastCheck = Date.now();
-            if (gVer) cachedCliStatus.gemini.models = DEFAULT_MODELS.gemini;
+            if (gVer) {
+                const apiKey = (keys?.gemini?.active && keys.gemini.key) ? keys.gemini.key : null;
+                const apiModels = await fetchGoogleModels(apiKey);
+                if (apiModels && apiModels.length > 0) {
+                    cachedCliStatus.gemini.models = apiModels;
+                    cachedCliStatus.gemini.source = 'api';
+                } else {
+                    cachedCliStatus.gemini.models = applyKnownCosts(DEFAULT_MODELS.gemini);
+                    cachedCliStatus.gemini.source = 'default';
+                }
+                cachedCliStatus.gemini.lastUpdated = new Date().toISOString();
+            }
         }
 
         if (checkClaude) {
@@ -286,10 +470,21 @@ async function refreshCliStatusCache(provider) {
             cachedCliStatus.claude.installed = !!cVer;
             cachedCliStatus.claude.version = cVer || '';
             cachedCliStatus.claude.lastCheck = Date.now();
-            if (cVer) cachedCliStatus.claude.models = DEFAULT_MODELS.claude;
+            if (cVer) {
+                const apiKey = (keys?.claude?.active && keys.claude.key) ? keys.claude.key : null;
+                const apiModels = await fetchAnthropicModels(apiKey);
+                if (apiModels && apiModels.length > 0) {
+                    cachedCliStatus.claude.models = apiModels;
+                    cachedCliStatus.claude.source = 'api';
+                } else {
+                    cachedCliStatus.claude.models = applyKnownCosts(DEFAULT_MODELS.claude);
+                    cachedCliStatus.claude.source = 'default';
+                }
+                cachedCliStatus.claude.lastUpdated = new Date().toISOString();
+            }
         }
 
-        console.log('[CLI-CACHE] Refresh complete.');
+        console.log(`[CLI-CACHE] Refresh complete. Sources: gemini=${cachedCliStatus.gemini.source}, claude=${cachedCliStatus.claude.source}`);
     } catch (e) {
         console.error('[CLI-CACHE] Error:', e);
     } finally {

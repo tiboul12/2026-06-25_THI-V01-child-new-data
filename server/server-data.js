@@ -41,20 +41,22 @@ const DEFAULT_MODELS = {
         { value: 'gemini-3.1-pro-preview',  label: 'Gemini 3.1 Pro (Preview)', costInput: 1.25,  costOutput: 5.00 },
         { value: 'gemini-3-flash',          label: 'Gemini 3 Flash',           costInput: 0.10,  costOutput: 0.40 },
         { value: 'gemini-3-flash-preview',  label: 'Gemini 3 Flash (Preview)', costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-2.5-pro-preview',  label: 'Gemini 2.5 Pro (Preview)', costInput: 1.25,  costOutput: 5.00 },
+        { value: 'gemini-2.5-pro',          label: 'Gemini 2.5 Pro',           costInput: 1.25,  costOutput: 5.00 },
+        { value: 'gemini-2.5-flash',        label: 'Gemini 2.5 Flash',         costInput: 0.10,  costOutput: 0.40 },
         { value: 'gemini-2.0-pro-preview',  label: 'Gemini 2.0 Pro (Preview)', costInput: 1.25,  costOutput: 5.00 },
         { value: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash',         costInput: 0.10,  costOutput: 0.40 },
         { value: 'gemini-1.5-pro',          label: 'Gemini 1.5 Pro',           costInput: 1.25,  costOutput: 5.00 },
         { value: 'gemini-1.5-flash',        label: 'Gemini 1.5 Flash',         costInput: 0.075, costOutput: 0.30 }
     ],
     claude: [
-        { value: 'claude-3-7-sonnet-latest',     label: 'Claude 3.7 Sonnet (Latest)', costInput: 3.00, costOutput: 15.00 },
-        { value: 'claude-3-5-sonnet-latest',     label: 'Claude 3.5 Sonnet',          costInput: 3.00, costOutput: 15.00 },
-        { value: 'claude-3-5-haiku-latest',      label: 'Claude 3.5 Haiku',           costInput: 0.80, costOutput: 4.00 },
-        { value: 'claude-3-opus-latest',         label: 'Claude 3 Opus',              costInput: 15.00, costOutput: 75.00 },
-        { value: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6',          costInput: 3.00, costOutput: 15.00 },
+        { value: 'claude-opus-4-7',              label: 'Claude Opus 4.7',            costInput: 15.00, costOutput: 75.00 },
+        { value: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6',          costInput: 3.00,  costOutput: 15.00 },
         { value: 'claude-opus-4-6',              label: 'Claude Opus 4.6',            costInput: 15.00, costOutput: 75.00 },
-        { value: 'claude-haiku-4-5',             label: 'Claude Haiku 4.5',           costInput: 0.80, costOutput: 4.00 }
+        { value: 'claude-haiku-4-5-20251001',    label: 'Claude Haiku 4.5',           costInput: 0.80,  costOutput: 4.00 },
+        { value: 'claude-3-7-sonnet-latest',     label: 'Claude 3.7 Sonnet (Latest)', costInput: 3.00,  costOutput: 15.00 },
+        { value: 'claude-3-5-sonnet-latest',     label: 'Claude 3.5 Sonnet',          costInput: 3.00,  costOutput: 15.00 },
+        { value: 'claude-3-5-haiku-latest',      label: 'Claude 3.5 Haiku',           costInput: 0.80,  costOutput: 4.00 },
+        { value: 'claude-3-opus-latest',         label: 'Claude 3 Opus',              costInput: 15.00, costOutput: 75.00 }
     ]
 };
 
@@ -96,7 +98,7 @@ app.use(cors({
         // 'https://app.worganic.com'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Internal-Call']
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -676,6 +678,8 @@ app.get('/api/config/keys', (req, res) => {
             },
             appVersion: globalConf.appVersion || '',
             headerIaVisible: globalConf.headerIaVisible !== undefined ? globalConf.headerIaVisible : false,
+            cliIaEnabled: globalConf.cliIaEnabled !== undefined ? globalConf.cliIaEnabled : true,
+            apiKeysEnabled: globalConf.apiKeysEnabled !== undefined ? globalConf.apiKeysEnabled : true,
             // Préférences outils par utilisateur — stockées en DB (priorité sur flags globaux conf.json)
             enabledTools: {
                 tickets: userEnabledTools.tickets !== undefined ? userEnabledTools.tickets : (globalConf.ticketsEnabled || false),
@@ -702,7 +706,7 @@ app.post('/api/config/keys', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     try {
-        const { gemini, claude, cliConfig, appVersion, ticketsEnabled, recetteWidgetEnabled, enabledTools, headerIaVisible, enabledTabs, navItems } = req.body;
+        const { gemini, claude, cliConfig, appVersion, ticketsEnabled, recetteWidgetEnabled, enabledTools, headerIaVisible, cliIaEnabled, apiKeysEnabled, enabledTabs, navItems } = req.body;
 
         // ── Config IA propre à l'utilisateur ────────────────────────────────
         const rawCfg = user.config || {};
@@ -754,7 +758,8 @@ app.post('/api/config/keys', async (req, res) => {
 
         // ── Settings globaux (conf.json) — tous les champs peuvent être mis à jour ──
         if (appVersion !== undefined || ticketsEnabled !== undefined || recetteWidgetEnabled !== undefined ||
-            headerIaVisible !== undefined || enabledTabs !== undefined || navItems !== undefined) {
+            headerIaVisible !== undefined || cliIaEnabled !== undefined || apiKeysEnabled !== undefined ||
+            enabledTabs !== undefined || navItems !== undefined) {
             let globalConf = {};
             if (fs.existsSync(CONFIG_FILE)) {
                 try { globalConf = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch {}
@@ -765,8 +770,14 @@ app.post('/api/config/keys', async (req, res) => {
             if (ticketsEnabled !== undefined) globalConf.ticketsEnabled = ticketsEnabled;
             if (recetteWidgetEnabled !== undefined) globalConf.recetteWidgetEnabled = recetteWidgetEnabled;
             if (headerIaVisible !== undefined) globalConf.headerIaVisible = Boolean(headerIaVisible);
-            if (enabledTabs !== undefined) globalConf.enabledTabs = enabledTabs;
-            if (navItems !== undefined) globalConf.navItems = { ...(globalConf.navItems || {}), ...navItems };
+            if (cliIaEnabled !== undefined) globalConf.cliIaEnabled = Boolean(cliIaEnabled);
+            if (apiKeysEnabled !== undefined) globalConf.apiKeysEnabled = Boolean(apiKeysEnabled);
+            if (enabledTabs !== undefined && typeof enabledTabs === 'object') {
+                globalConf.enabledTabs = { ...(globalConf.enabledTabs || {}), ...enabledTabs };
+            }
+            if (navItems !== undefined && typeof navItems === 'object') {
+                globalConf.navItems = { ...(globalConf.navItems || {}), ...navItems };
+            }
             globalConf.lastUpdated = new Date().toISOString();
             fs.writeFileSync(CONFIG_FILE, JSON.stringify(globalConf, null, 2), 'utf8');
         }
@@ -2615,6 +2626,295 @@ app.put('/api/history/:id', async (req, res) => {
 });
 
 // ============================================================
+// WO Action History
+// ============================================================
+
+app.get('/api/wo-action-history', async (req, res) => {
+    try {
+        const { section, userId, entityType, entityId, contextKey, contextValue, undoableOnly, limit, offset } = req.query;
+        let sql = 'SELECT * FROM wo_action_history WHERE 1=1';
+        const params = [];
+
+        if (section)      { sql += ' AND section = ?';      params.push(section); }
+        if (userId)       { sql += ' AND user_id = ?';      params.push(userId); }
+        if (entityType)   { sql += ' AND entity_type = ?';  params.push(entityType); }
+        if (entityId)     { sql += ' AND entity_id = ?';    params.push(entityId); }
+        if (contextKey && contextValue) {
+            sql += ` AND JSON_EXTRACT(context, '$.${contextKey}') = ?`;
+            params.push(contextValue);
+        }
+        if (undoableOnly === 'true') { sql += ' AND undoable = 1'; }
+
+        sql += ' ORDER BY timestamp DESC';
+        sql += ` LIMIT ${Math.min(parseInt(limit) || 300, 1000)}`;
+        if (offset) sql += ` OFFSET ${parseInt(offset) || 0}`;
+
+        const [rows] = await pool.query(sql, params);
+        const entries = rows.map(r => ({
+            id: r.id,
+            timestamp: r.timestamp,
+            section: r.section,
+            subsection: r.subsection || undefined,
+            actionType: r.action_type,
+            label: r.label,
+            entityType: r.entity_type || undefined,
+            entityId: r.entity_id || undefined,
+            entityLabel: r.entity_label || undefined,
+            beforeState: r.before_state || undefined,
+            afterState: r.after_state || undefined,
+            userId: r.user_id || undefined,
+            username: r.username || undefined,
+            context: r.context || undefined,
+            undoable: !!r.undoable,
+            undone: !!r.undone,
+            undoneAt: r.undone_at || undefined,
+            undoneBy: r.undone_by || undefined,
+            undoAction: r.undo_action || undefined,
+            redoAction: r.redo_action || undefined,
+            meta: r.meta || undefined
+        }));
+        res.json(entries);
+    } catch (e) {
+        console.error('[WO_ACTION_HISTORY] Get error:', e);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.post('/api/wo-action-history', async (req, res) => {
+    const { section, subsection, actionType, label, entityType, entityId, entityLabel,
+            beforeState, afterState, userId, username, context, undoable, undoAction, redoAction, meta } = req.body;
+    if (!section || !actionType || !label) {
+        return res.status(400).json({ error: 'section, actionType et label sont requis' });
+    }
+    try {
+        const [countRows] = await pool.query('SELECT COUNT(*) AS cnt FROM wo_action_history');
+        const nextNum = (Number(countRows[0].cnt) + 1).toString().padStart(3, '0');
+        const id = `wah-${nextNum}`;
+        const now = new Date();
+
+        await pool.query(
+            `INSERT INTO wo_action_history
+             (id, timestamp, section, subsection, action_type, label, entity_type, entity_id, entity_label,
+              before_state, after_state, user_id, username, context, undoable, undone, undo_action, redo_action, meta)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)`,
+            [id, now, section, subsection || '', actionType, label,
+             entityType || '', entityId || '', entityLabel || '',
+             beforeState ? JSON.stringify(beforeState) : null,
+             afterState  ? JSON.stringify(afterState)  : null,
+             userId || null, username || '',
+             context ? JSON.stringify(context) : null,
+             undoable ? 1 : 0,
+             undoAction ? JSON.stringify(undoAction) : null,
+             redoAction ? JSON.stringify(redoAction) : null,
+             meta ? JSON.stringify(meta) : null]
+        );
+
+        const entry = {
+            id, timestamp: now.toISOString(), section, subsection, actionType, label,
+            entityType, entityId, entityLabel, beforeState, afterState,
+            userId, username, context, undoable: !!undoable, undone: false, undoAction, redoAction, meta
+        };
+        console.log(`[WO_ACTION_HISTORY] Tracked: ${id} — ${label} (${section})`);
+        res.json(entry);
+    } catch (e) {
+        console.error('[WO_ACTION_HISTORY] Create error:', e);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Helper interne : insère une entrée de tracking dans wo_action_history
+async function insertWoActionEntry(payload) {
+    const [countRows] = await pool.query('SELECT COUNT(*) AS cnt FROM wo_action_history');
+    const nextNum = (Number(countRows[0].cnt) + 1).toString().padStart(3, '0');
+    const id = `wah-${nextNum}`;
+    const now = new Date();
+    await pool.query(
+        `INSERT INTO wo_action_history
+         (id, timestamp, section, subsection, action_type, label, entity_type, entity_id, entity_label,
+          before_state, after_state, user_id, username, context, undoable, undone, undo_action, redo_action, meta)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)`,
+        [id, now, payload.section, payload.subsection || '', payload.actionType, payload.label,
+         payload.entityType || '', payload.entityId || '', payload.entityLabel || '',
+         payload.beforeState ? JSON.stringify(payload.beforeState) : null,
+         payload.afterState  ? JSON.stringify(payload.afterState)  : null,
+         payload.userId || null, payload.username || '',
+         payload.context ? JSON.stringify(payload.context) : null,
+         payload.undoable ? 1 : 0,
+         payload.undoAction ? JSON.stringify(payload.undoAction) : null,
+         payload.redoAction ? JSON.stringify(payload.redoAction) : null,
+         payload.meta ? JSON.stringify(payload.meta) : null]
+    );
+    return { id, timestamp: now };
+}
+
+app.post('/api/wo-action-history/:id/undo', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM wo_action_history WHERE id = ?', [req.params.id]);
+        if (!rows[0]) return res.status(404).json({ error: 'Action introuvable' });
+
+        const entry = rows[0];
+        if (!entry.undoable)  return res.status(400).json({ error: "Cette action n'est pas réversible" });
+        if (entry.undone)     return res.status(400).json({ error: 'Cette action a déjà été annulée' });
+
+        const undoAction = typeof entry.undo_action === 'string'
+            ? JSON.parse(entry.undo_action)
+            : entry.undo_action;
+
+        if (!undoAction?.endpoint || !undoAction?.method) {
+            return res.status(400).json({ error: "Aucune action d'annulation définie" });
+        }
+
+        const port = process.env.PORT || 3001;
+        const selfUrl = `http://localhost:${port}${undoAction.endpoint}`;
+        const fetchOptions = {
+            method: undoAction.method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Internal-Call': '1',
+                ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
+                ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {})
+            }
+        };
+        if (undoAction.payload && ['PUT', 'POST', 'PATCH'].includes(undoAction.method)) {
+            fetchOptions.body = JSON.stringify(undoAction.payload);
+        }
+
+        const undoRes = await fetch(selfUrl, fetchOptions);
+        if (!undoRes.ok && undoRes.status !== 404) {
+            const errData = await undoRes.json().catch(() => ({}));
+            return res.status(undoRes.status).json({ error: errData.error || "Erreur lors de l'annulation" });
+        }
+
+        const undoneAt = new Date();
+        const undoneBy = req.body?.undoneBy || '';
+        await pool.query(
+            'UPDATE wo_action_history SET undone = 1, undone_at = ?, undone_by = ? WHERE id = ?',
+            [undoneAt, undoneBy, req.params.id]
+        );
+
+        console.log(`[WO_ACTION_HISTORY] Undo: ${req.params.id} — ${entry.label} by ${undoneBy}`);
+
+        // Tracking de l'annulation comme nouvelle action (sauf si appel interne en cascade)
+        let trackedEntry = null;
+        if (req.headers['x-internal-call'] !== '1') {
+            try {
+                const sessionUser = getSessionUser(req);
+                trackedEntry = await insertWoActionEntry({
+                    section: entry.section,
+                    subsection: entry.subsection,
+                    actionType: 'undo',
+                    label: `Annulation : ${entry.label}`,
+                    entityType: 'history-entry',
+                    entityId: entry.id,
+                    entityLabel: entry.label,
+                    userId: sessionUser?.id || null,
+                    username: undoneBy || sessionUser?.username || '',
+                    context: { originalSection: entry.section, originalActionType: entry.action_type },
+                    undoable: true,
+                    undoAction: { endpoint: `/api/wo-action-history/${entry.id}/redo`, method: 'POST' },
+                    redoAction: { endpoint: `/api/wo-action-history/${entry.id}/undo`, method: 'POST' }
+                });
+            } catch (trackErr) {
+                console.warn('[WO_ACTION_HISTORY] Failed to track undo as new action:', trackErr.message);
+            }
+        }
+
+        res.json({ success: true, undoneAt: undoneAt.toISOString(), undoneBy, trackedActionId: trackedEntry?.id });
+    } catch (e) {
+        console.error('[WO_ACTION_HISTORY] Undo error:', e);
+        res.status(500).json({ error: "Erreur lors de l'annulation" });
+    }
+});
+
+app.post('/api/wo-action-history/:id/redo', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM wo_action_history WHERE id = ?', [req.params.id]);
+        if (!rows[0]) return res.status(404).json({ error: 'Action introuvable' });
+
+        const entry = rows[0];
+        if (!entry.undone) return res.status(400).json({ error: "Cette action n'a pas été annulée" });
+
+        const redoAction = typeof entry.redo_action === 'string'
+            ? JSON.parse(entry.redo_action)
+            : entry.redo_action;
+
+        if (!redoAction?.endpoint || !redoAction?.method) {
+            return res.status(400).json({ error: "Aucune action de rétablissement définie" });
+        }
+
+        const port = process.env.PORT || 3001;
+        const selfUrl = `http://localhost:${port}${redoAction.endpoint}`;
+        const fetchOptions = {
+            method: redoAction.method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Internal-Call': '1',
+                ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
+                ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {})
+            }
+        };
+        if (redoAction.payload && ['PUT', 'POST', 'PATCH'].includes(redoAction.method)) {
+            fetchOptions.body = JSON.stringify(redoAction.payload);
+        }
+
+        const redoRes = await fetch(selfUrl, fetchOptions);
+        if (!redoRes.ok && redoRes.status !== 404) {
+            const errData = await redoRes.json().catch(() => ({}));
+            return res.status(redoRes.status).json({ error: errData.error || "Erreur lors du rétablissement" });
+        }
+
+        const redoneBy = req.body?.redoneBy || '';
+        await pool.query(
+            'UPDATE wo_action_history SET undone = 0, undone_at = NULL, undone_by = ? WHERE id = ?',
+            [redoneBy, req.params.id]
+        );
+
+        console.log(`[WO_ACTION_HISTORY] Redo: ${req.params.id} — ${entry.label}`);
+
+        // Tracking du rétablissement comme nouvelle action (sauf si appel interne en cascade)
+        let trackedEntry = null;
+        if (req.headers['x-internal-call'] !== '1') {
+            try {
+                const sessionUser = getSessionUser(req);
+                trackedEntry = await insertWoActionEntry({
+                    section: entry.section,
+                    subsection: entry.subsection,
+                    actionType: 'redo',
+                    label: `Rétablissement : ${entry.label}`,
+                    entityType: 'history-entry',
+                    entityId: entry.id,
+                    entityLabel: entry.label,
+                    userId: sessionUser?.id || null,
+                    username: redoneBy || sessionUser?.username || '',
+                    context: { originalSection: entry.section, originalActionType: entry.action_type },
+                    undoable: true,
+                    undoAction: { endpoint: `/api/wo-action-history/${entry.id}/undo`, method: 'POST' },
+                    redoAction: { endpoint: `/api/wo-action-history/${entry.id}/redo`, method: 'POST' }
+                });
+            } catch (trackErr) {
+                console.warn('[WO_ACTION_HISTORY] Failed to track redo as new action:', trackErr.message);
+            }
+        }
+
+        res.json({ success: true, trackedActionId: trackedEntry?.id });
+    } catch (e) {
+        console.error('[WO_ACTION_HISTORY] Redo error:', e);
+        res.status(500).json({ error: "Erreur lors du rétablissement" });
+    }
+});
+
+app.delete('/api/wo-action-history', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM wo_action_history');
+        console.log('[WO_ACTION_HISTORY] History cleared');
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[WO_ACTION_HISTORY] Clear error:', e);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// ============================================================
 // Tickets
 // ============================================================
 
@@ -4091,16 +4391,26 @@ function slugify(text) {
         .replace(/-+/g, '-').trim();
 }
 
-function cleanStructure(items) {
-    if (!items) return [];
-    const seen = new Set();
-    const cleaned = [];
-    for (const item of items) {
-        const key = item.id || `${item.type}:${item.name.toLowerCase()}`;
-        if (!seen.has(key)) {
-            seen.add(key);
-            if (item.type === 'folder' && item.children) {
-                item.children = cleanStructure(item.children);
+function getProjectConfig(projectName) {
+    const cfgPath = path.join(PROJECTS_DIR, projectName, 'config.json');
+    if (!fs.existsSync(cfgPath)) return null;
+    try {
+        const config = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+        
+        // Nettoyage des doublons (même nom et type au même niveau)
+        function cleanStructure(items) {
+            if (!items) return [];
+            const seen = new Set();
+            const cleaned = [];
+            for (const item of items) {
+                const key = `${item.type}:${item.name.toLowerCase()}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    if (item.children) {
+                        item.children = cleanStructure(item.children);
+                    }
+                    cleaned.push(item);
+                }
             }
             cleaned.push(item);
         }
@@ -4198,10 +4508,18 @@ function isImageFile(name) {
 function attachContent(projectName, items) {
     const sortedItems = [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
     return sortedItems.map(item => {
+        const result = { ...item };
         if (item.type === 'file') {
-            if (isImageFile(item.name)) return { ...item, content: '', fileType: 'image' };
-            const full = path.join(PROJECTS_DIR, projectName, item.path);
-            return { ...item, content: fs.existsSync(full) ? fs.readFileSync(full, 'utf8') : '', fileType: 'text' };
+            if (isImageFile(item.name)) {
+                result.content = '';
+                result.fileType = 'image';
+            } else {
+                const full = path.join(PROJECTS_DIR, projectName, item.path);
+                result.content = fs.existsSync(full) ? fs.readFileSync(full, 'utf8') : '';
+                result.fileType = 'text';
+            }
+            if (item.children) result.children = attachContent(projectName, item.children);
+            return result;
         }
         return { ...item, children: attachContent(projectName, item.children || []) };
     });
