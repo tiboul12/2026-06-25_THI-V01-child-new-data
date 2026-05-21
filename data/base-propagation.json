@@ -372,6 +372,18 @@
         "frankenstein/src/app/pages/user/config/config.component.ts"
       ],
       "propagationNote": "Deux bugs corrigés dans la page config admin. (1) server/server-data.js ligne ~754 : ajouter 'cliIaEnabled !== undefined || apiKeysEnabled !== undefined ||' dans la condition if qui déclenche l'écriture de conf.json (avant 'enabledTabs !== undefined'). Sans ce fix, les POST contenant uniquement { apiKeysEnabled } ou { cliIaEnabled } ne sauvegardent pas conf.json. (2) config.service.ts : ajout des signaux cliIaEnabled = signal<boolean>(true), apiKeysEnabled = signal<boolean>(true) et des méthodes setCliIaEnabled / setApiKeysEnabled (avec http.post interne). (3) config.component.ts : rétablir les getters cliIaEnabled→configService.cliIaEnabled() et apiKeysEnabled→configService.apiKeysEnabled(), et les toggles vers setCliIaEnabled/setApiKeysEnabled."
+    },
+    {
+      "baseVersion": "B0.048",
+      "date": "2026-05-21T00:40:00.000Z",
+      "modRef": "mod-054",
+      "title": "Modèles CLI IA : fetch dynamique via API Anthropic/Google + liste à jour",
+      "propagationRequired": true,
+      "propagationScope": [
+        "electron/executor/server-executor.js",
+        "server/server-data.js"
+      ],
+      "propagationNote": "Refonte de la source des modèles CLI affichés. (1) electron/executor/server-executor.js : ajout du require https. Remplacer le DEFAULT_MODELS hardcodé par : une table MODEL_COSTS (référence des coûts par ID), un nouveau DEFAULT_MODELS étendu (Opus 4.7, Gemini 2.5 Pro/Flash), des helpers annotateModel/applyKnownCosts. Nouvelles fonctions httpsGetJson, fetchApiKeysFromDataServer (GET vers http://localhost:3001/api/config/keys), fetchAnthropicModels (https://api.anthropic.com/v1/models, headers x-api-key + anthropic-version: 2023-06-01), fetchGoogleModels (https://generativelanguage.googleapis.com/v1beta/models?key=..., filtre supportedGenerationMethods incluant generateContent). Modifier refreshCliStatusCache pour appeler ces fetchers et fallback sur DEFAULT_MODELS si pas de clé/échec. Ajouter les champs source ('api'|'default') et lastUpdated au cachedCliStatus. (2) server/server-data.js : aligner le DEFAULT_MODELS local (utilisé par /api/admin/update-models-costs) avec la même liste (Opus 4.7 en tête, Gemini 2.5 Pro/Flash). (3) Frontend : config.component.ts ajouter source?: 'api'|'default' au type cliStatus.gemini/claude. config.component.html : ajouter un badge API (vert) ou Fallback (gris) à côté de 'Modèles disponibles (N)' dans les deux cartes provider, avec tooltip explicatif."
     }
   ]
 }

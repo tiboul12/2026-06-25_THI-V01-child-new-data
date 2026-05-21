@@ -1279,6 +1279,28 @@
       "prompt": "dans le menu admin/general le système de test CLI IA ne fonctionne pas corectement j'ai le message sur le front : Impossible de contacter le serveur pour vérifier les outils CLI. et sur la console : config.service.ts:202 [ConfigService] Executor server not available\nconfig.service.ts:189\n GET http://localhost:3002/api/cli-status net::ERR_CONNECTION_REFUSED",
       "startedAt": "2026-05-21T00:10:00.000Z",
       "completedAt": "2026-05-21T00:15:00.000Z"
+    },
+    {
+      "id": "mod-054",
+      "version": "B0.048",
+      "date": "2026-05-21T00:40:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["electron", "server", "frankenstein"],
+      "features": "electron:executor,server:config,frankenstein:config",
+      "title": "Modèles CLI IA : fetch dynamique API + liste à jour (Opus 4.7)",
+      "description": "Cause : la liste des modèles affichée pour Claude/Gemini venait d'un DEFAULT_MODELS codé en dur dans server-executor.js, sans relation avec les modèles réellement disponibles. Claude Opus 4.7 manquait. Corrections : (1) DEFAULT_MODELS mis à jour avec les modèles actuels (Opus 4.7, Gemini 2.5). (2) Nouvelles fonctions fetchAnthropicModels() et fetchGoogleModels() qui appellent https://api.anthropic.com/v1/models et https://generativelanguage.googleapis.com/v1beta/models. (3) refreshCliStatusCache récupère la clé API via /api/config/keys du data server, fetch la liste réelle, fallback sur DEFAULT_MODELS sinon. (4) Table MODEL_COSTS séparée pour annoter les coûts indépendamment de la source. (5) Champ source: 'api' | 'default' exposé dans cli-status. (6) Badge API/Fallback affiché dans l'UI à côté de 'Modèles disponibles' + compteur. (7) server-data.js DEFAULT_MODELS aligné pour cohérence (bouton Mettre à jour les coûts).",
+      "files": [
+        "electron/executor/server-executor.js",
+        "server/server-data.js",
+        "frankenstein/src/app/pages/user/config/config.component.ts",
+        "frankenstein/src/app/pages/user/config/config.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "actuellement on affiche la liste des modèles disponible pour gemini et claude, cependant si je verifi les modèles disponible dans claude cli je constate que je n'ai pas les mêmes modèle, exemple je peux mettre claude opus 4.7 qui n'est pas dans les modèles disponible affiché, regarde pourquoi et améliore le système pour affiché tous les modèles disponible dans les 2 systèmes",
+      "startedAt": "2026-05-21T00:20:00.000Z",
+      "completedAt": "2026-05-21T00:40:00.000Z"
     }
   ]
 }

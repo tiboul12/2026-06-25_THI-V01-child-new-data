@@ -37,20 +37,22 @@ const DEFAULT_MODELS = {
         { value: 'gemini-3.1-pro-preview',  label: 'Gemini 3.1 Pro (Preview)', costInput: 1.25,  costOutput: 5.00 },
         { value: 'gemini-3-flash',          label: 'Gemini 3 Flash',           costInput: 0.10,  costOutput: 0.40 },
         { value: 'gemini-3-flash-preview',  label: 'Gemini 3 Flash (Preview)', costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-2.5-pro-preview',  label: 'Gemini 2.5 Pro (Preview)', costInput: 1.25,  costOutput: 5.00 },
+        { value: 'gemini-2.5-pro',          label: 'Gemini 2.5 Pro',           costInput: 1.25,  costOutput: 5.00 },
+        { value: 'gemini-2.5-flash',        label: 'Gemini 2.5 Flash',         costInput: 0.10,  costOutput: 0.40 },
         { value: 'gemini-2.0-pro-preview',  label: 'Gemini 2.0 Pro (Preview)', costInput: 1.25,  costOutput: 5.00 },
         { value: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash',         costInput: 0.10,  costOutput: 0.40 },
         { value: 'gemini-1.5-pro',          label: 'Gemini 1.5 Pro',           costInput: 1.25,  costOutput: 5.00 },
         { value: 'gemini-1.5-flash',        label: 'Gemini 1.5 Flash',         costInput: 0.075, costOutput: 0.30 }
     ],
     claude: [
-        { value: 'claude-3-7-sonnet-latest',     label: 'Claude 3.7 Sonnet (Latest)', costInput: 3.00, costOutput: 15.00 },
-        { value: 'claude-3-5-sonnet-latest',     label: 'Claude 3.5 Sonnet',          costInput: 3.00, costOutput: 15.00 },
-        { value: 'claude-3-5-haiku-latest',      label: 'Claude 3.5 Haiku',           costInput: 0.80, costOutput: 4.00 },
-        { value: 'claude-3-opus-latest',         label: 'Claude 3 Opus',              costInput: 15.00, costOutput: 75.00 },
-        { value: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6',          costInput: 3.00, costOutput: 15.00 },
+        { value: 'claude-opus-4-7',              label: 'Claude Opus 4.7',            costInput: 15.00, costOutput: 75.00 },
+        { value: 'claude-sonnet-4-6',            label: 'Claude Sonnet 4.6',          costInput: 3.00,  costOutput: 15.00 },
         { value: 'claude-opus-4-6',              label: 'Claude Opus 4.6',            costInput: 15.00, costOutput: 75.00 },
-        { value: 'claude-haiku-4-5',             label: 'Claude Haiku 4.5',           costInput: 0.80, costOutput: 4.00 }
+        { value: 'claude-haiku-4-5-20251001',    label: 'Claude Haiku 4.5',           costInput: 0.80,  costOutput: 4.00 },
+        { value: 'claude-3-7-sonnet-latest',     label: 'Claude 3.7 Sonnet (Latest)', costInput: 3.00,  costOutput: 15.00 },
+        { value: 'claude-3-5-sonnet-latest',     label: 'Claude 3.5 Sonnet',          costInput: 3.00,  costOutput: 15.00 },
+        { value: 'claude-3-5-haiku-latest',      label: 'Claude 3.5 Haiku',           costInput: 0.80,  costOutput: 4.00 },
+        { value: 'claude-3-opus-latest',         label: 'Claude 3 Opus',              costInput: 15.00, costOutput: 75.00 }
     ]
 };
 
