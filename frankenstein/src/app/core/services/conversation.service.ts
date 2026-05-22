@@ -8,7 +8,8 @@ export interface Message {
   userId: string;
   text: string;
   timestamp: string;
-  role?: 'user' | 'ai'; // Pour future compatibilité
+  role?: 'user' | 'ai';
+  tokenInfo?: { used: number; total: number; remaining: number };
 }
 
 export interface Conversation {

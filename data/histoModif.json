@@ -1,12 +1,35 @@
-﻿{
+{
   "modifications": [
+    {
+      "id": "mod-200",
+      "version": "THI-0.125",
+      "date": "2026-05-22T19:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "data"
+      ],
+      "features": "data:content",
+      "title": "Article Claude Opus 4.7 dans Menu 2-1",
+      "description": "Remplacement du contenu vide du fichier contenu.md (Menu 2-1) par un article complet et actuel sur Claude Opus 4.7 : présentation du modèle, positionnement dans la gamme Claude 4, nouveautés (mode Fast, agents, prompt caching, multimodal), cas d'usage, intégration API et considérations éthiques.",
+      "files": [
+        "data/projets/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52/menu-2/menu-2-1/contenu.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "peux tu me supprimé tous le texte et le remplacer par un articles actuel sur claude opus 4.7",
+      "startedAt": "2026-05-22T18:50:00.000Z",
+      "completedAt": "2026-05-22T19:00:00.000Z"
+    },
     {
       "id": "mod-199",
       "version": "THI-0.125",
       "date": "2026-05-22T18:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor|conversation",
       "title": "Conversation panel : toggle IA/Chat, sélecteur modèle, option historique",
       "description": "Refonte de la zone de saisie du panneau conversation : suppression du header 'CONVERSATION' en doublon, ajout d'un bouton toggle Chat/IA (bascule le mode sans taper @ia manuellement), remplacement du label modèle par un sélecteur dropdown de tous les modèles disponibles (Claude + Gemini), ajout d'un bouton toggle pour inclure l'historique de la conversation comme contexte IA supplémentaire (désactivé par défaut).",
@@ -26,7 +49,10 @@
       "date": "2026-05-22T17:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein", "server"],
+      "scope": [
+        "frankenstein",
+        "server"
+      ],
       "features": "frankenstein:editor|conversation,server:workflow",
       "title": "IA Edit : modification de section via conversation (@ia)",
       "description": "Nouvelle fonctionnalité permettant de demander à l'IA de modifier le contenu d'une section depuis le panneau conversation. L'utilisateur tape @ia <demande> dans le textarea, le contenu de contenu.md est envoyé à l'executor Claude avec le prompt. La réponse est streamée token par token dans un message IA. Une fois terminé, l'éditeur central bascule en vue diff côte-à-côte Avant/Après. Une barre flottante permet d'Accepter (sauvegarde dans contenu.md) ou d'Annuler. Nouveaux fichiers : compute-line-diff.ts (utilitaire partagé), ProjetAiEditService, ProjetAiDiffComponent. server-data.js étendu pour persister le champ role sur les messages IA.",
@@ -55,11 +81,15 @@
       "date": "2026-05-22T16:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "server:workflow",
       "title": "Fix historique : ID collision + SSE broadcast manquant",
       "description": "Double fix sur wo_action_history. (1) Génération d'ID : COUNT(*) produisait des doublons après suppression d'entrées — remplacé par MAX(CAST(SUBSTRING(id,5) AS UNSIGNED)). (2) SSE broadcast manquant : le POST /api/wo-action-history n'appelait pas broadcastToProject() après l'INSERT, les entrées restaient 'en cours' côté client car clearPending() n'était jamais déclenché.",
-      "files": ["server/server-data.js"],
+      "files": [
+        "server/server-data.js"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "l'historique n'a pas l'air de fonctionné corectement, j'ai fait une modif en temps que user Thibault et je ne vois pas la modification dans l'historique",
@@ -72,7 +102,9 @@
       "date": "2026-05-22T16:10:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["data"],
+      "scope": [
+        "data"
+      ],
       "features": "system:workflow",
       "title": "Purge locks orphelins admin — projet THI",
       "description": "Suppression de 28 locks orphelins tenus par l'utilisateur 'admin' sur le projet 4aa105c7. Ces locks dataient du 13-20 mai et bloquaient la sauvegarde des fichiers avec erreur 423 Locked pour les autres utilisateurs.",
@@ -89,11 +121,15 @@
       "date": "2026-05-21T22:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "server:config",
       "title": "server-data.js : conflit merge — double getProjectConfig + try sans catch",
       "description": "Le merge base B0.048 a créé deux définitions de getProjectConfig dans server-data.js : l'ancienne version sync avec un try sans catch/finally (syntax error Node.js), et la nouvelle version async avec MySQL. Correction : suppression de l'ancienne version et extraction de cleanStructure en fonction standalone accessible par la version async.",
-      "files": ["server/server-data.js"],
+      "files": [
+        "server/server-data.js"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "SyntaxError: Missing catch or finally after try à la ligne 4417 de server-data.js",
@@ -106,7 +142,10 @@
       "date": "2026-05-21T22:14:11.493Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein", "system"],
+      "scope": [
+        "frankenstein",
+        "system"
+      ],
       "features": "frankenstein:config,system:workflow",
       "title": "Post-sync B0.048 : version.json + signal woActionHistoryNavEnabled",
       "description": "Suite au sync base B0.048 : (1) version.json écrasé par le merge -X theirs, champs childId/child/baseSynced perdus — restaurés manuellement avec baseSynced=B0.048. (2) config.service.ts (base) référence woActionHistoryNavEnabled dans loadCliConfig/saveNavItems mais la déclaration du signal avait disparu — ajout de la déclaration manquante pour rétablir la compilation. Bug à corriger dans worganic-base.",
@@ -3162,7 +3201,9 @@
       "date": "2026-05-21T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:admin",
       "title": "Fix config admin : options remises à zéro à la sauvegarde",
       "description": "Correction d'un bug dans config.component.ts : les getters cliIaEnabled et apiKeysEnabled lisaient les mauvais signaux du service (tchatIaEnabled et ticketsEnabled au lieu de cliIaEnabled et apiKeysEnabled). De même, les toggles appelaient setTchatIaEnabled et setTicketsEnabled au lieu de setCliIaEnabled et setApiKeysEnabled. Ce mismatch faisait que les signaux corrects (fraîchement ajoutés dans config.service.ts) n'étaient jamais mis à jour par les toggles, et que saveKeys() envoyait les anciennes valeurs au serveur, réinitialisant les options à leur état initial.",
@@ -3181,7 +3222,9 @@
       "date": "2026-05-21T00:05:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "server:config",
       "title": "Fix : apiKeysEnabled et cliIaEnabled non persistés dans conf.json",
       "description": "La condition de sauvegarde dans le POST /api/config/keys (server-data.js) ne listait pas cliIaEnabled ni apiKeysEnabled. Quand le toggle envoyait { apiKeysEnabled: val } seul, la condition était false et conf.json n'était jamais réécrit. La valeur était donc perdue au refresh. Ajout de cliIaEnabled !== undefined || apiKeysEnabled !== undefined dans la condition.",
@@ -3200,7 +3243,9 @@
       "date": "2026-05-21T00:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:config",
       "title": "Fix CLI IA : guard ngOnInit + message executor manquant",
       "description": "Deux corrections dans config.component : (1) loadCliStatus() était appelé au ngOnInit même si cliIaEnabled=false, provoquant une erreur inutile sur port 3002. Ajout d'un guard if(cliIaEnabled). (2) Le message d'erreur ne donnait aucune indication sur la cause. Remplacement par un message explicatif (Electron/port 3002) + bouton Réessayer.",
@@ -3220,7 +3265,11 @@
       "date": "2026-05-21T00:40:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["electron", "server", "frankenstein"],
+      "scope": [
+        "electron",
+        "server",
+        "frankenstein"
+      ],
       "features": "electron:executor,server:config,frankenstein:config",
       "title": "Modèles CLI IA : fetch dynamique API + liste à jour (Opus 4.7)",
       "description": "Cause : la liste des modèles affichée pour Claude/Gemini venait d'un DEFAULT_MODELS codé en dur dans server-executor.js, sans relation avec les modèles réellement disponibles. Claude Opus 4.7 manquait. Corrections : (1) DEFAULT_MODELS mis à jour avec les modèles actuels (Opus 4.7, Gemini 2.5). (2) Nouvelles fonctions fetchAnthropicModels() et fetchGoogleModels() qui appellent https://api.anthropic.com/v1/models et https://generativelanguage.googleapis.com/v1beta/models. (3) refreshCliStatusCache récupère la clé API via /api/config/keys du data server, fetch la liste réelle, fallback sur DEFAULT_MODELS sinon. (4) Table MODEL_COSTS séparée pour annoter les coûts indépendamment de la source. (5) Champ source: 'api' | 'default' exposé dans cli-status. (6) Badge API/Fallback affiché dans l'UI à côté de 'Modèles disponibles' + compteur. (7) server-data.js DEFAULT_MODELS aligné pour cohérence (bouton Mettre à jour les coûts).",
@@ -3235,6 +3284,30 @@
       "prompt": "actuellement on affiche la liste des modèles disponible pour gemini et claude, cependant si je verifi les modèles disponible dans claude cli je constate que je n'ai pas les mêmes modèle, exemple je peux mettre claude opus 4.7 qui n'est pas dans les modèles disponible affiché, regarde pourquoi et améliore le système pour affiché tous les modèles disponible dans les 2 systèmes",
       "startedAt": "2026-05-21T00:20:00.000Z",
       "completedAt": "2026-05-21T00:40:00.000Z"
+    },
+    {
+      "id": "mod-055",
+      "version": "THI-0.126",
+      "date": "2026-05-22T17:42:37.628Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projets",
+      "title": "Conversation IA : loader textarea + affichage tokens utilisés",
+      "description": "Ajout dun overlay loader sur le textarea pendant le streaming IA. Ajout du parsing des tokens (type:tokens SSE ou pattern stdout) dans ProjetAiEditService. Affichage des tokens utilisés (bolt + count) au-dessus de chaque message IA dans la conversation.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/services/projet-ai-edit.service.ts",
+        "frankenstein/src/app/core/services/conversation.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque l'ia est intérroger il faut bloqué la fenètre de conversation (textarea) tans que l'IA n'a pas répondus avec un pti loader. Il faudrait indiqué à chaque intervention de l'ia le nombre de token utilisé par l'IA et l'indiqué dans la zone historique d'information avant l'affichage du message.",
+      "startedAt": "2026-05-22T19:30:00.000Z",
+      "completedAt": "2026-05-22T17:42:37.629Z"
     }
   ]
 }

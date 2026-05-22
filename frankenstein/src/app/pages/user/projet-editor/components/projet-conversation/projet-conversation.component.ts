@@ -242,6 +242,14 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     const doneSub = this.aiEditService.done$.subscribe(finalText => {
       sub.unsubscribe();
       doneSub.unsubscribe();
+      // Attacher les infos tokens au dernier message IA
+      const tokens = this.aiEditService.tokenInfo();
+      if (tokens) {
+        const updated = [...this.messages];
+        const last = updated[updated.length - 1];
+        if (last?.role === 'ai') updated[updated.length - 1] = { ...last, tokenInfo: tokens };
+        this.messages = updated;
+      }
       if (finalText && this.sectionId) {
         this.convService.saveAiMessage(this.sectionId, finalText).subscribe();
         this.conversationAdded.emit(this.sectionId);

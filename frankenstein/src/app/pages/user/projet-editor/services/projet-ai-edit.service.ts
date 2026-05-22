@@ -10,6 +10,12 @@ export interface PendingAiEdit {
   proposedContent: string;
 }
 
+export interface TokenInfo {
+  used: number;
+  total: number;
+  remaining: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProjetAiEditService {
   private projectFilesService = inject(ProjectFilesService);
@@ -17,6 +23,7 @@ export class ProjetAiEditService {
 
   pendingEdit = signal<PendingAiEdit | null>(null);
   isStreaming = signal(false);
+  tokenInfo = signal<TokenInfo | null>(null);
 
   // Émet chaque chunk SSE reçu (stdout)
   chunk$ = new Subject<string>();
@@ -35,6 +42,7 @@ export class ProjetAiEditService {
     model: string
   ): void {
     this.isStreaming.set(true);
+    this.tokenInfo.set(null);
     let accumulated = '';
 
     fetch(`${environment.apiExecutorUrl}/execute-file-prompt`, {
@@ -58,6 +66,16 @@ export class ProjetAiEditService {
         if (done) {
           this.ngZone.run(() => {
             this.isStreaming.set(false);
+            // Extraire les infos de tokens depuis le contenu accumulé si présentes
+            const tokenMatch = accumulated.match(/Token usage:\s*(\d+)\/(\d+);\s*(\d+)\s*remaining/i);
+            if (tokenMatch) {
+              this.tokenInfo.set({
+                used: parseInt(tokenMatch[1], 10),
+                total: parseInt(tokenMatch[2], 10),
+                remaining: parseInt(tokenMatch[3], 10)
+              });
+              accumulated = accumulated.replace(/\n?Token usage:\s*\d+\/\d+;\s*\d+\s*remaining\n?/gi, '').trim();
+            }
             if (accumulated) {
               this.pendingEdit.set({ sectionId, fileId, originalContent, proposedContent: accumulated });
             }
@@ -74,10 +92,17 @@ export class ProjetAiEditService {
           const line = part.trim();
           if (!line.startsWith('data:')) continue;
           try {
-            const payload = JSON.parse(line.slice(5).trim()) as { type: string; message: string };
+            const payload = JSON.parse(line.slice(5).trim()) as { type: string; message: string; used?: number; total?: number; remaining?: number };
             if (payload.type === 'stdout' && payload.message) {
               accumulated += payload.message;
               this.ngZone.run(() => this.chunk$.next(payload.message));
+            } else if (payload.type === 'tokens') {
+              // Événement tokens explicite (execute-prompt)
+              this.ngZone.run(() => this.tokenInfo.set({
+                used: payload.used ?? 0,
+                total: payload.total ?? 0,
+                remaining: payload.remaining ?? 0
+              }));
             } else if (payload.type === 'error') {
               this.ngZone.run(() => {
                 this.isStreaming.set(false);
