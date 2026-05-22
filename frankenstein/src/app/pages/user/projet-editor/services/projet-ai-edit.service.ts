@@ -2,6 +2,7 @@ import { Injectable, NgZone, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { ProjectFilesService } from '../../../../core/services/project-files.service';
+import { sanitizeIaContent } from '../utils/sanitize-ia-content';
 
 export interface PendingAiEdit {
   sectionId: string;
@@ -79,7 +80,8 @@ export class ProjetAiEditService {
             }
             const isError = accumulated.trimStart().startsWith('--ERREUR--');
             if (accumulated && !isError) {
-              this.pendingEdit.set({ sectionId, fileId, originalContent, proposedContent: accumulated });
+              const sanitized = sanitizeIaContent(accumulated);
+              this.pendingEdit.set({ sectionId, fileId, originalContent, proposedContent: sanitized });
             }
             this.done$.next(accumulated);
           });

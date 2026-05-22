@@ -3359,6 +3359,28 @@
       "prompt": "Si le message renvoyé par l'ia indique au début du message --ERREUR--, le message doit être indiqué dans l'historique de conversation mais ne doit pas mettre à jour le contenue de la section.",
       "startedAt": "2026-05-22T20:30:00.000Z",
       "completedAt": "2026-05-22T19:26:18.388Z"
+    },
+    {
+      "id": "mod-058",
+      "version": "THI-0.129",
+      "date": "2026-05-22T20:02:03.312Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projets",
+      "title": "IA Edit : sanitisation automatique du contenu retourné par l'IA",
+      "description": "Création de sanitize-ia-content.ts : (1) retire le heading # Titre ajouté par l'IA (auto-injecté par l'éditeur), (2) ferme les blocs de documents additionnels non fermés (délimiteurs ', `, ^), (3) normalise les marqueurs {{IMG:id}} (ID lowercase/hyphens), (4) supprime les images markdown ![alt](url) non supportées, (5) nettoie les lignes vides multiples. Appelé depuis ProjetAiEditService avant de setter pendingEdit.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/utils/sanitize-ia-content.ts",
+        "frankenstein/src/app/pages/user/projet-editor/services/projet-ai-edit.service.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "A chaque fois qu'un message est envoyé par l'ia pour modifié un texte, il faut vérifié que la section est bien valide, avec un titre pour les dossier # Titre avec un titre pour les documents et un backtick au début et un backtick à la fin et un titre sur la première ligne : backtickTITRE, avec le bon format pour les images.",
+      "startedAt": "2026-05-22T21:00:00.000Z",
+      "completedAt": "2026-05-22T20:02:03.313Z"
     }
   ]
 }
