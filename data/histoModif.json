@@ -1,6 +1,23 @@
 ﻿{
   "modifications": [
     {
+      "id": "mod-196",
+      "version": "THI-0.123",
+      "date": "2026-05-22T16:10:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["data"],
+      "features": "system:workflow",
+      "title": "Purge locks orphelins admin — projet THI",
+      "description": "Suppression de 28 locks orphelins tenus par l'utilisateur 'admin' sur le projet 4aa105c7. Ces locks dataient du 13-20 mai et bloquaient la sauvegarde des fichiers avec erreur 423 Locked pour les autres utilisateurs.",
+      "files": [],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "project-files.service.ts:70 \n PUT http://localhost:3001/api/file-projects/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52/files/507652ab-0a43-4aba-b240-ef509ea3ad9e 423 (Locked)\n\nprojet-editor-zone.component.ts:3141 [PublishCode] erreur: \nHttpErrorResponse {headers: _HttpHeaders, status: 423, statusText: 'Locked', ...}",
+      "startedAt": "2026-05-22T16:00:00.000Z",
+      "completedAt": "2026-05-22T16:10:00.000Z"
+    },
+    {
       "id": "mod-195",
       "version": "THI-0.122",
       "date": "2026-05-21T22:30:00.000Z",
