@@ -1,0 +1,56 @@
+<!-- Split diff view IA — sans toolbar (géré par la barre flottante du parent) -->
+<div class="flex flex-1 min-h-0 overflow-hidden font-mono text-[11px]">
+
+  <!-- Panneau gauche : Original -->
+  <div class="flex-1 flex flex-col min-w-0 border-r border-light-border dark:border-white/10 overflow-hidden">
+    <div class="flex-shrink-0 px-4 py-1.5 bg-red-500/8 dark:bg-red-900/20 border-b border-red-500/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-sm text-red-400">remove_circle</span>
+      <span class="text-[10px] font-bold text-red-400 uppercase tracking-wider">Original</span>
+      <span class="text-[9px] text-red-400/60 ml-auto">{{ leftLineCount }} lignes</span>
+    </div>
+    <div class="flex-1 overflow-auto">
+      @for (pair of diffPairs; track $index) {
+        <div class="flex items-start min-h-[20px] leading-5"
+             [ngClass]="{
+               'bg-red-500/15 dark:bg-red-900/25': pair.type === 'removed',
+               'opacity-0 select-none pointer-events-none': pair.type === 'added'
+             }">
+          <span class="w-9 flex-shrink-0 text-right pr-2 text-[9px] text-light-text-muted dark:text-white/20 select-none border-r border-light-border dark:border-white/8 self-stretch flex items-center justify-end">
+            {{ pair.leftNum ?? '' }}
+          </span>
+          <span class="pl-3 pr-2 py-0 whitespace-pre-wrap break-all flex-1 text-light-text dark:text-white/75"
+                [class.text-red-400]="pair.type === 'removed'">{{ pair.type !== 'added' ? pair.left : ' ' }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Panneau droit : Proposition IA -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div class="flex-shrink-0 px-4 py-1.5 bg-violet-500/8 dark:bg-violet-900/20 border-b border-violet-500/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-sm text-violet-400">auto_awesome</span>
+      <span class="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Proposition IA</span>
+      <div class="ml-auto flex items-center gap-2 text-[9px] font-bold">
+        <span class="px-2 py-0.5 rounded bg-red-500/15 text-red-400">-{{ removedCount }}</span>
+        <span class="px-2 py-0.5 rounded bg-green-500/15 text-green-400">+{{ addedCount }}</span>
+        <span class="text-violet-400/60">{{ rightLineCount }} lignes</span>
+      </div>
+    </div>
+    <div class="flex-1 overflow-auto">
+      @for (pair of diffPairs; track $index) {
+        <div class="flex items-start min-h-[20px] leading-5"
+             [ngClass]="{
+               'bg-green-500/15 dark:bg-green-900/25': pair.type === 'added',
+               'opacity-0 select-none pointer-events-none': pair.type === 'removed'
+             }">
+          <span class="w-9 flex-shrink-0 text-right pr-2 text-[9px] text-light-text-muted dark:text-white/20 select-none border-r border-light-border dark:border-white/8 self-stretch flex items-center justify-end">
+            {{ pair.rightNum ?? '' }}
+          </span>
+          <span class="pl-3 pr-2 py-0 whitespace-pre-wrap break-all flex-1 text-light-text dark:text-white/75"
+                [class.text-green-400]="pair.type === 'added'">{{ pair.type !== 'removed' ? pair.right : ' ' }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

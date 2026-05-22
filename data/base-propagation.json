@@ -1,6 +1,15 @@
 ﻿{
   "entries": [
     {
+      "baseVersion": "B0.049",
+      "date": "2026-05-22T18:30:00.000Z",
+      "modRef": "mod-198, mod-199",
+      "title": "IA Edit conversation : support role message + route conversations",
+      "propagationRequired": true,
+      "propagationScope": ["server/server-data.js"],
+      "propagationNote": "Dans POST /api/conversations/:sectionId : extraire { text, role } au lieu de { text } et ajouter le champ role dans l'objet newMessage (role: role || 'user'). Les champs user et userId doivent aussi brancher sur role === 'ai' (user: 'IA', userId: 'ai')."
+    },
+    {
       "baseVersion": "B0.011",
       "date": "2026-04-25T13:00:00Z",
       "modRef": "mod-010",

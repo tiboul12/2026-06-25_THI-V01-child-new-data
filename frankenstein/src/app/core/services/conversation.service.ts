@@ -34,4 +34,8 @@ export class ConversationService {
   sendMessage(sectionId: string, text: string): Observable<Message> {
     return this.http.post<Message>(`${this.apiUrl}/${sectionId}`, { text });
   }
+
+  saveAiMessage(sectionId: string, text: string): Observable<Message> {
+    return this.http.post<Message>(`${this.apiUrl}/${sectionId}`, { text, role: 'ai' });
+  }
 }

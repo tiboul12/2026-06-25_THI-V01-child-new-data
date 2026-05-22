@@ -17,9 +17,11 @@ import { ProjetConversationComponent } from './components/projet-conversation/pr
 import { ProjetStatusbarComponent } from './components/projet-statusbar/projet-statusbar.component';
 import { ProjetHistoryComponent } from './components/projet-history/projet-history.component';
 import { ProjetDiffComponent } from './components/projet-diff/projet-diff.component';
+import { ProjetAiDiffComponent } from './components/projet-ai-diff/projet-ai-diff.component';
 import { ProjetUpdateBannerComponent } from './components/projet-update-banner/projet-update-banner.component';
 import { CommentsDrawerComponent } from './components/comments-drawer/comments-drawer.component';
 import { ProjectCommentsService } from './services/project-comments.service';
+import { ProjetAiEditService } from './services/projet-ai-edit.service';
 
 @Component({
   selector: 'app-projet-editor',
@@ -33,6 +35,7 @@ import { ProjectCommentsService } from './services/project-comments.service';
     ProjetStatusbarComponent,
     ProjetHistoryComponent,
     ProjetDiffComponent,
+    ProjetAiDiffComponent,
     ProjetUpdateBannerComponent,
     CommentsDrawerComponent,
   ],
@@ -59,6 +62,9 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   // Map fileId -> imageIds[] pour les images imbriquées dans un bloc document
   nestedImagesMap = signal<Record<string, string[]>>({});
   diffEntry = signal<CollabHistoryEntry | null>(null);
+
+  aiEditService = inject(ProjetAiEditService);
+  hasPendingEdit = computed(() => !!this.aiEditService.pendingEdit());
 
   // Nom + icône du noeud actuellement sélectionné, affichés sous les onglets de la zone 5b
   readonly activeNodeInfo = computed<{ name: string; icon: string } | null>(() => {
@@ -1209,6 +1215,24 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
   closeDiff() {
     this.diffEntry.set(null);
+  }
+
+  async onAcceptAiEdit() {
+    const projectName = this.project()?.id;
+    const edit = this.aiEditService.pendingEdit();
+    if (!projectName || !edit) return;
+    try {
+      await this.aiEditService.acceptEdit(projectName);
+      // Patch le signal local immédiatement — évite la latence d'un onRefresh()
+      this.files.update(nodes => this.patchNodeContent(nodes, edit.fileId, edit.proposedContent));
+    } catch (e) {
+      console.error('[AI Edit] Accept failed:', e);
+      this.aiEditService.cancelEdit();
+    }
+  }
+
+  onCancelAiEdit() {
+    this.aiEditService.cancelEdit();
   }
 
   get statusLabel(): string {

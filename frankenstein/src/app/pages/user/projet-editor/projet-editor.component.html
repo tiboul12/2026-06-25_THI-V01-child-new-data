@@ -45,7 +45,7 @@
         (dragDrop)="onDragDrop($event)"
         (refresh)="onRefresh()" />
 
-      @if (!diffEntry()) {
+      @if (!diffEntry() && !hasPendingEdit()) {
         <app-projet-editor-zone
           [files]="files()"
           [scrollToNodeId]="scrollToNodeId()"
@@ -62,10 +62,29 @@
           (saveStarting)="onSaveStarting()"
           (commentRequest)="onCommentRequest($event)"
           (refresh)="onRefresh()" />
-      } @else {
+      } @else if (diffEntry()) {
         <app-projet-diff
           [entry]="diffEntry()"
           (close)="closeDiff()" />
+      } @else if (aiEditService.pendingEdit(); as edit) {
+        <!-- Barre flottante Accepter/Annuler -->
+        <div class="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative">
+          <div class="flex-shrink-0 flex items-center gap-3 px-4 py-2 bg-violet-600/95 backdrop-blur text-white text-xs font-medium border-b border-violet-400/30">
+            <span class="material-symbols-outlined text-sm">auto_awesome</span>
+            <span class="flex-1 truncate">Modification IA proposée — vérifiez avant d'accepter</span>
+            <button (click)="onAcceptAiEdit()"
+                    class="px-3 py-1 rounded-md bg-white text-violet-700 font-bold text-xs hover:bg-violet-50 transition-colors flex-shrink-0">
+              Accepter
+            </button>
+            <button (click)="onCancelAiEdit()"
+                    class="px-3 py-1 rounded-md bg-white/15 hover:bg-white/25 transition-colors text-xs flex-shrink-0">
+              Annuler
+            </button>
+          </div>
+          <app-projet-ai-diff
+            [originalContent]="edit.originalContent"
+            [proposedContent]="edit.proposedContent" />
+        </div>
       }
 
       <!-- Zone 5 : Conversation + Historique -->
@@ -109,6 +128,8 @@
             <app-projet-conversation
               [sectionId]="activeNodeId()"
               [projectId]="project()?.id || null"
+              [files]="files()"
+              [projectName]="project()?.id || null"
               (conversationAdded)="sidebar.loadConversations()" />
           }
           @if (zone5Tab() === 'history') {

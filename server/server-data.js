@@ -6273,12 +6273,12 @@ app.post('/api/conversations/:sectionId', (req, res) => {
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     
     const sectionId = req.params.sectionId;
-    const { text } = req.body;
-    
+    const { text, role } = req.body;
+
     if (!text) return res.status(400).json({ error: 'Texte requis' });
-    
+
     const filePath = path.join(CONVERSATIONS_DIR, `${sectionId}.json`);
-    
+
     try {
         if (!fs.existsSync(CONVERSATIONS_DIR)) {
             fs.mkdirSync(CONVERSATIONS_DIR, { recursive: true });
@@ -6288,11 +6288,12 @@ app.post('/api/conversations/:sectionId', (req, res) => {
         if (fs.existsSync(filePath)) {
             data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         }
-        
+
         const newMessage = {
-            user: user.username,
-            userId: user.id,
+            user: role === 'ai' ? 'IA' : user.username,
+            userId: role === 'ai' ? 'ai' : user.id,
             text,
+            role: role || 'user',
             timestamp: new Date().toISOString()
         };
         

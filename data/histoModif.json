@@ -1,6 +1,55 @@
 ﻿{
   "modifications": [
     {
+      "id": "mod-199",
+      "version": "THI-0.125",
+      "date": "2026-05-22T18:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor|conversation",
+      "title": "Conversation panel : toggle IA/Chat, sélecteur modèle, option historique",
+      "description": "Refonte de la zone de saisie du panneau conversation : suppression du header 'CONVERSATION' en doublon, ajout d'un bouton toggle Chat/IA (bascule le mode sans taper @ia manuellement), remplacement du label modèle par un sélecteur dropdown de tous les modèles disponibles (Claude + Gemini), ajout d'un bouton toggle pour inclure l'historique de la conversation comme contexte IA supplémentaire (désactivé par défaut).",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans la zone 'Envoyer un message' ajoute un bouton pour passer du mode conversation user ou conversation IA, en mode conversation IA ajoute automatiquement '@ia'. Ajoute à la place du nom du model utilisé un selecteur de model pour que l'utilisateur puisse selectionné le model qui sera utilisé. Supprime à ligne 'CONVERSATION' qui fait doublons. Ajoute une option dans la zone Envoyer le message pour pouvoir indiqué à l'IA le context avec tous les messages précédent, cela ne doit être qu'une option, par defaut, seul la selection fait partis du context.",
+      "startedAt": "2026-05-22T18:00:00.000Z",
+      "completedAt": "2026-05-22T18:30:00.000Z"
+    },
+    {
+      "id": "mod-198",
+      "version": "THI-0.125",
+      "date": "2026-05-22T17:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein", "server"],
+      "features": "frankenstein:editor|conversation,server:workflow",
+      "title": "IA Edit : modification de section via conversation (@ia)",
+      "description": "Nouvelle fonctionnalité permettant de demander à l'IA de modifier le contenu d'une section depuis le panneau conversation. L'utilisateur tape @ia <demande> dans le textarea, le contenu de contenu.md est envoyé à l'executor Claude avec le prompt. La réponse est streamée token par token dans un message IA. Une fois terminé, l'éditeur central bascule en vue diff côte-à-côte Avant/Après. Une barre flottante permet d'Accepter (sauvegarde dans contenu.md) ou d'Annuler. Nouveaux fichiers : compute-line-diff.ts (utilitaire partagé), ProjetAiEditService, ProjetAiDiffComponent. server-data.js étendu pour persister le champ role sur les messages IA.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/utils/compute-line-diff.ts",
+        "frankenstein/src/app/pages/user/projet-editor/services/projet-ai-edit.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-ai-diff/projet-ai-diff.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-ai-diff/projet-ai-diff.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-diff/projet-diff.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
+        "frankenstein/src/app/core/services/conversation.service.ts",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais implémenter une nouvelle fonctionnalité très importante. Cette fonctionnalité doit permettre de pouvoir demandé à l'IA selectionné dans l'admin via le système de communication dans le menu projet/editor de mettre en place les modifications demandé...",
+      "startedAt": "2026-05-22T17:00:00.000Z",
+      "completedAt": "2026-05-22T17:30:00.000Z"
+    },
+    {
       "id": "mod-197",
       "version": "THI-0.124",
       "date": "2026-05-22T16:30:00.000Z",
