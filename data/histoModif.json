@@ -3338,6 +3338,27 @@
       "prompt": "dans l'admin des projet, je voudrais que tu rajoute une option IA, cela consiste en un textarea qui permet d'indiqué des informations à prendre en compte lorsqu'on intéroge l'IA pour ce projet. Cette information devra être ajouté au contexte exemple comme un claude.md et si l'option est ajouté pour le projet aucun autre option ne doit être prise en compte lors d'action avec l'IA, ainsi si l'ia est claude cli et qu'il y a un claude.md il ne devra pas être prise en compte mais uniquement les informations de l'option enregistré pour ce projet.",
       "startedAt": "2026-05-22T20:00:00.000Z",
       "completedAt": "2026-05-22T18:17:11.787Z"
+    },
+    {
+      "id": "mod-057",
+      "version": "THI-0.128",
+      "date": "2026-05-22T19:26:18.387Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "frankenstein"
+      ],
+      "features": "frankenstein:projets",
+      "title": "IA Edit : --ERREUR-- bloque la mise à jour de la section",
+      "description": "Si la réponse de l'IA commence par --ERREUR--, le pendingEdit n'est pas activé (pas de diff, pas de mise à jour du contenu). Le message est quand même affiché dans la conversation.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/services/projet-ai-edit.service.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Si le message renvoyé par l'ia indique au début du message --ERREUR--, le message doit être indiqué dans l'historique de conversation mais ne doit pas mettre à jour le contenue de la section.",
+      "startedAt": "2026-05-22T20:30:00.000Z",
+      "completedAt": "2026-05-22T19:26:18.388Z"
     }
   ]
 }

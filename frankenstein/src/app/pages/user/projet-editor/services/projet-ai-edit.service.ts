@@ -77,7 +77,8 @@ export class ProjetAiEditService {
               });
               accumulated = accumulated.replace(/\n?Token usage:\s*\d+\/\d+;\s*\d+\s*remaining\n?/gi, '').trim();
             }
-            if (accumulated) {
+            const isError = accumulated.trimStart().startsWith('--ERREUR--');
+            if (accumulated && !isError) {
               this.pendingEdit.set({ sectionId, fileId, originalContent, proposedContent: accumulated });
             }
             this.done$.next(accumulated);
