@@ -20,6 +20,7 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   @Input() projectId: string | null = null;
   @Input() files: FileNode[] = [];
   @Input() projectName: string | null = null;
+  @Input() iaInstructions: string | null = null;
   @Output() conversationAdded = new EventEmitter<string>();
   @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
 
@@ -274,7 +275,8 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
       finalPrompt,
       fileInfo.fileName,
       provider,
-      model
+      model,
+      this.iaInstructions
     );
   }
 

@@ -1,4 +1,4 @@
-﻿{
+{
   "entries": [
     {
       "baseVersion": "B0.049",
@@ -6,7 +6,9 @@
       "modRef": "mod-198, mod-199",
       "title": "IA Edit conversation : support role message + route conversations",
       "propagationRequired": true,
-      "propagationScope": ["server/server-data.js"],
+      "propagationScope": [
+        "server/server-data.js"
+      ],
       "propagationNote": "Dans POST /api/conversations/:sectionId : extraire { text, role } au lieu de { text } et ajouter le champ role dans l'objet newMessage (role: role || 'user'). Les champs user et userId doivent aussi brancher sur role === 'ai' (user: 'IA', userId: 'ai')."
     },
     {
@@ -363,7 +365,9 @@
       "modRef": "mod-050",
       "title": "Migration versioning 2 → 3 décimales",
       "propagationRequired": false,
-      "syncedBy": ["THI-V01"],
+      "syncedBy": [
+        "THI-V01"
+      ],
       "propagationScope": [
         "CLAUDE.md"
       ],
@@ -393,6 +397,18 @@
         "server/server-data.js"
       ],
       "propagationNote": "Refonte de la source des modèles CLI affichés. (1) electron/executor/server-executor.js : ajout du require https. Remplacer le DEFAULT_MODELS hardcodé par : une table MODEL_COSTS (référence des coûts par ID), un nouveau DEFAULT_MODELS étendu (Opus 4.7, Gemini 2.5 Pro/Flash), des helpers annotateModel/applyKnownCosts. Nouvelles fonctions httpsGetJson, fetchApiKeysFromDataServer (GET vers http://localhost:3001/api/config/keys), fetchAnthropicModels (https://api.anthropic.com/v1/models, headers x-api-key + anthropic-version: 2023-06-01), fetchGoogleModels (https://generativelanguage.googleapis.com/v1beta/models?key=..., filtre supportedGenerationMethods incluant generateContent). Modifier refreshCliStatusCache pour appeler ces fetchers et fallback sur DEFAULT_MODELS si pas de clé/échec. Ajouter les champs source ('api'|'default') et lastUpdated au cachedCliStatus. (2) server/server-data.js : aligner le DEFAULT_MODELS local (utilisé par /api/admin/update-models-costs) avec la même liste (Opus 4.7 en tête, Gemini 2.5 Pro/Flash). (3) Frontend : config.component.ts ajouter source?: 'api'|'default' au type cliStatus.gemini/claude. config.component.html : ajouter un badge API (vert) ou Fallback (gris) à côté de 'Modèles disponibles (N)' dans les deux cartes provider, avec tooltip explicatif."
+    },
+    {
+      "baseVersion": "B0.050",
+      "date": "2026-05-22T19:15:40.782Z",
+      "modRef": "mod-056",
+      "title": "Admin projets : instructions IA par projet (override contexte)",
+      "propagationRequired": true,
+      "propagationScope": [
+        "server/server-data.js",
+        "electron/executor/server-executor.js"
+      ],
+      "propagationNote": "server-data.js : (1) ajouter migration ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS ia_instructions TEXT DEFAULT NULL après la ligne backup_port. (2) Dans frankRowToObj(), ajouter iaInstructions: r.ia_instructions || null. (3) Dans PUT /api/frank/projects/:id : destructurer iaInstructions du body, ajouter ia_instructions dans updated object et dans UPDATE query, retourner iaInstructions dans res.json. executor/server-executor.js : Dans POST /execute-file-prompt, destructurer systemInstructions du body. Si présent, construire systemBlock et le prépendre à fullPrompt."
     }
   ]
 }

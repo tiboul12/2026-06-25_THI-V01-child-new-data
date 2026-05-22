@@ -39,7 +39,8 @@ export class ProjetAiEditService {
     promptContent: string,
     fileName: string,
     provider: string,
-    model: string
+    model: string,
+    systemInstructions?: string | null
   ): void {
     this.isStreaming.set(true);
     this.tokenInfo.set(null);
@@ -48,7 +49,7 @@ export class ProjetAiEditService {
     fetch(`${environment.apiExecutorUrl}/execute-file-prompt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName, promptContent, fileContent: originalContent, provider, model })
+      body: JSON.stringify({ fileName, promptContent, fileContent: originalContent, provider, model, ...(systemInstructions ? { systemInstructions } : {}) })
     }).then(response => {
       if (!response.ok || !response.body) {
         this.ngZone.run(() => {

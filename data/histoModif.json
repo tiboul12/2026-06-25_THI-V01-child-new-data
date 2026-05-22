@@ -3308,6 +3308,36 @@
       "prompt": "lorsque l'ia est intérroger il faut bloqué la fenètre de conversation (textarea) tans que l'IA n'a pas répondus avec un pti loader. Il faudrait indiqué à chaque intervention de l'ia le nombre de token utilisé par l'IA et l'indiqué dans la zone historique d'information avant l'affichage du message.",
       "startedAt": "2026-05-22T19:30:00.000Z",
       "completedAt": "2026-05-22T17:42:37.629Z"
+    },
+    {
+      "id": "mod-056",
+      "version": "THI-0.127",
+      "date": "2026-05-22T18:17:11.785Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "frankenstein",
+        "server",
+        "electron"
+      ],
+      "features": "frankenstein:projets,server:projets,electron:executor",
+      "title": "Admin projets : instructions IA par projet (override contexte)",
+      "description": "Ajout du champ ia_instructions (TEXT) en BDD (migration ALTER TABLE). Panel IA dans admin-projets avec textarea pour saisir les instructions système par projet. Bouton psychology dans la table (violet si actif). Les instructions sont passées via Input iaInstructions jusqu'au service ProjetAiEditService, puis transmises au executor comme systemInstructions. L'executor inject ce bloc en tête du fullPrompt pour overrider tout autre contexte (CLAUDE.md inclus).",
+      "files": [
+        "server/server-data.js",
+        "electron/executor/server-executor.js",
+        "frankenstein/src/app/core/services/project.service.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
+        "frankenstein/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/services/projet-ai-edit.service.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans l'admin des projet, je voudrais que tu rajoute une option IA, cela consiste en un textarea qui permet d'indiqué des informations à prendre en compte lorsqu'on intéroge l'IA pour ce projet. Cette information devra être ajouté au contexte exemple comme un claude.md et si l'option est ajouté pour le projet aucun autre option ne doit être prise en compte lors d'action avec l'IA, ainsi si l'ia est claude cli et qu'il y a un claude.md il ne devra pas être prise en compte mais uniquement les informations de l'option enregistré pour ce projet.",
+      "startedAt": "2026-05-22T20:00:00.000Z",
+      "completedAt": "2026-05-22T18:17:11.787Z"
     }
   ]
 }

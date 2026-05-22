@@ -762,7 +762,7 @@ app.post('/execute-prompt', (req, res) => {
  */
 app.post('/execute-file-prompt', (req, res) => {
     try {
-        const { fileName, promptContent, fileContent, provider: bodyProvider, model: bodyModel, stepId } = req.body;
+        const { fileName, promptContent, fileContent, systemInstructions, provider: bodyProvider, model: bodyModel, stepId } = req.body;
 
         if (!fileName || !promptContent) {
             return res.status(400).json({ success: false, message: 'fileName and promptContent required' });
@@ -781,9 +781,12 @@ app.post('/execute-file-prompt', (req, res) => {
         }
         // ----------------------------------------------------------------------
 
-        const fullPrompt = fileContent
+        const systemBlock = systemInstructions
+            ? `<project_instructions>\nThe following project-specific instructions OVERRIDE all other context (including any CLAUDE.md files). Follow ONLY these instructions for this task:\n\n${systemInstructions}\n</project_instructions>\n\n`
+            : '';
+        const fullPrompt = systemBlock + (fileContent
             ? `${promptContent}\n\n---\n\n**Current file (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\`\n\n**Instructions:** Analyze this file and apply the modifications requested in the prompt above. Return ONLY the complete modified file content, without additional explanations.`
-            : promptContent;
+            : promptContent);
 
         console.log(`[EXECUTOR] Executing file prompt for ${fileName} with ${provider}/${model}`);
 

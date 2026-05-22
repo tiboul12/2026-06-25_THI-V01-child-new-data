@@ -10,6 +10,57 @@
 
 @if (!loadingProjects()) {
 
+  <!-- Panneau instructions IA -->
+  @if (editingIa()) {
+    <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-violet-500/30 overflow-hidden">
+      <div class="px-5 py-3 bg-violet-500/5 border-b border-violet-500/20 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm text-violet-400">psychology</span>
+          <span class="text-sm font-semibold text-light-text dark:text-white">Instructions IA — {{ editingIa()!.title }}</span>
+        </div>
+        <button (click)="closeEditIa()" class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+      <div class="px-5 py-4 space-y-3">
+        <p class="text-xs text-light-text-muted dark:text-white/40 leading-relaxed">
+          Ces instructions seront injectées comme contexte système lors de chaque appel à l'IA pour ce projet.<br>
+          Si renseignées, elles remplacent tout autre contexte (CLAUDE.md, etc.).
+        </p>
+        <textarea [(ngModel)]="editIaInstructions"
+                  rows="8"
+                  placeholder="Ex: Tu es un expert en accessibilité web. Ce projet suit les normes WCAG 2.1 AA. Le code doit être en TypeScript strict. Toujours commenter les fonctions complexes en français…"
+                  class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-violet-500/20 text-light-text dark:text-white text-sm focus:outline-none focus:border-violet-500/60 transition-colors resize-none leading-relaxed font-mono placeholder-light-text-muted/40 dark:placeholder-white/20"></textarea>
+        @if (editIaInstructions.trim()) {
+          <div class="flex items-center gap-1.5 px-0.5">
+            <span class="material-symbols-outlined text-[11px] text-violet-400">check_circle</span>
+            <span class="text-[10px] text-violet-400/70">{{ editIaInstructions.trim().length }} caractères · instructions actives</span>
+          </div>
+        } @else {
+          <div class="flex items-center gap-1.5 px-0.5">
+            <span class="material-symbols-outlined text-[11px] text-light-text-muted dark:text-white/30">info</span>
+            <span class="text-[10px] text-light-text-muted dark:text-white/30">Vide = pas d'override, le contexte par défaut s'applique</span>
+          </div>
+        }
+      </div>
+      <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
+        <button (click)="closeEditIa()"
+                class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+          Annuler
+        </button>
+        <button (click)="saveIa()" [disabled]="savingIa()"
+                class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-violet-600 text-white transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-violet-500/20">
+          @if (savingIa()) {
+            <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+          } @else {
+            <span class="material-symbols-outlined text-base">save</span>
+          }
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  }
+
   <!-- Panneau édition sauvegarde -->
   @if (editingBackup()) {
     <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-light-primary/30 dark:border-primary/20 overflow-hidden">
@@ -254,8 +305,15 @@
                             class="p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all" title="Modifier">
                       <span class="material-symbols-outlined text-sm">edit</span>
                     </button>
+                    <button (click)="openEditIa(project)"
+                            [ngClass]="project.iaInstructions
+                              ? 'p-1.5 rounded-lg text-violet-400 hover:bg-violet-500/10 transition-all'
+                              : 'p-1.5 rounded-lg hover:bg-violet-500/10 text-light-text-muted dark:text-white/40 hover:text-violet-400 transition-all'"
+                            title="{{ project.iaInstructions ? 'Instructions IA actives' : 'Configurer instructions IA' }}">
+                      <span class="material-symbols-outlined text-sm">psychology</span>
+                    </button>
                     <button (click)="openEditBackup(project)"
-                            [class]="project.backupType
+                            [ngClass]="project.backupType
                               ? 'p-1.5 rounded-lg text-light-primary dark:text-primary hover:bg-light-primary/10 dark:hover:bg-primary/10 transition-all'
                               : 'p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all'"
                             title="{{ project.backupType ? 'Sauvegarde : ' + backupTypeLabel(project.backupType) : 'Configurer sauvegarde' }}">

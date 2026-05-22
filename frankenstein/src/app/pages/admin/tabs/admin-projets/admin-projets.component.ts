@@ -25,6 +25,10 @@ export class AdminProjetsComponent implements OnInit {
   editStatus: 'draft' | 'published' = 'draft';
   savingProject = signal(false);
 
+  editingIa = signal<Project | null>(null);
+  editIaInstructions = '';
+  savingIa = signal(false);
+
   editingBackup = signal<Project | null>(null);
   backupType: 'github' | 'gitlab' | 'ftp' | 'googledrive' | '' = '';
   backupServer = '';
@@ -104,6 +108,32 @@ export class AdminProjetsComponent implements OnInit {
       this.projectsError.set(e?.error?.error || 'Erreur sauvegarde');
     } finally {
       this.savingProject.set(false);
+    }
+  }
+
+  openEditIa(project: Project) {
+    this.editingIa.set(project);
+    this.editIaInstructions = project.iaInstructions || '';
+  }
+
+  closeEditIa() {
+    this.editingIa.set(null);
+  }
+
+  async saveIa() {
+    const proj = this.editingIa();
+    if (!proj) return;
+    this.savingIa.set(true);
+    try {
+      await this.projectService.updateProject(proj.id, {
+        iaInstructions: this.editIaInstructions.trim() || null
+      });
+      this.closeEditIa();
+      await this.loadProjects();
+    } catch (e: any) {
+      this.projectsError.set(e?.error?.error || 'Erreur sauvegarde instructions IA');
+    } finally {
+      this.savingIa.set(false);
     }
   }
 

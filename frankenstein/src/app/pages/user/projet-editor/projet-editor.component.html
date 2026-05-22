@@ -130,6 +130,7 @@
               [projectId]="project()?.id || null"
               [files]="files()"
               [projectName]="project()?.id || null"
+              [iaInstructions]="project()?.iaInstructions || null"
               (conversationAdded)="sidebar.loadConversations()" />
           }
           @if (zone5Tab() === 'history') {
