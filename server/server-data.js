@@ -2687,8 +2687,8 @@ app.post('/api/wo-action-history', async (req, res) => {
         return res.status(400).json({ error: 'section, actionType et label sont requis' });
     }
     try {
-        const [countRows] = await pool.query('SELECT COUNT(*) AS cnt FROM wo_action_history');
-        const nextNum = (Number(countRows[0].cnt) + 1).toString().padStart(3, '0');
+        const [countRows] = await pool.query('SELECT MAX(CAST(SUBSTRING(id, 5) AS UNSIGNED)) AS maxNum FROM wo_action_history');
+        const nextNum = ((Number(countRows[0].maxNum) || 0) + 1).toString().padStart(3, '0');
         const id = `wah-${nextNum}`;
         const now = new Date();
 
@@ -2715,6 +2715,8 @@ app.post('/api/wo-action-history', async (req, res) => {
             userId, username, context, undoable: !!undoable, undone: false, undoAction, redoAction, meta
         };
         console.log(`[WO_ACTION_HISTORY] Tracked: ${id} — ${label} (${section})`);
+        const projetId = context?.projectId;
+        if (projetId) broadcastToProject(projetId, 'history', entry);
         res.json(entry);
     } catch (e) {
         console.error('[WO_ACTION_HISTORY] Create error:', e);
@@ -2724,8 +2726,8 @@ app.post('/api/wo-action-history', async (req, res) => {
 
 // Helper interne : insère une entrée de tracking dans wo_action_history
 async function insertWoActionEntry(payload) {
-    const [countRows] = await pool.query('SELECT COUNT(*) AS cnt FROM wo_action_history');
-    const nextNum = (Number(countRows[0].cnt) + 1).toString().padStart(3, '0');
+    const [countRows] = await pool.query('SELECT MAX(CAST(SUBSTRING(id, 5) AS UNSIGNED)) AS maxNum FROM wo_action_history');
+    const nextNum = ((Number(countRows[0].maxNum) || 0) + 1).toString().padStart(3, '0');
     const id = `wah-${nextNum}`;
     const now = new Date();
     await pool.query(

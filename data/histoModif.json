@@ -1,6 +1,23 @@
 ﻿{
   "modifications": [
     {
+      "id": "mod-197",
+      "version": "THI-0.124",
+      "date": "2026-05-22T16:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:workflow",
+      "title": "Fix historique : ID collision + SSE broadcast manquant",
+      "description": "Double fix sur wo_action_history. (1) Génération d'ID : COUNT(*) produisait des doublons après suppression d'entrées — remplacé par MAX(CAST(SUBSTRING(id,5) AS UNSIGNED)). (2) SSE broadcast manquant : le POST /api/wo-action-history n'appelait pas broadcastToProject() après l'INSERT, les entrées restaient 'en cours' côté client car clearPending() n'était jamais déclenché.",
+      "files": ["server/server-data.js"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "l'historique n'a pas l'air de fonctionné corectement, j'ai fait une modif en temps que user Thibault et je ne vois pas la modification dans l'historique",
+      "startedAt": "2026-05-22T16:15:00.000Z",
+      "completedAt": "2026-05-22T16:30:00.000Z"
+    },
+    {
       "id": "mod-196",
       "version": "THI-0.123",
       "date": "2026-05-22T16:10:00.000Z",
