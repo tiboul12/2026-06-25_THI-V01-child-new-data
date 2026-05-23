@@ -1954,6 +1954,84 @@ $struct-colors: (
   &:focus { color: #111827; :host-context(.dark) & { color: rgba(255,255,255,0.85); } }
 }
 
+// Blocs de documents additionnels dans une section
+.struct-block {
+  margin-top: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.08);
+  overflow: hidden;
+  background: rgba(0,0,0,0.02);
+
+  :host-context(.dark) & {
+    border-color: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+  }
+}
+
+.struct-block__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  background: rgba(0,0,0,0.04);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+
+  :host-context(.dark) & {
+    background: rgba(255,255,255,0.05);
+    border-bottom-color: rgba(255,255,255,0.06);
+  }
+}
+
+.struct-block__badge {
+  flex-shrink: 0;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgb(100, 116, 139);
+  background: rgba(100, 116, 139, 0.12);
+  padding: 1px 5px;
+  border-radius: 3px;
+  line-height: 1.5;
+
+  :host-context(.dark) & { color: rgb(148, 163, 184); background: rgba(148, 163, 184, 0.1); }
+}
+
+.struct-block__title {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  padding: 0;
+
+  :host-context(.dark) & { color: rgba(255,255,255,0.75); }
+
+  &::placeholder { color: rgba(0,0,0,0.25); font-weight: 400; :host-context(.dark) & { color: rgba(255,255,255,0.2); } }
+}
+
+.struct-block__content {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #374151;
+  padding: 0.4rem 0.6rem;
+  overflow: hidden;
+  min-height: 2rem;
+
+  :host-context(.dark) & { color: rgba(255,255,255,0.6); }
+  &::placeholder { color: rgba(0,0,0,0.2); font-style: italic; :host-context(.dark) & { color: rgba(255,255,255,0.15); } }
+}
+
 // Menu contextuel
 .struct-ctx-menu {
   position: fixed;

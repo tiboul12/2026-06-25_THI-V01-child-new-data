@@ -2,6 +2,27 @@
   "modifications": [
     {
     {
+      "id": "mod-205",
+      "version": "THI-0.132",
+      "date": "2026-05-23T11:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projets",
+      "title": "Editor Structure : blocs additionnels séparés en sous-cartes",
+      "description": "Les blocs de documents additionnels ('titre\\ncontenu\\n') n'apparaissent plus en texte brut dans le textarea du contenu principal. parseAdditionalBlocks() extrait les blocs (délimiteurs ', `, ^) depuis rawContent et les stocke dans StructureNode.additionalBlocks. Chaque bloc est affiché comme une sous-carte distincte avec badge délimiteur, input titre et textarea contenu éditables. rebuildNodeRawContent() reconstruit le contenu complet (textContent + blocs) pour le flush. Nouveaux handlers onStructBlockTitleInput/onStructBlockContentInput.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "certaine section ne sont pas decoupé dans le mode structure",
+      "startedAt": "2026-05-23T11:10:00.000Z",
+      "completedAt": "2026-05-23T11:30:00.000Z"
+    },
+    {
       "id": "mod-204",
       "version": "THI-0.131",
       "date": "2026-05-23T11:00:00.000Z",

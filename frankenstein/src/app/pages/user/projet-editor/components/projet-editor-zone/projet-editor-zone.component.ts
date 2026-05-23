@@ -121,11 +121,19 @@ interface VisuSectionState {
   markdownBefore: string;
 }
 
+interface StructureAdditionalBlock {
+  id: string;
+  delimiter: string;
+  title: string;
+  content: string;
+}
+
 interface StructureNode {
   id: string;
   level: number;
   title: string;
-  rawContent: string;
+  textContent: string;
+  additionalBlocks: StructureAdditionalBlock[];
   lineStart: number;
   lineEnd: number;
   folderId: string | null;
@@ -3710,6 +3718,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return [];
   }
 
+  private parseAdditionalBlocks(raw: string): { textContent: string; blocks: StructureAdditionalBlock[] } {
+    const blockRe = /^(['`^])([^\n]+)\n([\s\S]*?)\n\1$/gm;
+    const blocks: StructureAdditionalBlock[] = [];
+    let idx = 0;
+    const textContent = raw.replace(blockRe, (_match, delim, title, content) => {
+      blocks.push({ id: `blk-${idx++}`, delimiter: delim, title: title.trim(), content: content.trimEnd() });
+      return '';
+    }).replace(/\n{3,}/g, '\n\n').trim();
+    return { textContent, blocks };
+  }
+
   parseStructureNodes(): StructureNode[] {
     const lines = this.unifiedContent.split('\n');
     const nodes: StructureNode[] = [];
@@ -3722,12 +3741,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     const pushNode = (lineEnd: number) => {
       if (currentLineStart < 0) return;
+      const raw = contentLines.join('\n').replace(/^\n+|\n+$/g, '');
+      const { textContent, blocks } = this.parseAdditionalBlocks(raw);
       const folderId = this.sectionRanges.find(r => r.lineStart === currentLineStart)?.folderId ?? null;
       nodes.push({
         id: `struct-${currentLineStart}`,
         level: currentLevel,
         title: currentTitle,
-        rawContent: contentLines.join('\n').replace(/^\n+|\n+$/g, ''),
+        textContent,
+        additionalBlocks: blocks,
         lineStart: currentLineStart,
         lineEnd: lineEnd,
         folderId,
@@ -3751,12 +3773,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return nodes;
   }
 
+  private rebuildNodeRawContent(node: StructureNode): string {
+    const parts: string[] = [];
+    if (node.textContent.trim()) parts.push(node.textContent.trim());
+    for (const b of node.additionalBlocks) {
+      parts.push(`${b.delimiter}${b.title}\n${b.content}\n${b.delimiter}`);
+    }
+    return parts.join('\n\n');
+  }
+
   flushStructureNodes(): void {
     if (!this.structureNodes.length) return;
     const parts: string[] = [];
     for (const node of this.structureNodes) {
       const hashes = '#'.repeat(node.level);
-      const content = node.rawContent.trim();
+      const content = this.rebuildNodeRawContent(node);
       parts.push(`${hashes} ${node.title || 'Sans titre'}${content ? '\n' + content : ''}`);
     }
     const newContent = parts.join('\n\n');
@@ -3799,12 +3830,29 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const ta = event.target as HTMLTextAreaElement;
     ta.style.height = 'auto';
     ta.style.height = `${ta.scrollHeight}px`;
-    node.rawContent = ta.value;
+    node.textContent = ta.value;
+    this.scheduleStructFlush();
+  }
+
+  onStructBlockTitleInput(node: StructureNode, block: StructureAdditionalBlock, event: Event): void {
+    block.title = (event.target as HTMLInputElement).value;
+    this.scheduleStructFlush();
+  }
+
+  onStructBlockContentInput(node: StructureNode, block: StructureAdditionalBlock, event: Event): void {
+    const ta = event.target as HTMLTextAreaElement;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+    block.content = ta.value;
     this.scheduleStructFlush();
   }
 
   getStructContentRows(node: StructureNode): number {
-    return Math.max(2, Math.min(node.rawContent.split('\n').length + 1, 25));
+    return Math.max(2, Math.min(node.textContent.split('\n').length + 1, 25));
+  }
+
+  getStructBlockRows(block: StructureAdditionalBlock): number {
+    return Math.max(2, Math.min(block.content.split('\n').length + 1, 25));
   }
 
   openStructContextMenu(node: StructureNode, event: MouseEvent): void {
