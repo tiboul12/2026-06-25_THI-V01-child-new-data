@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-210",
+      "version": "THI-0.135",
+      "date": "2026-05-23T15:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Editor Structure : save/share collab (Annuler/Partager)",
+      "description": "Le mode Structure bénéficie du même système collab que le mode Code. À la première modification d'un nœud (titre, contenu, bloc additionnel), un snapshot est pris et l'entité est verrouillée (structEntityLocks Set). La barre Annuler/Partager apparaît (structureHasPending signal). Partager flush les nœuds → parseContent → updateFile avec publish=true pour chaque section → unlock. Annuler restaure le snapshot, réinitialise les nœuds, déverrouille. Les entités bloc additionnels sont identifiées par leur fileId via getStructBlockEntityId(). ngOnDestroy libère les verrous restants.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le système d'enregistrement et de partage fonctionne maintenant très bien dans le mode code mais n'est pas présent dans le mode structure, il faut que le mode structure qui permet de modifier les sections puisse de la même façon s'enregistré et ce partagé dans le mode structure.",
+      "startedAt": "2026-05-23T14:30:00.000Z",
+      "completedAt": "2026-05-23T15:00:00.000Z"
+    },
+    {
       "id": "mod-209",
       "version": "THI-0.134",
       "date": "2026-05-23T14:00:00.000Z",

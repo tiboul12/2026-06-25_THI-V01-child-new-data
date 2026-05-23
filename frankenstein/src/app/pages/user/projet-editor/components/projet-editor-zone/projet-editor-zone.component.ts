@@ -206,6 +206,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   structureNodes: StructureNode[] = [];
   structContextMenu: StructContextMenu = { visible: false, node: null, x: 0, y: 0 };
   private structFlushTimeout: any;
+  // Collab structure mode
+  structureHasPending = signal(false);
+  private structEntityLocks = new Set<string>();   // IDs verrouillés en mode structure
+  private structureCancelSnapshot: string | null = null; // contenu original pour Annuler
 
   // Mode Focus : édition d'une seule section / document
   focusedHandle: DragHandle | null = null;
@@ -1214,6 +1218,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.mode === 'structure') this.flushStructureNodes();
     if (this.unifiedContent !== this.lastSavedContent) this.saveAll();
     this.teardownVisuSelectionListener();
+    // Libérer les verrous structure si non publiés (ex: fermeture de page)
+    for (const entityId of this.structEntityLocks) {
+      this.collab.removeLocalPending(entityId);
+      if (this.projectName) this.collab.unlockNode(this.projectName, entityId).catch(() => {});
+    }
+    this.structEntityLocks.clear();
   }
 
   // ── Mode focus : édition d'une seule section / document ─────
@@ -3889,6 +3899,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   onStructTitleInput(node: StructureNode, event: Event): void {
+    this.applyStructLock(node.folderId ?? '');
     node.title = (event.target as HTMLInputElement).value;
     this.scheduleStructFlush();
   }
@@ -3910,6 +3921,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   onStructContentInput(node: StructureNode, event: Event): void {
+    this.applyStructLock(node.folderId ?? '');
     const ta = event.target as HTMLTextAreaElement;
     ta.style.height = 'auto';
     ta.style.height = `${ta.scrollHeight}px`;
@@ -3918,11 +3930,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   onStructBlockTitleInput(node: StructureNode, block: StructureAdditionalBlock, event: Event): void {
+    this.applyStructLock(this.getStructBlockEntityId(node, block));
     block.title = (event.target as HTMLInputElement).value;
     this.scheduleStructFlush();
   }
 
   onStructBlockContentInput(node: StructureNode, block: StructureAdditionalBlock, event: Event): void {
+    this.applyStructLock(this.getStructBlockEntityId(node, block));
     const ta = event.target as HTMLTextAreaElement;
     ta.style.height = 'auto';
     ta.style.height = `${ta.scrollHeight}px`;
@@ -3953,5 +3967,94 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.structureNodes = this.structureNodes.filter(n => n.id !== node.id);
     this.closeStructContextMenu();
     this.flushStructureNodes();
+  }
+
+  // ── Collab mode Structure ───────────────────────────────────
+
+  // Retourne le fileId d'un bloc additionnel (ou le folderId en fallback)
+  private getStructBlockEntityId(node: StructureNode, block: StructureAdditionalBlock): string {
+    const folderNode = node.folderId ? this.findNode(node.folderId, this.files) : null;
+    const additionalFiles = (folderNode?.children || []).filter(c =>
+      c.type === 'file' && !this.isImageFile(c.name) && c.name !== 'contenu.md'
+    );
+    const fileNode = additionalFiles.find(f =>
+      this.slugify(f.name.replace(/\.md$/, '')) === this.slugify(block.title)
+    );
+    return fileNode?.id ?? node.folderId ?? '';
+  }
+
+  // Verrouille une entité en mode structure (première fois seulement)
+  private applyStructLock(entityId: string): void {
+    if (!entityId) return;
+    // Prendre le snapshot global avant le premier edit
+    if (!this.structureCancelSnapshot) {
+      this.structureCancelSnapshot = this.unifiedContent;
+    }
+    if (this.structEntityLocks.has(entityId)) return;
+    // Vérifier que l'entité n'est pas verrouillée par un autre user
+    if (this.collab.isLockedByOther(entityId)) return;
+    this.structEntityLocks.add(entityId);
+    this.collab.addLocalPending(entityId);
+    if (this.projectName) this.collab.lockNode(this.projectName, entityId).catch(() => {});
+    this.structureHasPending.set(true);
+  }
+
+  async publishStructureEdit(): Promise<void> {
+    if (!this.projectName) return;
+    this.isPublishing.set(true);
+    clearTimeout(this.structFlushTimeout);
+    this.flushStructureNodes();
+    clearTimeout(this.saveTimeout);
+    this.lastSavedContent = this.unifiedContent;
+
+    const sections = this.parseContent();
+    try {
+      await Promise.all(
+        sections
+          .filter(s => s.fileId)
+          .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+      );
+      // Déverrouiller toutes les entités structure
+      for (const entityId of this.structEntityLocks) {
+        this.collab.removeLocalPending(entityId);
+        await this.collab.unlockNode(this.projectName, entityId).catch(() => {});
+      }
+      this.structEntityLocks.clear();
+      this.structureHasPending.set(false);
+      this.structureCancelSnapshot = null;
+      this.showPublishToast();
+    } catch (e: any) {
+      const msg = e?.error?.pushFailed
+        ? 'Sauvegardé localement — synchronisation GitHub échouée'
+        : 'Erreur lors du partage des modifications';
+      this.showPublishErrorToast(msg);
+    } finally {
+      this.isPublishing.set(false);
+    }
+  }
+
+  async cancelStructureEdit(): Promise<void> {
+    if (!this.structureCancelSnapshot) return;
+    clearTimeout(this.structFlushTimeout);
+    // Restaurer le contenu original
+    this.unifiedContent = this.structureCancelSnapshot;
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.structureCancelSnapshot;
+    clearTimeout(this.saveTimeout);
+    this.lastSavedContent = this.structureCancelSnapshot;
+    this.saveAll();
+    this.recomputeAll();
+    this.structureNodes = this.parseStructureNodes();
+    this.localDirty = false;
+    this.dirtyChange.emit(false);
+    // Déverrouiller
+    for (const entityId of this.structEntityLocks) {
+      this.collab.removeLocalPending(entityId);
+      this.collab.clearPending(entityId);
+      if (this.projectName) this.collab.unlockNode(this.projectName, entityId).catch(() => {});
+    }
+    this.structEntityLocks.clear();
+    this.structureHasPending.set(false);
+    this.structureCancelSnapshot = null;
   }
 }

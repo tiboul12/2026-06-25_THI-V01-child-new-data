@@ -133,6 +133,23 @@
     </div>
   }
 
+  <!-- Barre Annuler/Partager mode Structure -->
+  @if (mode === 'structure' && structureHasPending()) {
+    <div class="code-publish-bar">
+      <span class="code-publish-bar__info">
+        <span class="material-symbols-outlined">edit</span>
+        Modifications en cours
+      </span>
+      <div class="code-publish-bar__actions">
+        <button class="visu-publish-bar__cancel" (click)="cancelStructureEdit()">Annuler</button>
+        <button class="visu-publish-bar__publish" (click)="publishStructureEdit()" [disabled]="isPublishing()">
+          <span class="material-symbols-outlined">share</span>
+          Partager mes modifications
+        </button>
+      </div>
+    </div>
+  }
+
   <!-- Barre Annuler/Partager mode Preview (même design que mode Code) -->
   @if (mode === 'visu' && editingVisuSectionId()) {
     <div class="code-publish-bar">
