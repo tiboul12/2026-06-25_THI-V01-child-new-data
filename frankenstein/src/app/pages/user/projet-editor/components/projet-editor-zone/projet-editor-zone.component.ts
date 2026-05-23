@@ -239,6 +239,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
   activeVisuSectionId: string | null = null;
   editingVisuSectionId = signal<string | null>(null);
+  // Entité (fileId, blockId ou folderId) sous le curseur courant dans la textarea
+  cursorEntityId = signal<string | null>(null);
   publishToastVisible = signal<boolean>(false);
   publishErrorToastVisible = signal<boolean>(false);
   publishErrorMessage = signal<string>('');
@@ -293,6 +295,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // entityId = fileId si curseur dans un bloc fichier additionnel, sinon folderId.
   // folderId est utilisé pour récupérer le snapshot de la section parente.
   private modifiedEntities = new Map<string, string>();
+  // IDs des entités verrouillées au niveau granulaire (fichier, bloc inline, ou section).
+  // Permet de déverrouiller uniquement les entités réellement touchées, pas toute la section.
+  private activeEntityLocks = new Set<string>();
   // Snapshot fichier (contenu.md) par section — utilisé pour l'action undo
   private sectionFileSnapshot = new Map<string, { fileId: string; content: string }>();
   // Snapshot texte complet de la section dans unifiedContent — utilisé pour le diff (inclut en-tête + fichiers additionnels)
@@ -1236,13 +1241,32 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.lastSavedContent = this.unifiedContent;
     this.focusedHandle = handle;
 
-    // Si la section est déjà verrouillée par moi (verrou serveur persistant après reload),
-    // restaurer l'état "pending" pour que la barre Annuler/Partager s'affiche immédiatement
-    if (this.collab.isLockedByMe(handle.id) && !this.collab.isLocalPending(handle.id)) {
+    // Si la section ou l'une de ses entités enfants est déjà verrouillée par moi
+    // (verrou serveur persistant après reload), restaurer l'état "pending" + activeEntityLocks
+    const allLocks = this.collab.locks();
+    const me = this.authSvc.currentUser();
+    let hasMyLock = this.collab.isLockedByMe(handle.id);
+    if (!hasMyLock && me) {
+      // Vérifier si un verrou granulaire (fichier/bloc) appartenant à moi existe pour cette section
+      for (const [nodeId, lock] of allLocks) {
+        if (lock.lockedById === me.id && nodeId !== handle.id) {
+          // Vérifier si ce nodeId est un enfant de la section (fichier ou bloc dans ce dossier)
+          const parent = this.findParentFolder(nodeId, this.files);
+          if (parent?.id === handle.id) {
+            hasMyLock = true;
+            this.activeEntityLocks.add(nodeId);
+          }
+        }
+      }
+    }
+    if (hasMyLock) {
       if (!this.codeSectionSnapshots.has(handle.id)) {
         this.codeSectionSnapshots.set(handle.id, this.unifiedContent);
       }
-      this.collab.addLocalPending(handle.id);
+      // Restaurer le pending sur chaque entité verrouillée (pour que hasPendingCode = true)
+      for (const entityId of this.activeEntityLocks) {
+        if (!this.collab.isLocalPending(entityId)) this.collab.addLocalPending(entityId);
+      }
     }
 
     this.recomputeAll();
@@ -1273,6 +1297,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.fullContentBackup = '';
     this.unifiedContent = fullLines.join('\n');
     this.lastSavedContent = '';
+    this.cursorEntityId.set(null);
+    // Les verrous sont libérés par publishCodeEdit/cancelCodeEdit avant exitFocusMode
+    // On nettoie uniquement si on sort sans publish/cancel (ex: destruction du composant)
+    this.activeEntityLocks.clear();
 
     this.recomputeAll(); // reconstruit handles depuis le document complet
   }
@@ -1331,6 +1359,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     };
     findAndCollect(nodes);
     return ids;
+  }
+
+  // Vrai si la barre Annuler/Partager doit s'afficher en mode Code.
+  // Avec des verrous granulaires : visible seulement si le curseur est dans l'entité verrouillée.
+  // Sans verrou granulaire : comportement classique (section entière verrouillée).
+  get hasPendingCode(): boolean {
+    if (!this.focusedHandle) return false;
+    if (this.activeEntityLocks.size > 0) {
+      // Afficher la barre uniquement si le curseur est dans l'une des entités verrouillées
+      const entityId = this.cursorEntityId();
+      return entityId != null && this.activeEntityLocks.has(entityId);
+    }
+    return this.collab.localPendingSections().has(this.focusedHandle.id);
   }
 
   // Sections visu filtrées selon la sélection active (null = tout afficher)
@@ -1446,19 +1487,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.localDirty = true;
       this.dirtyChange.emit(true);
     }
-    // Marquer la section focusée comme "modifications locales en attente" + capturer snapshot original
-    // Le snapshot persiste à travers les navigations pour permettre Annuler après changement de section
-    if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
+    // Capturer le snapshot de la section pour permettre le Cancel — persistant à travers les navigations
+    if (this.focusedHandle && !this.codeSectionSnapshots.has(this.focusedHandle.id)) {
       this.codeSectionSnapshots.set(this.focusedHandle.id, this.lastSavedContent);
-      this.collab.addLocalPending(this.focusedHandle.id);
-      // Verrouiller la section (les autres users la verront en rouge dans leur menu)
-      if (this.projectName) {
-        this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
-      }
     }
     const entity = this.getCursorEntity();
+    // Mettre à jour le signal de position pour hasPendingCode (barre Annuler/Partager contextuelle)
+    this.cursorEntityId.set(entity?.id ?? this.focusedHandle?.id ?? null);
     if (entity) {
       this.modifiedEntities.set(entity.id, entity.folderId);
+      // Marquer uniquement l'entité précise comme pending + verrouiller
+      // → le dossier parent n'apparaît PAS comme verrouillé dans la zone 3
+      if (!this.activeEntityLocks.has(entity.id)) {
+        this.activeEntityLocks.add(entity.id);
+        this.collab.addLocalPending(entity.id);
+        if (this.projectName) this.collab.lockNode(this.projectName, entity.id).catch(() => {});
+      }
       // Affichage live grisé dans le panneau historique tant que le save n'est pas fait
       const isBlock = entity.id.includes('##');
       const node = isBlock ? null : this.findNode(entity.id, this.files);
@@ -1477,6 +1521,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // → fallback sur focusedHandle.id qui est le fileId lui-même
       const hId = this.focusedHandle.id;
       this.modifiedEntities.set(hId, hId);
+      if (!this.activeEntityLocks.has(hId)) {
+        this.activeEntityLocks.add(hId);
+        this.collab.addLocalPending(hId);
+        if (this.projectName) this.collab.lockNode(this.projectName, hId).catch(() => {});
+      }
       const node = this.findNode(hId, this.files);
       this.collab.upsertPending({
         entityId: hId,
@@ -1568,6 +1617,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (const fr of this.fileRanges) {
       if (lineIdx >= fr.lineStart && lineIdx <= fr.lineEnd) {
         this.suppressScrollOnNextActiveChange = true;
+        this.cursorEntityId.set(fr.fileId);
         this.nodeActive.emit(fr.fileId);
         return;
       }
@@ -1576,6 +1626,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (const r of this.inlineBlockRanges) {
       if (lineIdx >= r.lineStart && lineIdx <= r.lineEnd) {
         this.suppressScrollOnNextActiveChange = true;
+        this.cursorEntityId.set(r.id);
         this.nodeActive.emit(r.id);
         return;
       }
@@ -1585,10 +1636,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const r = this.sectionRanges[i];
       if (lineIdx >= r.lineStart && lineIdx <= r.lineEnd) {
         this.suppressScrollOnNextActiveChange = true;
+        this.cursorEntityId.set(r.folderId);
         this.nodeActive.emit(r.folderId);
         return;
       }
     }
+    this.cursorEntityId.set(null);
   }
 
   onTextareaBlur() {
@@ -2202,7 +2255,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           this.codeSectionSnapshots.set(this.focusedHandle.id, snapshotBeforeImageSave);
         }
         this.collab.addLocalPending(this.focusedHandle.id);
-        if (this.projectName) {
+        if (this.projectName && !this.activeEntityLocks.has(this.focusedHandle.id)) {
+          this.activeEntityLocks.add(this.focusedHandle.id);
           this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
         }
       }
@@ -2361,7 +2415,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.codeSectionSnapshots.set(this.focusedHandle.id, snapshotBeforeDelete);
       }
       this.collab.addLocalPending(this.focusedHandle.id);
-      if (this.projectName) {
+      if (this.projectName && !this.activeEntityLocks.has(this.focusedHandle.id)) {
+        this.activeEntityLocks.add(this.focusedHandle.id);
         this.collab.lockNode(this.projectName, this.focusedHandle.id).catch(() => {});
       }
     }
@@ -3115,9 +3170,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }
     }
     this.codeSectionSnapshots.delete(sectionId);
+    // Libérer le pending de chaque entité verrouillée (+ fallback sur sectionId)
+    for (const entityId of this.activeEntityLocks) this.collab.removeLocalPending(entityId);
     this.collab.removeLocalPending(sectionId);
     if (this.projectName) {
-      this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+      const toUnlock = this.activeEntityLocks.size > 0 ? [...this.activeEntityLocks] : [sectionId];
+      await Promise.all(toUnlock.map(id => this.collab.unlockNode(this.projectName, id).catch(() => {})));
+      this.activeEntityLocks.clear();
     }
   }
 
@@ -3165,11 +3224,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       ));
       pendingDelIds.forEach(id => this.pendingVisuDeletions.delete(id));
 
-      // Section partagée : retirer du pending + libérer le verrou
+      // Section partagée : retirer du pending + libérer les verrous granulaires
       this.codeSectionSnapshots.delete(sectionId);
+      for (const entityId of this.activeEntityLocks) this.collab.removeLocalPending(entityId);
       this.collab.removeLocalPending(sectionId);
       if (this.projectName) {
-        this.collab.unlockNode(this.projectName, sectionId).catch(() => {});
+        const toUnlock = this.activeEntityLocks.size > 0 ? [...this.activeEntityLocks] : [sectionId];
+        await Promise.all(toUnlock.map(id => this.collab.unlockNode(this.projectName, id).catch(() => {})));
+        this.activeEntityLocks.clear();
       }
       this.showPublishToast();
       this.woHistory.track({

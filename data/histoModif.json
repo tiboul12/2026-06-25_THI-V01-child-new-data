@@ -1,6 +1,24 @@
 {
   "modifications": [
     {
+      "id": "mod-209",
+      "version": "THI-0.134",
+      "date": "2026-05-23T14:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Editor : verrouillage granulaire par entité (fichier, bloc, section)",
+      "description": "Lorsqu'un utilisateur édite un fichier additionnel ou un bloc inline (code, tableau, citation, liste) dans une section dossier, seule cette entité précise est verrouillée côté collab — pas la section entière. addLocalPending() appelé sur entity.id (pas folderId) pour que le cadenas rouge dans la zone 3 apparaisse sur l'entité et non sur le dossier parent. Signal cursorEntityId trackée via onTextareaCursor (keyup/mouseup) et onTextareaInput. Getter hasPendingCode affiche la barre Annuler/Partager uniquement si le curseur est dans l'une des entités verrouillées (activeEntityLocks.has(cursorEntityId())). publish/cancel déverrouillent et remove-pending toutes les entités.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je modifi une section de type bloc de code, document, code inline ou tableau, cela ne doit bloqué (interdire la modification à un autre utilisateur) que sur la section et non sur toutes la section affiché, exemple si j'affice un dossier entier qui contient un document et que je modifi que le document, cela ne doit bloqué et sauvegardé (et partagé) que le document.",
+      "startedAt": "2026-05-23T13:00:00.000Z",
+      "completedAt": "2026-05-23T13:30:00.000Z"
+    },
     {
       "id": "mod-208",
       "version": "THI-0.133",
