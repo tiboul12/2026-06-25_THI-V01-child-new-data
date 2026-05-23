@@ -5124,7 +5124,9 @@ app.delete('/api/file-projects/:name/files/:id', async (req, res) => {
         removeNodeById(config.structure, req.params.id);
         await saveProjectConfig(req.params.name, config);
         try {
-            await ensureGithubRemoteForProject(req.params.name, config);
+            if ((await ftpService.getBackupType(pool, req.params.name).catch(() => null)) !== 'ftp') {
+                await ensureGithubRemoteForProject(req.params.name, config);
+            }
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `delete_file ${deletedName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit delete_file:', gitErr.message); }
         broadcastToProject(req.params.name, 'structure_update', { operation: 'delete_file', payload: { id: req.params.id }, updatedBy: user.id });
@@ -5352,7 +5354,9 @@ app.post('/api/file-projects/:name/upload-image', async (req, res) => {
         parentItems.push(newNode);
         await saveProjectConfig(req.params.name, config);
         try {
-            await ensureGithubRemoteForProject(req.params.name, config);
+            if ((await ftpService.getBackupType(pool, req.params.name).catch(() => null)) !== 'ftp') {
+                await ensureGithubRemoteForProject(req.params.name, config);
+            }
             projetGit.commitOnMain(path.join(PROJECTS_DIR, req.params.name), `upload_image ${uniqueName}`);
         } catch (gitErr) { console.warn('[ProjetGit] commit upload_image:', gitErr.message); }
         // Notifier les autres users connectés pour déclencher leur auto-pull

@@ -3708,14 +3708,35 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return this.structureNodes.filter(n => n.folderId && visible.has(n.folderId));
     }
 
-    // Fichier/image → afficher la section parente
-    const parent = this.findParentFolder(this.activeNodeId, this.files);
-    if (parent) {
-      const visible = this.getDescendantFolderIds(parent.id, this.files);
-      return this.structureNodes.filter(n => n.folderId && visible.has(n.folderId));
+    if (node.type === 'file' && !this.isImageFile(node.name)) {
+      const parent = this.findParentFolder(this.activeNodeId, this.files);
+      if (!parent) return [];
+      return this.structureNodes.filter(n => n.folderId === parent.id);
     }
 
     return [];
+  }
+
+  // Indique si le textContent principal d'une carte doit être affiché
+  structNodeShowText(node: StructureNode): boolean {
+    if (!this.activeNodeId) return true;
+    const fileNode = this.findNode(this.activeNodeId, this.files);
+    if (!fileNode || fileNode.type !== 'file' || this.isImageFile(fileNode.name)) return true;
+    const parent = this.findParentFolder(this.activeNodeId, this.files);
+    if (!parent || parent.id !== node.folderId) return true;
+    // Fichier principal → afficher le texte, masquer les blocs
+    return fileNode.name === 'contenu.md' || !node.additionalBlocks.length;
+  }
+
+  // Indique si un bloc additionnel donné doit être affiché
+  structNodeShowBlock(node: StructureNode, block: StructureAdditionalBlock): boolean {
+    if (!this.activeNodeId) return true;
+    const fileNode = this.findNode(this.activeNodeId, this.files);
+    if (!fileNode || fileNode.type !== 'file' || this.isImageFile(fileNode.name)) return true;
+    const parent = this.findParentFolder(this.activeNodeId, this.files);
+    if (!parent || parent.id !== node.folderId) return true;
+    if (fileNode.name === 'contenu.md') return false;
+    return this.slugify(block.title) === this.slugify(fileNode.name.replace(/\.md$/, ''));
   }
 
   private parseAdditionalBlocks(raw: string): { textContent: string; blocks: StructureAdditionalBlock[] } {

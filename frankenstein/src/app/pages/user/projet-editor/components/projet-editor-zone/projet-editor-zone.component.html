@@ -369,18 +369,22 @@
                 </button>
               </div>
 
-              <!-- Corps : contenu texte (sans les blocs additionnels) -->
-              <div class="struct-card__body">
-                <textarea class="struct-card__content"
-                          [value]="node.textContent"
-                          [rows]="getStructContentRows(node)"
-                          (input)="onStructContentInput(node, $event)"
-                          placeholder="Contenu de la section…"
-                          spellcheck="false"></textarea>
+              <!-- Corps : contenu texte (masqué si un fichier additionnel est sélectionné) -->
+              @if (structNodeShowText(node)) {
+                <div class="struct-card__body">
+                  <textarea class="struct-card__content"
+                            [value]="node.textContent"
+                            [rows]="getStructContentRows(node)"
+                            (input)="onStructContentInput(node, $event)"
+                            placeholder="Contenu de la section…"
+                            spellcheck="false"></textarea>
+                </div>
+              }
 
-                <!-- Blocs de documents additionnels -->
-                @for (block of node.additionalBlocks; track block.id) {
-                  <div class="struct-block">
+              <!-- Blocs de documents additionnels (filtrés selon le fichier sélectionné) -->
+              @for (block of node.additionalBlocks; track block.id) {
+                @if (structNodeShowBlock(node, block)) {
+                  <div class="struct-block" [class.struct-block--focused]="!structNodeShowText(node)">
                     <div class="struct-block__head">
                       <span class="struct-block__badge" title="Document additionnel">{{ block.delimiter }}</span>
                       <input class="struct-block__title"
@@ -398,7 +402,7 @@
                               spellcheck="false"></textarea>
                   </div>
                 }
-              </div>
+              }
 
             </div>
           }

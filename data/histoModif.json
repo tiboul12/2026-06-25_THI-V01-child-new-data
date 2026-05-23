@@ -2,6 +2,65 @@
   "modifications": [
     {
     {
+      "id": "mod-208",
+      "version": "THI-0.133",
+      "date": "2026-05-23T12:45:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projets",
+      "title": "SCSS : correction mixed-decls Sass deprecation sur struct-block",
+      "description": "Dans .struct-block, les propriétés border-radius/border/overflow/background étaient placées après la règle imbriquée &--focused, provoquant 4 warnings Sass 'mixed-decls'. Déplacées avant la règle imbriquée conformément à la spécification CSS.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "[warning Sass mixed-decls sur struct-block lignes 1967-1970]",
+      "startedAt": "2026-05-23T12:40:00.000Z",
+      "completedAt": "2026-05-23T12:45:00.000Z"
+    },
+    {
+      "id": "mod-207",
+      "version": "THI-0.133",
+      "date": "2026-05-23T12:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:workflow",
+      "title": "FTP : suppression du déclenchement GitHub sur projets FTP",
+      "description": "ensureGithubRemoteForProject() était appelée sans vérification du backup_type dans 2 routes : DELETE /api/file-projects/:name/files/:id (suppression fichier) et POST /api/file-projects/:name/upload-image (upload image). Pour un projet en mode FTP avec GitHub activé globalement, ces actions déclenchaient une tentative de création/connexion d'un repo GitHub. Fix : ajout du check backup_type !== 'ftp' (même pattern que la route PUT déjà correcte). En cas d'erreur DB sur le check, catch(() => null) retourne null → GitHub ne s'active pas (safe par défaut).",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Alors que le projet est en système d'enregistrement ftp (voir capture) le système me demande de validé l'utilisateur github. Si je suis en ftp le système github pour le projet ne doit pas être activé.",
+      "startedAt": "2026-05-23T12:10:00.000Z",
+      "completedAt": "2026-05-23T12:30:00.000Z"
+    },
+    {
+      "id": "mod-206",
+      "version": "THI-0.133",
+      "date": "2026-05-23T12:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projets",
+      "title": "Editor Structure : filtrage fichier = comportement identique au mode Code",
+      "description": "Quand un fichier (non-image) est sélectionné dans le menu zone 3, le mode Structure n'affiche plus toute la section parente mais uniquement le contenu correspondant : fichier principal (contenu.md) → seul le textContent est visible, blocs masqués ; fichier additionnel → seul le bloc dont le titre matche est visible, textContent masqué. Méthodes structNodeShowText() et structNodeShowBlock() gèrent ce filtrage. struct-block--focused applique un style pleine-largeur quand le bloc est seul.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le mode structure l'affichage d'une section doit fonctionné comme dans le mode code et preview, si on selectionne dans le menu une section de code/document cela ne doit affiché que celle ci",
+      "startedAt": "2026-05-23T11:40:00.000Z",
+      "completedAt": "2026-05-23T12:00:00.000Z"
+    },
+    {
       "id": "mod-205",
       "version": "THI-0.132",
       "date": "2026-05-23T11:30:00.000Z",
