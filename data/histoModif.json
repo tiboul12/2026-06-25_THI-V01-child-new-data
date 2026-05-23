@@ -1,6 +1,65 @@
 {
   "modifications": [
     {
+    {
+      "id": "mod-204",
+      "version": "THI-0.131",
+      "date": "2026-05-23T11:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projets",
+      "title": "Editor Structure : filtrage par section active (zone 3)",
+      "description": "Ajout du getter filteredStructureNodes qui filtre les StructureNode selon activeNodeId, exactement comme filteredVisuSections en mode Preview. Si activeNodeId pointe vers un dossier, seules les sections dont le folderId est dans getDescendantFolderIds() sont affichées. Si activeNodeId pointe vers un fichier/image, la section parente est affichée. Le template utilise filteredStructureNodes au lieu de structureNodes.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans l'editor en mode structure, il ne faut affiché que les sections selectionné dans le menu zone 3",
+      "startedAt": "2026-05-23T10:50:00.000Z",
+      "completedAt": "2026-05-23T11:00:00.000Z"
+    },
+    {
+      "id": "mod-203",
+      "version": "THI-0.131",
+      "date": "2026-05-23T10:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projets",
+      "title": "Editor : Mode Structure — vue hiérarchique des sections",
+      "description": "Ajout d'un 3ème mode 'Structure' dans la zone éditeur (zone 4). Ce mode intermédiaire entre Code et Preview affiche chaque section markdown comme une carte visuelle indentée selon son niveau (H1→H4). Titre et contenu sont édités dans des zones séparées : l'input titre masque le # markdown, le textarea contenu masque les caractères de structure. Suppression uniquement via clic droit → 'Supprimer la section'. Barre colorée gauche par niveau (indigo H1, vert H2, orange H3, rouge H4). Les modifications sont flush vers unifiedContent avec debounce 800ms. Compilation Angular validée.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lance le dev de l'évolution",
+      "startedAt": "2026-05-23T10:00:00.000Z",
+      "completedAt": "2026-05-23T10:45:00.000Z"
+    },
+    {
+      "id": "mod-202",
+      "version": "THI-0.131",
+      "date": "2026-05-23T10:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:projets",
+      "title": "Editor zone 4 : plan refonte ergonomique 3 modes",
+      "description": "Analyse de l'architecture existante de la zone 4 (projet-editor-zone, ~3660 lignes). Proposition d'un plan en 8 étapes pour implémenter 3 modes : Code (textarea actuel), Structure (vue hiérarchique avec indentation, titre/contenu séparés, syntaxe verrouillée, suppression clic droit), Preview (rendu + toolbar mise en forme). Plan validé par l'utilisateur.",
+      "files": [],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu améliore l'ergonomie de la zone 4 editor. Chaque section est composé d'un titre et d'un texte, d'image, de code, de bloc de code, de tableau. Le texte peut avoir lui même une sous section (sous menu) Je voudrais mettre plus en avant l'architecture des sous menu et data inclus dans un dossier, ainsi un sous menu et son contenu devrait être affiché en décalé tu menu parent. Je voudrais aussi que chaque section est un titre bien séparé (design) du contenue, Le titre ne doit jamais être vide. Ainsi quand on rajoute un bloc de code ou du code inline cela doit demandé le titre et ensuite laissé la possibilité d'indiqué le conenue dans l'éditor. Si on veux modifié une section, on doit pouvoir directement modifié soi le titre soi le contenue, mais les Zones sont différentes. Je pense qu'un troisième mode serait indispensable : Mode Code avec le code pure qu'on peux entièrement modifié, un mode intermédiaire qui fait apparaitre les décalage de dossier et sous dossier, avec l'affichage et l'edition séparé des titre et contenue, avec l'impossibilité de touché au code de mise en forme du markdown (comme les # ou les ') qui sont ainsi fixe, on pourra les supprimés avec bouton droit supprimé la section, mais les titree et éléments de code ne pourront être supprimé directement comme dans la section code. Met de l'ordre dans mes idées propose moi un plan pour mettre en place tous ça. Le mode code est libre de modification, le mode intermédiaire qui met à plus de restriction mais permet de mieux comprendre le système et le mode preview qui est la visualisation du résultat avec des options classique de mise en forme",
+      "startedAt": "2026-05-23T09:30:00.000Z",
+      "completedAt": "2026-05-23T10:00:00.000Z"
+    },
+    {
       "id": "mod-201",
       "version": "THI-0.130",
       "date": "2026-05-23T00:00:00.000Z",

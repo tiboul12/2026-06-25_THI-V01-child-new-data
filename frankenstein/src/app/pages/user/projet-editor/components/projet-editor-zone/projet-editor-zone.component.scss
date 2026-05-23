@@ -1797,3 +1797,205 @@ h4.visu-sec-heading {
   font-size: 0.85rem;
   .material-symbols-outlined { font-size: 1.2rem; }
 }
+
+// ── Mode Structure ─────────────────────────────────────────────
+
+.struct-wrap {
+  background: var(--color-light-surface, #f8f9fa);
+  @media (prefers-color-scheme: dark) { background: #0f0f17; }
+}
+
+:host-context(.dark) .struct-wrap {
+  background: #0f0f17;
+}
+
+.struct-inner {
+  padding: 1.25rem 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// Couleurs par niveau
+$struct-colors: (
+  1: (border: rgb(99, 102, 241), badge-bg: rgb(99, 102, 241), badge-text: #fff, head-bg-light: rgba(99,102,241,0.06), head-bg-dark: rgba(99,102,241,0.12)),
+  2: (border: rgb(16, 185, 129), badge-bg: rgb(16, 185, 129), badge-text: #fff, head-bg-light: rgba(16,185,129,0.06), head-bg-dark: rgba(16,185,129,0.12)),
+  3: (border: rgb(245, 158, 11), badge-bg: rgb(245, 158, 11), badge-text: #fff, head-bg-light: rgba(245,158,11,0.06), head-bg-dark: rgba(245,158,11,0.12)),
+  4: (border: rgb(239, 68, 68),  badge-bg: rgb(239, 68, 68),  badge-text: #fff, head-bg-light: rgba(239,68,68,0.06),  head-bg-dark: rgba(239,68,68,0.12)),
+);
+
+.struct-card {
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease;
+
+  :host-context(.dark) & {
+    background: #1a1a2e;
+    border-color: rgba(255,255,255,0.07);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    :host-context(.dark) & { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+  }
+
+  // Barre latérale colorée selon le niveau
+  &--l1 { border-left: 3px solid rgb(99, 102, 241); }
+  &--l2 { border-left: 3px solid rgb(16, 185, 129); }
+  &--l3 { border-left: 3px solid rgb(245, 158, 11); }
+  &--l4 { border-left: 3px solid rgb(239, 68, 68); }
+}
+
+.struct-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+
+  :host-context(.dark) & { border-bottom-color: rgba(255,255,255,0.06); }
+
+  .struct-card--l1 & { background: rgba(99,102,241,0.07); :host-context(.dark) & { background: rgba(99,102,241,0.14); } }
+  .struct-card--l2 & { background: rgba(16,185,129,0.07); :host-context(.dark) & { background: rgba(16,185,129,0.12); } }
+  .struct-card--l3 & { background: rgba(245,158,11,0.07); :host-context(.dark) & { background: rgba(245,158,11,0.12); } }
+  .struct-card--l4 & { background: rgba(239,68,68,0.07);  :host-context(.dark) & { background: rgba(239,68,68,0.12); } }
+}
+
+.struct-card__badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.4;
+  font-family: 'Fira Code', monospace;
+
+  .struct-card--l1 & { background: rgb(99, 102, 241); color: #fff; }
+  .struct-card--l2 & { background: rgb(16, 185, 129); color: #fff; }
+  .struct-card--l3 & { background: rgb(245, 158, 11); color: #fff; }
+  .struct-card--l4 & { background: rgb(239, 68, 68);  color: #fff; }
+}
+
+.struct-card__title {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111;
+  padding: 0;
+  line-height: 1.5;
+
+  :host-context(.dark) & { color: rgba(255,255,255,0.9); }
+
+  &::placeholder { color: rgba(0,0,0,0.3); font-weight: 400; :host-context(.dark) & { color: rgba(255,255,255,0.2); } }
+
+  &:focus {
+    background: rgba(99,102,241,0.04);
+    border-radius: 3px;
+    padding: 0 4px;
+    margin: 0 -4px;
+  }
+}
+
+.struct-card__ctx-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+  color: rgba(0,0,0,0.35);
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+
+  :host-context(.dark) & { color: rgba(255,255,255,0.3); }
+
+  .struct-card__head:hover & { opacity: 1; }
+  &:hover { background: rgba(0,0,0,0.07); :host-context(.dark) & { background: rgba(255,255,255,0.08); } }
+
+  .material-symbols-outlined { font-size: 16px; line-height: 1; }
+}
+
+.struct-card__body {
+  padding: 0.5rem 0.75rem 0.6rem;
+}
+
+.struct-card__content {
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #374151;
+  padding: 0;
+  overflow: hidden;
+  min-height: 2.5rem;
+
+  :host-context(.dark) & { color: rgba(255,255,255,0.65); }
+
+  &::placeholder { color: rgba(0,0,0,0.25); font-style: italic; :host-context(.dark) & { color: rgba(255,255,255,0.15); } }
+
+  &:focus { color: #111827; :host-context(.dark) & { color: rgba(255,255,255,0.85); } }
+}
+
+// Menu contextuel
+.struct-ctx-menu {
+  position: fixed;
+  z-index: 200;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 4px;
+  min-width: 190px;
+
+  :host-context(.dark) & {
+    background: #1e1e2e;
+    border-color: rgba(255,255,255,0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+}
+
+.struct-ctx-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 13px;
+  color: #374151;
+  text-align: left;
+  transition: background 0.1s;
+
+  :host-context(.dark) & { color: rgba(255,255,255,0.75); }
+
+  &:hover { background: rgba(0,0,0,0.05); :host-context(.dark) & { background: rgba(255,255,255,0.07); } }
+
+  .material-symbols-outlined { font-size: 15px; }
+
+  &--danger {
+    color: rgb(220, 38, 38);
+    :host-context(.dark) & { color: rgb(248, 113, 113); }
+    &:hover { background: rgba(220, 38, 38, 0.08); }
+  }
+}

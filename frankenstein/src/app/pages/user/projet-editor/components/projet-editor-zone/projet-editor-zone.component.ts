@@ -121,6 +121,23 @@ interface VisuSectionState {
   markdownBefore: string;
 }
 
+interface StructureNode {
+  id: string;
+  level: number;
+  title: string;
+  rawContent: string;
+  lineStart: number;
+  lineEnd: number;
+  folderId: string | null;
+}
+
+interface StructContextMenu {
+  visible: boolean;
+  node: StructureNode | null;
+  x: number;
+  y: number;
+}
+
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
@@ -174,8 +191,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   collab = inject(ProjetCollabService);
   private authSvc = inject(AuthService);
 
-  // Mode (toggle Edition / Visu)
-  mode: 'edit' | 'visu' = 'edit';
+  // Mode (toggle Edition / Structure / Visu)
+  mode: 'edit' | 'visu' | 'structure' = 'edit';
+
+  // ── Mode Structure ──────────────────────────────────────────
+  structureNodes: StructureNode[] = [];
+  structContextMenu: StructContextMenu = { visible: false, node: null, x: 0, y: 0 };
+  private structFlushTimeout: any;
 
   // Mode Focus : édition d'une seule section / document
   focusedHandle: DragHandle | null = null;
@@ -1134,7 +1156,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // ── Mode toggle ─────────────────────────────────────────────
-  setMode(m: 'edit' | 'visu') {
+  setMode(m: 'edit' | 'visu' | 'structure') {
     if (this.mode === m) return;
     if (this.mode === 'edit') {
       this.unfoldAll();
@@ -1143,6 +1165,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     } else if (this.mode === 'visu') {
       this.flushVisuSections();
       this.teardownVisuSelectionListener();
+    } else if (this.mode === 'structure') {
+      clearTimeout(this.structFlushTimeout);
+      this.flushStructureNodes();
+      this.structContextMenu = { visible: false, node: null, x: 0, y: 0 };
     }
     this.mode = m;
     this.recomputeAll();
@@ -1150,8 +1176,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.setupVisuSelectionListener();
     }
     if (m === 'edit') {
-      // Réappliquer le focus sur la section active après changement de mode
       setTimeout(() => this.applyFocusByActiveNode(), 0);
+    }
+    if (m === 'structure') {
+      this.structureNodes = this.parseStructureNodes();
     }
     if (this.activeNodeId) {
       setTimeout(() => this.scrollToActive(), 80);
@@ -1169,6 +1197,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   ngOnDestroy() {
     clearTimeout(this.saveTimeout);
+    clearTimeout(this.structFlushTimeout);
+    if (this.mode === 'structure') this.flushStructureNodes();
     if (this.unifiedContent !== this.lastSavedContent) this.saveAll();
     this.teardownVisuSelectionListener();
   }
@@ -3655,5 +3685,142 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
     }
     setTimeout(() => this.initVisuSectionHtml(), 80);
+  }
+
+  // ── Mode Structure ──────────────────────────────────────────
+
+  get filteredStructureNodes(): StructureNode[] {
+    if (!this.activeNodeId) return this.structureNodes;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node) return this.structureNodes;
+
+    if (node.type === 'folder') {
+      const visible = this.getDescendantFolderIds(this.activeNodeId, this.files);
+      if (visible.size === 0) return this.structureNodes;
+      return this.structureNodes.filter(n => n.folderId && visible.has(n.folderId));
+    }
+
+    // Fichier/image → afficher la section parente
+    const parent = this.findParentFolder(this.activeNodeId, this.files);
+    if (parent) {
+      const visible = this.getDescendantFolderIds(parent.id, this.files);
+      return this.structureNodes.filter(n => n.folderId && visible.has(n.folderId));
+    }
+
+    return [];
+  }
+
+  parseStructureNodes(): StructureNode[] {
+    const lines = this.unifiedContent.split('\n');
+    const nodes: StructureNode[] = [];
+    const headingRe = /^(#{1,4}) (.+)$/;
+
+    let currentLevel = 0;
+    let currentTitle = '';
+    let currentLineStart = -1;
+    let contentLines: string[] = [];
+
+    const pushNode = (lineEnd: number) => {
+      if (currentLineStart < 0) return;
+      const folderId = this.sectionRanges.find(r => r.lineStart === currentLineStart)?.folderId ?? null;
+      nodes.push({
+        id: `struct-${currentLineStart}`,
+        level: currentLevel,
+        title: currentTitle,
+        rawContent: contentLines.join('\n').replace(/^\n+|\n+$/g, ''),
+        lineStart: currentLineStart,
+        lineEnd: lineEnd,
+        folderId,
+      });
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const m = headingRe.exec(lines[i]);
+      if (m) {
+        pushNode(i - 1);
+        currentLevel = m[1].length;
+        currentTitle = m[2].trim();
+        currentLineStart = i;
+        contentLines = [];
+      } else if (currentLineStart >= 0) {
+        contentLines.push(lines[i]);
+      }
+    }
+    pushNode(lines.length - 1);
+
+    return nodes;
+  }
+
+  flushStructureNodes(): void {
+    if (!this.structureNodes.length) return;
+    const parts: string[] = [];
+    for (const node of this.structureNodes) {
+      const hashes = '#'.repeat(node.level);
+      const content = node.rawContent.trim();
+      parts.push(`${hashes} ${node.title || 'Sans titre'}${content ? '\n' + content : ''}`);
+    }
+    const newContent = parts.join('\n\n');
+    if (newContent !== this.unifiedContent) {
+      this.unifiedContent = newContent;
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = newContent;
+      this.lastSavedContent = '';
+      this.scheduleSave();
+    }
+  }
+
+  private scheduleStructFlush(): void {
+    clearTimeout(this.structFlushTimeout);
+    this.structFlushTimeout = setTimeout(() => this.flushStructureNodes(), 800);
+  }
+
+  onStructTitleInput(node: StructureNode, event: Event): void {
+    node.title = (event.target as HTMLInputElement).value;
+    this.scheduleStructFlush();
+  }
+
+  onStructTitleBlur(node: StructureNode, event: FocusEvent): void {
+    if (!node.title.trim()) {
+      const lines = this.unifiedContent.split('\n');
+      const m = /^(#{1,4}) (.+)$/.exec(lines[node.lineStart] ?? '');
+      if (m) {
+        node.title = m[2].trim();
+        (event.target as HTMLInputElement).value = node.title;
+      } else {
+        node.title = 'Sans titre';
+        (event.target as HTMLInputElement).value = node.title;
+      }
+    }
+    clearTimeout(this.structFlushTimeout);
+    this.flushStructureNodes();
+  }
+
+  onStructContentInput(node: StructureNode, event: Event): void {
+    const ta = event.target as HTMLTextAreaElement;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+    node.rawContent = ta.value;
+    this.scheduleStructFlush();
+  }
+
+  getStructContentRows(node: StructureNode): number {
+    return Math.max(2, Math.min(node.rawContent.split('\n').length + 1, 25));
+  }
+
+  openStructContextMenu(node: StructureNode, event: MouseEvent): void {
+    event.preventDefault();
+    this.structContextMenu = { visible: true, node, x: event.clientX, y: event.clientY };
+  }
+
+  closeStructContextMenu(): void {
+    if (this.structContextMenu.visible) {
+      this.structContextMenu = { ...this.structContextMenu, visible: false };
+    }
+  }
+
+  structureDeleteSection(node: StructureNode): void {
+    this.structureNodes = this.structureNodes.filter(n => n.id !== node.id);
+    this.closeStructContextMenu();
+    this.flushStructureNodes();
   }
 }

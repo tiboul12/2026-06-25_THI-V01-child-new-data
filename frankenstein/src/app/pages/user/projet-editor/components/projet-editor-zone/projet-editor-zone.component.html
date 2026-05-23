@@ -29,11 +29,15 @@
   <!-- Barre d'outils -->
   <div class="flex flex-wrap items-center gap-1 p-2 bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
 
-    <!-- Tabs Code / Preview (style GitHub) -->
+    <!-- Tabs Code / Structure / Preview -->
     <div class="ed-mode-tabs mr-2">
       <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'edit'" (click)="setMode('edit')">
         <span class="material-symbols-outlined">code</span>
         Code
+      </button>
+      <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'structure'" (click)="setMode('structure')">
+        <span class="material-symbols-outlined">account_tree</span>
+        Structure
       </button>
       <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'visu'" (click)="setMode('visu')">
         <span class="material-symbols-outlined">visibility</span>
@@ -331,6 +335,69 @@
         <img [src]="hoverPreview.url" [alt]="hoverPreview.name" (error)="onImgError($event)">
         <div class="ed-img-preview__name">{{ hoverPreview.name }}</div>
       </div>
+    }
+
+    <!-- Mode Structure : vue hiérarchique avec titre et contenu séparés -->
+    @if (mode === 'structure') {
+      <div class="struct-wrap flex-1 min-h-0 overflow-y-auto"
+           (click)="closeStructContextMenu()">
+        <div class="struct-inner">
+
+          @for (node of filteredStructureNodes; track node.id) {
+            <div class="struct-card"
+                 [class.struct-card--l1]="node.level === 1"
+                 [class.struct-card--l2]="node.level === 2"
+                 [class.struct-card--l3]="node.level === 3"
+                 [class.struct-card--l4]="node.level === 4"
+                 [style.margin-left.px]="(node.level - 1) * 28"
+                 (contextmenu)="openStructContextMenu(node, $event)">
+
+              <!-- En-tête : badge niveau + titre -->
+              <div class="struct-card__head">
+                <span class="struct-card__badge" [attr.data-level]="node.level">H{{ node.level }}</span>
+                <input class="struct-card__title"
+                       [value]="node.title"
+                       (input)="onStructTitleInput(node, $event)"
+                       (blur)="onStructTitleBlur(node, $event)"
+                       placeholder="Titre requis"
+                       spellcheck="false"
+                       autocomplete="off">
+                <button class="struct-card__ctx-btn"
+                        title="Actions"
+                        (click)="openStructContextMenu(node, $event); $event.stopPropagation()">
+                  <span class="material-symbols-outlined">more_vert</span>
+                </button>
+              </div>
+
+              <!-- Corps : contenu markdown brut (sans les # du titre) -->
+              <div class="struct-card__body">
+                <textarea class="struct-card__content"
+                          [value]="node.rawContent"
+                          [rows]="getStructContentRows(node)"
+                          (input)="onStructContentInput(node, $event)"
+                          placeholder="Contenu de la section…"
+                          spellcheck="false"></textarea>
+              </div>
+
+            </div>
+          }
+
+        </div>
+      </div>
+
+      <!-- Menu contextuel clic droit -->
+      @if (structContextMenu.visible && structContextMenu.node) {
+        <div class="struct-ctx-menu"
+             [style.left.px]="structContextMenu.x"
+             [style.top.px]="structContextMenu.y"
+             (click)="$event.stopPropagation()">
+          <button class="struct-ctx-menu__item struct-ctx-menu__item--danger"
+                  (click)="structureDeleteSection(structContextMenu.node)">
+            <span class="material-symbols-outlined">delete</span>
+            Supprimer la section
+          </button>
+        </div>
+      }
     }
 
     <!-- Mode Preview : éditable par section (contenteditable + toolbar flottante) -->
