@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-201",
+      "version": "THI-0.130",
+      "date": "2026-05-23T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Editor zone 4 : highlight section cliquée sans changer la vue",
+      "description": "Découplage focus/highlight dans l'éditeur. Ajout d'un Input highlightNodeId dans ProjetEditorZoneComponent : recomputeHighlights utilise highlightNodeId ?? activeNodeId pour la couleur de surbrillance. Dans le parent, highlightNodeId est toujours mis à jour par onNodeActive (clic zone 4) et onNodeSelect (clic menu zone 3) ; activeNodeId est bloqué si le nœud cliqué est un descendant du focus courant. Résultat : clic zone 4 sur sous-section → surbrillance couleur (vert/bleu) sans changer la vue affichée.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.ts",
+        "frankenstein/src/app/pages/user/projet-editor/projet-editor.component.html",
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Quand je clique dans une section document dans l'éditor zone 4 je veux que la section apparaisse dans sa couleur, exemple vert pour les documents, tous reste affiché mais la section selectionné prend sa couleur",
+      "startedAt": "2026-05-23T00:00:00.000Z",
+      "completedAt": "2026-05-23T00:00:00.000Z"
+    },
+    {
       "id": "mod-200",
       "version": "THI-0.125",
       "date": "2026-05-22T19:00:00.000Z",

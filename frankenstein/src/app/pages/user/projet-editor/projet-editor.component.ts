@@ -52,6 +52,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   initMessage = signal<string | null>(null);
   saveStatus = signal<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
   activeNodeId = signal<string | null>(null);
+  highlightNodeId = signal<string | null>(null);
   scrollToNodeId = signal<string | null>(null);
   zone5Tab = signal<'conversation' | 'history'>('conversation');
   // F6 — Drawer des commentaires de section
@@ -360,19 +361,38 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
   onNodeSelect(node: FileNode) {
     this.activeNodeId.set(node.id);
+    this.highlightNodeId.set(node.id);
     this.scrollToNodeId.set(null);
     setTimeout(() => this.scrollToNodeId.set(node.id), 0);
   }
 
   onProjectRootSelect(): void {
     this.activeNodeId.set(null);
+    this.highlightNodeId.set(null);
     this.scrollToNodeId.set(null);
   }
 
   onNodeActive(nodeId: string) {
-    if (this.activeNodeId() !== nodeId) {
-      this.activeNodeId.set(nodeId);
-    }
+    // Toujours mettre à jour le highlight visuel
+    this.highlightNodeId.set(nodeId);
+    if (this.activeNodeId() === nodeId) return;
+    // Clic dans l'éditeur zone 4 : ignorer le focus si le nœud est un descendant du nœud actif courant
+    const currentId = this.activeNodeId();
+    if (currentId && this.isDescendantInTree(nodeId, currentId)) return;
+    this.activeNodeId.set(nodeId);
+  }
+
+  private isDescendantInTree(nodeId: string, ancestorId: string): boolean {
+    const ancestor = this.findFolderById(ancestorId, this.files());
+    if (!ancestor) return false;
+    const walk = (nodes: FileNode[]): boolean => {
+      for (const n of nodes) {
+        if (n.id === nodeId) return true;
+        if (n.children && walk(n.children)) return true;
+      }
+      return false;
+    };
+    return walk(ancestor.children || []);
   }
 
   onDirtyChange(dirty: boolean) {

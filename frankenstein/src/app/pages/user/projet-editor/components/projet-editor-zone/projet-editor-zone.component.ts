@@ -135,6 +135,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Input() saveStatus: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' = 'idle';
   @Input() projectName = '';
   @Input() activeNodeId: string | null = null;
+  @Input() highlightNodeId: string | null = null;
   @Input() backupType: string | null = null;
 
   readonly backupBadge: Record<string, { icon: string; label: string; css: string }> = {
@@ -366,6 +367,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (markersFixed && !this.focusedHandle) {
         setTimeout(() => this.saveAll(), 0);
       }
+    }
+
+    if (changes['highlightNodeId']) {
+      this.recomputeHighlights();
     }
 
     if (changes['activeNodeId']) {
@@ -749,8 +754,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private computeHighlights() {
     this.highlightedFolderIds = new Set<string>();
     this.highlightedFileIds = new Set<string>();
-    if (!this.activeNodeId) return;
-    const node = this.findNode(this.activeNodeId, this.files);
+    const effectiveId = this.highlightNodeId ?? this.activeNodeId;
+    if (!effectiveId) return;
+    const node = this.findNode(effectiveId, this.files);
     if (!node) return;
     if (node.type === 'folder') {
       const addAll = (n: FileNode) => {
@@ -763,11 +769,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     } else if (node.type === 'file' && !this.isImageFile(node.name)) {
       if (node.name === 'contenu.md') {
         // Fichier principal : surligne le dossier parent (bleu)
-        const parent = this.findParentFolder(this.activeNodeId, this.files);
+        const parent = this.findParentFolder(effectiveId, this.files);
         if (parent) this.highlightedFolderIds.add(parent.id);
       } else {
         // Document additionnel : surligne uniquement son bloc (vert)
-        this.highlightedFileIds.add(this.activeNodeId);
+        this.highlightedFileIds.add(effectiveId);
       }
     }
   }

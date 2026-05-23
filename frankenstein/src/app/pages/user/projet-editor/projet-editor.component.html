@@ -52,6 +52,7 @@
           [saveStatus]="saveStatus()"
           [projectName]="project()?.id || ''"
           [activeNodeId]="activeNodeId()"
+          [highlightNodeId]="highlightNodeId()"
           [commentCounts]="commentCounts()"
           [backupType]="project()?.backupType ?? null"
           (fileSave)="onFileSave($event)"
