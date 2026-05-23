@@ -133,8 +133,8 @@
     </div>
   }
 
-  <!-- Barre Annuler/Partager mode Structure -->
-  @if (mode === 'structure' && structureHasPending()) {
+  <!-- Barre Annuler/Partager mode Structure (visible aussi en mode Code/Preview si lock structure actif) -->
+  @if (structureHasPending()) {
     <div class="code-publish-bar">
       <span class="code-publish-bar__info">
         <span class="material-symbols-outlined">edit</span>

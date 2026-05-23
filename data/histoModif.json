@@ -1,6 +1,82 @@
 {
   "modifications": [
     {
+      "id": "mod-214",
+      "version": "THI-0.137",
+      "date": "2026-05-24T10:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Editor Code : Annuler granulaire par entité (main content vs bloc fichier)",
+      "description": "cancelCodeEdit() restaurait l'intégralité du snapshot de section, annulant aussi bien le contenu principal du dossier que les blocs de fichiers enfants. Réécriture en restauration granulaire : le contenu est parsé en parties (main content + blocs additionnels via parseAdditionalBlocks). Seule la partie correspondant à cursorEntityId() est restaurée depuis le snapshot original. Les autres blocs/entités gardent leur contenu modifié et leurs verrous. Le snapshot de section est conservé jusqu'à ce que tous les verrous soient libérés.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "non cela ne fonctionne toujours pas, lorsque je fais une modif sur un dossier puis une modif sur un document en dessous du même dossier que je retourne sur le dossier et que je clique sur annulé les modifications du dossier cela annule bien les modifications du dossier, mais aussi du document",
+      "startedAt": "2026-05-24T09:30:00.000Z",
+      "completedAt": "2026-05-24T10:00:00.000Z"
+    },
+    {
+      "id": "mod-213",
+      "version": "THI-0.136",
+      "date": "2026-05-23T18:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Editor : hasPendingCode n'interfère plus avec les locks structure",
+      "description": "Correction d'un bug où le fallback de hasPendingCode (localPendingSections().has(focusedHandle.id)) détectait à tort un lock provenant du mode Structure. En mode Code, si l'utilisateur entrait en focus sur un document verrouillé en mode Structure, la barre Code apparaissait. Cliquer 'Annuler' appelait cancelCodeEdit() qui supprimait le document de localPendingSections, effaçant le lock visuellement. Fix : le fallback de hasPendingCode exclut les IDs qui sont dans structEntityLocks.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il y a encore un soucis si j'annule une modification d'un dossier parent le document enfants ce debloque",
+      "startedAt": "2026-05-23T17:30:00.000Z",
+      "completedAt": "2026-05-23T18:00:00.000Z"
+    },
+    {
+      "id": "mod-212",
+      "version": "THI-0.136",
+      "date": "2026-05-23T17:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Editor Structure : barre Annuler visible hors mode Structure",
+      "description": "La barre Annuler/Partager du mode Structure s'affiche maintenant quelle que soit le mode actif (Code, Preview...) tant que structureHasPending() est vrai. Auparavant, la condition mode === 'structure' empêchait l'affichage après un changement de mode, laissant l'entité verrouillée sans possibilité d'action.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "cela fonctionne mais si j'annule les modifications du dossier et que je refait des modifs et que je retourne dans le document, il est marqué bloqué mais je n'ai plus les boutons d'annulation ou de partage",
+      "startedAt": "2026-05-23T16:45:00.000Z",
+      "completedAt": "2026-05-23T17:00:00.000Z"
+    },
+    {
+      "id": "mod-211",
+      "version": "THI-0.136",
+      "date": "2026-05-23T16:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["frankenstein"],
+      "features": "frankenstein:editor",
+      "title": "Editor Structure : Annuler granulaire par entité",
+      "description": "Correction du comportement d'Annuler en mode Structure. Auparavant, un snapshot global était pris au premier edit et Annuler restaurait tout le contenu + vidait tous les verrous. Désormais, chaque entité a son propre snapshot (structEntitySnapshots Map) pris avant sa première modification. Annuler cible uniquement l'entité active (structFocusedEntityId signal, mis à jour à chaque frappe). Seules les données de cette entité sont restaurées dans structureNodes, puis reflushées. Les autres entités modifiées conservent leur verrou et leurs modifications. structFocusedEntityId est mis à jour vers une entité restante si d'autres locks existent encore.",
+      "files": [
+        "frankenstein/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Si j'ai un document modifié 'ddddddddddddddddbbbbbbb' et ensuite le dossier parent 'Menu 3' et que j'annule la modification du contenue du dossier 'Menu 3' le document qui à été modifié mais non validé et non annulé ce debloque et n'a plus le bouton partager ou annulé. Si j'annule un dossier parent cela ne doit pas impacté les modifications en cours d'un sous dossier ou d'un bloc enfant du menu parent",
+      "startedAt": "2026-05-23T16:00:00.000Z",
+      "completedAt": "2026-05-23T16:30:00.000Z"
+    },
+    {
       "id": "mod-210",
       "version": "THI-0.135",
       "date": "2026-05-23T15:00:00.000Z",

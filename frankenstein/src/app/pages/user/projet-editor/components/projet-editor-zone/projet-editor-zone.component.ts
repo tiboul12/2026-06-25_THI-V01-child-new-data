@@ -208,8 +208,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private structFlushTimeout: any;
   // Collab structure mode
   structureHasPending = signal(false);
+  structFocusedEntityId = signal<string | null>(null);  // entité active pour Annuler
   private structEntityLocks = new Set<string>();   // IDs verrouillés en mode structure
-  private structureCancelSnapshot: string | null = null; // contenu original pour Annuler
+  private structEntitySnapshots = new Map<string, { type: 'folder' | 'block', folderId: string, blockId?: string, title: string, textContent: string }>();
 
   // Mode Focus : édition d'une seule section / document
   focusedHandle: DragHandle | null = null;
@@ -1224,6 +1225,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (this.projectName) this.collab.unlockNode(this.projectName, entityId).catch(() => {});
     }
     this.structEntityLocks.clear();
+    this.structEntitySnapshots.clear();
   }
 
   // ── Mode focus : édition d'une seule section / document ─────
@@ -1381,7 +1383,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const entityId = this.cursorEntityId();
       return entityId != null && this.activeEntityLocks.has(entityId);
     }
-    return this.collab.localPendingSections().has(this.focusedHandle.id);
+    // Ne pas activer la barre Code pour un pending issu uniquement du mode Structure
+    const hId = this.focusedHandle.id;
+    return this.collab.localPendingSections().has(hId) && !this.structEntityLocks.has(hId);
   }
 
   // Sections visu filtrées selon la sélection active (null = tout afficher)
@@ -3150,9 +3154,46 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   async cancelCodeEdit(): Promise<void> {
     if (!this.focusedHandle) return;
     const sectionId = this.focusedHandle.id;
+    const entityId = this.cursorEntityId();
+    if (!entityId || !this.activeEntityLocks.has(entityId)) return;
+
     const snapshot = this.codeSectionSnapshots.get(sectionId) ?? this.lastSavedContent;
 
-    // Restaurer les images dont la suppression est annulée pour cette section
+    // ── Restauration granulaire : uniquement la partie de l'entité annulée ──
+    const origLines = snapshot.split('\n');
+    const origHeading = origLines[0] ?? '';
+    const { textContent: origMain, blocks: origBlocks } = this.parseAdditionalBlocks(origLines.slice(1).join('\n'));
+
+    const currLines = this.unifiedContent.split('\n');
+    const currHeading = currLines[0] ?? '';
+    const { textContent: currMain, blocks: currBlocks } = this.parseAdditionalBlocks(currLines.slice(1).join('\n'));
+
+    let newMain = currMain;
+    const newBlocks = currBlocks.map(b => ({ ...b }));
+
+    const fileNode = entityId !== sectionId ? this.findNode(entityId, this.files) : null;
+    if (!fileNode) {
+      // Contenu principal du dossier (ou bloc inline) → restaurer le main content
+      newMain = origMain;
+    } else {
+      // Bloc fichier additionnel → restaurer uniquement ce bloc
+      const slugName = this.slugify(fileNode.name.replace(/\.md$/, ''));
+      const origIdx = origBlocks.findIndex(b => this.slugify(b.title) === slugName);
+      const currIdx = newBlocks.findIndex(b => this.slugify(b.title) === slugName);
+      if (origIdx >= 0 && currIdx >= 0) {
+        newBlocks[currIdx] = { ...newBlocks[currIdx], title: origBlocks[origIdx].title, content: origBlocks[origIdx].content };
+      }
+    }
+
+    // Reconstruire le contenu avec la partie restaurée + les autres parties intactes
+    const parts: string[] = [];
+    if (newMain.trim()) parts.push(newMain.trim());
+    for (const b of newBlocks) {
+      parts.push(`${b.delimiter}${b.title}\n${b.content}\n${b.delimiter}`);
+    }
+    const newContent = currHeading + (parts.length ? '\n' + parts.join('\n\n') : '');
+
+    // Restaurer les images annulées pour cette section
     const toRestore = [...this.pendingVisuDeletions.entries()]
       .filter(([, v]) => v.sectionId === sectionId);
     toRestore.forEach(([imgId, { node }]) => {
@@ -3160,33 +3201,30 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.pendingVisuDeletions.delete(imgId);
     });
 
-    // Restaurer le contenu original dans la vue focusée
-    this.unifiedContent = snapshot;
+    this.unifiedContent = newContent;
     const ta = this.textareaRef?.nativeElement;
-    if (ta) ta.value = snapshot;
+    if (ta) ta.value = newContent;
     clearTimeout(this.saveTimeout);
-    this.lastSavedContent = snapshot;
+    this.lastSavedContent = newContent;
     this.recomputeAll();
-    this.localDirty = false;
-    this.dirtyChange.emit(false);
-
-    // Sauvegarder le contenu restauré (sans publish) pour annuler tout auto-save sur le disque
     this.saveAll();
 
-    // Nettoyer le state pending : vider toutes les entrées zone 5 des entités modifiées
-    for (const [entityId, folderId] of this.modifiedEntities) {
-      if (folderId === sectionId || entityId === sectionId) {
-        this.collab.clearPending(entityId);
-      }
+    // Déverrouiller uniquement cette entité
+    this.collab.clearPending(entityId);
+    this.collab.removeLocalPending(entityId);
+    if (this.projectName) this.collab.unlockNode(this.projectName, entityId).catch(() => {});
+    this.activeEntityLocks.delete(entityId);
+    for (const [eid] of this.modifiedEntities) {
+      if (eid === entityId) this.modifiedEntities.delete(eid);
     }
-    this.codeSectionSnapshots.delete(sectionId);
-    // Libérer le pending de chaque entité verrouillée (+ fallback sur sectionId)
-    for (const entityId of this.activeEntityLocks) this.collab.removeLocalPending(entityId);
-    this.collab.removeLocalPending(sectionId);
-    if (this.projectName) {
-      const toUnlock = this.activeEntityLocks.size > 0 ? [...this.activeEntityLocks] : [sectionId];
-      await Promise.all(toUnlock.map(id => this.collab.unlockNode(this.projectName, id).catch(() => {})));
-      this.activeEntityLocks.clear();
+    this.cursorEntityId.set(null);
+
+    // Si plus aucun verrou → nettoyage complet
+    if (this.activeEntityLocks.size === 0) {
+      this.collab.removeLocalPending(sectionId);
+      this.codeSectionSnapshots.delete(sectionId);
+      this.localDirty = false;
+      this.dirtyChange.emit(false);
     }
   }
 
@@ -3983,13 +4021,42 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return fileNode?.id ?? node.folderId ?? '';
   }
 
-  // Verrouille une entité en mode structure (première fois seulement)
+  // Verrouille une entité en mode structure (première fois seulement) et trace l'entité active
   private applyStructLock(entityId: string): void {
     if (!entityId) return;
-    // Prendre le snapshot global avant le premier edit
-    if (!this.structureCancelSnapshot) {
-      this.structureCancelSnapshot = this.unifiedContent;
+
+    // Toujours mettre à jour l'entité courante (pour que Annuler cible la bonne)
+    this.structFocusedEntityId.set(entityId);
+
+    // Capturer le snapshot AVANT la première modification de cette entité
+    if (!this.structEntitySnapshots.has(entityId)) {
+      const folderNode = this.structureNodes.find(n => n.folderId === entityId);
+      if (folderNode) {
+        this.structEntitySnapshots.set(entityId, {
+          type: 'folder',
+          folderId: entityId,
+          title: folderNode.title,
+          textContent: folderNode.textContent
+        });
+      } else {
+        // Chercher parmi les blocs additionnels
+        outer: for (const node of this.structureNodes) {
+          for (const block of node.additionalBlocks) {
+            if (this.getStructBlockEntityId(node, block) === entityId) {
+              this.structEntitySnapshots.set(entityId, {
+                type: 'block',
+                folderId: node.folderId ?? '',
+                blockId: block.id,
+                title: block.title,
+                textContent: block.content
+              });
+              break outer;
+            }
+          }
+        }
+      }
     }
+
     if (this.structEntityLocks.has(entityId)) return;
     // Vérifier que l'entité n'est pas verrouillée par un autre user
     if (this.collab.isLockedByOther(entityId)) return;
@@ -4020,8 +4087,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         await this.collab.unlockNode(this.projectName, entityId).catch(() => {});
       }
       this.structEntityLocks.clear();
+      this.structEntitySnapshots.clear();
       this.structureHasPending.set(false);
-      this.structureCancelSnapshot = null;
+      this.structFocusedEntityId.set(null);
       this.showPublishToast();
     } catch (e: any) {
       const msg = e?.error?.pushFailed
@@ -4034,27 +4102,56 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   async cancelStructureEdit(): Promise<void> {
-    if (!this.structureCancelSnapshot) return;
+    const entityId = this.structFocusedEntityId();
+    if (!entityId) return;
+    const snapshot = this.structEntitySnapshots.get(entityId);
+    if (!snapshot) return;
+
     clearTimeout(this.structFlushTimeout);
-    // Restaurer le contenu original
-    this.unifiedContent = this.structureCancelSnapshot;
-    const ta = this.textareaRef?.nativeElement;
-    if (ta) ta.value = this.structureCancelSnapshot;
+
+    // Restaurer uniquement les données de l'entité annulée dans structureNodes
+    if (snapshot.type === 'folder') {
+      const node = this.structureNodes.find(n => n.folderId === snapshot.folderId);
+      if (node) {
+        node.title = snapshot.title;
+        node.textContent = snapshot.textContent;
+      }
+    } else {
+      const node = this.structureNodes.find(n => n.folderId === snapshot.folderId);
+      if (node) {
+        const block = node.additionalBlocks.find(b => b.id === snapshot.blockId);
+        if (block) {
+          block.title = snapshot.title;
+          block.content = snapshot.textContent;
+        }
+      }
+    }
+
+    // Re-flush les nodes modifiés → unifiedContent + textarea mis à jour
+    this.flushStructureNodes();
     clearTimeout(this.saveTimeout);
-    this.lastSavedContent = this.structureCancelSnapshot;
+    this.lastSavedContent = this.unifiedContent;
     this.saveAll();
     this.recomputeAll();
     this.structureNodes = this.parseStructureNodes();
-    this.localDirty = false;
-    this.dirtyChange.emit(false);
-    // Déverrouiller
-    for (const entityId of this.structEntityLocks) {
-      this.collab.removeLocalPending(entityId);
-      this.collab.clearPending(entityId);
-      if (this.projectName) this.collab.unlockNode(this.projectName, entityId).catch(() => {});
+
+    // Déverrouiller uniquement cette entité
+    this.collab.removeLocalPending(entityId);
+    this.collab.clearPending(entityId);
+    if (this.projectName) this.collab.unlockNode(this.projectName, entityId).catch(() => {});
+    this.structEntityLocks.delete(entityId);
+    this.structEntitySnapshots.delete(entityId);
+
+    // Mettre à jour l'état global
+    if (this.structEntityLocks.size === 0) {
+      this.structureHasPending.set(false);
+      this.structFocusedEntityId.set(null);
+      this.localDirty = false;
+      this.dirtyChange.emit(false);
+    } else {
+      // D'autres entités restent verrouillées — pointer vers la dernière ajoutée
+      const remaining = [...this.structEntityLocks];
+      this.structFocusedEntityId.set(remaining[remaining.length - 1]);
     }
-    this.structEntityLocks.clear();
-    this.structureHasPending.set(false);
-    this.structureCancelSnapshot = null;
   }
 }
