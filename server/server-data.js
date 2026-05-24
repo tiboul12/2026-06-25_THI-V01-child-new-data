@@ -5748,6 +5748,15 @@ app.post('/api/file-projects/:name/push', (req, res) => {
 
 const VERSION_FILE = path.join(PROJECT_ROOT, 'version.json');
 
+// Auto-migration: add branch column to app_deployments if missing
+pool.query("SHOW COLUMNS FROM app_deployments LIKE 'branch'")
+    .then(([cols]) => {
+        if (!cols.length) {
+            return pool.query("ALTER TABLE app_deployments ADD COLUMN branch VARCHAR(255) DEFAULT 'main'");
+        }
+    })
+    .catch(e => console.warn('[DB MIGRATION] branch column:', e.message));
+
 app.get('/api/version/check', async (req, res) => {
     try {
         let vf = {};
@@ -5758,10 +5767,19 @@ app.get('/api/version/check', async (req, res) => {
         }
 
         const localVersion = vf.version || '0.00';
-        const [rows] = await pool.query('SELECT * FROM app_deployments ORDER BY deployed_at DESC LIMIT 1');
+        const [rows] = await pool.query(
+            "SELECT * FROM app_deployments WHERE branch = 'main' OR branch IS NULL OR branch = '' ORDER BY deployed_at DESC LIMIT 1"
+        );
         const latest = rows[0] || null;
         const upToDate = !latest || latest.version === localVersion;
-        res.json({ upToDate, localVersion, latestDeployment: latest });
+
+        let currentBranch = 'main';
+        try {
+            const { execSync } = require('child_process');
+            currentBranch = execSync('git branch --show-current', { cwd: PROJECT_ROOT, timeout: 2000 }).toString().trim() || 'main';
+        } catch {}
+
+        res.json({ upToDate, localVersion, latestDeployment: latest, currentBranch });
     } catch (e) {
         console.error('[VERSION CHECK]', e);
         res.status(500).json({ error: 'Erreur serveur' });
@@ -5772,17 +5790,158 @@ app.get('/api/admin/deployments', async (req, res) => {
     const user = getSessionUser(req);
     if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
     try {
-        let vf = {};
-        if (fs.existsSync(VERSION_FILE)) {
-            let raw = fs.readFileSync(VERSION_FILE, 'utf8');
-            if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
-            vf = JSON.parse(raw);
-        }
         const [rows] = await pool.query('SELECT * FROM app_deployments ORDER BY deployed_at DESC LIMIT 100');
         res.json(rows);
     } catch (e) {
         console.error('[DEPLOYMENTS] List error:', e);
         res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.get('/api/admin/git-status', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    try {
+        const { execSync } = require('child_process');
+        const exec = (cmd) => execSync(cmd, { cwd: PROJECT_ROOT, timeout: 10000 }).toString().trim();
+
+        let currentBranch = 'main';
+        let fetchError = null;
+
+        try { currentBranch = exec('git branch --show-current') || 'main'; } catch {}
+
+        try { exec('git fetch origin --quiet'); } catch (e) { fetchError = e.message; }
+
+        let mainRemoteAhead = 0;
+        let mainLocalAhead  = 0;
+        try { mainRemoteAhead = parseInt(exec('git rev-list HEAD..origin/main --count')) || 0; } catch {}
+        try { mainLocalAhead  = parseInt(exec('git rev-list origin/main..HEAD --count'))  || 0; } catch {}
+
+        let branchRemoteAhead = 0;
+        let branchLocalAhead  = 0;
+        if (currentBranch && currentBranch !== 'main') {
+            try { branchRemoteAhead = parseInt(exec(`git rev-list HEAD..origin/${currentBranch} --count`)) || 0; } catch {}
+            try { branchLocalAhead  = parseInt(exec(`git rev-list origin/${currentBranch}..HEAD --count`))  || 0; } catch {}
+        }
+
+        res.json({
+            currentBranch,
+            fetchError,
+            main:   { remoteAheadOfLocal: mainRemoteAhead,   localAheadOfRemote: mainLocalAhead },
+            branch: { remoteAheadOfLocal: branchRemoteAhead, localAheadOfRemote: branchLocalAhead }
+        });
+    } catch (e) {
+        console.error('[GIT STATUS]', e);
+        res.status(500).json({ error: 'Erreur git' });
+    }
+});
+
+// Commits git de la branche courante (vs main) — sans fetch réseau
+app.get('/api/admin/branch-commits', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    try {
+        const { execSync } = require('child_process');
+        const exec = (cmd) => execSync(cmd, { cwd: PROJECT_ROOT, timeout: 5000 }).toString().trim();
+
+        let currentBranch = 'main';
+        try { currentBranch = exec('git branch --show-current'); } catch {}
+
+        if (!currentBranch || currentBranch === 'main') {
+            return res.json({ branch: currentBranch, commits: [] });
+        }
+
+        const SEP = '|||';
+        let raw = '';
+        try {
+            raw = exec(`git log main..HEAD --format="%H${SEP}%s${SEP}%ci${SEP}%an" --reverse`);
+        } catch {}
+
+        const commits = raw ? raw.split('\n').filter(Boolean).map((line, i) => {
+            const parts = line.split(SEP);
+            return {
+                hash:    (parts[0] || '').trim(),
+                subject: (parts[1] || '').trim(),
+                date:    (parts[2] || '').trim(),
+                author:  (parts[3] || '').trim(),
+                index:   i + 1
+            };
+        }) : [];
+
+        res.json({ branch: currentBranch, commits });
+    } catch (e) {
+        console.error('[BRANCH COMMITS]', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Infos git locales rapides (sans fetch réseau) — chargé au démarrage de la page
+app.get('/api/admin/git-local', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    try {
+        const { execSync } = require('child_process');
+        const exec = (cmd) => execSync(cmd, { cwd: PROJECT_ROOT, timeout: 3000 }).toString().trim();
+
+        let currentBranch = 'main';
+        let branchCommitCount = 0;
+        let branchLastCommitDate = null;
+        let branchLastCommitMsg  = null;
+
+        try { currentBranch = exec('git branch --show-current') || 'main'; } catch {}
+        try { branchCommitCount = parseInt(exec('git rev-list main..HEAD --count')) || 0; } catch {}
+        try { branchLastCommitDate = exec('git log -1 --format="%ci" HEAD'); } catch {}
+        try { branchLastCommitMsg  = exec('git log -1 --format="%s" HEAD');  } catch {}
+
+        res.json({ currentBranch, branchCommitCount, branchLastCommitDate, branchLastCommitMsg });
+    } catch (e) {
+        console.error('[GIT LOCAL]', e);
+        res.status(500).json({ error: 'Erreur git local' });
+    }
+});
+
+// Migration des versions legacy vers le format unifié B.XXX / Br.XXX
+app.post('/api/admin/migrate-versions', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    try {
+        const [all] = await pool.query('SELECT * FROM app_deployments ORDER BY deployed_at ASC');
+
+        const mainRecords   = all.filter(r => !r.branch || r.branch === 'main');
+        const branchRecords = all.filter(r => r.branch && r.branch !== 'main');
+
+        const pad = (n) => String(n).padStart(3, '0');
+
+        for (let i = 0; i < mainRecords.length; i++) {
+            const newVersion = `B.${pad(i + 1)}`;
+            await pool.query('UPDATE app_deployments SET version = ? WHERE id = ?', [newVersion, mainRecords[i].id]);
+        }
+
+        // Numérotation par branche (Br.001, Br.002... par branche distincte)
+        const branchGroups = {};
+        for (const r of branchRecords) {
+            if (!branchGroups[r.branch]) branchGroups[r.branch] = [];
+            branchGroups[r.branch].push(r);
+        }
+        // Numérotation globale inter-branches par date
+        for (let i = 0; i < branchRecords.length; i++) {
+            const newVersion = `Br.${pad(i + 1)}`;
+            await pool.query('UPDATE app_deployments SET version = ? WHERE id = ?', [newVersion, branchRecords[i].id]);
+        }
+
+        // Mise à jour version.json avec la nouvelle version main courante
+        const latestMain = mainRecords.length > 0 ? `B.${pad(mainRecords.length)}` : 'B.001';
+        fs.writeFileSync(VERSION_FILE, JSON.stringify({ version: latestMain }, null, 2), 'utf8');
+
+        res.json({
+            success: true,
+            mainCount:   mainRecords.length,
+            branchCount: branchRecords.length,
+            latestVersion: latestMain
+        });
+    } catch (e) {
+        console.error('[MIGRATE VERSIONS]', e);
+        res.status(500).json({ error: e.message });
     }
 });
 

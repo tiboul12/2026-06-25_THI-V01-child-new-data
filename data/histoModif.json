@@ -1,6 +1,71 @@
 {
   "modifications": [
     {
+      "id": "mod-217",
+      "version": "B0.048",
+      "date": "2026-05-24T16:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:admin-deployments,server:api",
+      "title": "Admin/déploiements : commits git de branche dans l'historique",
+      "description": "Nouveau endpoint /api/admin/branch-commits qui lit les commits git de la branche courante (vs main) sans fetch réseau. Quand le filtre branche est actif, les commits git sont affichés dans l'historique avec hash court, sujet, date et auteur — clairement distincts des enregistrements DB.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.html",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois aucun commit dans l'historique pour les commits de la branche",
+      "startedAt": "2026-05-24T16:15:00.000Z",
+      "completedAt": "2026-05-24T16:30:00.000Z"
+    },
+    {
+      "id": "mod-216",
+      "version": "B0.048",
+      "date": "2026-05-24T16:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:admin-deployments,server:api",
+      "title": "Admin/déploiements : migration B.XXX/Br.XXX, git-local, surbrillance duale",
+      "description": "Refonte de admin/deployments : nouveau format de version unifié B.XXX (main) et Br.XXX (branches). Migration automatique des versions legacy (THI-X.X, B0.X) via bouton dans l'UI. Endpoint /api/admin/git-local (sans fetch réseau) pour infos branche courante chargées au démarrage : nb commits, date/msg dernier commit. Surbrillance duale dans l'historique (jaune = version main locale, violet = commits de la branche courante). Filtre par branche dans l'historique. Mise à jour CLAUDE.md avec nouveau format.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.html",
+        "server/server-data.js",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans l'admin/deploiement on doit trouvé désormais que vB. et vBr. pour les commit des branches. Il faut que tu mette à jour toutes les anciens commit en transformant les vTHI-.... et les vB.... en vB-.... Ainsi tu doit faire un mix entre les versions child et les versions de base, laisse le même ordre en re-numérotant toutes les versions. Pour les branches, affiche les commits de la branche dans l'historique en les nommants et en indiquand les informations disponible. Met en surbrillance la version local de Base et de branche dans l'historique. Dans l'encart Branche courante indique le nombre de commit de la branche ainsi que son nom et la date du dernier commit",
+      "startedAt": "2026-05-24T15:30:00.000Z",
+      "completedAt": "2026-05-24T16:00:00.000Z"
+    },
+    {
+      "id": "mod-215",
+      "version": "B0.048",
+      "date": "2026-05-24T14:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:admin-deployments,server:api",
+      "title": "Admin/déploiements git-aware avec statut main + branche",
+      "description": "Refonte complète de la page admin/déploiements : suppression de l'ancien mode base/child, ajout de deux panneaux de statut (version principale main et branche courante). Nouveau endpoint /api/admin/git-status pour vérifier l'état git (fetch, commits ahead/behind). Migration DB automatique pour ajouter la colonne branch à app_deployments. deploy-log.js accepte désormais --branch. Les versions non-main affichent leur branche dans l'historique.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.html",
+        "server/server-data.js",
+        "server/deploy-log.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans la partie admin/deploiement cela doit intégré les versions officiel (branche main) et les version autres (branche dans lequel je suis), ainsi actuellement je devrait être à jour dans la version main et à jour dans ma branche puisque je suis dedans. Si la version main (github) est au dessus de celle de la version local, cela doit me l'indiqué, Idem pour les versions des branches si je me trouve en local sur une branche",
+      "startedAt": "2026-05-24T14:00:00.000Z",
+      "completedAt": "2026-05-24T14:30:00.000Z"
+    },
+    {
       "id": "mod-214",
       "version": "THI-0.137",
       "date": "2026-05-24T10:00:00.000Z",

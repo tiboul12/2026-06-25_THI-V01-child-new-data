@@ -35,6 +35,7 @@ async function run() {
     const filesRaw    = arg('files') || '';
     const scope       = arg('scope') || '';
     const features    = arg('features') || '';
+    const branch      = arg('branch') || 'main';
     const deployedBy  = arg('deployed-by') || process.env.USERNAME || process.env.USER || ai;
 
     if (!version || !commitName) {
@@ -46,9 +47,9 @@ async function run() {
 
     await pool.query(
         `INSERT INTO app_deployments
-         (version, commit_name, deployed_by, description, files_modified, ai, model, mod_ids, scope, features)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [version, commitName, deployedBy, description, files, ai, model, modIds, scope, features]
+         (version, commit_name, deployed_by, description, files_modified, ai, model, mod_ids, scope, features, branch)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [version, commitName, deployedBy, description, files, ai, model, modIds, scope, features, branch]
     );
 
     // Mettre à jour version.json local pour que le check soit à jour

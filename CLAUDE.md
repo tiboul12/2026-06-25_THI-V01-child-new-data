@@ -156,11 +156,12 @@ Question 3 : "Titre du commit ?"
 ## Règle obligatoire : Gestion de version
 
 ### Format
-`version.json` à la racine : `{ "version": "BX.XXX" }`
+- **Main** : `version.json` → `{ "version": "B.XXX" }` (ex: `B.049`, `B.050`)
+- **Branche** : versions DB enregistrées en `Br.XXX` (ex: `Br.001`)
 
-### Règles d'incrément
-- **Mineure** (+0.001) : `B0.005` → `B0.006` / `B0.999` → `B1.000`
-- **Majeure** (+1.000) : `B0.025` → `B1.000` / `B2.005` → `B3.000`
+### Règles d'incrément (main uniquement)
+- Mineure : `B.048` → `B.049`
+- Majeure : `B.099` → `B.100`
 
 ### Règle clé — version et branche
 - Sur une **branche feature** : ne PAS incrémenter `version.json`, ne PAS appeler `deploy-log.js`. Les modifications sont enregistrées dans `histoModif.json` uniquement.
@@ -178,7 +179,7 @@ Synthétiser tous les `mod-XXX` depuis le dernier commit pour produire 3 options
 
 ### Procédure complète (branche feature)
 1. `git add` des fichiers modifiés (jamais `git add .`)
-2. `git commit -m "vBX.XXX - YYYYMMDD - [TYPE] - Titre"` (version = version courante, PAS incrémentée)
+2. `git commit -m "vB.XXX - YYYYMMDD - [TYPE] - Titre"` (version = version courante, PAS incrémentée)
 3. `git push -u origin [branche]`
 4. **Ne pas** appeler `deploy-log.js` — la version en DB n'est pas mise à jour sur une branche
 

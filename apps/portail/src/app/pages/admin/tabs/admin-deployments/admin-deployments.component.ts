@@ -15,12 +15,14 @@ export class AdminDeploymentsComponent implements OnInit {
   @Output() versionStatusChange = new EventEmitter<any>();
 
   deployments = signal<any[]>([]);
-  propagationEntries = signal<any[]>([]);
   deployFilterType = signal<string>('');
   deployFilterAi = signal<string>('');
+  deployFilterBranch = signal<string>('');
   loadingDeploy = signal(false);
+  gitStatusLoading = signal(false);
+  migrating = signal(false);
+  migrateResult = signal<any>(null);
   deployError = signal('');
-  deploySuccess = signal(false);
   showDeployForm = signal(false);
   deployVersion = '';
   deployCommitName = '';
@@ -31,6 +33,9 @@ export class AdminDeploymentsComponent implements OnInit {
   deployModIds = '';
   expandedDeploy = signal<number | null>(null);
   versionStatus = signal<any>(null);
+  gitLocal = signal<any>(null);
+  gitStatus = signal<any>(null);
+  branchCommits = signal<any[]>([]);
 
   readonly deployCommitTypes: readonly string[] = ['FIX', 'AMELIORATION', 'MERGE'];
 
@@ -39,16 +44,20 @@ export class AdminDeploymentsComponent implements OnInit {
   ngOnInit() {
     this.loadVersionStatus();
     this.loadDeployments();
-    this.loadPropagation();
+    this.loadGitLocal();
+    this.loadBranchCommits();
+  }
+
+  private get authHeaders(): Record<string, string> {
+    const token = this.authService.getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
   async loadDeployments() {
     this.loadingDeploy.set(true);
     this.deployError.set('');
     try {
-      const token = this.authService.getToken();
-      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API}/api/admin/deployments`, { headers });
+      const res = await fetch(`${API}/api/admin/deployments`, { headers: this.authHeaders });
       if (!res.ok) throw new Error((await res.json()).error || 'Erreur chargement');
       this.deployments.set(await res.json());
     } catch (e: any) {
@@ -56,42 +65,6 @@ export class AdminDeploymentsComponent implements OnInit {
     } finally {
       this.loadingDeploy.set(false);
     }
-  }
-
-  async loadPropagation() {
-    try {
-      const token = this.authService.getToken();
-      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API}/api/admin/propagation`, { headers });
-      if (res.ok) this.propagationEntries.set(await res.json());
-    } catch (e) { console.error('[PROPAGATION]', e); }
-  }
-
-  async markPropagationSynced(baseVersion: string, childId: string) {
-    try {
-      const token = this.authService.getToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-      const res = await fetch(`${API}/api/admin/propagation/${encodeURIComponent(baseVersion)}`, {
-        method: 'PATCH', headers,
-        body: JSON.stringify({ childId })
-      });
-      if (res.ok) await this.loadPropagation();
-    } catch (e) { console.error('[PROPAGATION PATCH]', e); }
-  }
-
-  private parseVersionNum(v: string): number {
-    const m = v?.match(/[A-Z](\d+)\.(\d+)/);
-    return m ? parseInt(m[1]) * 1000 + parseInt(m[2]) : 0;
-  }
-
-  get pendingPropagations(): any[] {
-    const vs = this.versionStatus();
-    const baseSyncedNum = this.isChildMode ? this.parseVersionNum(vs?.base?.localVersion || '') : 0;
-    return this.propagationEntries().filter(e => {
-      if (!e.propagationRequired) return false;
-      if (this.isChildMode && baseSyncedNum > 0 && this.parseVersionNum(e.baseVersion) <= baseSyncedNum) return false;
-      return true;
-    });
   }
 
   async loadVersionStatus() {
@@ -103,14 +76,68 @@ export class AdminDeploymentsComponent implements OnInit {
     } catch (e) { console.error('[VERSION]', e); }
   }
 
-  get isChildMode(): boolean { return this.versionStatus()?.mode === 'child'; }
-  get childUpToDate(): boolean { return this.versionStatus()?.child?.upToDate ?? true; }
-  get baseUpToDate(): boolean { return this.versionStatus()?.base?.upToDate ?? true; }
-  get anyOutOfDate(): boolean { return this.isChildMode ? (!this.childUpToDate || !this.baseUpToDate) : !(this.versionStatus()?.upToDate ?? true); }
+  async loadGitLocal() {
+    try {
+      const res = await fetch(`${API}/api/admin/git-local`, { headers: this.authHeaders });
+      if (res.ok) this.gitLocal.set(await res.json());
+    } catch (e) { console.error('[GIT LOCAL]', e); }
+  }
+
+  async loadBranchCommits() {
+    try {
+      const res = await fetch(`${API}/api/admin/branch-commits`, { headers: this.authHeaders });
+      if (res.ok) {
+        const data = await res.json();
+        this.branchCommits.set(data.commits || []);
+      }
+    } catch (e) { console.error('[BRANCH COMMITS]', e); }
+  }
+
+  async loadGitStatus() {
+    this.gitStatusLoading.set(true);
+    try {
+      const res = await fetch(`${API}/api/admin/git-status`, { headers: this.authHeaders });
+      if (!res.ok) throw new Error((await res.json()).error || 'Erreur git');
+      this.gitStatus.set(await res.json());
+    } catch (e: any) {
+      this.gitStatus.set({ error: e?.message || 'Erreur git' });
+    } finally {
+      this.gitStatusLoading.set(false);
+    }
+  }
+
+  async migrateVersions() {
+    this.migrating.set(true);
+    this.migrateResult.set(null);
+    try {
+      const res = await fetch(`${API}/api/admin/migrate-versions`, {
+        method: 'POST',
+        headers: { ...this.authHeaders, 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur migration');
+      this.migrateResult.set(data);
+      await this.loadVersionStatus();
+      await this.loadDeployments();
+    } catch (e: any) {
+      this.migrateResult.set({ error: e?.message });
+    } finally {
+      this.migrating.set(false);
+    }
+  }
+
+  get localVersion(): string { return this.versionStatus()?.localVersion || '—'; }
+  get currentBranch(): string {
+    return this.gitLocal()?.currentBranch || this.versionStatus()?.currentBranch || 'main';
+  }
+  get mainUpToDate(): boolean { return this.versionStatus()?.upToDate ?? true; }
+
+  get hasLegacyVersions(): boolean {
+    return this.deployments().some(d => /^(THI-|B0\.|B\d+\.)/.test(d.version || ''));
+  }
 
   openDeployForm() {
-    const vs = this.versionStatus();
-    this.deployVersion = this.isChildMode ? (vs?.child?.localVersion || '') : (vs?.localVersion || '');
+    this.deployVersion = this.versionStatus()?.localVersion || '';
     this.deployCommitName = '';
     this.deployDescription = '';
     this.deployFiles = '';
@@ -118,28 +145,23 @@ export class AdminDeploymentsComponent implements OnInit {
     this.deployModel = '';
     this.deployModIds = '';
     this.deployError.set('');
-    this.deploySuccess.set(false);
     this.showDeployForm.set(true);
   }
 
   closeDeployForm() {
     this.showDeployForm.set(false);
     this.deployError.set('');
-    this.deploySuccess.set(false);
   }
 
   async saveDeployment() {
     if (!this.deployVersion.trim()) return;
     this.loadingDeploy.set(true);
     this.deployError.set('');
-    this.deploySuccess.set(false);
     try {
-      const token = this.authService.getToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
       const filesArray = this.deployFiles.split('\n').map(f => f.trim()).filter(f => f.length > 0);
       const res = await fetch(`${API}/api/admin/deployments`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json', ...this.authHeaders },
         body: JSON.stringify({
           version: this.deployVersion,
           commitName: this.deployCommitName,
@@ -155,7 +177,7 @@ export class AdminDeploymentsComponent implements OnInit {
       await this.loadDeployments();
       this.showDeployForm.set(false);
     } catch (e: any) {
-      this.deployError.set(e?.message || 'Erreur sauvegarde déploiement');
+      this.deployError.set(e?.message || 'Erreur sauvegarde');
     } finally {
       this.loadingDeploy.set(false);
     }
@@ -210,14 +232,21 @@ export class AdminDeploymentsComponent implements OnInit {
 
   get filteredDeployments(): any[] {
     return this.deployments().filter(dep => {
-      const typeMatch = !this.deployFilterType() || this.extractCommitType(dep.commit_name) === this.deployFilterType();
-      const aiMatch   = !this.deployFilterAi() || dep.ai === this.deployFilterAi();
-      return typeMatch && aiMatch;
+      const typeMatch   = !this.deployFilterType()   || this.extractCommitType(dep.commit_name) === this.deployFilterType();
+      const aiMatch     = !this.deployFilterAi()     || dep.ai === this.deployFilterAi();
+      const branchMatch = !this.deployFilterBranch() ||
+        (this.deployFilterBranch() === 'main'   ? (!dep.branch || dep.branch === 'main') : dep.branch === this.deployFilterBranch());
+      return typeMatch && aiMatch && branchMatch;
     });
   }
 
   get uniqueDeployAis(): string[] {
     return [...new Set(this.deployments().map(d => d.ai).filter(Boolean))];
+  }
+
+  get uniqueBranches(): string[] {
+    const branches = [...new Set(this.deployments().map(d => d.branch).filter(b => b && b !== 'main'))];
+    return branches as string[];
   }
 
   getScopedRows(scope: string, features: string): Array<{scope: string, features: string[]}> {
@@ -239,25 +268,31 @@ export class AdminDeploymentsComponent implements OnInit {
 
   scopeClass(s: string): string {
     switch (s) {
-      case 'frankenstein': return 'bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary border border-light-primary/20 dark:border-primary/20';
-      case 'server':       return 'bg-green-500/10 text-green-400 border border-green-500/20';
-      case 'electron':     return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
-      case 'data':         return 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
-      default:             return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+      case 'portail':  return 'bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary border border-light-primary/20 dark:border-primary/20';
+      case 'projets':  return 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
+      case 'server':   return 'bg-green-500/10 text-green-400 border border-green-500/20';
+      case 'libs':     return 'bg-violet-500/10 text-violet-400 border border-violet-500/20';
+      case 'electron': return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
+      case 'data':     return 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
+      default:         return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
     }
   }
 
+  isCurrentMain(dep: any): boolean {
+    return (!dep.branch || dep.branch === 'main') && dep.version === this.versionStatus()?.localVersion;
+  }
+
+  isCurrentBranch(dep: any): boolean {
+    return dep.branch && dep.branch !== 'main' && dep.branch === this.currentBranch;
+  }
+
   deployRowClass(dep: any): string {
-    const vs = this.versionStatus();
-    if (this.isChildMode) {
-      if (dep.version === vs?.child?.localVersion)
-        return 'bg-green-500/[0.06] hover:bg-green-500/10 border-l-2 border-l-green-500/50 transition-colors';
-      if (dep.version === vs?.base?.localVersion)
-        return 'bg-yellow-500/[0.06] hover:bg-yellow-500/10 border-l-2 border-l-yellow-500/50 transition-colors';
-    } else {
-      if (dep.version === vs?.localVersion)
-        return 'bg-yellow-500/[0.06] hover:bg-yellow-500/10 border-l-2 border-l-yellow-500/50 transition-colors';
-    }
+    if (this.isCurrentMain(dep))
+      return 'bg-yellow-500/[0.06] hover:bg-yellow-500/10 border-l-2 border-l-yellow-500/50 transition-colors';
+    if (this.isCurrentBranch(dep))
+      return 'bg-violet-500/[0.06] hover:bg-violet-500/10 border-l-2 border-l-violet-500/50 transition-colors';
+    if (dep.branch && dep.branch !== 'main')
+      return 'bg-violet-500/[0.02] hover:bg-violet-500/5 transition-colors';
     return 'hover:bg-light-primary/5 dark:hover:bg-primary/5 transition-colors';
   }
 }
