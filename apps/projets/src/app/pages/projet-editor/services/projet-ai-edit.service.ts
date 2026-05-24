@@ -1,7 +1,6 @@
 import { Injectable, NgZone, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
-import { environment } from '../../../../../environments/environment';
-import { ProjectFilesService } from '@worganic/portail-core/data-access';
+import { ProjectFilesService, API_EXECUTOR_URL } from '@worganic/portail-core/data-access';
 import { sanitizeIaContent } from '../utils/sanitize-ia-content';
 
 export interface PendingAiEdit {
@@ -21,6 +20,7 @@ export interface TokenInfo {
 export class ProjetAiEditService {
   private projectFilesService = inject(ProjectFilesService);
   private ngZone = inject(NgZone);
+  private executorUrl = inject(API_EXECUTOR_URL);
 
   pendingEdit = signal<PendingAiEdit | null>(null);
   isStreaming = signal(false);
@@ -47,7 +47,7 @@ export class ProjetAiEditService {
     this.tokenInfo.set(null);
     let accumulated = '';
 
-    fetch(`${environment.apiExecutorUrl}/execute-file-prompt`, {
+    fetch(`${this.executorUrl}/execute-file-prompt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileName, promptContent, fileContent: originalContent, provider, model, ...(systemInstructions ? { systemInstructions } : {}) })

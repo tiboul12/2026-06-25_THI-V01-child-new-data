@@ -1,8 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { environment } from '../../../../environments/environment';
-import { AuthService } from '@worganic/portail-core/data-access';
+import { AuthService, API_DATA_URL } from '@worganic/portail-core/data-access';
 
 export interface SearchResult {
   projectId: string;
@@ -22,17 +21,16 @@ export interface SearchResponse {
   truncated: boolean;
 }
 
-const API = environment.apiDataUrl;
-
 @Injectable({ providedIn: 'root' })
 export class SearchService {
+  private apiUrl = inject(API_DATA_URL);
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   search(q: string, projectId?: string): Promise<SearchResponse> {
     let params = new HttpParams().set('q', q);
     if (projectId) params = params.set('projectId', projectId);
     return firstValueFrom(
-      this.http.get<SearchResponse>(`${API}/api/search`, { headers: this.auth.getAuthHeaders(), params })
+      this.http.get<SearchResponse>(`${this.apiUrl}/api/search`, { headers: this.auth.getAuthHeaders(), params })
     );
   }
 }

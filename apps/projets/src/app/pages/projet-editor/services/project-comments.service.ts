@@ -1,8 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { environment } from '../../../../../environments/environment';
-import { AuthService } from '@worganic/portail-core/data-access';
+import { AuthService, API_DATA_URL } from '@worganic/portail-core/data-access';
 
 export interface ProjectComment {
   id: string;
@@ -15,10 +14,9 @@ export interface ProjectComment {
   updatedAt: string;
 }
 
-const API = environment.apiDataUrl;
-
 @Injectable({ providedIn: 'root' })
 export class ProjectCommentsService {
+  private apiUrl = inject(API_DATA_URL);
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   private h() { return this.auth.getAuthHeaders(); }
@@ -27,25 +25,25 @@ export class ProjectCommentsService {
     const params: any = {};
     if (folderId) params.folderId = folderId;
     return firstValueFrom(
-      this.http.get<{ comments: ProjectComment[] }>(`${API}/api/project-comments/${projectId}`, { headers: this.h(), params })
+      this.http.get<{ comments: ProjectComment[] }>(`${this.apiUrl}/api/project-comments/${projectId}`, { headers: this.h(), params })
     ).then(r => r.comments);
   }
 
   counts(projectId: string): Promise<Record<string, number>> {
     return firstValueFrom(
-      this.http.get<{ counts: Record<string, number> }>(`${API}/api/project-comments/${projectId}/counts`, { headers: this.h() })
+      this.http.get<{ counts: Record<string, number> }>(`${this.apiUrl}/api/project-comments/${projectId}/counts`, { headers: this.h() })
     ).then(r => r.counts);
   }
 
   add(projectId: string, folderId: string, text: string): Promise<ProjectComment> {
     return firstValueFrom(
-      this.http.post<{ comment: ProjectComment }>(`${API}/api/project-comments/${projectId}`, { folderId, text }, { headers: this.h() })
+      this.http.post<{ comment: ProjectComment }>(`${this.apiUrl}/api/project-comments/${projectId}`, { folderId, text }, { headers: this.h() })
     ).then(r => r.comment);
   }
 
   remove(projectId: string, commentId: string): Promise<void> {
     return firstValueFrom(
-      this.http.delete<{ success: boolean }>(`${API}/api/project-comments/${projectId}/${commentId}`, { headers: this.h() })
+      this.http.delete<{ success: boolean }>(`${this.apiUrl}/api/project-comments/${projectId}/${commentId}`, { headers: this.h() })
     ).then(() => undefined);
   }
 }

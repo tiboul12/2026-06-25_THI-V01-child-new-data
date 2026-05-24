@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { WorgHelpTriggerComponent } from '../../../shared/help/worg-help-trigger.component';
+import { WorgHelpTriggerComponent } from '@worganic/shared/ui';
 import { Router } from '@angular/router';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
 import { ProjectFilesService } from '@worganic/portail-core/data-access';
