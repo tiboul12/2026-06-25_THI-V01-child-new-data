@@ -58,6 +58,9 @@
           "buildTarget": "projets:build:development"
         }
       },
+      "options": {
+        "port": 4203
+      },
       "defaultConfiguration": "development"
     },
     "extract-i18n": {

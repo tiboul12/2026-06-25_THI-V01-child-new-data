@@ -1,1 +1,102 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
+:root {
+    --bg-primary: #f8f9fa;
+    --bg-surface: #ffffff;
+    --bg-surface-hover: #f1f3f5;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --border-color: #dee2e6;
+    --accent-color: #7b2cbf;
+    --accent-light: #c77dff;
+    --accent-lighter: #e0aaff;
+
+    --color-light-primary: 123 44 191;
+    --color-light-secondary: 157 78 221;
+    --color-light-accent: 199 125 255;
+    --color-light-background: 248 249 250;
+    --color-light-surface: 255 255 255;
+    --color-light-surface-hover: 241 243 245;
+    --color-light-text: 33 37 41;
+    --color-light-text-muted: 108 117 125;
+    --color-light-border: 222 226 230;
+
+    --tw-primary: 224 170 255;
+    --tw-secondary: 199 125 255;
+    --tw-accent: 157 78 221;
+    --tw-accent-dark: 123 44 191;
+    --tw-accent-darker: 90 24 154;
+    --tw-background: 10 10 15;
+    --tw-surface: 18 18 26;
+    --tw-surface-light: 26 26 37;
+
+    --btn-text-color: 255 255 255;
+    --card-radius: 12px;
+    --card-border-width: 1px;
+    --input-radius: 10px;
+}
+
+.dark {
+    --bg-primary: #0a0a0f;
+    --bg-surface: #12121a;
+    --bg-surface-hover: #1a1a25;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --accent-color: #9d4edd;
+}
+
+.pink {
+    --tw-primary: 244 114 182;
+    --tw-secondary: 249 168 212;
+    --tw-accent: 236 72 153;
+    --tw-accent-dark: 190 24 93;
+    --tw-accent-darker: 131 24 67;
+    --tw-background: 26 10 18;
+    --tw-surface: 42 16 32;
+    --tw-surface-light: 58 24 48;
+    --color-light-primary: 236 72 153;
+    --color-light-secondary: 244 114 182;
+    --color-light-accent: 249 168 212;
+    --color-light-background: 26 10 18;
+    --color-light-surface: 42 16 32;
+    --color-light-surface-hover: 58 24 48;
+    --color-light-text: 252 231 243;
+    --color-light-text-muted: 200 160 180;
+    --color-light-border: 120 30 70;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.neon-border {
+    border: var(--card-border-width, 1px) solid rgb(var(--tw-accent));
+    border-radius: var(--card-radius, 12px);
+    box-shadow: 0 0 10px rgb(var(--tw-accent) / 0.3);
+    transition: all 0.3s ease;
+}
+
+.neon-text {
+    color: rgb(var(--tw-primary));
+    transition: all 0.3s ease;
+}
+.dark .neon-text { text-shadow: 0 0 8px rgb(var(--tw-primary) / 0.6); }
+
+::-webkit-scrollbar { width: 6px; }
+.dark ::-webkit-scrollbar-track { background: #0a0a0f; }
+:root ::-webkit-scrollbar-track { background: #f8f9fa; }
+.dark ::-webkit-scrollbar-thumb { background: #5a189a; }
+:root ::-webkit-scrollbar-thumb { background: #c77dff; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
