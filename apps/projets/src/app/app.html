@@ -5,4 +5,10 @@
 <main [class]="layoutService.editorMode() ? 'contents' : 'pt-[120px] pb-[44px] min-h-screen bg-light-bg dark:bg-bg'">
   <router-outlet></router-outlet>
 </main>
-<app-footer [externalBaseUrl]="portailUrl" />
+<app-footer [externalBaseUrl]="portailUrl" [onOpenTools]="openToolsPanel.bind(this)" />
+
+<wo-ticket-widget />
+<wo-cahier-recette-widget />
+<wo-tchat-ia-widget />
+<wo-actions-widget />
+<wo-tools-panel #toolsPanel />
