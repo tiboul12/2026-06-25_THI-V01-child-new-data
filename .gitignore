@@ -87,3 +87,4 @@ data/projets/conversations/
 
 # Config GitHub (contient le PAT) — ne JAMAIS commiter
 data/config/github.json
+.angular

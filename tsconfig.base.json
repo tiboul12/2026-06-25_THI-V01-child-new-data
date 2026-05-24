@@ -1,0 +1,31 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@worganic/portail-core/auth": ["libs/portail-core/auth/src/index.ts"],
+      "@worganic/portail-core/data-access": [
+        "libs/portail-core/data-access/src/index.ts"
+      ],
+      "@worganic/shared/ui": ["libs/shared/ui/src/index.ts"],
+      "@worganic/shared/utils": ["libs/shared/utils/src/index.ts"],
+      "portail-core-auth": ["libs/portail-core/auth/src/index.ts"],
+      "portail-core-data-access": [
+        "libs/portail-core/data-access/src/index.ts"
+      ],
+      "shared-ui": ["libs/shared/ui/src/index.ts"],
+      "shared-utils": ["libs/shared/utils/src/index.ts"]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "run": {
+    "command": "nx build portail",
+    "startTime": "2026-05-24T11:32:09.364Z",
+    "endTime": "2026-05-24T11:32:09.420Z",
+    "inner": false
+  },
+  "tasks": [
+    {
+      "taskId": "portail:build:production",
+      "target": "build",
+      "projectName": "portail",
+      "hash": "7916035467813600362",
+      "startTime": "2026-05-24T11:32:09.382Z",
+      "endTime": "2026-05-24T11:32:09.403Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    }
+  ]
+}

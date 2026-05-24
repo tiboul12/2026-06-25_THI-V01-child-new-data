@@ -1,0 +1,961 @@
+{
+  "5787056337109562421": {
+    "apps/portail": {
+      "projectType": "application",
+      "sourceRoot": "apps/portail/src",
+      "targets": {
+        "build": {
+          "command": "ng build",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"build\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:build --help",
+              "example": {
+                "options": {
+                  "localize": true
+                }
+              }
+            }
+          },
+          "dependsOn": [
+            "^build"
+          ],
+          "outputs": [
+            "{projectRoot}/dist\\markdown-editor"
+          ],
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli"
+              ]
+            }
+          ],
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:build:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:build:development"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "command": "ng serve",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"serve\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:serve --help",
+              "example": {
+                "options": {
+                  "port": 4201
+                }
+              }
+            }
+          },
+          "continuous": true,
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:serve:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:serve:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "command": "ng extract-i18n",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"extract-i18n\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:extract-i18n --help",
+              "example": {
+                "options": {
+                  "format": "json"
+                }
+              }
+            }
+          }
+        },
+        "test": {
+          "command": "ng test",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"test\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:test --help",
+              "example": {
+                "options": {
+                  "codeCoverage": true
+                }
+              }
+            }
+          },
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli",
+                "karma"
+              ]
+            }
+          ],
+          "outputs": [
+            "{workspaceRoot}/apps/portail/coverage/{projectName}"
+          ]
+        }
+      }
+    }
+  },
+  "507273055459787928": {
+    "apps/portail": {
+      "projectType": "application",
+      "sourceRoot": "apps/portail/src",
+      "targets": {
+        "build": {
+          "command": "ng build",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"build\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:build --help",
+              "example": {
+                "options": {
+                  "localize": true
+                }
+              }
+            }
+          },
+          "dependsOn": [
+            "^build"
+          ],
+          "outputs": [
+            "{projectRoot}/dist\\markdown-editor"
+          ],
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli"
+              ]
+            }
+          ],
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:build:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:build:development"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "command": "ng serve",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"serve\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:serve --help",
+              "example": {
+                "options": {
+                  "port": 4201
+                }
+              }
+            }
+          },
+          "continuous": true,
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:serve:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:serve:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "command": "ng extract-i18n",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"extract-i18n\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:extract-i18n --help",
+              "example": {
+                "options": {
+                  "format": "json"
+                }
+              }
+            }
+          }
+        },
+        "test": {
+          "command": "ng test",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"test\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:test --help",
+              "example": {
+                "options": {
+                  "codeCoverage": true
+                }
+              }
+            }
+          },
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli",
+                "karma"
+              ]
+            }
+          ],
+          "outputs": [
+            "{workspaceRoot}/apps/portail/coverage/{projectName}"
+          ]
+        }
+      }
+    }
+  },
+  "4520638914500639693": {
+    "apps/portail": {
+      "projectType": "application",
+      "sourceRoot": "apps/portail/src",
+      "targets": {
+        "build": {
+          "command": "ng build",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"build\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:build --help",
+              "example": {
+                "options": {
+                  "localize": true
+                }
+              }
+            }
+          },
+          "dependsOn": [
+            "^build"
+          ],
+          "outputs": [
+            "{projectRoot}/dist\\markdown-editor"
+          ],
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli"
+              ]
+            }
+          ],
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:build:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:build:development"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "command": "ng serve",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"serve\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:serve --help",
+              "example": {
+                "options": {
+                  "port": 4201
+                }
+              }
+            }
+          },
+          "continuous": true,
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:serve:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:serve:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "command": "ng extract-i18n",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"extract-i18n\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:extract-i18n --help",
+              "example": {
+                "options": {
+                  "format": "json"
+                }
+              }
+            }
+          }
+        },
+        "test": {
+          "command": "ng test",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"test\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:test --help",
+              "example": {
+                "options": {
+                  "codeCoverage": true
+                }
+              }
+            }
+          },
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli",
+                "karma"
+              ]
+            }
+          ],
+          "outputs": [
+            "{workspaceRoot}/apps/portail/coverage/{projectName}"
+          ]
+        }
+      }
+    }
+  },
+  "13041608212939883472": {
+    "apps/portail": {
+      "projectType": "application",
+      "sourceRoot": "apps/portail/src",
+      "targets": {
+        "build": {
+          "command": "ng build",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"build\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:build --help",
+              "example": {
+                "options": {
+                  "localize": true
+                }
+              }
+            }
+          },
+          "dependsOn": [
+            "^build"
+          ],
+          "outputs": [
+            "{projectRoot}/dist\\markdown-editor"
+          ],
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli"
+              ]
+            }
+          ],
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:build:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:build:development"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "command": "ng serve",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"serve\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:serve --help",
+              "example": {
+                "options": {
+                  "port": 4201
+                }
+              }
+            }
+          },
+          "continuous": true,
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:serve:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:serve:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "command": "ng extract-i18n",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"extract-i18n\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:extract-i18n --help",
+              "example": {
+                "options": {
+                  "format": "json"
+                }
+              }
+            }
+          }
+        },
+        "test": {
+          "command": "ng test",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"test\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:test --help",
+              "example": {
+                "options": {
+                  "codeCoverage": true
+                }
+              }
+            }
+          },
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli",
+                "karma"
+              ]
+            }
+          ],
+          "outputs": [
+            "{workspaceRoot}/apps/portail/coverage/{projectName}"
+          ]
+        }
+      }
+    }
+  },
+  "8242694899536333304": {
+    "apps/portail": {
+      "projectType": "application",
+      "sourceRoot": "apps/portail/src",
+      "targets": {
+        "build": {
+          "command": "ng build",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"build\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:build --help",
+              "example": {
+                "options": {
+                  "localize": true
+                }
+              }
+            }
+          },
+          "dependsOn": [
+            "^build"
+          ],
+          "outputs": [
+            "{projectRoot}/dist\\markdown-editor"
+          ],
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli"
+              ]
+            }
+          ],
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:build:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:build:development"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "command": "ng serve",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"serve\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:serve --help",
+              "example": {
+                "options": {
+                  "port": 4201
+                }
+              }
+            }
+          },
+          "continuous": true,
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:serve:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:serve:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "command": "ng extract-i18n",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"extract-i18n\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:extract-i18n --help",
+              "example": {
+                "options": {
+                  "format": "json"
+                }
+              }
+            }
+          }
+        },
+        "test": {
+          "command": "ng test",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"test\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:test --help",
+              "example": {
+                "options": {
+                  "codeCoverage": true
+                }
+              }
+            }
+          },
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli",
+                "karma"
+              ]
+            }
+          ],
+          "outputs": [
+            "{workspaceRoot}/apps/portail/coverage/{projectName}"
+          ]
+        }
+      }
+    }
+  },
+  "17881275089054591604": {
+    "apps/portail": {
+      "projectType": "application",
+      "sourceRoot": "apps/portail/src",
+      "targets": {
+        "build": {
+          "command": "ng build",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"build\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:build --help",
+              "example": {
+                "options": {
+                  "localize": true
+                }
+              }
+            }
+          },
+          "dependsOn": [
+            "^build"
+          ],
+          "outputs": [
+            "{projectRoot}/dist\\markdown-editor"
+          ],
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli"
+              ]
+            }
+          ],
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:build:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:build:development"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "command": "ng serve",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"serve\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:serve --help",
+              "example": {
+                "options": {
+                  "port": 4201
+                }
+              }
+            }
+          },
+          "continuous": true,
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:serve:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:serve:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "command": "ng extract-i18n",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"extract-i18n\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:extract-i18n --help",
+              "example": {
+                "options": {
+                  "format": "json"
+                }
+              }
+            }
+          }
+        },
+        "test": {
+          "command": "ng test",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"test\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:test --help",
+              "example": {
+                "options": {
+                  "codeCoverage": true
+                }
+              }
+            }
+          },
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli",
+                "karma"
+              ]
+            }
+          ],
+          "outputs": [
+            "{workspaceRoot}/apps/portail/coverage/{projectName}"
+          ]
+        }
+      }
+    }
+  },
+  "17272059239977338258": {
+    "apps/portail": {
+      "projectType": "application",
+      "sourceRoot": "apps/portail/src",
+      "targets": {
+        "build": {
+          "command": "ng build",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"build\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:build --help",
+              "example": {
+                "options": {
+                  "localize": true
+                }
+              }
+            }
+          },
+          "dependsOn": [
+            "^build"
+          ],
+          "outputs": [
+            "{projectRoot}/dist\\markdown-editor"
+          ],
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli"
+              ]
+            }
+          ],
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:build:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:build:development"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "command": "ng serve",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"serve\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:serve --help",
+              "example": {
+                "options": {
+                  "port": 4201
+                }
+              }
+            }
+          },
+          "continuous": true,
+          "configurations": {
+            "production": {
+              "command": "ng run markdown-editor:serve:production"
+            },
+            "development": {
+              "command": "ng run markdown-editor:serve:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "command": "ng extract-i18n",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"extract-i18n\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:extract-i18n --help",
+              "example": {
+                "options": {
+                  "format": "json"
+                }
+              }
+            }
+          }
+        },
+        "test": {
+          "command": "ng test",
+          "options": {
+            "cwd": "apps/portail"
+          },
+          "metadata": {
+            "technologies": [
+              "angular"
+            ],
+            "description": "Run the \"test\" target for \"markdown-editor\".",
+            "help": {
+              "command": "npx ng run markdown-editor:test --help",
+              "example": {
+                "options": {
+                  "codeCoverage": true
+                }
+              }
+            }
+          },
+          "cache": true,
+          "inputs": [
+            "default",
+            "^default",
+            {
+              "externalDependencies": [
+                "@angular/cli",
+                "karma"
+              ]
+            }
+          ],
+          "outputs": [
+            "{workspaceRoot}/apps/portail/coverage/{projectName}"
+          ]
+        }
+      }
+    }
+  }
+}

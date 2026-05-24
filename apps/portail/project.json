@@ -1,0 +1,87 @@
+{
+  "name": "portail",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/portail/src",
+  "prefix": "app",
+  "tags": ["app:portail"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{workspaceRoot}/dist/apps/portail"],
+      "options": {
+        "outputPath": "dist/apps/portail",
+        "index": "apps/portail/src/index.html",
+        "browser": "apps/portail/src/main.ts",
+        "polyfills": ["zone.js"],
+        "tsConfig": "apps/portail/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/portail/public"
+          }
+        ],
+        "styles": ["apps/portail/src/styles.scss"],
+        "scripts": []
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "1MB",
+              "maximumError": "2MB"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "30kB",
+              "maximumError": "50kB"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@angular/build:dev-server",
+      "configurations": {
+        "production": {
+          "buildTarget": "portail:build:production"
+        },
+        "development": {
+          "buildTarget": "portail:build:development"
+        }
+      },
+      "options": {
+        "port": 4202
+      },
+      "defaultConfiguration": "development"
+    },
+    "extract-i18n": {
+      "executor": "@angular/build:extract-i18n"
+    },
+    "test": {
+      "executor": "@angular/build:karma",
+      "options": {
+        "polyfills": ["zone.js", "zone.js/testing"],
+        "tsConfig": "apps/portail/tsconfig.spec.json",
+        "inlineStyleLanguage": "scss",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/portail/public"
+          }
+        ],
+        "styles": ["apps/portail/src/styles.scss"],
+        "scripts": []
+      }
+    }
+  }
+}

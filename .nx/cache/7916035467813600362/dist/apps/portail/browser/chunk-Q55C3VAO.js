@@ -1,0 +1,1 @@
+var t={production:!1,apiDataUrl:"http://localhost:3001",apiExecutorUrl:"http://localhost:3002",apiAgentUrl:"http://localhost:3003",appName:"Frankenstein Child",appVersion:"1.0.0",copyrightYear:2026,copyrightHolder:"Frankenstein Child",copyrightTagline:"Propuls\xE9 par IA"};export{t as a};

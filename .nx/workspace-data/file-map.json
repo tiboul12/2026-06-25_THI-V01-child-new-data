@@ -1,0 +1,3255 @@
+{
+  "version": "6.0",
+  "nxVersion": "21.6.11",
+  "pathMappings": {
+    "@worganic/portail-core/auth": [
+      "libs/portail-core/auth/src/index.ts"
+    ],
+    "@worganic/portail-core/data-access": [
+      "libs/portail-core/data-access/src/index.ts"
+    ],
+    "@worganic/shared/ui": [
+      "libs/shared/ui/src/index.ts"
+    ],
+    "@worganic/shared/utils": [
+      "libs/shared/utils/src/index.ts"
+    ],
+    "portail-core-auth": [
+      "libs/portail-core/auth/src/index.ts"
+    ],
+    "portail-core-data-access": [
+      "libs/portail-core/data-access/src/index.ts"
+    ],
+    "shared-ui": [
+      "libs/shared/ui/src/index.ts"
+    ],
+    "shared-utils": [
+      "libs/shared/utils/src/index.ts"
+    ]
+  },
+  "nxJsonPlugins": [
+    {
+      "name": "@nx/angular/plugin",
+      "options": {
+        "buildTargetName": "build",
+        "serveTargetName": "serve",
+        "testTargetName": "test",
+        "lintTargetName": "lint",
+        "extractI18nTargetName": "extract-i18n"
+      }
+    },
+    {
+      "name": "@nx/playwright/plugin",
+      "options": {
+        "targetName": "e2e"
+      }
+    },
+    {
+      "name": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "eslint:lint"
+      }
+    }
+  ],
+  "fileMap": {
+    "nonProjectFiles": [
+      {
+        "file": "data/recette/categories.json",
+        "hash": "12357874846894740923"
+      },
+      {
+        "file": "docs/structure/admin-help.component.md",
+        "hash": "14591449414541603243"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V3_-_Blog_Lifestyle_&_Cuisine_(Chaleureux)/screen.png",
+        "hash": "11927475322718963715"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v1_-_Visionneuse_Exécutive_(Minimaliste)/screen.png",
+        "hash": "12724535501130926807"
+      },
+      {
+        "file": "eslint.config.mjs",
+        "hash": "10770449096712831357"
+      },
+      {
+        "file": "data/frankenstein-projects.json",
+        "hash": "6230372025600342830"
+      },
+      {
+        "file": "zone.png",
+        "hash": "11979076824728885789"
+      },
+      {
+        "file": "docs/structure/ticket-widget-doc.component.md",
+        "hash": "16143953209187206148"
+      },
+      {
+        "file": "data/origine/Da0-Prompt.md",
+        "hash": "15424489484265912192"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v1_-_Portfolio_d'Architecture_Minimaliste_(Clair)/infos.md",
+        "hash": "16597559281481005851"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v5_-_Lego/code.html",
+        "hash": "1154173889579670619"
+      },
+      {
+        "file": "jest.preset.js",
+        "hash": "9430166341120122740"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v1_-_Visionneuse_Exécutive_(Minimaliste)/code.html",
+        "hash": "13514710559697507355"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v4_-_Urban_Edge_(Brutaliste_Streetwear)/infos.md",
+        "hash": "13194986610343128952"
+      },
+      {
+        "file": "THI-V01",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V4_-_Blog_Design_Brutaliste_(Sombre)/screen.png",
+        "hash": "1079292054632744000"
+      },
+      {
+        "file": "data/origine/design/update_documents_mapping.js",
+        "hash": "9334597283028677580"
+      },
+      {
+        "file": "start-electron.ps1",
+        "hash": "15782442631367052739"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v2_-_Bibliothèque_Institutionnelle_(Moderne)/code.html",
+        "hash": "5133590863200726516"
+      },
+      {
+        "file": "data/mock-editor.md",
+        "hash": "14034254270982792383"
+      },
+      {
+        "file": "data/index.json",
+        "hash": "1806142174773601967"
+      },
+      {
+        "file": ".editorconfig",
+        "hash": "8037249353422744134"
+      },
+      {
+        "file": "data/origine/gestion-stocks-restaurantmd.md",
+        "hash": "7346436153924990172"
+      },
+      {
+        "file": "README-old-20260521.md",
+        "hash": "8271998820656020856"
+      },
+      {
+        "file": "data/origine/design/design_documents/31549-i_CPR-One-Pager_full.jpg",
+        "hash": "842896203736595469"
+      },
+      {
+        "file": "B0.41",
+        "hash": "4516122268078749367"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V2_-_Agence_Créative_(Sombre)/screen.png",
+        "hash": "13783865345152813320"
+      },
+      {
+        "file": "CLAUDE-old-20260521.md",
+        "hash": "1221621718964369058"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v4_-_Noir_neon_futuriste/infos.md",
+        "hash": "7324260957608867862"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v2_-_sacs_2/screen.png",
+        "hash": "12686087257769315225"
+      },
+      {
+        "file": "data/origine/prompt-creation-storyboard-custom.md",
+        "hash": "18022857019192646501"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v1_-_Horlogerie_de_Luxe_(Minimaliste_Clair)/code.html",
+        "hash": "16099502255939074907"
+      },
+      {
+        "file": "data/origine/Ea1-mockup.html",
+        "hash": "10607835566674587617"
+      },
+      {
+        "file": "docs/structure/app.component.md",
+        "hash": "1526508858219125142"
+      },
+      {
+        "file": "docs/structure/worg-help-drawer.component.md",
+        "hash": "15815590540144024558"
+      },
+      {
+        "file": "data/recette/variables.json",
+        "hash": "3181841300145171199"
+      },
+      {
+        "file": "docs/structure/documents.component.md",
+        "hash": "17884675348036203161"
+      },
+      {
+        "file": ".gitignore-old-20260516",
+        "hash": "15928140207669203646"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v2_-_Bleu_nuit_compact/infos.md",
+        "hash": "8192253546354346225"
+      },
+      {
+        "file": "data/origine/categories-ingredients.md",
+        "hash": "858082232573968449"
+      },
+      {
+        "file": "docs/structure/projet-update-banner.component.md",
+        "hash": "13310069302011979659"
+      },
+      {
+        "file": "docs/structure/projet-conversation.component.md",
+        "hash": "8944598301697672059"
+      },
+      {
+        "file": "docs/infos-synchro.md",
+        "hash": "18165595627862989523"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v4_-_Boutique_de_Montres_de_Luxe_(SombrePremium)/code.html",
+        "hash": "3159266347915174073"
+      },
+      {
+        "file": "data/config/users.json",
+        "hash": "9287182712703462472"
+      },
+      {
+        "file": "data/child/app.json",
+        "hash": "3309667515464011448"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v5_-_Marque_de_Cosmétiques_Éco-responsables_(NaturelClair)/code.html",
+        "hash": "7704673898880625182"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v3_-_Mode_Technique_Sombre_(High-Tech)/infos.md",
+        "hash": "6656791565636481796"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v2_-_Plateforme_de_Cybersécurité_(Sombre)/infos.md",
+        "hash": "1566814683790630715"
+      },
+      {
+        "file": "CLAUDE.md",
+        "hash": "1221621718964369058"
+      },
+      {
+        "file": "data/origine/design/Fa1-design.html",
+        "hash": "15588722055978733718"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v1_-_Design_1_tableau_de_bord/page-2_code.html",
+        "hash": "8931972964294486807"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v5_-_Marque_de_Cosmétiques_Éco-responsables_(NaturelClair)/screen.png",
+        "hash": "18249775050551476363"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v3_-_Boulangerie_Artisanale_(ChaudClair)/code.html",
+        "hash": "6801610386708799143"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v1_-_sacs/code.html",
+        "hash": "15780818575013746224"
+      },
+      {
+        "file": "data/screenshots/ticket-1773173645372.png",
+        "hash": "16131822559397162092"
+      },
+      {
+        "file": "data/tickets.json",
+        "hash": "4915175942123991984"
+      },
+      {
+        "file": "data/origine/demarches-administrativesmd.md",
+        "hash": "2746399123316559306"
+      },
+      {
+        "file": "data/origine/I-------",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "data/origine/design/design_documents/64591-i_Simple-One-Pager_full.jpg",
+        "hash": "4545047713210988184"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v2_-_Cyber_Gear_(Sombre_&_Néon)/code.html",
+        "hash": "13236268181003991908"
+      },
+      {
+        "file": ".prettierignore",
+        "hash": "5407418692668764289"
+      },
+      {
+        "file": "docs/structure/deployments.component.md",
+        "hash": "6832204774794051542"
+      },
+      {
+        "file": "docs/structure/config.component.md",
+        "hash": "2136875549953287124"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v3_-_Boulangerie_Artisanale_(ChaudClair)/screen.png",
+        "hash": "16453837129030685865"
+      },
+      {
+        "file": "docs/structure/wo-actions.component.md",
+        "hash": "17103396242735650639"
+      },
+      {
+        "file": "docs/structure/ticket-widget.component.md",
+        "hash": "6215522038993211497"
+      },
+      {
+        "file": "data/origine/Ja0-Prompt.md",
+        "hash": "12326999096732303787"
+      },
+      {
+        "file": "data/config/ai-models.json",
+        "hash": "825467630779762206"
+      },
+      {
+        "file": "docs/architecture-v2.md",
+        "hash": "8006118877399115526"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-002.md",
+        "hash": "2600707976036033595"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v1_-_Design_1_tableau_de_bord/code.html",
+        "hash": "7515539546671151532"
+      },
+      {
+        "file": "data/origine/Fa2-design-choix-exemple.md",
+        "hash": "3113346741014079694"
+      },
+      {
+        "file": "docs/structure/projet-statusbar.component.md",
+        "hash": "14846834841948207154"
+      },
+      {
+        "file": "docs/structure/projet-editor.component-old-20260521.md",
+        "hash": "17094444617632684218"
+      },
+      {
+        "file": "data/origine/Ia0-Prompt.md",
+        "hash": "7039140910956720698"
+      },
+      {
+        "file": "data/origine/prompt-extraction-exigences-custom.md",
+        "hash": "4267740107161578835"
+      },
+      {
+        "file": "data/origine/Ea0-Prompt.md",
+        "hash": "10976222609965214920"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V4_-_Luxe_&_Élégance_(Sombre)/screen.png",
+        "hash": "12576480633360789118"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V5_-_Éducation_Ludique_(Clair)/code.html",
+        "hash": "7023305314078192421"
+      },
+      {
+        "file": "data/origine/prompt-framework-p-a-r-s-custom.md",
+        "hash": "7200697183309306594"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V4_-_Blog_Design_Brutaliste_(Sombre)/infos.md",
+        "hash": "12796312055179710343"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V3_-_Bio_&_Écologique_(Clair)/infos.md",
+        "hash": "14501295143472906594"
+      },
+      {
+        "file": "docs/structure/cahier-recette-doc.component.md",
+        "hash": "14532325177090285521"
+      },
+      {
+        "file": "B0.40",
+        "hash": "17602622594799230471"
+      },
+      {
+        "file": "data/histoModif.json",
+        "hash": "9710362439787111880"
+      },
+      {
+        "file": "docs/structure/footer.component.md",
+        "hash": "3474539203648237815"
+      },
+      {
+        "file": "launch-frankenstein.bat",
+        "hash": "1457134985865302526"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v5_-_Atelier_Maison_(Sombre_&_Chaleureux)/code.html",
+        "hash": "1922558630900548126"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V1_-_Blog_Tech_Minimaliste_(Clair)/screen.png",
+        "hash": "17124350589134137135"
+      },
+      {
+        "file": "docs/structure/wo-ia-logs.component.md",
+        "hash": "8593619496377104528"
+      },
+      {
+        "file": "data/origine/analyse-besoins-promptmd.md",
+        "hash": "11561807166724176677"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v5_-_Atelier_Maison_(Sombre_&_Chaleureux)/infos.md",
+        "hash": "10283501423238286983"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v3_-_Boulangerie_Artisanale_(ChaudClair)/infos.md",
+        "hash": "8674005505905840071"
+      },
+      {
+        "file": "data/origine/normes-hygiene-restaurationmd.md",
+        "hash": "13568871406799327978"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v4_-_Grille_Éditoriale_(Style_Suisse)/screen.png",
+        "hash": "16133205000037852971"
+      },
+      {
+        "file": "data/origine/C-------",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "data/origine/design/design_documents/20815-i_Corporate-One-Pager_full.jpg",
+        "hash": "10081929744401935472"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V2_-_Blog_Gaming_Cyber_(Sombre)/screen.png",
+        "hash": "17244141157644345518"
+      },
+      {
+        "file": "data/origine/concept-restaurant-promptmd.md",
+        "hash": "1930876318119619511"
+      },
+      {
+        "file": "data/origine/substitutions-ingredients.md",
+        "hash": "816310273977908500"
+      },
+      {
+        "file": "CLAUDE-old-20260506.md",
+        "hash": "1677021758191001063"
+      },
+      {
+        "file": "data/origine/design/data.json",
+        "hash": "912038274600923770"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v5/infos.md",
+        "hash": "7499825395395473919"
+      },
+      {
+        "file": "docs/structure/wo-tchat-ia-widget.component.md",
+        "hash": "8330074681886670958"
+      },
+      {
+        "file": "data/origine/role.design.md",
+        "hash": "12271613626364201921"
+      },
+      {
+        "file": "B0.35",
+        "hash": "14867266299399529331"
+      },
+      {
+        "file": "data/origine/B-------",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": ".vscode/launch.json",
+        "hash": "17406702432687230417"
+      },
+      {
+        "file": "docs/Capture d’écran 2026-04-18 090819.png",
+        "hash": "18185019793167738918"
+      },
+      {
+        "file": "docs/structure/landing.component.md",
+        "hash": "16952444033120296390"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v5_-_Interface_Verre_Dépoli_(Moderne)/screen.png",
+        "hash": "3817574443357131057"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v1_-_Portfolio_d'Architecture_Minimaliste_(Clair)/screen.png",
+        "hash": "2906400656091211401"
+      },
+      {
+        "file": "docs/structure/editor.component.md",
+        "hash": "997918043187369601"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v5_-_Marque_de_Cosmétiques_Éco-responsables_(NaturelClair)/infos.md",
+        "hash": "9161695833491344538"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V1_-_Blog_Tech_Minimaliste_(Clair)/infos.md",
+        "hash": "4064607716180046127"
+      },
+      {
+        "file": "docs/structure/projet-sidebar.component.md",
+        "hash": "13211445827085001704"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v1_-_Design_1_tableau_de_bord/infos.md",
+        "hash": "7837285474161681383"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v2_-_Plateforme_de_Cybersécurité_(Sombre)/code.html",
+        "hash": "6293419179775846117"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v4_-_recettes/infos.md",
+        "hash": "14635161935214320195"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v1_-_sacs/infos.md",
+        "hash": "10104567694967767250"
+      },
+      {
+        "file": "data/origine/types-restaurationmd.md",
+        "hash": "12887746877289304908"
+      },
+      {
+        "file": "data/origine/PARS_exemple.md",
+        "hash": "7547494811883521196"
+      },
+      {
+        "file": "data/origine/Ha2-cahier-de-tests.html",
+        "hash": "4995996389141457550"
+      },
+      {
+        "file": ".gitignore-old-20260521",
+        "hash": "15928140207669203646"
+      },
+      {
+        "file": "docs/structure/projets.component.md",
+        "hash": "3037590297062295791"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v2_-_Plateforme_de_Cybersécurité_(Sombre)/screen.png",
+        "hash": "13686625205781413352"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V5_-_Blog_Finance_&_Actualités_(Classique)/code.html",
+        "hash": "9723429306288426381"
+      },
+      {
+        "file": "tsconfig.base.json",
+        "hash": "1679511063881797927"
+      },
+      {
+        "file": "old_install.bat",
+        "hash": "9893286668631551575"
+      },
+      {
+        "file": "data/origine/Ca0-Prompt.md",
+        "hash": "17166854750935130055"
+      },
+      {
+        "file": "sync-backup-helper.ps1",
+        "hash": "6160328828514359605"
+      },
+      {
+        "file": "data/config/conf.json",
+        "hash": "818376154649454091"
+      },
+      {
+        "file": "data/origine/criteres-maison-hotemd.md",
+        "hash": "16994694345702372936"
+      },
+      {
+        "file": "CLAUDE-old-20260516.md",
+        "hash": "4978805224538830988"
+      },
+      {
+        "file": ".vscode/extensions.json",
+        "hash": "17734840601270282222"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V5_-_Blog_Finance_&_Actualités_(Classique)/infos.md",
+        "hash": "1614272162934362630"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V1_-_SaaS_Moderne_(Clair)/screen.png",
+        "hash": "17095443160156335262"
+      },
+      {
+        "file": "docs/structure/worg-help-trigger.component.md",
+        "hash": "15964512240728600097"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V2_-_Blog_Gaming_Cyber_(Sombre)/infos.md",
+        "hash": "7215023495657788735"
+      },
+      {
+        "file": "tests/read_me.txt",
+        "hash": "15637043970142499228"
+      },
+      {
+        "file": "data/recette/campaigns.json",
+        "hash": "17657653462264521136"
+      },
+      {
+        "file": "data/origine/analyse-concurrentiellemd.md",
+        "hash": "15284165310729422410"
+      },
+      {
+        "file": "data/origine/Da3-STORYBOARDS-SYNTHESE.md",
+        "hash": "10449147209810763214"
+      },
+      {
+        "file": "data/base-propagation.json",
+        "hash": "12427217327950832380"
+      },
+      {
+        "file": "version.json",
+        "hash": "17267162981288947402"
+      },
+      {
+        "file": "data/01-PROMPT_INITIAL-prompt.md",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "data/origine/standards-chambres-hotesmd.md",
+        "hash": "15934502613737598473"
+      },
+      {
+        "file": "nx.json",
+        "hash": "10371406371262613969"
+      },
+      {
+        "file": "docs/structure/action-report-modal.component.md",
+        "hash": "8270002369240293388"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v2_-_Cyber_Gear_(Sombre_&_Néon)/screen.png",
+        "hash": "11182114140812830627"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v4_-_Grille_Éditoriale_(Style_Suisse)/code.html",
+        "hash": "5949816032264378136"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v2_-_Bleu_nuit_compact/screen.png",
+        "hash": "7795392455647136234"
+      },
+      {
+        "file": "docs/infos-action-historique.md",
+        "hash": "3038432447261174334"
+      },
+      {
+        "file": "jest.config.ts",
+        "hash": "6870352021923392442"
+      },
+      {
+        "file": "data/origine/extraction_exigences-Redaction_et_Qualite_des_Exigences_Fonctionnelles.md",
+        "hash": "4083831629076553377"
+      },
+      {
+        "file": "data/origine/Da1-storyboard.html",
+        "hash": "4865310692594429775"
+      },
+      {
+        "file": "data/origine/design/update_standalone.js",
+        "hash": "2949317177129127404"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v4_-_Noir_neon_futuriste/screen.png",
+        "hash": "12714669688598261662"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-001.md",
+        "hash": "15237794787693247890"
+      },
+      {
+        "file": "data/origine/role-product-owner--PO-.md",
+        "hash": "16636957310743686292"
+      },
+      {
+        "file": "data/origine/details-recette-prompt.md",
+        "hash": "12107401385170334691"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v2_-_sacs_2/infos.md",
+        "hash": "6293887163381241636"
+      },
+      {
+        "file": "data/origine/Ga0-Prompt.md",
+        "hash": "7525927126372799844"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v5_-_Lego/infos.md",
+        "hash": "15501258137537732502"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V2_-_Agence_Créative_(Sombre)/code.html",
+        "hash": "266640542767222242"
+      },
+      {
+        "file": "data/origine/design/design_documents/53284-i_Professional-One-Pager_full.jpg",
+        "hash": "5204279693254967767"
+      },
+      {
+        "file": "data/origine/strategie-marketing-promptmd.md",
+        "hash": "5844971498334942235"
+      },
+      {
+        "file": "data/origine/F-------",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "data/child/theme.json",
+        "hash": "11485178208282281365"
+      },
+      {
+        "file": "data/origine/criteres-localisationmd.md",
+        "hash": "1121691428795468128"
+      },
+      {
+        "file": "data/origine/business-plan-promptmd.md",
+        "hash": "6331049576942595662"
+      },
+      {
+        "file": "tests/test-zone-projet.js",
+        "hash": "2893952525068094348"
+      },
+      {
+        "file": "data/origine/conception-espaces-promptmd.md",
+        "hash": "6903031951301506505"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v1_-_Visionneuse_Exécutive_(Minimaliste)/infos.md",
+        "hash": "3612630574443356972"
+      },
+      {
+        "file": "docs/structure/wo-tools-admin.component.md",
+        "hash": "9318036926919565336"
+      },
+      {
+        "file": "docs/structure/header.component.md",
+        "hash": "14007136751368175351"
+      },
+      {
+        "file": "tests/run-tests.bat",
+        "hash": "16901954110360445059"
+      },
+      {
+        "file": "docs/structure/projet-editor.component.md",
+        "hash": "17094444617632684218"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v2_-_sacs_2/code.html",
+        "hash": "5180828604534519336"
+      },
+      {
+        "file": "data/origine/etude-localisation-promptmd.md",
+        "hash": "6810433178951947623"
+      },
+      {
+        "file": ".prettierrc",
+        "hash": "16267754514737964994"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v2_-_Bibliothèque_Institutionnelle_(Moderne)/screen.png",
+        "hash": "16211625751137292423"
+      },
+      {
+        "file": "B0.39",
+        "hash": "736627821807367616"
+      },
+      {
+        "file": "data/child/landing.json",
+        "hash": "4741287015723071689"
+      },
+      {
+        "file": "data/origine/prompt-prompt-initial-custom.md",
+        "hash": "11095900746554490804"
+      },
+      {
+        "file": "B0.33",
+        "hash": "1039182344485515240"
+      },
+      {
+        "file": "docs/structure/home.component.md",
+        "hash": "10284372010826738070"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V3_-_Blog_Lifestyle_&_Cuisine_(Chaleureux)/infos.md",
+        "hash": "1261313031530390087"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V4_-_Luxe_&_Élégance_(Sombre)/code.html",
+        "hash": "3124999195097410433"
+      },
+      {
+        "file": "docs/structure/projet-editor.component-old-20260516.md",
+        "hash": "17094444617632684218"
+      },
+      {
+        "file": "data/origine/prompt-ordre-execution-custom.md",
+        "hash": "2432564483245098189"
+      },
+      {
+        "file": ".vscode/tasks.json",
+        "hash": "10093397977228577162"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v3_-_Mode_Technique_Sombre_(High-Tech)/code.html",
+        "hash": "17777381925346617218"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V4_-_Blog_Design_Brutaliste_(Sombre)/code.html",
+        "hash": "13341300214603886334"
+      },
+      {
+        "file": "data/origine/design/add_codes.js",
+        "hash": "3929924887401474002"
+      },
+      {
+        "file": "data/child/custom.css",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "docs/structure/admin-deployments.component.md",
+        "hash": "9283781855183536845"
+      },
+      {
+        "file": "B0.36",
+        "hash": "8787735361520640122"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v3_-_voitures/infos.md",
+        "hash": "11186110885603613189"
+      },
+      {
+        "file": "data/origine/J-------",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v4_-_Urban_Edge_(Brutaliste_Streetwear)/code.html",
+        "hash": "12569827993704853339"
+      },
+      {
+        "file": "data/origine/generation-recettes-promptmd.md",
+        "hash": "14299152953465779615"
+      },
+      {
+        "file": "data/origine/design/codes.json",
+        "hash": "12225516506860888489"
+      },
+      {
+        "file": "data/origine/design/rename_documents.js",
+        "hash": "17416869448179666926"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v4_-_Noir_neon_futuriste/code.html",
+        "hash": "16291495894301705258"
+      },
+      {
+        "file": "docs/structure/wo-tools-panel.component.md",
+        "hash": "8664353060709348632"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V3_-_Bio_&_Écologique_(Clair)/screen.png",
+        "hash": "13718392905363329738"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v5_-_Interface_Verre_Dépoli_(Moderne)/code.html",
+        "hash": "10464478234982015194"
+      },
+      {
+        "file": "data/origine/role-product-manager.md",
+        "hash": "8259505864258614861"
+      },
+      {
+        "file": "data/origine/selection-recette.html",
+        "hash": "10441864197401935006"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v3_-_Terra_Botanica_(Naturel_&_Organique)/screen.png",
+        "hash": "1975936195331182874"
+      },
+      {
+        "file": "data/origine/design/design_documents/link docs.url",
+        "hash": "10736219089684280992"
+      },
+      {
+        "file": "B0.38",
+        "hash": "6106074390203803843"
+      },
+      {
+        "file": "docs/structure/admin.component.md",
+        "hash": "17231307307855052895"
+      },
+      {
+        "file": "data/origine/design/design_documents/42076-i_Onboarding-One-Pager_full.jpg",
+        "hash": "2117001064473138639"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-007.md",
+        "hash": "10353525447066094321"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v1_-_Portfolio_d'Architecture_Minimaliste_(Clair)/code.html",
+        "hash": "2965514505266509407"
+      },
+      {
+        "file": "data/origine/types-recettesmd.md",
+        "hash": "15828727627022832092"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-010.md",
+        "hash": "5284194549243678475"
+      },
+      {
+        "file": "README-old-20260506.md",
+        "hash": "1422934427525955094"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V5_-_Éducation_Ludique_(Clair)/screen.png",
+        "hash": "17286256087292888477"
+      },
+      {
+        "file": "data/origine/principes-cuisinemd.md",
+        "hash": "10798517853492292028"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V1_-_Blog_Tech_Minimaliste_(Clair)/code.html",
+        "hash": "18202300453234266011"
+      },
+      {
+        "file": "docs/structure/wo-actions-widget.component.md",
+        "hash": "45373089888624180"
+      },
+      {
+        "file": "data/origine/canaux-distribution-tourismemd.md",
+        "hash": "12512422028977141160"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v4_-_Urban_Edge_(Brutaliste_Streetwear)/screen.png",
+        "hash": "14774507246957670165"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v3_-_Mode_Technique_Sombre_(High-Tech)/screen.png",
+        "hash": "1540708239989616583"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v4_-_recettes/screen.png",
+        "hash": "8540734133819128448"
+      },
+      {
+        "file": "data/base-propagation-old-20260521.json",
+        "hash": "12379097744964114418"
+      },
+      {
+        "file": "data/origine/H-------",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "data/origine/Ha1-cahier-de-tests.md",
+        "hash": "13191241836259981157"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-003.md",
+        "hash": "7357416029791921303"
+      },
+      {
+        "file": "data/child/nav.json",
+        "hash": "1436437229653455072"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v5/code.html",
+        "hash": "12137360117523133204"
+      },
+      {
+        "file": "data/origine/role-orchestrateur-de-processus-d-analyse.md",
+        "hash": "2145305820418645044"
+      },
+      {
+        "file": "docs/structure/admin-tools.component.md",
+        "hash": "6208039741611216653"
+      },
+      {
+        "file": "data/origine/Da2-infographie-parcours-utilisateur.html",
+        "hash": "12959432309057188801"
+      },
+      {
+        "file": "THI-2026-04-gestion-fichiers-v2.md",
+        "hash": "9441838009062300690"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v3_-_Terra_Botanica_(Naturel_&_Organique)/infos.md",
+        "hash": "10158703845308036597"
+      },
+      {
+        "file": "data/origine/Ha0-Prompt.md",
+        "hash": "9215182638413229542"
+      },
+      {
+        "file": "docs/structure/cahier-recette.component.md",
+        "hash": "10113225098589895071"
+      },
+      {
+        "file": "docs/Capture interface vue general.png",
+        "hash": "5458473422922400446"
+      },
+      {
+        "file": "data/origine/structure-dossier-projetmd.md",
+        "hash": "602620697880523159"
+      },
+      {
+        "file": "data/origine/analyse-ingredients-promptmd.md",
+        "hash": "7133458531070096021"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v4_-_Grille_Éditoriale_(Style_Suisse)/infos.md",
+        "hash": "2718099998150970140"
+      },
+      {
+        "file": "data/origine/styles-storyboard.css",
+        "hash": "4376566272352330954"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v2_-_Bibliothèque_Institutionnelle_(Moderne)/infos.md",
+        "hash": "17177855047536379809"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v5_-_Atelier_Maison_(Sombre_&_Chaleureux)/screen.png",
+        "hash": "11487519004838172272"
+      },
+      {
+        "file": "start-dev.js",
+        "hash": "365154027459747166"
+      },
+      {
+        "file": "REGLES_GESTION_PROJET.md",
+        "hash": "10570472200597851669"
+      },
+      {
+        "file": "docs/structure/wo-history.component.md",
+        "hash": "3667358490320019871"
+      },
+      {
+        "file": "package.json",
+        "hash": "7578922261466887141"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v4_-_Boutique_de_Montres_de_Luxe_(SombrePremium)/infos.md",
+        "hash": "983186818087062739"
+      },
+      {
+        "file": "data/origine/Ha3-cahier-de-tests-exemple.json",
+        "hash": "17988376835044726491"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V1_-_SaaS_Moderne_(Clair)/infos.md",
+        "hash": "7887560696597479721"
+      },
+      {
+        "file": "data/base-propagation-old-20260506.json",
+        "hash": "16624866642483539402"
+      },
+      {
+        "file": "data/origine/role-project-manager--pm-.md",
+        "hash": "6406770050922305824"
+      },
+      {
+        "file": "data/recette/templates.json",
+        "hash": "3424267921723392897"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v3_-_Gris_epure_luxueux/screen.png",
+        "hash": "5454490469051095244"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v1_-_Horlogerie_de_Luxe_(Minimaliste_Clair)/screen.png",
+        "hash": "3526837818873805398"
+      },
+      {
+        "file": "data/origine/design/design_documents/10042-i_Business-Cafe-One-Pager_full.jpg",
+        "hash": "6673691931266752821"
+      },
+      {
+        "file": "data/origine/G-------",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "data/origine/modele-financier-maison-hotemd.md",
+        "hash": "8692451347937371376"
+      },
+      {
+        "file": "launch-frankenstein sans IA.bat",
+        "hash": "7745254852753905341"
+      },
+      {
+        "file": "docs/Capture d’écran 2026-04-18 092009.png",
+        "hash": "12990857734084591653"
+      },
+      {
+        "file": "data/origine/design/.claude/settings.local.json",
+        "hash": "890661689253804991"
+      },
+      {
+        "file": "data/origine/design/design_documents/75803-i_Tech-One-Pager_full.jpg",
+        "hash": "10319910963273558530"
+      },
+      {
+        "file": "data/origine/reglementation-territorialemd.md",
+        "hash": "7095342051373723955"
+      },
+      {
+        "file": "docs/structure/tchat-ia.component.md",
+        "hash": "790847249473009112"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v1_-_sacs/screen.png",
+        "hash": "7308524019910397037"
+      },
+      {
+        "file": "data/origine/tarification-hebergementmd.md",
+        "hash": "142793138471534682"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-005.md",
+        "hash": "323233300903521081"
+      },
+      {
+        "file": "data/recette/runs.json",
+        "hash": "14591991936354867997"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v1_-_Horlogerie_de_Luxe_(Minimaliste_Clair)/infos.md",
+        "hash": "9193236046488634637"
+      },
+      {
+        "file": "docs/comm.txt",
+        "hash": "711509383541653626"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v4_-_recettes/code.html",
+        "hash": "4843509203739088787"
+      },
+      {
+        "file": "docs/structure/tchat-ia-doc.component.md",
+        "hash": "4440937120109306882"
+      },
+      {
+        "file": ".gitignore-old-20260506",
+        "hash": "9132643381343769550"
+      },
+      {
+        "file": "docs/notes.txt",
+        "hash": "2109773675130681827"
+      },
+      {
+        "file": "data/child/home.json",
+        "hash": "13781154265767988181"
+      },
+      {
+        "file": "docs/structure/markdown-editor.component.md",
+        "hash": "15098927083143417254"
+      },
+      {
+        "file": "data/origine/accessibilite-normesmd.md",
+        "hash": "15515212383650406016"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V2_-_Agence_Créative_(Sombre)/infos.md",
+        "hash": "16752693469170190711"
+      },
+      {
+        "file": "data/origine/plan-operationnel-promptmd.md",
+        "hash": "1089449732478807497"
+      },
+      {
+        "file": "data/recette/tests.json",
+        "hash": "5923973727979605776"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-008.md",
+        "hash": "8966471107453299779"
+      },
+      {
+        "file": "data/origine/prompt-design-selection-custom.md",
+        "hash": "5097983811553493140"
+      },
+      {
+        "file": "data/origine/prompt-cahier-de-tests-custom.md",
+        "hash": "4841519131501994302"
+      },
+      {
+        "file": "data/origine/role-script-analytiqye.md",
+        "hash": "15429315570154588776"
+      },
+      {
+        "file": ".gitattributes",
+        "hash": "17136357228397186202"
+      },
+      {
+        "file": "docs/USAGE.md",
+        "hash": "11317004818142416451"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v3_-_Gris_epure_luxueux/code.html",
+        "hash": "6542326439639726170"
+      },
+      {
+        "file": ".gitignore",
+        "hash": "15096911053624069716"
+      },
+      {
+        "file": "data/origine/planning-realisation-promptmd.md",
+        "hash": "5845572137493705140"
+      },
+      {
+        "file": "docs/structure/admin-users.component.md",
+        "hash": "8893416845426838185"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v3_-_Terra_Botanica_(Naturel_&_Organique)/code.html",
+        "hash": "17072293904967990682"
+      },
+      {
+        "file": "data/origine/synthese-projet-promptmd.md",
+        "hash": "8729891022561433635"
+      },
+      {
+        "file": "README-old-20260516.md",
+        "hash": "8271998820656020856"
+      },
+      {
+        "file": "data/screenshots/ticket-1773521975779.png",
+        "hash": "6595698197080217280"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V5_-_Blog_Finance_&_Actualités_(Classique)/screen.png",
+        "hash": "15799275817545364701"
+      },
+      {
+        "file": "tests/TESTS_PROJET.md",
+        "hash": "17919684165824279171"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V3_-_Blog_Lifestyle_&_Cuisine_(Chaleureux)/code.html",
+        "hash": "9693472581689095738"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V5_-_Éducation_Ludique_(Clair)/infos.md",
+        "hash": "2491733910341358136"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-009.md",
+        "hash": "10125762378140013616"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v5_-_Lego/screen.png",
+        "hash": "17411275204728186201"
+      },
+      {
+        "file": "data/screenshots/ticket-1772929297525.png",
+        "hash": "389953743222396541"
+      },
+      {
+        "file": "data/origine/etapes-creation-maison-hotemd.md",
+        "hash": "4241475076323812834"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v3_-_voitures/screen.png",
+        "hash": "7699693464613171995"
+      },
+      {
+        "file": "docs/structure/projet-toolbar.component.md",
+        "hash": "15025893467474525994"
+      },
+      {
+        "file": ".claude/settings.local.json",
+        "hash": "8108273725119257401"
+      },
+      {
+        "file": "data/origine/techniques-culinaires.md",
+        "hash": "10979239886300067487"
+      },
+      {
+        "file": "data/config/sessions.json",
+        "hash": "10896530185471537645"
+      },
+      {
+        "file": "data/origine/suggestions-prompt.md",
+        "hash": "1638817215818969726"
+      },
+      {
+        "file": "data/origine/Fa0-Prompt.md",
+        "hash": "7525927126372799844"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v2_-_Bleu_nuit_compact/code.html",
+        "hash": "13917145505840231531"
+      },
+      {
+        "file": "data/origine/design/design_sites/C-ecommerce/v2_-_Cyber_Gear_(Sombre_&_Néon)/infos.md",
+        "hash": "10409304950875828896"
+      },
+      {
+        "file": "data/origine/sources-financementmd.md",
+        "hash": "1193951277380917274"
+      },
+      {
+        "file": "data/origine/Aa0-prompt.md",
+        "hash": "8453327721718403962"
+      },
+      {
+        "file": "data/origine/role-scrum-master.md",
+        "hash": "771794596314538291"
+      },
+      {
+        "file": "data/origine/design/generate_data.js",
+        "hash": "14848472994847409808"
+      },
+      {
+        "file": "data/base-propagation-old-20260516.json",
+        "hash": "16624866642483539402"
+      },
+      {
+        "file": "data/origine/design/design_sites/G-Gestion_docs/v5_-_Interface_Verre_Dépoli_(Moderne)/infos.md",
+        "hash": "16134792908235376813"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V1_-_SaaS_Moderne_(Clair)/code.html",
+        "hash": "10484123676554099890"
+      },
+      {
+        "file": "docs/structure/nav.component.md",
+        "hash": "489363572792072156"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-006.md",
+        "hash": "17609823609154070262"
+      },
+      {
+        "file": "data/origine/design/design_sites/B-portfolio/v3_-_voitures/code.html",
+        "hash": "17834054383608800201"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v3_-_Gris_epure_luxueux/infos.md",
+        "hash": "16220904898681002774"
+      },
+      {
+        "file": "data/prompts/agent-pm.md",
+        "hash": "5131284731450589039"
+      },
+      {
+        "file": "data/origine/Fa1-design_exemple.html",
+        "hash": "14572685909947640363"
+      },
+      {
+        "file": "data/prompts/prompt_EF-SYS-004.md",
+        "hash": "9422034969827355847"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V4_-_Luxe_&_Élégance_(Sombre)/infos.md",
+        "hash": "10583214096734328157"
+      },
+      {
+        "file": "docs/structure/admin-theme.component.md",
+        "hash": "11998173906571352360"
+      },
+      {
+        "file": "data/origine/design/design_sites/E-Site_Vitrine_(Corporate)/v4_-_Boutique_de_Montres_de_Luxe_(SombrePremium)/screen.png",
+        "hash": "2644728916280896425"
+      },
+      {
+        "file": "data/origine/Prompt-extraction_exigences.md",
+        "hash": "16650028843324419156"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v1_-_Design_1_tableau_de_bord/screen.png",
+        "hash": "16877005850789610942"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v5/screen.png",
+        "hash": "2741897688980498629"
+      },
+      {
+        "file": "docs/structure/projet-editor-zone.component.md",
+        "hash": "1275720525190717531"
+      },
+      {
+        "file": "data/origine/design/design_sites/H-landingpage/V3_-_Bio_&_Écologique_(Clair)/code.html",
+        "hash": "10487404409434616702"
+      },
+      {
+        "file": "data/origine/design/design_sites/A-tableau_de_bord/v1_-_Design_1_tableau_de_bord/page-2_screen.png",
+        "hash": "15769714499363782133"
+      },
+      {
+        "file": ".gemini/settings.json",
+        "hash": "7773837189994706952"
+      },
+      {
+        "file": "docs/structure/wo-action-history.component.md",
+        "hash": "13451856270346603053"
+      },
+      {
+        "file": "README.md",
+        "hash": "8271998820656020856"
+      },
+      {
+        "file": "data/config/github.json.example",
+        "hash": "14202954208720955537"
+      },
+      {
+        "file": "docs/structure/cahier-recette-widget.component.md",
+        "hash": "682400451836743439"
+      },
+      {
+        "file": "data/origine/D-------",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "sync-from-base.bat",
+        "hash": "5292590946365514739"
+      },
+      {
+        "file": "data/origine/design/design_sites/F-Blog/V2_-_Blog_Gaming_Cyber_(Sombre)/code.html",
+        "hash": "10588314293969930585"
+      },
+      {
+        "file": "data/origine/E-------",
+        "hash": "3244421341483603138"
+      }
+    ],
+    "projectFileMap": {
+      "portail-core-data-access": [
+        {
+          "file": "libs/portail-core/data-access/README.md",
+          "hash": "6770738916928830820"
+        },
+        {
+          "file": "libs/portail-core/data-access/eslint.config.mjs",
+          "hash": "6219511726200060807"
+        },
+        {
+          "file": "libs/portail-core/data-access/jest.config.ts",
+          "hash": "6902846422831955649"
+        },
+        {
+          "file": "libs/portail-core/data-access/project.json",
+          "hash": "10952897883805028809"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/index.ts",
+          "hash": "18005329823194931017"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/admin-tabs-registry.service.ts",
+          "hash": "674536043617694900"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/agent.service.ts",
+          "hash": "15650818222304016288"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/api.service.ts",
+          "hash": "1868905864426679619"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/app-config.service.ts",
+          "hash": "3924959767182629345"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/auth.service.ts",
+          "hash": "11171594588289270507"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/config.service.ts",
+          "hash": "10675111009187797853"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/conversation.service.ts",
+          "hash": "5176308177301943073"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/db-status.service.ts",
+          "hash": "6631271413963749603"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/layout.service.ts",
+          "hash": "6320019890776006053"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/portail-core-data-access/portail-core-data-access.css",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/portail-core-data-access/portail-core-data-access.html",
+          "hash": "3742599646950334672"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/portail-core-data-access/portail-core-data-access.spec.ts",
+          "hash": "5413166033783392012"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/portail-core-data-access/portail-core-data-access.ts",
+          "hash": "17125310271301491431"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/project-files.service.ts",
+          "hash": "7309468741519115226"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/project.service.ts",
+          "hash": "14704558790099889494"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+          "hash": "7621230121649458736"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/theme.service.ts",
+          "hash": "18153031669791737222"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/tokens.ts",
+          "hash": "15203298117358832118"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/lib/wo-action-history.service.ts",
+          "hash": "15752520511683147524"
+        },
+        {
+          "file": "libs/portail-core/data-access/src/test-setup.ts",
+          "hash": "1917999429567095215"
+        },
+        {
+          "file": "libs/portail-core/data-access/tsconfig.json",
+          "hash": "914917973328039364"
+        },
+        {
+          "file": "libs/portail-core/data-access/tsconfig.lib.json",
+          "hash": "6020606002228403423"
+        },
+        {
+          "file": "libs/portail-core/data-access/tsconfig.spec.json",
+          "hash": "13282830509091205533"
+        }
+      ],
+      "worganic-electron": [
+        {
+          "file": "electron/executor/server-executor-old-20260521.js",
+          "hash": "87741040529919144"
+        },
+        {
+          "file": "electron/executor/server-executor.js",
+          "hash": "4091001223587102511"
+        },
+        {
+          "file": "electron/main.js",
+          "hash": "8376989206420099580"
+        },
+        {
+          "file": "electron/package-lock.json",
+          "hash": "6158129121512726769"
+        },
+        {
+          "file": "electron/package.json",
+          "hash": "11275200275532467991"
+        }
+      ],
+      "projets-e2e": [
+        {
+          "file": "apps/projets-e2e/eslint.config.mjs",
+          "hash": "1172734138943286526"
+        },
+        {
+          "file": "apps/projets-e2e/playwright.config.ts",
+          "hash": "7776417110501706949"
+        },
+        {
+          "file": "apps/projets-e2e/project.json",
+          "hash": "5642517139026223199"
+        },
+        {
+          "file": "apps/projets-e2e/src/example.spec.ts",
+          "hash": "16019101014373124625"
+        },
+        {
+          "file": "apps/projets-e2e/tsconfig.json",
+          "hash": "15726545290547512047"
+        }
+      ],
+      "projets": [
+        {
+          "file": "apps/projets/eslint.config.mjs",
+          "hash": "16756400681144203361"
+        },
+        {
+          "file": "apps/projets/jest.config.ts",
+          "hash": "14434175431380276118"
+        },
+        {
+          "file": "apps/projets/project.json",
+          "hash": "18153924825048387619"
+        },
+        {
+          "file": "apps/projets/public/favicon.ico",
+          "hash": "9303420814833116677"
+        },
+        {
+          "file": "apps/projets/src/app/app.config.ts",
+          "hash": "4515289115773032281"
+        },
+        {
+          "file": "apps/projets/src/app/app.html",
+          "hash": "11987652264972370457"
+        },
+        {
+          "file": "apps/projets/src/app/app.routes.ts",
+          "hash": "6185150965714414910"
+        },
+        {
+          "file": "apps/projets/src/app/app.scss",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/projets/src/app/app.spec.ts",
+          "hash": "2955429242923971434"
+        },
+        {
+          "file": "apps/projets/src/app/app.ts",
+          "hash": "12687543272284663429"
+        },
+        {
+          "file": "apps/projets/src/app/nx-welcome.ts",
+          "hash": "17026511428685820985"
+        },
+        {
+          "file": "apps/projets/src/index.html",
+          "hash": "7005033560864190475"
+        },
+        {
+          "file": "apps/projets/src/main.ts",
+          "hash": "3314327030169821486"
+        },
+        {
+          "file": "apps/projets/src/styles.scss",
+          "hash": "5195668842064076916"
+        },
+        {
+          "file": "apps/projets/src/test-setup.ts",
+          "hash": "1917999429567095215"
+        },
+        {
+          "file": "apps/projets/tsconfig.app.json",
+          "hash": "10974451356376189872"
+        },
+        {
+          "file": "apps/projets/tsconfig.json",
+          "hash": "16947299719819898322"
+        },
+        {
+          "file": "apps/projets/tsconfig.spec.json",
+          "hash": "5331518322626158299"
+        }
+      ],
+      "worganic-server": [
+        {
+          "file": "server/db.js",
+          "hash": "441964611846874979"
+        },
+        {
+          "file": "server/deploy-log.js",
+          "hash": "16661100847191661228"
+        },
+        {
+          "file": "server/init-db-old-20260506.js",
+          "hash": "286631383927590041"
+        },
+        {
+          "file": "server/init-db-old-20260516.js",
+          "hash": "8601743186582702023"
+        },
+        {
+          "file": "server/init-db-old-20260521.js",
+          "hash": "8601743186582702023"
+        },
+        {
+          "file": "server/init-db.js",
+          "hash": "8601743186582702023"
+        },
+        {
+          "file": "server/migrate-projets-to-git.js",
+          "hash": "14627818807397985036"
+        },
+        {
+          "file": "server/modules/agent-state.js",
+          "hash": "9736631597334322964"
+        },
+        {
+          "file": "server/modules/ftp-service.js",
+          "hash": "17019609379634928849"
+        },
+        {
+          "file": "server/modules/git-manager.js",
+          "hash": "11773866691217912882"
+        },
+        {
+          "file": "server/modules/github-service.js",
+          "hash": "2017089543379938566"
+        },
+        {
+          "file": "server/modules/projet-git.js",
+          "hash": "11765756460195087942"
+        },
+        {
+          "file": "server/package-lock-old-20260521.json",
+          "hash": "1614845039554812000"
+        },
+        {
+          "file": "server/package-lock.json",
+          "hash": "1614845039554812000"
+        },
+        {
+          "file": "server/package-old-20260521.json",
+          "hash": "3288991225488307035"
+        },
+        {
+          "file": "server/package.json",
+          "hash": "3288991225488307035"
+        },
+        {
+          "file": "server/server-agent.js",
+          "hash": "4495996944273023949"
+        },
+        {
+          "file": "server/server-data-old-20260506.js",
+          "hash": "17147074680653959098"
+        },
+        {
+          "file": "server/server-data-old-20260516.js",
+          "hash": "2533535036651536488"
+        },
+        {
+          "file": "server/server-data-old-20260521.js",
+          "hash": "9567501895963823674"
+        },
+        {
+          "file": "server/server-data.js",
+          "hash": "1952991506278266728"
+        },
+        {
+          "file": "server/tests/test-servers.js",
+          "hash": "16254624658590702386"
+        }
+      ],
+      "Worganic Platform - Create App": [
+        {
+          "file": "data/projets/projet-001-worganic-platform/Aa0-prompt.md",
+          "hash": "8453327721718403962"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Bg0-Exigences_Fonctionnelles_Structurees.md",
+          "hash": "5455381892236969755"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Bg0-Prompt.md",
+          "hash": "8571877722493313292"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Cg0-Prompt.md",
+          "hash": "17166854750935130055"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Cg1-prompt-final.md",
+          "hash": "5860245948699796372"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Cg2-GUIDE_UTILISATION.md",
+          "hash": "4235041778049730893"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Cg3-INDEX.md",
+          "hash": "234149299271728952"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Cg4-README-PROJET.md",
+          "hash": "10325042008319376244"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Dg0-Prompt.md",
+          "hash": "7191595185908803077"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Dg1-storyboard-prompt.md",
+          "hash": "7279854620664040993"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Dg1-storyboard.html",
+          "hash": "16775666868914767450"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Dg2-infographie-parcours-utilisateur.html",
+          "hash": "4569102921640569244"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Dg3-STORYBOARDS-SYNTHESE.md",
+          "hash": "10449147209810763214"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Dg4-INDEX-STORYBOARDS.md",
+          "hash": "13711643408924512949"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Dg5-LIVRABLES-COMPLETS.md",
+          "hash": "3524660269430352806"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Eg0-Prompt.md",
+          "hash": "10976222609965214920"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Eg1-mockup.html",
+          "hash": "3519116811867372313"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Eg2-GUIDE-VALIDATION-MOCKUP.md",
+          "hash": "6814919028945249885"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/Eg3-SYNTHESE-MOCKUP.md",
+          "hash": "7395340133951059910"
+        },
+        {
+          "file": "data/projets/projet-001-worganic-platform/project.json",
+          "hash": "1731127010094074912"
+        }
+      ],
+      "shared-ui": [
+        {
+          "file": "libs/shared/ui/README.md",
+          "hash": "16248885516767211022"
+        },
+        {
+          "file": "libs/shared/ui/eslint.config.mjs",
+          "hash": "6219511726200060807"
+        },
+        {
+          "file": "libs/shared/ui/jest.config.ts",
+          "hash": "7818118351952278934"
+        },
+        {
+          "file": "libs/shared/ui/project.json",
+          "hash": "17945213614908248111"
+        },
+        {
+          "file": "libs/shared/ui/src/index.ts",
+          "hash": "12001691749150942951"
+        },
+        {
+          "file": "libs/shared/ui/src/lib/shared-ui/shared-ui.css",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "libs/shared/ui/src/lib/shared-ui/shared-ui.html",
+          "hash": "9009390473639923416"
+        },
+        {
+          "file": "libs/shared/ui/src/lib/shared-ui/shared-ui.spec.ts",
+          "hash": "16081523151534158946"
+        },
+        {
+          "file": "libs/shared/ui/src/lib/shared-ui/shared-ui.ts",
+          "hash": "5940039166139358287"
+        },
+        {
+          "file": "libs/shared/ui/src/test-setup.ts",
+          "hash": "1917999429567095215"
+        },
+        {
+          "file": "libs/shared/ui/tsconfig.json",
+          "hash": "914917973328039364"
+        },
+        {
+          "file": "libs/shared/ui/tsconfig.lib.json",
+          "hash": "6020606002228403423"
+        },
+        {
+          "file": "libs/shared/ui/tsconfig.spec.json",
+          "hash": "13282830509091205533"
+        }
+      ],
+      "portail-core-auth": [
+        {
+          "file": "libs/portail-core/auth/README.md",
+          "hash": "15608594505232708430"
+        },
+        {
+          "file": "libs/portail-core/auth/eslint.config.mjs",
+          "hash": "6219511726200060807"
+        },
+        {
+          "file": "libs/portail-core/auth/jest.config.ts",
+          "hash": "11124224325247966119"
+        },
+        {
+          "file": "libs/portail-core/auth/project.json",
+          "hash": "5872875241870409538"
+        },
+        {
+          "file": "libs/portail-core/auth/src/index.ts",
+          "hash": "5063308301342205062"
+        },
+        {
+          "file": "libs/portail-core/auth/src/lib/auth.guard.ts",
+          "hash": "16352962213334999617",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "libs/portail-core/auth/src/lib/auth.interceptor.ts",
+          "hash": "5490400722970265293",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "libs/portail-core/auth/src/lib/guest.guard.ts",
+          "hash": "10854747844922663227",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "libs/portail-core/auth/src/lib/portail-core-auth/portail-core-auth.css",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "libs/portail-core/auth/src/lib/portail-core-auth/portail-core-auth.html",
+          "hash": "5097681161986181465"
+        },
+        {
+          "file": "libs/portail-core/auth/src/lib/portail-core-auth/portail-core-auth.spec.ts",
+          "hash": "474853194416438350"
+        },
+        {
+          "file": "libs/portail-core/auth/src/lib/portail-core-auth/portail-core-auth.ts",
+          "hash": "8171844195939373639"
+        },
+        {
+          "file": "libs/portail-core/auth/src/test-setup.ts",
+          "hash": "1917999429567095215"
+        },
+        {
+          "file": "libs/portail-core/auth/tsconfig.json",
+          "hash": "914917973328039364"
+        },
+        {
+          "file": "libs/portail-core/auth/tsconfig.lib.json",
+          "hash": "6020606002228403423"
+        },
+        {
+          "file": "libs/portail-core/auth/tsconfig.spec.json",
+          "hash": "13282830509091205533"
+        }
+      ],
+      "shared-utils": [
+        {
+          "file": "libs/shared/utils/README.md",
+          "hash": "5352665523196431657"
+        },
+        {
+          "file": "libs/shared/utils/eslint.config.mjs",
+          "hash": "6219511726200060807"
+        },
+        {
+          "file": "libs/shared/utils/jest.config.ts",
+          "hash": "13050353719127378612"
+        },
+        {
+          "file": "libs/shared/utils/project.json",
+          "hash": "13423354423994324487"
+        },
+        {
+          "file": "libs/shared/utils/src/index.ts",
+          "hash": "1438452712617484999"
+        },
+        {
+          "file": "libs/shared/utils/src/lib/shared-utils/shared-utils.css",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "libs/shared/utils/src/lib/shared-utils/shared-utils.html",
+          "hash": "14114367384469376407"
+        },
+        {
+          "file": "libs/shared/utils/src/lib/shared-utils/shared-utils.spec.ts",
+          "hash": "18133371803145653179"
+        },
+        {
+          "file": "libs/shared/utils/src/lib/shared-utils/shared-utils.ts",
+          "hash": "4811685838321959997"
+        },
+        {
+          "file": "libs/shared/utils/src/test-setup.ts",
+          "hash": "1917999429567095215"
+        },
+        {
+          "file": "libs/shared/utils/tsconfig.json",
+          "hash": "914917973328039364"
+        },
+        {
+          "file": "libs/shared/utils/tsconfig.lib.json",
+          "hash": "6020606002228403423"
+        },
+        {
+          "file": "libs/shared/utils/tsconfig.spec.json",
+          "hash": "13282830509091205533"
+        }
+      ],
+      "portail": [
+        {
+          "file": "apps/portail/.editorconfig",
+          "hash": "8037249353422744134"
+        },
+        {
+          "file": "apps/portail/.gitignore",
+          "hash": "10175894702052279752"
+        },
+        {
+          "file": "apps/portail/.vscode/extensions.json",
+          "hash": "11934160580685414355"
+        },
+        {
+          "file": "apps/portail/.vscode/launch.json",
+          "hash": "17406702432687230417"
+        },
+        {
+          "file": "apps/portail/.vscode/tasks.json",
+          "hash": "10093397977228577162"
+        },
+        {
+          "file": "apps/portail/README.md",
+          "hash": "14590475537858751564"
+        },
+        {
+          "file": "apps/portail/angular-old-20260516.json",
+          "hash": "11085403379199417924"
+        },
+        {
+          "file": "apps/portail/angular-old-20260521.json",
+          "hash": "18369945571510468877"
+        },
+        {
+          "file": "apps/portail/angular.json",
+          "hash": "18369945571510468877"
+        },
+        {
+          "file": "apps/portail/package-lock-old-20260516.json",
+          "hash": "13699925394099630969"
+        },
+        {
+          "file": "apps/portail/package-lock-old-20260521.json",
+          "hash": "7047208536210296075"
+        },
+        {
+          "file": "apps/portail/package-lock.json",
+          "hash": "7047208536210296075"
+        },
+        {
+          "file": "apps/portail/package-old-20260516.json",
+          "hash": "5331141790518621505"
+        },
+        {
+          "file": "apps/portail/package.json",
+          "hash": "3528484198483741405"
+        },
+        {
+          "file": "apps/portail/project.json",
+          "hash": "102022549035002183"
+        },
+        {
+          "file": "apps/portail/public/favicon.ico",
+          "hash": "3988961587069885523"
+        },
+        {
+          "file": "apps/portail/src/app/app.component-old-20260516.html",
+          "hash": "14318842093461965876"
+        },
+        {
+          "file": "apps/portail/src/app/app.component-old-20260516.ts",
+          "hash": "14334240431758557201"
+        },
+        {
+          "file": "apps/portail/src/app/app.component.html",
+          "hash": "10374116975311884647"
+        },
+        {
+          "file": "apps/portail/src/app/app.component.scss",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/portail/src/app/app.component.spec.ts",
+          "hash": "5351311879459233963"
+        },
+        {
+          "file": "apps/portail/src/app/app.component.ts",
+          "hash": "12905027525596865023",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/app.config-old-20260516.ts",
+          "hash": "5813323367506918352"
+        },
+        {
+          "file": "apps/portail/src/app/app.config.ts",
+          "hash": "8123491158410358822",
+          "deps": [
+            "portail-core-auth",
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/app.routes.ts",
+          "hash": "4909002173729483760"
+        },
+        {
+          "file": "apps/portail/src/app/base-routes.ts",
+          "hash": "2349279552666164822",
+          "deps": [
+            "portail-core-auth"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/child/child-admin-tabs.ts",
+          "hash": "14488823790967271858",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/child/child-routes.ts",
+          "hash": "5623134953673240513",
+          "deps": [
+            "portail-core-auth"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/core/services/api.service.ts",
+          "hash": "12052940314230823160"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/app-config.service.ts",
+          "hash": "18232990581365426027"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/config.service-old-20260506.ts",
+          "hash": "16133817630597175225"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/config.service-old-20260516.ts",
+          "hash": "16133817630597175225"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/config.service-old-20260521.ts",
+          "hash": "16133817630597175225"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/conversation.service.ts",
+          "hash": "18226930423054471856"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/project-files.service-old-20260516.ts",
+          "hash": "16923846927319903325"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/project-files.service-old-20260521.ts",
+          "hash": "5745082928936815784"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/wo-action-history.service-old-20260506.ts",
+          "hash": "5844300576364228151"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/wo-action-history.service-old-20260516.ts",
+          "hash": "5844300576364228151"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/wo-action-history.service-old-20260521.ts",
+          "hash": "5844300576364228151"
+        },
+        {
+          "file": "apps/portail/src/app/core/services/wo-action-history.service.ts",
+          "hash": "5844300576364228151"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/admin.component-old-20260516.ts",
+          "hash": "12387379292548288066"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/admin.component.html",
+          "hash": "1820416267523237646"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/admin.component.scss",
+          "hash": "132524399391447356"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/admin.component.ts",
+          "hash": "2050237174486146142",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component-old-20260506.html",
+          "hash": "7683026530303104192"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component-old-20260516.html",
+          "hash": "7683026530303104192"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component-old-20260516.ts",
+          "hash": "6940390893901329317"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component-old-20260521.html",
+          "hash": "7683026530303104192"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.html",
+          "hash": "7683026530303104192"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-deployments/admin-deployments.component.ts",
+          "hash": "1768882643320648672",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-help/admin-help.component-old-20260506.html",
+          "hash": "5325309969548132333"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-help/admin-help.component-old-20260516.html",
+          "hash": "5325309969548132333"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-help/admin-help.component-old-20260516.ts",
+          "hash": "17362240459692404787"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-help/admin-help.component-old-20260521.html",
+          "hash": "5325309969548132333"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-help/admin-help.component.html",
+          "hash": "5325309969548132333"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-help/admin-help.component.ts",
+          "hash": "3687211226837609431",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html",
+          "hash": "8901457448960784973"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
+          "hash": "221021489365809119",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-theme/admin-theme.component-old-20260516.ts",
+          "hash": "8145766635154890315"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-theme/admin-theme.component.html",
+          "hash": "6579926072559810585"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-theme/admin-theme.component.ts",
+          "hash": "12584491516609514366"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-tools/admin-tools.component.html",
+          "hash": "13977073554280318870"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-tools/admin-tools.component.ts",
+          "hash": "10460633765689179532"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-users/admin-users.component-old-20260516.ts",
+          "hash": "6042259778600949210"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-users/admin-users.component.html",
+          "hash": "14374871581285561890"
+        },
+        {
+          "file": "apps/portail/src/app/pages/admin/tabs/admin-users/admin-users.component.ts",
+          "hash": "2340727263704260756",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/child/admin-theme/admin-theme.component.html",
+          "hash": "2595428626514764032"
+        },
+        {
+          "file": "apps/portail/src/app/pages/child/admin-theme/admin-theme.component.ts",
+          "hash": "10579760799367366588"
+        },
+        {
+          "file": "apps/portail/src/app/pages/public/landing/landing.component-old-20260506.html",
+          "hash": "16555348275651358265"
+        },
+        {
+          "file": "apps/portail/src/app/pages/public/landing/landing.component-old-20260516.html",
+          "hash": "16555348275651358265"
+        },
+        {
+          "file": "apps/portail/src/app/pages/public/landing/landing.component-old-20260516.ts",
+          "hash": "98499106035895675"
+        },
+        {
+          "file": "apps/portail/src/app/pages/public/landing/landing.component-old-20260521.html",
+          "hash": "18400160247363343145"
+        },
+        {
+          "file": "apps/portail/src/app/pages/public/landing/landing.component.html",
+          "hash": "18400160247363343145"
+        },
+        {
+          "file": "apps/portail/src/app/pages/public/landing/landing.component.scss",
+          "hash": "5192535605742169517"
+        },
+        {
+          "file": "apps/portail/src/app/pages/public/landing/landing.component.ts",
+          "hash": "7482627649116448622",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/config/config.component-old-20260506.ts",
+          "hash": "483703440501276517"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/config/config.component-old-20260516.html",
+          "hash": "1539262749536727773"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/config/config.component-old-20260516.ts",
+          "hash": "483703440501276517"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/config/config.component-old-20260521.html",
+          "hash": "18362405407132541916"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/config/config.component-old-20260521.ts",
+          "hash": "11078709263027026611"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/config/config.component.html",
+          "hash": "6342556307072855473"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/config/config.component.scss",
+          "hash": "9395648609756878563"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/config/config.component.ts",
+          "hash": "10967650064405226073",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/deployments/deployments.component-old-20260516.ts",
+          "hash": "18308410604732193388"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/deployments/deployments.component.html",
+          "hash": "14906300653443299049"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/deployments/deployments.component.ts",
+          "hash": "10788165568142142034"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/documents/documents.component-old-20260516.ts",
+          "hash": "6650112294241890687"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/documents/documents.component.html",
+          "hash": "6378256046754558533"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/documents/documents.component.scss",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/documents/documents.component.ts",
+          "hash": "16157631892552687193",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/editor/editor.component-old-20260516.ts",
+          "hash": "2391310074214785586"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/editor/editor.component.html",
+          "hash": "13390950808143149403"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/editor/editor.component.scss",
+          "hash": "1042610391305696330"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/editor/editor.component.ts",
+          "hash": "1641498810062214096"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/home/home.component-old-20260506.ts",
+          "hash": "5000869087028973896"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/home/home.component-old-20260516.ts",
+          "hash": "5000869087028973896"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/home/home.component-old-20260521.ts",
+          "hash": "7660624113397544582"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/home/home.component.html",
+          "hash": "2507806572434468536"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/home/home.component.scss",
+          "hash": "1042610391305696330"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/home/home.component.ts",
+          "hash": "16976163793442472903",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/comments-drawer/comments-drawer.component.ts",
+          "hash": "17349461432058823067",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/image-props-panel/image-props-panel.component.ts",
+          "hash": "1804986651201064827"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-ai-diff/projet-ai-diff.component.html",
+          "hash": "16842111214553464745"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-ai-diff/projet-ai-diff.component.ts",
+          "hash": "4708889113123598167"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260506.html",
+          "hash": "8051003975487971136"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260506.ts",
+          "hash": "14238059743894227243"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260516.html",
+          "hash": "8051003975487971136"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260516.ts",
+          "hash": "14238059743894227243"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260521.html",
+          "hash": "8051003975487971136"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component-old-20260521.ts",
+          "hash": "14238059743894227243"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.html",
+          "hash": "17327115152562521060"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+          "hash": "16047794781109120488",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-diff/projet-diff.component.html",
+          "hash": "17759189946450143923"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-diff/projet-diff.component.ts",
+          "hash": "5138276664622742673",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260506.html",
+          "hash": "7735498103975482016"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260506.scss",
+          "hash": "17842654177998903413"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260506.ts",
+          "hash": "9600246344035765183"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260516.html",
+          "hash": "9192211220977601213"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260516.scss",
+          "hash": "17108588145578005620"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260516.ts",
+          "hash": "9164056197603013444"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260521.html",
+          "hash": "5274492061768653318"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260521.scss",
+          "hash": "10005386919487186886"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component-old-20260521.ts",
+          "hash": "10582888492380588307"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+          "hash": "12020272758971650814"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+          "hash": "2967076875261422530"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+          "hash": "4773346799978605951",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.html",
+          "hash": "2371027258634685387"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-history/projet-history.component.ts",
+          "hash": "16814203288569272294",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260506.html",
+          "hash": "7837438207183535288"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260506.ts",
+          "hash": "10231183414359875900"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260516.html",
+          "hash": "2650748323186841130"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260516.ts",
+          "hash": "2085912469201923881"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260521.html",
+          "hash": "2650748323186841130"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component-old-20260521.ts",
+          "hash": "2085912469201923881"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+          "hash": "2650748323186841130"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+          "hash": "14202954840459577827",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component-old-20260521.html",
+          "hash": "13877279480786664683"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component-old-20260521.ts",
+          "hash": "15383547819509260775"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component.html",
+          "hash": "13877279480786664683"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-statusbar/projet-statusbar.component.ts",
+          "hash": "15383547819509260775"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260506.html",
+          "hash": "14762847772958814470"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260506.ts",
+          "hash": "15497503113281290420"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260516.html",
+          "hash": "15175943009340693302"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260516.ts",
+          "hash": "18244472635307104908"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260521.html",
+          "hash": "15175943009340693302"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component-old-20260521.ts",
+          "hash": "3031859021807559004"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
+          "hash": "15175943009340693302"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-toolbar/projet-toolbar.component.ts",
+          "hash": "3154108639593213209",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.html",
+          "hash": "1463721806356582353"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.scss",
+          "hash": "10743727319162650015"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/projet-update-banner/projet-update-banner.component.ts",
+          "hash": "1475971519127777230",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/components/slash-command-menu/slash-command-menu.component.ts",
+          "hash": "3279667006880946556"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component-old-20260506.html",
+          "hash": "3971414708326856790"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component-old-20260506.ts",
+          "hash": "8235868616287484385"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component-old-20260516.html",
+          "hash": "1091692527033239758"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component-old-20260516.ts",
+          "hash": "11940079849748969298"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component-old-20260521.html",
+          "hash": "12226595095949364962"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component-old-20260521.ts",
+          "hash": "16767771211585547488"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component.html",
+          "hash": "12534590642052356975"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component.scss",
+          "hash": "132524399391447356"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/projet-editor.component.ts",
+          "hash": "6182575233018993106",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/services/project-comments.service.ts",
+          "hash": "13876463235686454895",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/services/projet-ai-edit.service.ts",
+          "hash": "11972878634755501165",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/utils/compute-line-diff.ts",
+          "hash": "7390992418545554111"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projet-editor/utils/sanitize-ia-content.ts",
+          "hash": "17098693666009559900"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projets/projet-search/projet-search.component.ts",
+          "hash": "14572282906826863957"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projets/projets.component.html",
+          "hash": "2606187515079591743"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projets/projets.component.scss",
+          "hash": "132524399391447356"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projets/projets.component.ts",
+          "hash": "7508516688736364049",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/projets/search.service.ts",
+          "hash": "333487593613516187",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/wo-action-history/wo-action-history.component-old-20260516.ts",
+          "hash": "13647084794000410738"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/wo-action-history/wo-action-history.component.html",
+          "hash": "12134077995925848099"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/wo-action-history/wo-action-history.component.scss",
+          "hash": "13055500114585248273"
+        },
+        {
+          "file": "apps/portail/src/app/pages/user/wo-action-history/wo-action-history.component.ts",
+          "hash": "3732706657356465484",
+          "deps": [
+            "portail-core-data-access"
+          ]
+        },
+        {
+          "file": "apps/portail/src/app/shared/help/help.service.ts",
+          "hash": "4334240936562831579"
+        },
+        {
+          "file": "apps/portail/src/app/shared/help/worg-help-drawer.component-old-20260516.ts",
+          "hash": "16162609781477921525"
+        },
+        {
+          "file": "apps/portail/src/app/shared/help/worg-help-drawer.component.html",
+          "hash": "14466857309527312643"
+        },
+        {
+          "file": "apps/portail/src/app/shared/help/worg-help-drawer.component.ts",
+          "hash": "755198350798230180"
+        },
+        {
+          "file": "apps/portail/src/app/shared/help/worg-help-trigger.component.ts",
+          "hash": "13821373462295157551"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/footer/footer.component-old-20260516.html",
+          "hash": "6073848224871339056"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/footer/footer.component-old-20260516.ts",
+          "hash": "868313738768807098"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/footer/footer.component.html",
+          "hash": "2636798236563336559"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/footer/footer.component.ts",
+          "hash": "10278775537676243355"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/header/header.component-old-20260516.html",
+          "hash": "11684217510853132134"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/header/header.component-old-20260516.ts",
+          "hash": "3592397032537076892"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/header/header.component.html",
+          "hash": "2006052665383398287"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/header/header.component.ts",
+          "hash": "84587519547183337"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/nav/nav.component-old-20260516.ts",
+          "hash": "13402103335889458095"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/nav/nav.component.html",
+          "hash": "14723096042314922932"
+        },
+        {
+          "file": "apps/portail/src/app/shared/layout/nav/nav.component.ts",
+          "hash": "6699331704286085608"
+        },
+        {
+          "file": "apps/portail/src/app/shared/ui/markdown-editor/markdown-editor.component-old-20260516.ts",
+          "hash": "122628534643553552"
+        },
+        {
+          "file": "apps/portail/src/app/shared/ui/markdown-editor/markdown-editor.component.html",
+          "hash": "10559624805400139362"
+        },
+        {
+          "file": "apps/portail/src/app/shared/ui/markdown-editor/markdown-editor.component.ts",
+          "hash": "3316265539119280547"
+        },
+        {
+          "file": "apps/portail/src/app/tools/action-report-modal/action-report-modal.component-old-20260516.html",
+          "hash": "14591302584574618114"
+        },
+        {
+          "file": "apps/portail/src/app/tools/action-report-modal/action-report-modal.component-old-20260516.ts",
+          "hash": "18065832240369757025"
+        },
+        {
+          "file": "apps/portail/src/app/tools/action-report-modal/action-report-modal.component.html",
+          "hash": "16803365464168828736"
+        },
+        {
+          "file": "apps/portail/src/app/tools/action-report-modal/action-report-modal.component.ts",
+          "hash": "11654920580299314900"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-doc.component-old-20260516.ts",
+          "hash": "14160705590635648603"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-doc.component.html",
+          "hash": "1159770926851053749"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-doc.component.scss",
+          "hash": "6864205629959594981"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-doc.component.ts",
+          "hash": "16035077383603280278"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-widget.component-old-20260516.html",
+          "hash": "4769270978136974482"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-widget.component-old-20260516.ts",
+          "hash": "7728060594262586713"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-widget.component.html",
+          "hash": "11277770922688346280"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-widget.component.scss",
+          "hash": "7639867131638164180"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette-widget.component.ts",
+          "hash": "2803230649218561533"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette.component-old-20260516.html",
+          "hash": "1272850002392398521"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette.component-old-20260516.ts",
+          "hash": "11651772134914708886"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette.component.html",
+          "hash": "15733359725066972059"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette.component.scss",
+          "hash": "3445291121347974620"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette.component.ts",
+          "hash": "17667514814323544133"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette.service.ts",
+          "hash": "7594426234065348712"
+        },
+        {
+          "file": "apps/portail/src/app/tools/cahier-recette/cahier-recette.types.ts",
+          "hash": "17450051826210586505"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia-doc.component-old-20260516.html",
+          "hash": "13870048431623431137"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia-doc.component-old-20260516.ts",
+          "hash": "15328982620511413778"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia-doc.component.html",
+          "hash": "6276855659516463077"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia-doc.component.ts",
+          "hash": "14196807966760470828"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia.component-old-20260516.html",
+          "hash": "9096571371164603259"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia.component-old-20260516.ts",
+          "hash": "13226968967791336995"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia.component.html",
+          "hash": "4113641665309762729"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia.component.ts",
+          "hash": "5096221708080254377"
+        },
+        {
+          "file": "apps/portail/src/app/tools/tchat-ia/tchat-ia.types.ts",
+          "hash": "7708230790578767649"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget-doc.component-old-20260516.html",
+          "hash": "16203084506947573753"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget-doc.component-old-20260516.ts",
+          "hash": "17923047641835901835"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget-doc.component.html",
+          "hash": "14433524292860156741"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget-doc.component.ts",
+          "hash": "7825385951734717710"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget.component-old-20260516.html",
+          "hash": "6542081495246322052"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget.component-old-20260516.ts",
+          "hash": "2026648061466679345"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget.component.html",
+          "hash": "4893592423327248271"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget.component.scss",
+          "hash": "16697832977435140159"
+        },
+        {
+          "file": "apps/portail/src/app/tools/ticket-widget/ticket-widget.component.ts",
+          "hash": "10582439916947462580"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions-widget.component-old-20260506.html",
+          "hash": "7402081773519838186"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions-widget.component-old-20260516.html",
+          "hash": "7402081773519838186"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions-widget.component-old-20260516.ts",
+          "hash": "6165169816029770345"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions-widget.component-old-20260521.html",
+          "hash": "7402081773519838186"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions-widget.component.html",
+          "hash": "7402081773519838186"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions-widget.component.scss",
+          "hash": "17620977142148903703"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions-widget.component.ts",
+          "hash": "15534144811171721204"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions.component-old-20260506.html",
+          "hash": "11967543943306046687"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions.component-old-20260516.html",
+          "hash": "11967543943306046687"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions.component-old-20260516.ts",
+          "hash": "5661064233546947579"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions.component.html",
+          "hash": "6940871372088444198"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions.component.scss",
+          "hash": "16587862945170759940"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-actions/wo-actions.component.ts",
+          "hash": "7053965630438439522"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-history/wo-history.component-old-20260516.html",
+          "hash": "4138347613273071976"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-history/wo-history.component-old-20260516.ts",
+          "hash": "2837599563131567473"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-history/wo-history.component.html",
+          "hash": "3342514294190756332"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-history/wo-history.component.scss",
+          "hash": "9766817826211180441"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-history/wo-history.component.ts",
+          "hash": "1027204296575105111"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-ia-logs/wo-ia-logs.component-old-20260516.html",
+          "hash": "18334255625434473254"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-ia-logs/wo-ia-logs.component-old-20260516.ts",
+          "hash": "13665026501838345656"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-ia-logs/wo-ia-logs.component.html",
+          "hash": "3851904277568386624"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-ia-logs/wo-ia-logs.component.scss",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-ia-logs/wo-ia-logs.component.ts",
+          "hash": "1136446759086666084"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tchat-ia/wo-tchat-ia-widget.component-old-20260516.ts",
+          "hash": "17481358783175645672"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tchat-ia/wo-tchat-ia-widget.component.html",
+          "hash": "2322583046432666958"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tchat-ia/wo-tchat-ia-widget.component.scss",
+          "hash": "7639867131638164180"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tchat-ia/wo-tchat-ia-widget.component.ts",
+          "hash": "8692566226264679170"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component-old-20260506.ts",
+          "hash": "9501626296904341256"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component-old-20260516.html",
+          "hash": "15048948023733185638"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component-old-20260516.ts",
+          "hash": "9501626296904341256"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component-old-20260521.ts",
+          "hash": "16201733240487177833"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component.html",
+          "hash": "532810864892408089"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-admin/wo-tools-admin.component.ts",
+          "hash": "16201733240487177833"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-panel/wo-tools-panel.component-old-20260516.html",
+          "hash": "11591253247810427848"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-panel/wo-tools-panel.component-old-20260516.ts",
+          "hash": "18058834759559426108"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-panel/wo-tools-panel.component.html",
+          "hash": "4649289211093015819"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-panel/wo-tools-panel.component.scss",
+          "hash": "14521205919186363542"
+        },
+        {
+          "file": "apps/portail/src/app/tools/wo/wo-tools-panel/wo-tools-panel.component.ts",
+          "hash": "10361968899346448774"
+        },
+        {
+          "file": "apps/portail/src/environments/environment.prod-old-20260506.ts",
+          "hash": "8752992183728478781"
+        },
+        {
+          "file": "apps/portail/src/environments/environment.prod-old-20260516.ts",
+          "hash": "8752992183728478781"
+        },
+        {
+          "file": "apps/portail/src/environments/environment.prod-old-20260521.ts",
+          "hash": "8752992183728478781"
+        },
+        {
+          "file": "apps/portail/src/environments/environment.prod.ts",
+          "hash": "8752992183728478781"
+        },
+        {
+          "file": "apps/portail/src/environments/environment.ts",
+          "hash": "2443124491000538802"
+        },
+        {
+          "file": "apps/portail/src/index.html",
+          "hash": "18258739276431642046"
+        },
+        {
+          "file": "apps/portail/src/main.ts",
+          "hash": "4169901790405087765"
+        },
+        {
+          "file": "apps/portail/src/styles.scss",
+          "hash": "98817327798815692"
+        },
+        {
+          "file": "apps/portail/tailwind.config.js",
+          "hash": "1037456121006846665"
+        },
+        {
+          "file": "apps/portail/tsconfig.app.json",
+          "hash": "14560978611694835822"
+        },
+        {
+          "file": "apps/portail/tsconfig.json",
+          "hash": "10455385704030648431"
+        },
+        {
+          "file": "apps/portail/tsconfig.spec.json",
+          "hash": "11023685540591620072"
+        }
+      ]
+    }
+  },
+  "externalNodesHash": "3244421341483603138"
+}

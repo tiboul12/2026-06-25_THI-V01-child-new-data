@@ -1,0 +1,113 @@
+Project 'Worganic Platform - Create App' contains extension with invalid name (id).
+Project 'Worganic Platform - Create App' contains extension with invalid name (userId).
+Project 'Worganic Platform - Create App' contains extension with invalid name (type).
+Project 'Worganic Platform - Create App' contains extension with invalid name (createdAt).
+Project 'Worganic Platform - Create App' contains extension with invalid name (updatedAt).
+Project 'Worganic Platform - Create App' contains extension with invalid name (status).
+Project 'Worganic Platform - Create App' contains extension with invalid name (description).
+Project 'Worganic Platform - Create App' contains extension with invalid name (pipeline).
+Project 'Worganic Platform - Create App' contains extension with invalid name (pagesProjet).
+Project 'Worganic Platform - Create App' contains extension with invalid name (progress).
+Project 'Worganic Platform - Create App' contains extension with invalid name (workflows).
+[33m❯[39m Building...
+
+[1m[33mwarn[39m[22m - No utility classes were detected in your source files. If this is unexpected, double-check the `content` option in your Tailwind CSS configuration.
+[1m[33mwarn[39m[22m - https://tailwindcss.com/docs/content-configuration
+[32m✔[39m Building...
+[37mApplication bundle generation failed. [9.807 seconds] - 2026-05-24T11:29:23.691Z[39m
+[37m[39m
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTypeScript compiler option 'isolatedModules' may prevent the 'emitDecoratorMetadata' option from emitting all metadata.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[33m[39m[22m
+[1m[33m  The 'emitDecoratorMetadata' option is not required by Angularand can be removed if not explictly required by the project.[39m[22m
+[1m[33m[39m[22m
+[1m[33m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1272: A type referenced in a decorated signature must be imported with 'import type' or a namespace import when 'isolatedModules' and 'emitDecoratorMetadata' are enabled.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    apps/portail/src/app/tools/tchat-ia/tchat-ia.component.ts:36:20:[39m[22m
+[1m[31m[37m      36 │   @Input() context: [32mTchatContext[37m = {};[39m[22m
+[1m[31m         ╵                     [32m~~~~~~~~~~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m  'TchatContext' was imported here.[39m[22m
+[1m[31m[39m[22m
+[1m[31m    apps/portail/src/app/tools/tchat-ia/tchat-ia.component.ts:10:42:[39m[22m
+[1m[31m[37m      10 │ ... TchatForm, ZoneSelection, [32mTchatContext[37m, TchatResult, TchatSession[39m[22m
+[1m[31m         ╵                               [32m~~~~~~~~~~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"./tokens"' has no exported member 'API_this'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/agent.service.ts:4:9:[39m[22m
+[1m[31m[37m      4 │ import { [32mAPI_this[37m.agentUrl } from './tokens';[39m[22m
+[1m[31m        ╵          [32m~~~~~~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1005: ',' expected.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/agent.service.ts:4:17:[39m[22m
+[1m[31m[37m      4 │ import { API_this[32m.[37magentUrl } from './tokens';[39m[22m
+[1m[31m        ╵                  [32m^[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"./tokens"' has no exported member 'agentUrl'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/agent.service.ts:4:18:[39m[22m
+[1m[31m[37m      4 │ import { API_this.[32magentUrl[37m } from './tokens';[39m[22m
+[1m[31m        ╵                   [32m~~~~~~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'API'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/auth.service.ts:58:24:[39m[22m
+[1m[31m[37m      58 │       this.http.post(`${[32mAPI[37m}/api/auth/login`, { email, password })[39m[22m
+[1m[31m         ╵                         [32m~~~[[39m[22m[1m[31m0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'API'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/auth.service.ts:66:24:[39m[22m
+[1m[31m[37m      66 │       this.http.post(`${[32mAPI[37m}/api/auth/register`, { username, email...[39m[22m
+[1m[31m         ╵                         [32m~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'API'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/auth.service.ts:74:23:[39m[22m
+[1m[31m[37m      74 │       this.http.get(`${[32mAPI[37m}/api/auth/verify`, { headers: this.getA...[39m[22m
+[1m[31m         ╵                        [32m~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'API'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/auth.service.ts:84:26:[39m[22m
+[1m[31m[37m      84 │         this.http.post(`${[32mAPI[37m}/api/auth/logout`, {}, { headers: th...[39m[22m
+[1m[31m         ╵                           [32m~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'API'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/auth.service.ts:92:35:[39m[22m
+[1m[31m[37m      92 │ ... this.http.get<AuthUser[]>(`${[32mAPI[37m}/api/auth/users`, { headers: ...[39m[22m
+[1m[31m         ╵                                  [32m~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'API'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/auth.service.ts:98:26:[39m[22m
+[1m[31m[37m      98 │       this.http.delete(`${[32mAPI[37m}/api/auth/users/${id}`, { headers: t...[39m[22m
+[1m[31m         ╵                           [32m~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'API'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/auth.service.ts:104:33:[39m[22m
+[1m[31m[37m      104 │       this.http.put<AuthUser>(`${[32mAPI[37m}/api/auth/users/${id}`, data...[39m[22m
+[1m[31m          ╵                 [39m[22m[1m[31m                 [32m~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'EXECUTOR_API'.[0m [1m[35m[plugin angular-compiler][0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m    libs/portail-core/data-access/src/lib/config.service.ts:188:26:[39m[22m
+[1m[31m[37m      188 │     this.http.get<any>(`${[32mEXECUTOR_API[37m}/api/cli-status`).subscribe({[39m[22m
+[1m[31m          ╵                           [32m~~~~~~~~~~~~[0m[39m[22m
+[1m[31m[39m[22m
+[1m[31m[39m[22m
