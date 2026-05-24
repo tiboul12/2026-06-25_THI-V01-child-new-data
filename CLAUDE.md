@@ -156,12 +156,12 @@ Question 3 : "Titre du commit ?"
 ## Règle obligatoire : Gestion de version
 
 ### Format
-- **Main** : `version.json` → `{ "version": "B.XXX" }` (ex: `B.049`, `B.050`)
-- **Branche** : versions DB enregistrées en `Br.XXX` (ex: `Br.001`)
+- **Main** : `version.json` → `{ "version": "B-0.XXX" }` (ex: `B-0.210`, `B-0.211`)
+- **Branche** : versions DB enregistrées en `Br-0.XXX` (ex: `Br-0.001`)
 
 ### Règles d'incrément (main uniquement)
-- Mineure : `B.048` → `B.049`
-- Majeure : `B.099` → `B.100`
+- Mineure : `B-0.210` → `B-0.211`
+- Majeure : `B-0.999` → `B-1.000`
 
 ### Règle clé — version et branche
 - Sur une **branche feature** : ne PAS incrémenter `version.json`, ne PAS appeler `deploy-log.js`. Les modifications sont enregistrées dans `histoModif.json` uniquement.

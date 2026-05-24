@@ -5913,11 +5913,11 @@ app.post('/api/admin/migrate-versions', async (req, res) => {
         const pad = (n) => String(n).padStart(3, '0');
 
         for (let i = 0; i < mainRecords.length; i++) {
-            const newVersion = `B.${pad(i + 1)}`;
+            const newVersion = `B-0.${pad(i + 1)}`;
             await pool.query('UPDATE app_deployments SET version = ? WHERE id = ?', [newVersion, mainRecords[i].id]);
         }
 
-        // Numérotation par branche (Br.001, Br.002... par branche distincte)
+        // Numérotation par branche (Br-0.001, Br-0.002... par date)
         const branchGroups = {};
         for (const r of branchRecords) {
             if (!branchGroups[r.branch]) branchGroups[r.branch] = [];
@@ -5925,12 +5925,12 @@ app.post('/api/admin/migrate-versions', async (req, res) => {
         }
         // Numérotation globale inter-branches par date
         for (let i = 0; i < branchRecords.length; i++) {
-            const newVersion = `Br.${pad(i + 1)}`;
+            const newVersion = `Br-0.${pad(i + 1)}`;
             await pool.query('UPDATE app_deployments SET version = ? WHERE id = ?', [newVersion, branchRecords[i].id]);
         }
 
         // Mise à jour version.json avec la nouvelle version main courante
-        const latestMain = mainRecords.length > 0 ? `B.${pad(mainRecords.length)}` : 'B.001';
+        const latestMain = mainRecords.length > 0 ? `B-0.${pad(mainRecords.length)}` : 'B-0.001';
         fs.writeFileSync(VERSION_FILE, JSON.stringify({ version: latestMain }, null, 2), 'utf8');
 
         res.json({

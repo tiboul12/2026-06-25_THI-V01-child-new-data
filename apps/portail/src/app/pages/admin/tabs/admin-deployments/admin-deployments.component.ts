@@ -133,7 +133,7 @@ export class AdminDeploymentsComponent implements OnInit {
   get mainUpToDate(): boolean { return this.versionStatus()?.upToDate ?? true; }
 
   get hasLegacyVersions(): boolean {
-    return this.deployments().some(d => /^(THI-|B0\.|B\d+\.)/.test(d.version || ''));
+    return this.deployments().some(d => /^(THI-|B0\.|B\d+\.|^B\.\d|^Br\.\d)/.test(d.version || ''));
   }
 
   openDeployForm() {
