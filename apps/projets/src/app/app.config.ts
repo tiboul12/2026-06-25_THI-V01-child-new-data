@@ -12,7 +12,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { appRoutes } from './app.routes';
 import { environment } from '../environments/environment';
 import { authInterceptor } from '@worganic/portail-core/auth';
-import { API_DATA_URL, API_EXECUTOR_URL, API_AGENT_URL, APP_BRANDING, ThemeService } from '@worganic/portail-core/data-access';
+import { API_DATA_URL, API_EXECUTOR_URL, API_AGENT_URL, APP_BRANDING, ThemeService, AppConfigService } from '@worganic/portail-core/data-access';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -36,5 +36,6 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       inject(ThemeService).initTheme();
     }),
+    provideAppInitializer(() => inject(AppConfigService).load()),
   ],
 };
