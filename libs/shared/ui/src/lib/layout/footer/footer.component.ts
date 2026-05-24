@@ -1,28 +1,24 @@
-import { Component, Input, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, OnInit, signal, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
-import { ConfigService } from '../../../core/services/config.service';
-import { AppConfigService } from '../../../core/services/app-config.service';
-import { environment } from '../../../../environments/environment';
-
-const API = environment.apiDataUrl;
+import { AuthService, ConfigService, AppConfigService, API_DATA_URL } from '@worganic/portail-core/data-access';
 
 @Component({
   selector: 'app-footer',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [RouterModule],
   templateUrl: './footer.component.html',
 })
 export class FooterComponent implements OnInit {
   @Input() onOpenTools?: () => void;
+  @Input() externalBaseUrl?: string;
 
+  private apiUrl = inject(API_DATA_URL);
   versionStatus = signal<any>(null);
 
   constructor(
     public auth: AuthService,
     public configService: ConfigService,
-    public appConfig: AppConfigService
+    public appConfig: AppConfigService,
   ) {}
 
   ngOnInit() {
@@ -31,7 +27,7 @@ export class FooterComponent implements OnInit {
 
   async checkVersion() {
     try {
-      const res = await fetch(`${API}/api/version/check`);
+      const res = await fetch(`${this.apiUrl}/api/version/check`);
       if (res.ok) this.versionStatus.set(await res.json());
     } catch { /* silencieux */ }
   }
@@ -39,6 +35,12 @@ export class FooterComponent implements OnInit {
   openToolsPanel(): void {
     if (this.onOpenTools) {
       this.onOpenTools();
+    }
+  }
+
+  navigateToAdmin(): void {
+    if (this.externalBaseUrl) {
+      window.location.href = `${this.externalBaseUrl}/admin?tab=deploiement`;
     }
   }
 

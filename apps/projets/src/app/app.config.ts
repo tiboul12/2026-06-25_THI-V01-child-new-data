@@ -2,6 +2,8 @@ import {
   ApplicationConfig,
   provideZoneChangeDetection,
   provideBrowserGlobalErrorListeners,
+  provideAppInitializer,
+  inject,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -10,7 +12,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { appRoutes } from './app.routes';
 import { environment } from '../environments/environment';
 import { authInterceptor } from '@worganic/portail-core/auth';
-import { API_DATA_URL, API_EXECUTOR_URL, API_AGENT_URL, APP_BRANDING } from '@worganic/portail-core/data-access';
+import { API_DATA_URL, API_EXECUTOR_URL, API_AGENT_URL, APP_BRANDING, ThemeService } from '@worganic/portail-core/data-access';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -31,5 +33,8 @@ export const appConfig: ApplicationConfig = {
     provideRouter(appRoutes),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimations(),
+    provideAppInitializer(() => {
+      inject(ThemeService).initTheme();
+    }),
   ],
 };

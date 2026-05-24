@@ -8,8 +8,8 @@ import { ConfigService } from '@worganic/portail-core/data-access';
 import { LayoutService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 
-import { HeaderComponent } from './shared/layout/header/header.component';
-import { FooterComponent } from './shared/layout/footer/footer.component';
+import { HeaderComponent, FooterComponent } from '@worganic/shared/ui';
+import { navigateToProjets } from './shared/utils/navigate-to-projets';
 import { TicketWidgetComponent } from './tools/ticket-widget/ticket-widget.component';
 import { CahierRecetteWidgetComponent } from './tools/cahier-recette/cahier-recette-widget.component';
 import { WoTchatIaWidgetComponent } from './tools/wo/wo-tchat-ia/wo-tchat-ia-widget.component';
@@ -35,6 +35,7 @@ import { WorgHelpDrawerComponent } from './shared/help/worg-help-drawer.componen
 })
 export class AppComponent implements OnInit {
   @ViewChild(WoToolsPanelComponent) toolsPanel?: WoToolsPanelComponent;
+  navigateToProjets = navigateToProjets;
 
   constructor(
     private themeService: ThemeService,

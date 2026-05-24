@@ -1,2 +1,8 @@
-<app-nx-welcome></app-nx-welcome>
-<router-outlet></router-outlet>
+<app-header
+  [externalBaseUrl]="portailUrl"
+  activeExternalRoute="/projets"
+  [logoutRedirectUrl]="portailUrl" />
+<main [class]="layoutService.editorMode() ? 'contents' : 'pt-[120px] pb-[44px] min-h-screen bg-light-bg dark:bg-bg'">
+  <router-outlet></router-outlet>
+</main>
+<app-footer [externalBaseUrl]="portailUrl" />

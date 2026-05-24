@@ -1,5 +1,5 @@
 <!-- Header fixe (visible uniquement si connecté) -->
-<app-header></app-header>
+<app-header [onProjetsClick]="navigateToProjets"></app-header>
 
 <!-- Contenu principal — padding-top pour le header, padding-bottom pour le footer -->
 <main [class]="auth.currentUser() ? (layoutService.headerExpanded() ? 'pt-[120px]' : 'pt-[60px]') + ' pb-[44px] min-h-screen bg-light-background dark:bg-background transition-[padding-top] duration-300 ease-in-out' : ''">

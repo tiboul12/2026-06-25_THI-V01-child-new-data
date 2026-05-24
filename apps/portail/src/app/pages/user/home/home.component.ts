@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { AppConfigService } from '@worganic/portail-core/data-access';
-import { environment } from '../../../../environments/environment';
+import { navigateToProjets } from '../../../shared/utils/navigate-to-projets';
 
 @Component({
     selector: 'app-home',
@@ -13,13 +13,13 @@ import { environment } from '../../../../environments/environment';
 export class HomeComponent {
   constructor(private router: Router, public auth: AuthService, public appConfig: AppConfigService) {}
 
-  goToPrimary(): void {
+  ngOnInit(): void {
     const route = this.appConfig.homeConfig().primaryButtonRoute;
     if (!route || route === '/projets') {
-      window.location.href = environment.projetsAppUrl;
-      return;
+      navigateToProjets();
+    } else {
+      this.router.navigate([route]);
     }
-    this.router.navigate([route]);
   }
 
   goToAdmin(): void {

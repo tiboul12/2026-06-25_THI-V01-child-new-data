@@ -90,7 +90,8 @@ app.use(cors({
     origin: [
         'http://localhost:4200',  // Angular (projet principal)
         'http://localhost:4201',  // Frankenstein (second projet Angular)
-        'http://localhost:4202',  // Port de secours
+        'http://localhost:4202',  // Portail NX
+        'http://localhost:4203',  // Projets NX
         'http://localhost:3001',
         'http://127.0.0.1:4200',
         'http://127.0.0.1:4201',

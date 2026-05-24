@@ -1,5 +1,5 @@
 import { Route } from '@angular/router';
-import { authGuard } from '@worganic/portail-core/auth';
+import { authGuard } from './auth.guard';
 
 export const appRoutes: Route[] = [
   {

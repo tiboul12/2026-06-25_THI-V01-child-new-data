@@ -6,7 +6,7 @@ import { AuthService } from '@worganic/portail-core/data-access';
 import { ThemeService } from '@worganic/portail-core/data-access';
 import { DbStatusService } from '@worganic/portail-core/data-access';
 import { AppConfigService } from '@worganic/portail-core/data-access';
-import { environment } from '../../../../environments/environment';
+import { navigateToProjets } from '../../../shared/utils/navigate-to-projets';
 
 @Component({
     selector: 'app-landing',
@@ -58,7 +58,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     await this.db.check();
     this.retrying = false;
     if (!this.dbError && this.auth.isAuthenticated()) {
-      window.location.href = environment.projetsAppUrl;
+      navigateToProjets();
     }
   }
 
@@ -70,7 +70,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     }
 
     if (this.auth.isAuthenticated()) {
-      window.location.href = environment.projetsAppUrl;
+      navigateToProjets();
       return;
     }
 
@@ -120,7 +120,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     try {
       await this.auth.login(this.loginEmail, this.loginPassword);
       this.closeModals();
-      window.location.href = environment.projetsAppUrl;
+      navigateToProjets();
     } catch (err: any) {
       this.loginError = err?.error?.error || 'Erreur de connexion';
     } finally {
@@ -146,7 +146,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     try {
       await this.auth.register(this.registerUsername, this.registerEmail, this.registerPassword);
       this.closeModals();
-      window.location.href = environment.projetsAppUrl;
+      navigateToProjets();
     } catch (err: any) {
       this.registerError = err?.error?.error || "Erreur lors de l'inscription";
     } finally {

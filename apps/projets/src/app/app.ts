@@ -1,13 +1,17 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { NxWelcome } from './nx-welcome';
+import { HeaderComponent, FooterComponent } from '@worganic/shared/ui';
+import { LayoutService } from '@worganic/portail-core/data-access';
+import { environment } from '../environments/environment';
 
 @Component({
-  imports: [NxWelcome, RouterModule],
+  imports: [RouterModule, HeaderComponent, FooterComponent],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
 export class App {
-  protected title = 'projets';
+  portailUrl = environment.portailUrl;
+
+  constructor(public layoutService: LayoutService) {}
 }

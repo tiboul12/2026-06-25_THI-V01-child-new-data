@@ -1,0 +1,90 @@
+<nav class="flex items-center gap-1">
+  <!-- Item Documents -->
+  @if (isExternal) {
+    <button (click)="handleExternalRoute('/documents')"
+       [class]="isActiveExternal('/documents') ? 'text-light-primary dark:text-primary border-light-primary/30 dark:border-primary/30 bg-light-primary/5 dark:bg-primary/5' : ''"
+       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-transparent text-light-text-muted dark:text-white/50 hover:border-light-border dark:hover:border-white/10 hover:text-light-text dark:hover:text-white transition-all">
+      <span class="material-symbols-outlined text-sm">description</span>
+      Documents
+    </button>
+  } @else {
+    <a routerLink="/documents"
+       routerLinkActive="text-light-primary dark:text-primary border-light-primary/30 dark:border-primary/30 bg-light-primary/5 dark:bg-primary/5"
+       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-transparent text-light-text-muted dark:text-white/50 hover:border-light-border dark:hover:border-white/10 hover:text-light-text dark:hover:text-white transition-all">
+      <span class="material-symbols-outlined text-sm">description</span>
+      Documents
+    </a>
+  }
+
+  <!-- Historique des actions (configurable via admin/outils) -->
+  @if (configService.woActionHistoryNavEnabled()) {
+    @if (isExternal) {
+      <button (click)="handleExternalRoute('/wo-action-history')"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-transparent text-light-text-muted dark:text-white/50 hover:border-light-border dark:hover:border-white/10 hover:text-light-text dark:hover:text-white transition-all">
+        <span class="material-symbols-outlined text-sm">manage_history</span>
+        Historique
+      </button>
+    } @else {
+      <a routerLink="/wo-action-history"
+         routerLinkActive="text-light-primary dark:text-primary border-light-primary/30 dark:border-primary/30 bg-light-primary/5 dark:bg-primary/5"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-transparent text-light-text-muted dark:text-white/50 hover:border-light-border dark:hover:border-white/10 hover:text-light-text dark:hover:text-white transition-all">
+        <span class="material-symbols-outlined text-sm">manage_history</span>
+        Historique
+      </a>
+    }
+  }
+
+  <!-- Items child (depuis data/child/nav.json) -->
+  @for (item of appConfig.childNavItems(); track item.route) {
+    @if (isProjetsRoute(item)) {
+      @if (isExternal) {
+        <!-- En mode externe (projets app) : item actif non cliquable -->
+        <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border text-light-primary dark:text-primary border-light-primary/30 dark:border-primary/30 bg-light-primary/5 dark:bg-primary/5">
+          <span class="material-symbols-outlined text-sm">{{ item.icon }}</span>
+          {{ item.label }}
+        </span>
+      } @else {
+        <!-- En mode portail : appelle le callback (navigateToProjets) -->
+        <button (click)="handleProjetsClick()"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-transparent text-light-text-muted dark:text-white/50 hover:border-light-border dark:hover:border-white/10 hover:text-light-text dark:hover:text-white transition-all">
+          <span class="material-symbols-outlined text-sm">{{ item.icon }}</span>
+          {{ item.label }}
+        </button>
+      }
+    } @else {
+      @if (isExternal) {
+        <button (click)="handleExternalRoute(item.route)"
+           [class]="isActiveExternal(item.route) ? 'text-light-primary dark:text-primary border-light-primary/30 dark:border-primary/30 bg-light-primary/5 dark:bg-primary/5' : ''"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-transparent text-light-text-muted dark:text-white/50 hover:border-light-border dark:hover:border-white/10 hover:text-light-text dark:hover:text-white transition-all">
+          <span class="material-symbols-outlined text-sm">{{ item.icon }}</span>
+          {{ item.label }}
+        </button>
+      } @else {
+        <a [routerLink]="item.route"
+           routerLinkActive="text-light-primary dark:text-primary border-light-primary/30 dark:border-primary/30 bg-light-primary/5 dark:bg-primary/5"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-transparent text-light-text-muted dark:text-white/50 hover:border-light-border dark:hover:border-white/10 hover:text-light-text dark:hover:text-white transition-all">
+          <span class="material-symbols-outlined text-sm">{{ item.icon }}</span>
+          {{ item.label }}
+        </a>
+      }
+    }
+  }
+
+  <!-- Admin toujours en dernier -->
+  @if (auth.currentUser()?.role === 'admin') {
+    @if (isExternal) {
+      <button (click)="handleExternalRoute('/admin')"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/20 text-red-400 hover:bg-red-500/10 hover:border-red-400/40 transition-all">
+        <span class="material-symbols-outlined text-sm">admin_panel_settings</span>
+        Admin
+      </button>
+    } @else {
+      <a routerLink="/admin"
+         routerLinkActive="bg-red-500/10 border-red-400/40"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/20 text-red-400 hover:bg-red-500/10 hover:border-red-400/40 transition-all">
+        <span class="material-symbols-outlined text-sm">admin_panel_settings</span>
+        Admin
+      </a>
+    }
+  }
+</nav>

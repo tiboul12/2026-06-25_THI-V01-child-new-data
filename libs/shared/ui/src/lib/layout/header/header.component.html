@@ -21,7 +21,7 @@
           <!-- Fournisseur IA -->
           <div class="flex flex-col items-end">
             <select [(ngModel)]="aiProvider" (change)="onProviderChange()"
-              class="bg-gray-100 dark:bg-white/5 border border-light-border dark:border-white/10 rounded px-2 py-0.5 text-right text-light-primary dark:text-primary focus:outline-none focus:border-light-primary dark:focus:border-primary cursor-pointer font-bold uppercase transition-colors text-[10px]">
+              class="bg-gray-100 dark:bg-surface border border-light-border dark:border-white/10 rounded px-2 py-0.5 text-right text-light-primary dark:text-primary focus:outline-none focus:border-light-primary dark:focus:border-primary cursor-pointer font-bold uppercase transition-colors text-[10px] dark:[color-scheme:dark]">
               @for (p of activeProviders; track p) {
                 <option [value]="p.value"
                   class="bg-white dark:bg-surface text-light-text dark:text-white">
@@ -35,7 +35,7 @@
           <!-- Modèle IA -->
           <div class="flex flex-col items-end">
             <select [(ngModel)]="aiModel" (change)="onModelChange()"
-              class="bg-gray-100 dark:bg-white/5 border border-light-border dark:border-white/10 rounded px-2 py-0.5 text-right text-light-text dark:text-white focus:outline-none focus:border-light-primary dark:focus:border-primary cursor-pointer font-bold uppercase transition-colors text-[10px]">
+              class="bg-gray-100 dark:bg-surface border border-light-border dark:border-white/10 rounded px-2 py-0.5 text-right text-light-text dark:text-white focus:outline-none focus:border-light-primary dark:focus:border-primary cursor-pointer font-bold uppercase transition-colors text-[10px] dark:[color-scheme:dark]">
               @for (m of currentModels; track m) {
                 <option [value]="m.value"
                   class="bg-white dark:bg-surface text-light-text dark:text-white">
@@ -79,13 +79,15 @@
     <!-- ── Ligne 2 : Navigation + bannière MAJ (disparaît au scroll) ── -->
     <div class="h-[60px] flex-shrink-0 border-t border-light-border dark:border-white/10 max-w-7xl mx-auto px-6 flex items-center justify-between gap-4">
       <!-- Navigation -->
-      <app-nav />
-      <!-- Bannière MAJ (uniquement si version obsolète) -->
-      @if (versionStatus() && !versionStatus()!.upToDate) {
+      <app-nav
+        [externalBaseUrl]="externalBaseUrl"
+        [activeExternalRoute]="activeExternalRoute"
+        [onProjetsClick]="onProjetsClick" />
+      <!-- Bannière MAJ (uniquement si version obsolète et en mode portail) -->
+      @if (!externalBaseUrl && versionStatus() && !versionStatus()!.upToDate) {
         <div class="ml-auto overflow-hidden rounded-xl border border-red-500/20 bg-red-500/5 transition-[max-width] duration-500 ease-in-out"
           [class]="bannerCollapsed() ? 'max-w-[215px] cursor-pointer hover:bg-red-500/10' : 'max-w-[680px]'"
-          [routerLink]="bannerCollapsed() ? ['/admin'] : null"
-          [queryParams]="bannerCollapsed() ? { tab: 'deploiement' } : null">
+          (click)="bannerCollapsed() ? navigateToAdmin() : null">
           <div class="flex items-center gap-2 px-3 py-2">
             <!-- Icône (toujours visible) -->
             <span class="material-symbols-outlined text-red-400 text-lg flex-shrink-0">warning</span>
@@ -112,11 +114,11 @@
             <!-- Bouton Historique (disparaît après 5s) -->
             <div class="overflow-hidden transition-[max-width,opacity] duration-500 ease-in-out flex-shrink-0"
               [class]="bannerCollapsed() ? 'max-w-0 opacity-0' : 'max-w-[120px] opacity-100'">
-              <a [routerLink]="['/admin']" [queryParams]="{ tab: 'deploiement' }"
+              <button (click)="navigateToAdmin()"
                 class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-400/30 text-red-400 hover:bg-red-500/10 transition-colors whitespace-nowrap">
                 <span class="material-symbols-outlined text-sm">history</span>
                 Historique
-              </a>
+              </button>
             </div>
           </div>
         </div>

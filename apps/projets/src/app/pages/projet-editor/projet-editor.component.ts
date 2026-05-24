@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
 import { ProjectFilesService, FileNode } from '@worganic/portail-core/data-access';
@@ -10,6 +11,7 @@ import { LayoutService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { ProjetCollabService, CollabHistoryEntry } from '@worganic/portail-core/data-access';
 
+import { WorgMiniHeaderComponent } from '@worganic/shared/ui';
 import { ProjetToolbarComponent } from './components/projet-toolbar/projet-toolbar.component';
 import { ProjetSidebarComponent, DragDropEvent } from './components/projet-sidebar/projet-sidebar.component';
 import { ProjetEditorZoneComponent, FileSaveEvent, SectionInfo } from './components/projet-editor-zone/projet-editor-zone.component';
@@ -28,6 +30,7 @@ import { ProjetAiEditService } from './services/projet-ai-edit.service';
   standalone: true,
   imports: [
     CommonModule,
+    WorgMiniHeaderComponent,
     ProjetToolbarComponent,
     ProjetSidebarComponent,
     ProjetEditorZoneComponent,
@@ -44,6 +47,8 @@ import { ProjetAiEditService } from './services/projet-ai-edit.service';
 })
 export class ProjetEditorComponent implements OnInit, OnDestroy {
   @ViewChild(ProjetEditorZoneComponent) editorZone?: ProjetEditorZoneComponent;
+
+  readonly portailUrl = environment.portailUrl;
 
   project = signal<Project | null>(null);
   files = signal<FileNode[]>([]);

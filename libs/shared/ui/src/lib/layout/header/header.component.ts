@@ -1,26 +1,26 @@
-import { Component, OnInit, OnDestroy, HostListener, effect, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, OnInit, OnDestroy, HostListener, effect, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NavComponent } from '../nav/nav.component';
 import { Subject, interval, takeUntil } from 'rxjs';
-import { ThemeService } from '../../../core/services/theme.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { ConfigService, ProviderOption } from '../../../core/services/config.service';
-import { LayoutService } from '../../../core/services/layout.service';
-import { AppConfigService } from '../../../core/services/app-config.service';
-import { environment } from '../../../../environments/environment';
-
-const EXECUTOR_API = environment.apiExecutorUrl;
-const API = environment.apiDataUrl;
+import {
+  ThemeService, AuthService, ConfigService, LayoutService, AppConfigService,
+  ProviderOption, API_DATA_URL
+} from '@worganic/portail-core/data-access';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NavComponent],
+  imports: [FormsModule, RouterModule, NavComponent],
   templateUrl: './header.component.html',
 })
 export class HeaderComponent implements OnInit, OnDestroy {
+  @Input() externalBaseUrl?: string;
+  @Input() activeExternalRoute = '';
+  @Input() onProjetsClick?: () => void;
+  @Input() logoutRedirectUrl?: string;
+
+  private apiUrl = inject(API_DATA_URL);
   private destroy$ = new Subject<void>();
   private scrolled = false;
 
@@ -28,14 +28,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
   bannerCollapsed = signal(false);
   private bannerTimer?: ReturnType<typeof setTimeout>;
 
-  // ── Thème ────────────────────────────────────────────────
   themeIcon = 'light_mode';
 
-  // ── IA Provider / Model ──────────────────────────────────
   aiProvider = 'claude-cli';
   aiModel = 'claude-sonnet-4-6';
   activeProviders: ProviderOption[] = [];
-  serverUrl = `localhost:${environment.apiDataUrl.split(':').pop()}`;
+  serverUrl = `localhost:${this.apiUrl.split(':').pop()}`;
   private headerSelectionLoaded = false;
 
   private allClaudeModels: { value: string; label: string; costInput?: number; costOutput?: number }[] = [
@@ -64,23 +62,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
     public appConfig: AppConfigService,
     private router: Router
   ) {
-    // Sync thème icon
     effect(() => {
       this.themeIcon = this.themeService.getThemeIcon();
     });
 
-    // Sync providers depuis ConfigService
     effect(() => {
       const cfg = this.configService.cliConfig();
       this.activeProviders = cfg.availableProviders.length > 0
         ? cfg.availableProviders
         : [{ value: 'claude-cli', baseId: 'claude', label: 'Claude Code (Anthropic)', type: 'cli' }];
 
-      // Source complète : executor si disponible, sinon fallback local
       const sourceClaude = cfg.modelsList.claude.length > 0 ? cfg.modelsList.claude : this.allClaudeModels;
       const sourceGemini = cfg.modelsList.gemini.length > 0 ? cfg.modelsList.gemini : this.allGeminiModels;
 
-      // Filtrer par enabledModels (cochés en config)
       this.claudeModels = cfg.enabledModels.claude.length > 0
         ? sourceClaude.filter(m => cfg.enabledModels.claude.includes(m.value))
         : sourceClaude;
@@ -88,14 +82,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
         ? sourceGemini.filter(m => cfg.enabledModels.gemini.includes(m.value))
         : sourceGemini;
 
-      // Restaurer le choix sauvegardé (une seule fois, quand les données arrivent)
       if (!this.headerSelectionLoaded && cfg.headerSelection.provider) {
         this.aiProvider = cfg.headerSelection.provider;
         this.aiModel = cfg.headerSelection.model;
         this.headerSelectionLoaded = true;
       }
 
-      // Si le modèle sélectionné n'est plus dans la liste filtrée, prendre le premier disponible
       const currentList = this.aiProvider.split('-')[0] === 'claude' ? this.claudeModels : this.geminiModels;
       if (currentList.length > 0 && !currentList.find(m => m.value === this.aiModel)) {
         this.aiModel = currentList[0].value;
@@ -105,10 +97,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.themeIcon = this.themeService.getThemeIcon();
-    this.updateExpanded(); // header étendu par défaut (pas scrollé)
+    this.updateExpanded();
     this.checkVersion();
 
-    // Auto-refresh executor status toutes les 30s
     interval(30000)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.configService.refreshModels());
@@ -122,10 +113,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   async checkVersion(): Promise<void> {
     try {
-      const res = await fetch(`${API}/api/version/check`);
+      const res = await fetch(`${this.apiUrl}/api/version/check`);
       if (res.ok) {
         const data = await res.json();
-        // Normaliser la réponse child (mode:'child') vers la structure attendue
         if (data.mode === 'child') {
           this.versionStatus.set({
             upToDate: data.child.upToDate && data.base.upToDate,
@@ -164,7 +154,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // ── Providers & Models ───────────────────────────────────
   get currentModels() {
     const baseId = this.aiProvider.split('-')[0];
     return baseId === 'claude' ? this.claudeModels : this.geminiModels;
@@ -187,19 +176,29 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.configService.saveHeaderSelection(this.aiProvider, this.aiModel);
   }
 
-  // ── Thème ────────────────────────────────────────────────
   toggleTheme(): void {
     this.themeService.toggleTheme();
     this.themeIcon = this.themeService.getThemeIcon();
   }
 
-  // ── Auth ─────────────────────────────────────────────────
   get currentUsername(): string {
     return this.auth.currentUser()?.username || '';
   }
 
   async logout(): Promise<void> {
     await this.auth.logout();
-    this.router.navigate(['/']);
+    if (this.logoutRedirectUrl) {
+      window.location.href = this.logoutRedirectUrl;
+    } else {
+      this.router.navigate(['/']);
+    }
+  }
+
+  navigateToAdmin(): void {
+    if (this.externalBaseUrl) {
+      window.location.href = `${this.externalBaseUrl}/admin`;
+    } else {
+      this.router.navigate(['/admin'], { queryParams: { tab: 'deploiement' } });
+    }
   }
 }
