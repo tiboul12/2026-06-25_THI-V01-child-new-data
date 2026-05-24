@@ -1,17 +1,19 @@
-$port = 4202
-$timeout = 120
+$port    = 4202
+$timeout = 180
 $elapsed = 0
 
-Write-Host "[Electron] Attente d'Angular sur le port $port..."
+Write-Host "[Electron] Attente d'Angular sur http://localhost:$port ..."
 
 while ($elapsed -lt $timeout) {
-    $result = Test-NetConnection -ComputerName 'localhost' -Port $port -WarningAction SilentlyContinue -InformationLevel Quiet
-    if ($result) {
+    try {
+        $r = Invoke-WebRequest "http://localhost:$port" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
         Write-Host "[Electron] Angular pret - demarrage Electron..."
         break
+    } catch {
+        Start-Sleep -Seconds 3
+        $elapsed += 3
+        Write-Host "[Electron] ... toujours en compilation ($elapsed s)"
     }
-    Start-Sleep -Seconds 1
-    $elapsed++
 }
 
 if ($elapsed -ge $timeout) {
@@ -20,4 +22,4 @@ if ($elapsed -ge $timeout) {
 }
 
 Set-Location -Path "$PSScriptRoot\electron"
-npm start
+npx electron .

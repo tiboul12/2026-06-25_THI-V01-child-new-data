@@ -48,16 +48,28 @@ function createWindow() {
 
   console.log(`[Electron] Chargement de l'app Angular : ${ANGULAR_URL}`);
 
-  mainWindow.loadURL(ANGULAR_URL).catch((err) => {
-    console.error('[Electron] Impossible de charger Angular:', err);
-    dialog.showErrorBox(
-      'Erreur de chargement',
-      `Impossible de se connecter à ${ANGULAR_URL}\n\nVérifie que le serveur Angular est bien démarré (ng serve).`
-    );
-  });
+  loadWithRetry(mainWindow, ANGULAR_URL, 20);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+}
+
+// Tente de charger l'URL toutes les 3s si Angular n'est pas encore prêt
+function loadWithRetry(win, url, retriesLeft) {
+  win.loadURL(url).then(() => {
+    console.log('[Electron] App Angular chargée avec succès.');
+  }).catch((err) => {
+    if (retriesLeft > 0 && !win.isDestroyed()) {
+      console.log(`[Electron] Angular pas encore prêt, nouvelle tentative dans 3s (${retriesLeft} restantes)...`);
+      setTimeout(() => loadWithRetry(win, url, retriesLeft - 1), 3000);
+    } else {
+      console.error('[Electron] Impossible de charger Angular:', err);
+      dialog.showErrorBox(
+        'Erreur de chargement',
+        `Impossible de se connecter à ${url}\n\nVérifie que le serveur Angular est bien démarré.`
+      );
+    }
   });
 }
 

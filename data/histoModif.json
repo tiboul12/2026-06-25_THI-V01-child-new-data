@@ -1,6 +1,40 @@
 {
   "modifications": [
     {
+      "id": "mod-222",
+      "version": "B-0.211",
+      "date": "2026-05-24T21:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["system", "electron"],
+      "features": "system:workflow,electron:launch",
+      "title": "launch.bat : Windows Terminal multi-onglets + start-electron.ps1 HTTP polling",
+      "description": "Réécriture de launch.bat pour ouvrir tous les services dans une seule fenêtre Windows Terminal (wt) avec 8 onglets : Claude, Portail, Projets, API, Agent, Electron, Gemini, git. Mise à jour de start-electron.ps1 : polling HTTP sur http://localhost:4202 toutes les 3s (au lieu de Test-NetConnection port) avec timeout 180s, puis npx electron . depuis le dossier electron/.",
+      "files": ["launch.bat", "start-electron.ps1"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il faut que tous ce lance dans une seul fenètre comme cela le fesait dans @launch-frankenstein.bat",
+      "startedAt": "2026-05-24T21:20:00.000Z",
+      "completedAt": "2026-05-24T21:30:00.000Z"
+    },
+    {
+      "id": "mod-221",
+      "version": "B-0.211",
+      "date": "2026-05-24T18:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["system", "electron"],
+      "features": "system:workflow,electron:launch",
+      "title": "launch.bat : démarrage complet avec attente Angular avant Electron",
+      "description": "Création de launch.bat à la racine : lance API, Portail et Projets dans des fenêtres CMD séparées, attend que http://localhost:4202 réponde (polling toutes les 3s via PowerShell), puis lance Electron. Ajout d'un mécanisme de retry dans electron/main.js (loadWithRetry, 20 tentatives × 3s) comme filet de sécurité si Angular tarde.",
+      "files": ["launch.bat", "electron/main.js"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lors du lancement avec npm run start:all electron ne ce lance pas, je voudrais qu'au lancement (via un .bat ou autre) cela lance tous les services/app et qu'electron ce lance avec l'application",
+      "startedAt": "2026-05-24T17:45:00.000Z",
+      "completedAt": "2026-05-24T18:00:00.000Z"
+    },
+    {
       "id": "mod-220",
       "version": "B0.048",
       "date": "2026-05-24T17:25:00.000Z",
