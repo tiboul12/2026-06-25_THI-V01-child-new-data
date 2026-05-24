@@ -1,18 +1,17 @@
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!-- Boutons flottants                                          -->
 <!-- ═══════════════════════════════════════════════════════════ -->
-@if (phase === 'idle' && !showModal) {
-  <div class="fixed bottom-8 right-4 z-[100] flex items-center gap-2">
-    <button (click)="openWidget()"
-      title="Signaler un bug ou une amélioration"
-      class="flex items-center gap-2 bg-light-primary dark:bg-primary text-white dark:text-btn-text rounded-full shadow-lg shadow-light-primary/30 dark:shadow-primary/30 hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 pl-4 pr-5 py-3">
-      <span class="material-symbols-outlined text-xl">confirmation_number</span>
-      <span class="text-sm font-semibold hidden sm:inline">Ticket</span>
-    </button>
+@if (configService.ticketsEnabled() && phase === 'idle' && !showModal) {
+  <div class="fixed bottom-16 right-4 z-[100] flex flex-col items-center gap-2">
     <button (click)="openList()"
       title="Voir mes tickets"
       class="flex items-center justify-center w-10 h-10 bg-light-surface dark:bg-surface border border-light-border dark:border-white/15 text-light-text-muted dark:text-white/50 rounded-full shadow-md hover:border-light-primary dark:hover:border-primary hover:text-light-primary dark:hover:text-primary hover:scale-105 active:scale-95 transition-all duration-200">
       <span class="material-symbols-outlined text-lg">list_alt</span>
+    </button>
+    <button (click)="openWidget()"
+      title="Signaler un bug ou une amélioration"
+      class="flex items-center justify-center w-12 h-12 bg-light-primary dark:bg-primary text-white dark:text-btn-text rounded-full shadow-lg shadow-light-primary/30 dark:shadow-primary/30 hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200">
+      <span class="material-symbols-outlined text-xl">confirmation_number</span>
     </button>
   </div>
 }

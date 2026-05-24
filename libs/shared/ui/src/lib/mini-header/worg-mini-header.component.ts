@@ -1,5 +1,5 @@
 import { Component, Input, effect } from '@angular/core';
-import { AuthService, ThemeService } from '@worganic/portail-core/data-access';
+import { AuthService, ThemeService, AppConfigService } from '@worganic/portail-core/data-access';
 
 @Component({
   selector: 'worg-mini-header',
@@ -15,7 +15,7 @@ export class WorgMiniHeaderComponent {
 
   themeIcon = 'light_mode';
 
-  constructor(public auth: AuthService, private themeService: ThemeService) {
+  constructor(public auth: AuthService, private themeService: ThemeService, public appConfig: AppConfigService) {
     effect(() => {
       this.themeIcon = this.themeService.getThemeIcon();
     });

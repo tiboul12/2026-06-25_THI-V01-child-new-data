@@ -84,7 +84,7 @@
         [activeExternalRoute]="activeExternalRoute"
         [onProjetsClick]="onProjetsClick" />
       <!-- Bannière MAJ (uniquement si version obsolète et en mode portail) -->
-      @if (!externalBaseUrl && versionStatus() && !versionStatus()!.upToDate) {
+      @if (versionStatus() && !versionStatus()!.upToDate) {
         <div class="ml-auto overflow-hidden rounded-xl border border-red-500/20 bg-red-500/5 transition-[max-width] duration-500 ease-in-out"
           [class]="bannerCollapsed() ? 'max-w-[215px] cursor-pointer hover:bg-red-500/10' : 'max-w-[680px]'"
           (click)="bannerCollapsed() ? navigateToAdmin() : null">

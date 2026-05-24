@@ -8,7 +8,7 @@
   <button
     (click)="openPopup()"
     title="Cahier de recette"
-    class="fixed bottom-24 right-4 z-[100] w-12 h-12 rounded-full bg-teal-600 hover:bg-teal-500 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
+    class="fixed bottom-32 right-4 z-[100] w-12 h-12 rounded-full bg-teal-600 hover:bg-teal-500 text-white shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95"
     >
     <span class="material-symbols-outlined text-xl">{{ configService.activeTool() === 'recette' ? 'close' : 'checklist' }}</span>
   </button>
