@@ -2,6 +2,7 @@ import { Component, OnInit, Output, EventEmitter, signal, inject } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { environment } from '../../../../../environments/environment';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
@@ -208,7 +209,7 @@ export class AdminProjetsComponent implements OnInit {
   }
 
   openProject(id: string) {
-    this.router.navigate(['/projets', id]);
+    window.location.href = `${environment.projetsAppUrl}/projets/${id}`;
   }
 
   confirmDeleteProject(id: string) { this.deletingProjectId.set(id); }

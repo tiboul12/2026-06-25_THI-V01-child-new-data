@@ -6,9 +6,9 @@ export const environment = {
   apiDataUrl: 'http://localhost:3001',
   apiExecutorUrl: 'http://localhost:3002',
   apiAgentUrl: 'http://localhost:3003',
+  projetsAppUrl: 'http://localhost:4203',
 
   // ─── Copyright & Branding ──────────────────────────────
-  // Modifiez ces valeurs pour personnaliser le footer
   appName: 'Frankenstein Child',
   appVersion: '1.0.0',
   copyrightYear: 2026,

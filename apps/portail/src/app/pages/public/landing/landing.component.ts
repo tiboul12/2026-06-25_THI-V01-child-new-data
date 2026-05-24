@@ -58,7 +58,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     await this.db.check();
     this.retrying = false;
     if (!this.dbError && this.auth.isAuthenticated()) {
-      this.router.navigate(['/projets']);
+      window.location.href = environment.projetsAppUrl;
     }
   }
 
@@ -70,7 +70,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     }
 
     if (this.auth.isAuthenticated()) {
-      this.router.navigate(['/projets']);
+      window.location.href = environment.projetsAppUrl;
       return;
     }
 
@@ -120,7 +120,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     try {
       await this.auth.login(this.loginEmail, this.loginPassword);
       this.closeModals();
-      this.router.navigate(['/projets']);
+      window.location.href = environment.projetsAppUrl;
     } catch (err: any) {
       this.loginError = err?.error?.error || 'Erreur de connexion';
     } finally {
@@ -146,7 +146,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     try {
       await this.auth.register(this.registerUsername, this.registerEmail, this.registerPassword);
       this.closeModals();
-      this.router.navigate(['/projets']);
+      window.location.href = environment.projetsAppUrl;
     } catch (err: any) {
       this.registerError = err?.error?.error || "Erreur lors de l'inscription";
     } finally {
