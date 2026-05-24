@@ -11,7 +11,7 @@
   },
   "appVersion": "aaaaa",
   "ticketsEnabled": false,
-  "lastUpdated": "2026-05-21T19:28:33.519Z",
+  "lastUpdated": "2026-05-24T16:12:11.406Z",
   "cliConfig": {
     "activeProviders": [
       "claude",
@@ -35,5 +35,14 @@
   "navItems": {
     "woActionHistory": false
   },
-  "apiKeysEnabled": false
+  "apiKeysEnabled": false,
+  "cliIaEnabled": true,
+  "enabledTabs": {
+    "tchat": false,
+    "recette": false,
+    "tickets": false,
+    "actions": false,
+    "iaLogs": true,
+    "history": true
+  }
 }
