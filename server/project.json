@@ -1,0 +1,30 @@
+{
+  "name": "api",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "server",
+  "tags": ["type:api"],
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --watch server-data.js",
+        "cwd": "server"
+      }
+    },
+    "serve-agent": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --watch server-agent.js",
+        "cwd": "server"
+      }
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node server-data.js",
+        "cwd": "server"
+      }
+    }
+  }
+}

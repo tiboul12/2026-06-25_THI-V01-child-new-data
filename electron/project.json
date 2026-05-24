@@ -1,0 +1,23 @@
+{
+  "name": "electron",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "electron",
+  "tags": ["type:electron"],
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "set ANGULAR_URL=http://localhost:4202 && npx electron .",
+        "cwd": "electron"
+      }
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx electron .",
+        "cwd": "electron"
+      }
+    }
+  }
+}
