@@ -1,6 +1,60 @@
 {
   "modifications": [
     {
+      "id": "mod-220",
+      "version": "B0.048",
+      "date": "2026-05-24T17:25:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:mini-header",
+      "title": "Mini-header : bouton PORTAIL → BACK au hover",
+      "description": "Le bouton retour de la mini-header affiche PORTAIL en état normal et BACK au hover (swap de texte via group-hover:hidden / group-hover:inline).",
+      "files": ["libs/shared/ui/src/lib/mini-header/worg-mini-header.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "non ce n'est pas ça en mode normal (pas de passage de la sourie) cela doit indiqué PORTAIL, lorsque la sourie passe sur le bouton cela doit changer le texte en BACK",
+      "startedAt": "2026-05-24T17:20:00.000Z",
+      "completedAt": "2026-05-24T17:25:00.000Z"
+    },
+    {
+      "id": "mod-219",
+      "version": "B0.048",
+      "date": "2026-05-24T17:15:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:mini-header",
+      "title": "Mini-header : bouton Portail icône seule, texte animé au hover",
+      "description": "Le bouton retour de la mini-header (ligne 1) passe en mode icône seule au repos. Le label (Portail) s'étend au hover avec la même animation que les autres boutons de la toolbar : group-hover max-w + opacity transition.",
+      "files": ["libs/shared/ui/src/lib/mini-header/worg-mini-header.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "mettre le même effet sur le bouton portails (avec le mot back lorsque la sourie passe dessus), le texte Portail est présent lorsque la sourie n'est pas dessus",
+      "startedAt": "2026-05-24T17:10:00.000Z",
+      "completedAt": "2026-05-24T17:15:00.000Z"
+    },
+    {
+      "id": "mod-218",
+      "version": "B0.048",
+      "date": "2026-05-24T17:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "libs"],
+      "features": "projets:editor-toolbar,libs:mini-header",
+      "title": "Editor : suppression logout ligne 2, style animé logout ligne 1",
+      "description": "Suppression du bouton déconnexion de la toolbar ligne 2 (projet-toolbar) — il était dupliqué. Le bouton logout de la mini-header ligne 1 adopte le même style animé : icône seule au repos, texte DÉCONNEXION qui s'étend au hover (transition max-w + opacity).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-toolbar/projet-toolbar.component.html",
+        "libs/shared/ui/src/lib/mini-header/worg-mini-header.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans la page editor le menu specifique (ligne 2) ne doit pas avoir de bouton deconnexion. Le bouton deconnexion est déjà présent sur la première ligne et doit y resté, par contre le design doit être identique au bouton de déconnexion de la seconde ligne avec le mot DECONNEXION en hover sur le bouton",
+      "startedAt": "2026-05-24T16:50:00.000Z",
+      "completedAt": "2026-05-24T17:00:00.000Z"
+    },
+    {
       "id": "mod-217",
       "version": "B0.048",
       "date": "2026-05-24T16:30:00.000Z",
