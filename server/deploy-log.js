@@ -1,19 +1,24 @@
 /**
- * deploy-log.js — Enregistre un déploiement directement en BDD
+ * deploy-log.js — Enregistre un déploiement en BDD et met à jour version.json
+ * À exécuter depuis la racine du projet UNIQUEMENT après un push sur main.
  *
  * Usage :
  *   node server/deploy-log.js \
- *     --version 0.07 \
- *     --commit "v0.07 - 20260321 - Mon titre" \
+ *     --version "B0.049" \
+ *     --commit "vB0.049 - 20260524 - AMELIORATION - Titre" \
  *     --description "Ce qui a été fait" \
  *     --ai "Claude Code" \
  *     --model "claude-sonnet-4-6" \
- *     --mods "mod-291, mod-292" \
- *     --files "server/server-data.js,frankenstein/src/app/app.component.ts"
- *     --scope "frankenstein,server"
+ *     --mods "mod-001, mod-002" \
+ *     --files "apps/portail/src/...,libs/shared/..."
+ *     --scope "portail,libs"
  */
 
+const path = require('path');
+const fs   = require('fs');
 const pool = require('./db');
+
+const VERSION_FILE = path.join(__dirname, '..', 'version.json');
 
 function arg(name) {
     const idx = process.argv.indexOf(`--${name}`);
@@ -33,7 +38,7 @@ async function run() {
     const deployedBy  = arg('deployed-by') || process.env.USERNAME || process.env.USER || ai;
 
     if (!version || !commitName) {
-        console.error('Usage: node deploy-log.js --version X.XX --commit "titre" [options]');
+        console.error('Usage: node server/deploy-log.js --version "BX.XXX" --commit "titre" [options]');
         process.exit(1);
     }
 
@@ -46,7 +51,10 @@ async function run() {
         [version, commitName, deployedBy, description, files, ai, model, modIds, scope, features]
     );
 
-    console.log(`[deploy-log] ✓ Déploiement v${version} enregistré en BDD.`);
+    // Mettre à jour version.json local pour que le check soit à jour
+    fs.writeFileSync(VERSION_FILE, JSON.stringify({ version }, null, 2), 'utf8');
+
+    console.log(`[deploy-log] ✓ v${version} enregistrée en BDD et version.json mis à jour.`);
     process.exit(0);
 }
 
