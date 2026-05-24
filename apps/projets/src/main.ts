@@ -7,12 +7,19 @@ import { App } from './app/app';
 const params = new URLSearchParams(window.location.search);
 const token = params.get('token');
 const user = params.get('user');
+const theme = params.get('theme');
 if (token) {
   localStorage.setItem('frankenstein_token', token);
   if (user) localStorage.setItem('frankenstein_user', user);
+}
+if (theme && ['dark', 'light', 'pink'].includes(theme)) {
+  localStorage.setItem('theme', theme);
+}
+if (token || theme) {
   const clean = new URL(window.location.href);
   clean.searchParams.delete('token');
   clean.searchParams.delete('user');
+  clean.searchParams.delete('theme');
   window.history.replaceState({}, '', clean.toString());
 }
 

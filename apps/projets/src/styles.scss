@@ -5,6 +5,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 
+/* ============================================
+   LAVANDE DREAMS - Design System
+   Frankenstein Platform
+   With Light/Dark/Pink Mode Support
+   ============================================ */
+
 :root {
     --bg-primary: #f8f9fa;
     --bg-surface: #ffffff;
@@ -36,9 +42,21 @@
     --tw-surface-light: 26 26 37;
 
     --btn-text-color: 255 255 255;
+
     --card-radius: 12px;
     --card-border-width: 1px;
     --input-radius: 10px;
+
+    --h1-color: inherit; --h1-font-family: inherit; --h1-weight: 700; --h1-letter-spacing: -0.02em;
+    --h2-color: inherit; --h2-font-family: inherit; --h2-weight: 700; --h2-letter-spacing: -0.02em;
+    --h3-color: inherit; --h3-font-family: inherit; --h3-weight: 700; --h3-letter-spacing: -0.02em;
+    --h4-color: inherit; --h4-font-family: inherit; --h4-weight: 700; --h4-letter-spacing: -0.02em;
+
+    --p-color: inherit;
+    --p-size: inherit;
+    --p-font-family: inherit;
+    --p-weight: inherit;
+    --p-line-height: inherit;
 }
 
 .dark {
@@ -49,9 +67,21 @@
     --text-secondary: rgba(255, 255, 255, 0.7);
     --border-color: rgba(255, 255, 255, 0.1);
     --accent-color: #9d4edd;
+    --accent-light: #c77dff;
+    --accent-lighter: #e0aaff;
 }
 
 .pink {
+    --bg-primary: #1a0a12;
+    --bg-surface: #2a1020;
+    --bg-surface-hover: #3a1830;
+    --text-primary: #fce7f3;
+    --text-secondary: rgba(252, 231, 243, 0.7);
+    --border-color: rgba(219, 39, 119, 0.3);
+    --accent-color: #ec4899;
+    --accent-light: #f472b6;
+    --accent-lighter: #f9a8d4;
+
     --tw-primary: 244 114 182;
     --tw-secondary: 249 168 212;
     --tw-accent: 236 72 153;
@@ -60,6 +90,7 @@
     --tw-background: 26 10 18;
     --tw-surface: 42 16 32;
     --tw-surface-light: 58 24 48;
+
     --color-light-primary: 236 72 153;
     --color-light-secondary: 244 114 182;
     --color-light-accent: 249 168 212;
@@ -78,25 +109,108 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Pink theme overrides for hardcoded Tailwind colors */
+.pink .bg-white { background-color: #2a1020 !important; }
+.pink .bg-gray-100 { background-color: #3a1830 !important; }
+.pink .hover\:bg-gray-50:hover { background-color: #3a1830 !important; }
+.pink .border-white { border-color: rgba(219, 39, 119, 0.3) !important; }
+.pink .text-white { color: #fce7f3 !important; }
+.pink .text-gray-600 { color: #c8a0b4 !important; }
+.pink .bg-black\/40 { background-color: rgba(26, 10, 18, 0.6) !important; }
+.pink .bg-black\/30 { background-color: rgba(26, 10, 18, 0.5) !important; }
+.pink .bg-black\/20 { background-color: rgba(26, 10, 18, 0.4) !important; }
+
+.pink .dark\:bg-background { background-color: #1a0a12 !important; }
+.pink .dark\:bg-surface { background-color: #2a1020 !important; }
+.pink .dark\:bg-surface-light { background-color: #3a1830 !important; }
+.pink .dark\:bg-accent-darker\/40 { background-color: rgba(120, 20, 60, 0.4) !important; }
+.pink .dark\:border-primary { border-color: #ec4899 !important; }
+.pink .dark\:border-primary\/30 { border-color: rgba(236, 72, 153, 0.3) !important; }
+.pink .dark\:border-primary\/50 { border-color: rgba(236, 72, 153, 0.5) !important; }
+.pink .dark\:text-primary { color: #f472b6 !important; }
+.pink .dark\:hover\:border-primary:hover { border-color: #ec4899 !important; }
+.pink .dark\:focus\:border-primary:focus { border-color: #ec4899 !important; }
+.pink .dark\:shadow-primary\/20 { --tw-shadow-color: rgba(236, 72, 153, 0.2) !important; }
+.pink .dark\:from-primary { --tw-gradient-from: #ec4899 !important; }
+.pink .dark\:to-accent { --tw-gradient-to: #f472b6 !important; }
+.pink .dark\:bg-primary\/20 { background-color: rgba(236, 72, 153, 0.2) !important; }
+.pink .dark\:bg-primary\/30 { background-color: rgba(236, 72, 153, 0.3) !important; }
+.pink .dark\:hover\:bg-primary\/30:hover { background-color: rgba(236, 72, 153, 0.3) !important; }
+.pink .dark\:bg-primary { background-color: #ec4899 !important; }
+.pink .dark\:hover\:bg-primary\/80:hover { background-color: rgba(236, 72, 153, 0.8) !important; }
+.pink .dark\:ring-primary\/20 { --tw-ring-color: rgba(236, 72, 153, 0.2) !important; }
+.pink .dark\:group-hover\:text-primary { color: #f472b6 !important; }
+
+/* Style settings — global rules */
+h1 { font-weight: var(--h1-weight, 700) !important; letter-spacing: var(--h1-letter-spacing, -0.02em) !important; color: var(--h1-color, inherit) !important; font-family: var(--h1-font-family, inherit) !important; }
+h2 { font-weight: var(--h2-weight, 700) !important; letter-spacing: var(--h2-letter-spacing, -0.02em) !important; color: var(--h2-color, inherit) !important; font-family: var(--h2-font-family, inherit) !important; }
+h3 { font-weight: var(--h3-weight, 700) !important; letter-spacing: var(--h3-letter-spacing, -0.02em) !important; color: var(--h3-color, inherit) !important; font-family: var(--h3-font-family, inherit) !important; }
+h4 { font-weight: var(--h4-weight, 700) !important; letter-spacing: var(--h4-letter-spacing, -0.02em) !important; color: var(--h4-color, inherit) !important; font-family: var(--h4-font-family, inherit) !important; }
+p { color: var(--p-color, inherit); font-size: var(--p-size, inherit); font-family: var(--p-font-family, inherit); font-weight: var(--p-weight, inherit); line-height: var(--p-line-height, inherit); }
+
+/* Override Tailwind's .rounded-xl to follow --card-radius */
+.rounded-xl { border-radius: var(--card-radius, 0.75rem); }
+.rounded-xl.border { border-width: var(--card-border-width, 1px); }
+.modal-content, .modal-box {
+    border-radius: var(--card-radius, 12px);
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="file"]),
+textarea {
+    border-radius: var(--input-radius, 10px);
+}
+
 .neon-border {
     border: var(--card-border-width, 1px) solid rgb(var(--tw-accent));
     border-radius: var(--card-radius, 12px);
     box-shadow: 0 0 10px rgb(var(--tw-accent) / 0.3);
     transition: all 0.3s ease;
 }
+.dark .neon-border { box-shadow: 0 0 10px rgb(var(--tw-accent) / 0.3); }
+:root .neon-border { box-shadow: 0 0 5px rgb(var(--tw-accent-dark) / 0.2); }
+.pink .neon-border { box-shadow: 0 0 10px rgba(236, 72, 153, 0.4); border-color: #ec4899; }
 
 .neon-text {
     color: rgb(var(--tw-primary));
     transition: all 0.3s ease;
 }
 .dark .neon-text { text-shadow: 0 0 8px rgb(var(--tw-primary) / 0.6); }
+.pink .neon-text { color: #f472b6; text-shadow: 0 0 10px rgba(236, 72, 153, 0.6); }
+
+.link-card {
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: block;
+}
+.link-card:hover { border-color: var(--accent-color); transform: translateY(-2px); }
+.dark .link-card:hover { box-shadow: 0 0 20px rgb(var(--tw-accent) / 0.3); }
+:root .link-card:hover { box-shadow: 0 0 10px rgb(var(--tw-accent-dark) / 0.2); }
+.pink .link-card:hover { box-shadow: 0 0 20px rgba(236, 72, 153, 0.35); }
+
+.terminal-output { font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+.terminal-output .token-thinking { color: #fbbf24; font-style: italic; }
+.terminal-output .token-result { color: #34d399; }
+
+.accordion-header { cursor: pointer; user-select: none; transition: all 0.3s ease; }
+.accordion-header:hover { background: var(--bg-surface-hover); }
+.accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.accordion-content.open { max-height: 5000px; overflow: visible; }
+
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 100; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
+.modal-content { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s ease; }
 
 ::-webkit-scrollbar { width: 6px; }
 .dark ::-webkit-scrollbar-track { background: #0a0a0f; }
 :root ::-webkit-scrollbar-track { background: #f8f9fa; }
+.pink ::-webkit-scrollbar-track { background: #1a0a12; }
 .dark ::-webkit-scrollbar-thumb { background: #5a189a; }
 :root ::-webkit-scrollbar-thumb { background: #c77dff; }
+.pink ::-webkit-scrollbar-thumb { background: #ec4899; }
 
+@keyframes fadeInScale { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-blue {
+    0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+    50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.6); }
+}
