@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Worganic Launcher</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0a0a0a;
+  color: #e2e2e2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: #111;
+  border-bottom: 1px solid #222;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-icon {
+  font-size: 20px;
+  color: #6366f1;
+}
+.brand-name {
+  font-size: 16px;
+  color: #a1a1aa;
+  letter-spacing: -.2px;
+}
+.brand-name strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.hdr-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Buttons ── */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: opacity .15s, filter .15s;
+  white-space: nowrap;
+}
+button:hover  { filter: brightness(1.15); }
+button:active { filter: brightness(.9); }
+button:disabled { opacity: .4; cursor: not-allowed; filter: none; }
+
+.btn-green  { background: #10b981; color: #fff; }
+.btn-red    { background: #ef4444; color: #fff; }
+.btn-ghost  { background: #1c1c1e; color: #a1a1aa; border: 1px solid #2e2e2e; }
+
+/* ── Status bar ── */
+#statusbar {
+  font-size: 11px;
+  color: #3f3f46;
+  padding: 4px 24px;
+  background: #0d0d0d;
+  border-bottom: 1px solid #1a1a1a;
+  display: flex;
+  gap: 16px;
+}
+#statusbar .ok   { color: #10b981; }
+#statusbar .warn { color: #f59e0b; }
+
+/* ── Grid ── */
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  padding: 24px;
+  flex: 1;
+}
+
+/* ── Card ── */
+.card {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color .2s;
+}
+.card:hover { border-color: #333; }
+.card.running { border-color: #1a2e20; }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background .3s, box-shadow .3s;
+}
+.dot.on  { background: #10b981; box-shadow: 0 0 8px #10b98166; }
+.dot.off { background: #333; }
+.dot.warn { background: #f59e0b; box-shadow: 0 0 8px #f59e0b66; }
+
+.svc-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+}
+.badge-port    { background: #1a1a2e; color: #818cf8; border: 1px solid #2d2b5a; }
+.badge-status  { padding: 2px 8px; font-family: inherit; }
+.badge-running { background: #052e16; color: #10b981; border: 1px solid #14532d; }
+.badge-stopped { background: #1a1a1a; color: #52525b; border: 1px solid #2a2a2a; }
+
+/* ── Meta ── */
+.meta {
+  font-size: 11px;
+  color: #52525b;
+  display: flex;
+  gap: 12px;
+  min-height: 16px;
+}
+.meta span { display: flex; align-items: center; gap: 4px; }
+
+/* ── Toggle button ── */
+.btn-toggle {
+  width: 100%;
+  padding: 8px;
+  border-radius: 7px;
+  font-size: 13px;
+}
+.btn-start-svc { background: #0d1f14; color: #10b981; border: 1px solid #14532d; }
+.btn-start-svc:hover { background: #14532d; }
+.btn-stop-svc  { background: #1f0d0d; color: #ef4444; border: 1px solid #4a0a0a; }
+.btn-stop-svc:hover  { background: #4a0a0a; }
+
+/* ── Logs ── */
+.log-box {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 11px;
+  line-height: 1.65;
+  max-height: 80px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1px;
+}
+.log-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #71717a;
+}
+.log-line.launcher { color: #3f3f46; font-style: italic; }
+.log-line.err { color: #f87171; }
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 10px;
+  color: #27272a;
+  font-size: 11px;
+  border-top: 1px solid #161616;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-icon">◈</span>
+    <div class="brand-name">Worganic <strong>Launcher</strong></div>
+  </div>
+  <div class="hdr-right">
+    <button class="btn-ghost" id="btn-refresh" onclick="refresh()" title="Actualiser">↻</button>
+    <button class="btn-green" id="btn-start-all" onclick="startAll()">▶ Start All</button>
+    <button class="btn-red"   id="btn-stop-all"  onclick="stopAll()">■ Stop All</button>
+    <button class="btn-ghost" onclick="shutdown()">⏻ Shutdown</button>
+  </div>
+</header>
+
+<div id="statusbar">
+  <span id="sb-time">—</span>
+  <span id="sb-running">chargement...</span>
+</div>
+
+<main id="grid"></main>
+
+<footer>Dashboard · port 9000 · Worganic Platform</footer>
+
+<script>
+var lastLogs = {};
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function uptime(ms) {
+  var s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60)   return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+  return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+}
+
+function api(method, url) {
+  return fetch(url, { method: method }).then(function(r) { return r.json(); });
+}
+
+function startAll()  { setLoading(true); api('POST', '/api/start-all').then(function() { setTimeout(refresh, 800); }); }
+function stopAll()   { setLoading(true); api('POST', '/api/stop-all').then(function()  { setTimeout(refresh, 800); }); }
+
+function startSvc(id) {
+  var btn = document.getElementById('toggle-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  api('POST', '/api/start/' + id).then(function() { setTimeout(refresh, 600); });
+}
+
+function stopSvc(id) {
+  var btn = document.getElementById('toggle-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  api('POST', '/api/stop/' + id).then(function() { setTimeout(refresh, 600); });
+}
+
+function shutdown() {
+  if (!confirm('Arrêter le launcher et tous les services ?')) return;
+  api('POST', '/api/shutdown').then(function() {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#52525b;font-size:14px;">Launcher arrêté.</div>';
+  });
+}
+
+function setLoading(v) {
+  document.getElementById('btn-start-all').disabled = v;
+  document.getElementById('btn-stop-all').disabled  = v;
+}
+
+function renderLogs(id, lines) {
+  var last = lines.slice(-4);
+  if (!last.length) return '<div class="log-line launcher">— aucun log —</div>';
+  return last.map(function(l) {
+    var isLauncher = l.text.indexOf('[launcher]') === 0;
+    var isErr = /error|Error|EADDRINUSE|ENOENT/i.test(l.text) && !isLauncher;
+    var cls = isLauncher ? 'launcher' : (isErr ? 'err' : '');
+    return '<div class="log-line' + (cls ? ' ' + cls : '') + '">' + esc(l.text) + '</div>';
+  }).join('');
+}
+
+async function refresh() {
+  setLoading(false);
+
+  var services, logsAll;
+  try {
+    services = await api('GET', '/api/status');
+    logsAll  = await Promise.all(services.map(function(s) { return api('GET', '/api/logs/' + s.id); }));
+  } catch(e) {
+    document.getElementById('sb-time').textContent = '⚠ connexion perdue';
+    return;
+  }
+
+  var running = services.filter(function(s) { return s.running; }).length;
+  var total   = services.length;
+
+  document.getElementById('sb-time').textContent    = 'Actualisé ' + new Date().toLocaleTimeString('fr-FR');
+  document.getElementById('sb-running').className   = running === total ? 'ok' : (running > 0 ? 'warn' : '');
+  document.getElementById('sb-running').textContent = running + '/' + total + ' services actifs';
+
+  var grid = document.getElementById('grid');
+  var html = '';
+
+  services.forEach(function(s, i) {
+    var logs   = logsAll[i] || [];
+    var portBadge = s.port
+      ? '<span class="badge badge-port">:' + s.port + (s.portActive ? ' ✓' : '') + '</span>'
+      : '';
+    var statusBadge = s.running
+      ? '<span class="badge badge-status badge-running">● Actif</span>'
+      : '<span class="badge badge-status badge-stopped">○ Inactif</span>';
+    var dotCls = s.running ? 'on' : (s.portActive ? 'warn' : 'off');
+    var meta = '';
+    if (s.pid)       meta += '<span>PID&nbsp;' + s.pid + '</span>';
+    if (s.startedAt) meta += '<span>↑&nbsp;' + uptime(s.startedAt) + '</span>';
+
+    var btnCls  = s.running ? 'btn-stop-svc'  : 'btn-start-svc';
+    var btnFn   = s.running ? 'stopSvc'        : 'startSvc';
+    var btnText = s.running ? '■ Arrêter ' + s.name : '▶ Démarrer ' + s.name;
+
+    html += '<div class="card' + (s.running ? ' running' : '') + '">';
+    html +=   '<div class="card-header">';
+    html +=     '<div class="card-title">';
+    html +=       '<div class="dot ' + dotCls + '"></div>';
+    html +=       '<span class="svc-name" style="color:' + s.color + '">' + esc(s.name) + '</span>';
+    html +=       portBadge;
+    html +=     '</div>';
+    html +=     statusBadge;
+    html +=   '</div>';
+    html +=   '<div class="meta">' + meta + '</div>';
+    html +=   '<button id="toggle-' + s.id + '" class="btn-toggle ' + btnCls + '" onclick="' + btnFn + '(\'' + s.id + '\')">' + btnText + '</button>';
+    html +=   '<div class="log-box">' + renderLogs(s.id, logs) + '</div>';
+    html += '</div>';
+  });
+
+  grid.innerHTML = html;
+}
+
+refresh();
+setInterval(refresh, 2500);
+</script>
+</body>
+</html>
