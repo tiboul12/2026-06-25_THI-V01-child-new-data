@@ -9,6 +9,10 @@ const { app, BrowserWindow, dialog } = require('electron');
 const { fork } = require('child_process');
 const path = require('path');
 
+// Évite un crash fatal si le pipe stdout/stderr du launcher se ferme
+process.stdout.on('error', (err) => { if (err.code !== 'EPIPE') throw err; });
+process.stderr.on('error', (err) => { if (err.code !== 'EPIPE') throw err; });
+
 const ANGULAR_URL = process.env.ANGULAR_URL || 'http://localhost:4202';
 
 let executorProcess = null;

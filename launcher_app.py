@@ -25,7 +25,7 @@ ANSI_RE = re.compile(r'\x1B\[[0-9;?]*[A-Za-z]|\x1B[()][0-9A-Z]|\r')
 
 SERVICES = [
     {'id': 'api',      'name': 'API',      'port': 3001, 'cmd': 'node server/server-data.js',                                  'color': '#10b981'},
-    {'id': 'agent',    'name': 'Agent',    'port': 3002, 'cmd': 'node server/server-agent.js',                                 'color': '#6366f1'},
+    {'id': 'agent',    'name': 'Agent',    'port': 3003, 'cmd': 'node server/server-agent.js',                                 'color': '#6366f1'},
     {'id': 'portail',  'name': 'Portail',  'port': 4202, 'cmd': 'npx nx serve portail',                                        'color': '#f59e0b'},
     {'id': 'projets',  'name': 'Projets',  'port': 4203, 'cmd': 'npx nx serve projets',                                        'color': '#3b82f6'},
     {'id': 'electron', 'name': 'Electron', 'port': None, 'cmd': 'powershell -ExecutionPolicy Bypass -File start-electron.ps1', 'color': '#a855f7'},
@@ -66,6 +66,7 @@ class Manager(QObject):
         super().__init__()
         self._procs: dict = {}
         self._lock = threading.Lock()
+        self._daemon_retried: set = set()  # services ayant déjà eu un retry daemon NX
 
     def _emit_log(self, svc_id: str, text: str):
         clean = strip_ansi(text)
@@ -89,18 +90,27 @@ class Manager(QObject):
             return dict(self._procs[svc_id]) if svc_id in self._procs else None
 
     def _watch(self, svc_id: str, proc):
+        daemon_restart_needed = False
         try:
             for raw in proc.stdout:
                 clean = strip_ansi(raw)
                 if clean:
                     ts = datetime.now().strftime('%H:%M:%S')
                     self.sig_log.emit(svc_id, f'[{ts}] {clean}')
+                    if 'Please rerun the command' in clean and svc_id not in self._daemon_retried:
+                        daemon_restart_needed = True
         except Exception:
             pass
         with self._lock:
             if svc_id in self._procs and self._procs[svc_id]['proc'] is proc:
                 del self._procs[svc_id]
         self.sig_status.emit(svc_id, False)
+        # Relance automatique si le daemon NX avait besoin d'un restart (une seule fois)
+        if daemon_restart_needed:
+            self._daemon_retried.add(svc_id)
+            self.sig_log.emit(svc_id, f'[{datetime.now().strftime("%H:%M:%S")}] [launcher] Daemon NX redémarré → relance automatique...')
+            time.sleep(1.5)
+            threading.Thread(target=self.start, args=(svc_id,), daemon=True).start()
 
     def start(self, svc_id: str):
         svc = next((s for s in SERVICES if s['id'] == svc_id), None)
@@ -145,6 +155,7 @@ class Manager(QObject):
                        capture_output=True, timeout=5)
         with self._lock:
             self._procs.pop(svc_id, None)
+        self._daemon_retried.discard(svc_id)
         self.sig_status.emit(svc_id, False)
 
     def start_all(self):
@@ -300,7 +311,10 @@ class ServiceCard(QFrame):
         self._recent.append(line)
         if len(self._recent) > 2:
             self._recent.pop(0)
-        self.mini_log.setText('\n'.join(r[-90:] for r in self._recent))
+        # Tronquer à 55 chars pour ne jamais forcer l'élargissement de la carte
+        self.mini_log.setText('\n'.join(
+            (r[:55] + '…') if len(r) > 55 else r for r in self._recent
+        ))
 
     def tick(self):
         if not self._running:
@@ -316,6 +330,47 @@ class ServiceCard(QFrame):
         else:
             up = f'{int(elapsed // 3600)}h {int((elapsed % 3600) // 60)}m'
         self.meta_lbl.setText(f'PID {info["pid"]}  ·  ↑ {up}')
+
+
+# ─── Responsive Cards Container ───────────────────────────────────────────────
+
+class CardsContainer(QWidget):
+    """2 colonnes par défaut, bascule en 1 colonne si la largeur est insuffisante."""
+    COLS       = 2
+    MIN_WIDTH  = 300  # largeur minimale d'une carte avant de passer en 1 colonne
+
+    def __init__(self):
+        super().__init__()
+        self.setStyleSheet('background:#0a0a0a')
+        self._gl = QGridLayout(self)
+        self._gl.setContentsMargins(20, 20, 20, 10)
+        self._gl.setSpacing(14)
+        self._cards: list = []
+        self._cur_cols = self.COLS
+        for c in range(self.COLS):
+            self._gl.setColumnStretch(c, 1)
+
+    def add_card(self, card: QFrame):
+        from PyQt6.QtWidgets import QSizePolicy
+        card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._cards.append(card)
+        self._place(self._cur_cols)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        w = event.size().width() - 40  # marges 2×20
+        cols = self.COLS if w // self.COLS >= self.MIN_WIDTH else 1
+        if cols != self._cur_cols:
+            self._cur_cols = cols
+            self._place(cols)
+
+    def _place(self, cols: int):
+        for card in self._cards:
+            self._gl.removeWidget(card)
+        for c in range(max(self.COLS, cols) + 1):
+            self._gl.setColumnStretch(c, 1 if c < cols else 0)
+        for i, card in enumerate(self._cards):
+            self._gl.addWidget(card, i // cols, i % cols)
 
 
 # ─── Main Window ──────────────────────────────────────────────────────────────
@@ -390,17 +445,14 @@ class MainWindow(QMainWindow):
         # Cards scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setStyleSheet(
             'QScrollArea{background:#0a0a0a;border:none}'
             'QScrollBar:vertical{background:#111;width:8px;border-radius:4px}'
             'QScrollBar::handle:vertical{background:#333;border-radius:4px}'
             'QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical{height:0}'
         )
-        cards_container = QWidget()
-        cards_container.setStyleSheet('background:#0a0a0a')
-        self.grid = QGridLayout(cards_container)
-        self.grid.setContentsMargins(20, 20, 20, 10)
-        self.grid.setSpacing(14)
+        cards_container = CardsContainer()
         scroll.setWidget(cards_container)
         splitter.addWidget(scroll)
 
@@ -434,7 +486,7 @@ class MainWindow(QMainWindow):
         for i, svc in enumerate(SERVICES):
             card = ServiceCard(svc, manager)
             self.cards[svc['id']] = card
-            self.grid.addWidget(card, i // 2, i % 2)
+            cards_container.add_card(card)
 
             log_view = QPlainTextEdit()
             log_view.setReadOnly(True)
