@@ -1,6 +1,23 @@
 {
   "modifications": [
     {
+      "id": "mod-231",
+      "version": "B-0.214",
+      "date": "2026-05-26T21:00:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": ["system"],
+      "features": "system:launcher",
+      "title": "Ajout logging fichier launcher.log pour diagnostiquer les plantages",
+      "description": "Ajout d'un logger Python (logging + fichier launcher.log) avec capture des exceptions non gérées sur main thread (sys.excepthook) et threads (threading.excepthook). Logs DEBUG/INFO/CRITICAL sur start, stop, _watch, Popen, taskkill et lifecycle app.",
+      "files": ["launcher_app.py"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai régulièrement des plantages de l'application launcher_app.py pourrais tu rajouté des logs pour comprendre ou sont les problèmes",
+      "startedAt": "2026-05-26T20:55:00.000Z",
+      "completedAt": "2026-05-26T21:00:00.000Z"
+    },
+    {
       "id": "mod-230",
       "version": "B-0.213",
       "date": "2026-05-26T20:35:00.000Z",

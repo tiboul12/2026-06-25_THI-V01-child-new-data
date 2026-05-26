@@ -10,6 +10,8 @@ import socket
 import subprocess
 import time
 import threading
+import logging
+import traceback
 from datetime import datetime
 
 from PyQt6.QtWidgets import (
@@ -22,6 +24,31 @@ from PyQt6.QtGui import QFont, QColor, QPalette, QTextCursor
 
 ROOT    = os.path.dirname(os.path.abspath(__file__))
 ANSI_RE = re.compile(r'\x1B\[[0-9;?]*[A-Za-z]|\x1B[()][0-9A-Z]|\r')
+
+# ─── Logging ──────────────────────────────────────────────────────────────────
+
+LOG_FILE = os.path.join(ROOT, 'launcher.log')
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding='utf-8'),
+    ],
+)
+log = logging.getLogger('launcher')
+
+def _log_exception(exc_type, exc_value, exc_tb):
+    log.critical('Exception non gérée (main thread):\n%s',
+                 ''.join(traceback.format_exception(exc_type, exc_value, exc_tb)))
+    sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+def _log_thread_exception(args):
+    log.critical('Exception non gérée (thread %s):\n%s',
+                 args.thread.name if args.thread else '?',
+                 ''.join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_tb)))
+
+sys.excepthook = _log_exception
+threading.excepthook = _log_thread_exception
 
 SERVICES = [
     {'id': 'api',      'name': 'API',      'port': 3001, 'cmd': 'node server/server-data.js',                                  'color': '#10b981'},
@@ -90,6 +117,7 @@ class Manager(QObject):
             return dict(self._procs[svc_id]) if svc_id in self._procs else None
 
     def _watch(self, svc_id: str, proc):
+        log.debug('[%s] _watch démarré (PID %s)', svc_id, proc.pid)
         daemon_restart_needed = False
         try:
             for raw in proc.stdout:
@@ -98,9 +126,12 @@ class Manager(QObject):
                     ts = datetime.now().strftime('%H:%M:%S')
                     self.sig_log.emit(svc_id, f'[{ts}] {clean}')
                     if 'Please rerun the command' in clean and svc_id not in self._daemon_retried:
+                        log.info('[%s] Daemon NX demande une relance', svc_id)
                         daemon_restart_needed = True
         except Exception:
-            pass
+            log.exception('[%s] Erreur lecture stdout', svc_id)
+        rc = proc.poll()
+        log.debug('[%s] Processus terminé (returncode=%s)', svc_id, rc)
         with self._lock:
             if svc_id in self._procs and self._procs[svc_id]['proc'] is proc:
                 del self._procs[svc_id]
@@ -109,22 +140,27 @@ class Manager(QObject):
         if daemon_restart_needed:
             self._daemon_retried.add(svc_id)
             self.sig_log.emit(svc_id, f'[{datetime.now().strftime("%H:%M:%S")}] [launcher] Daemon NX redémarré → relance automatique...')
+            log.info('[%s] Relance automatique après restart daemon NX', svc_id)
             time.sleep(1.5)
             threading.Thread(target=self.start, args=(svc_id,), daemon=True).start()
 
     def start(self, svc_id: str):
         svc = next((s for s in SERVICES if s['id'] == svc_id), None)
         if not svc:
+            log.warning('start: service inconnu "%s"', svc_id)
             return
         with self._lock:
             if svc_id in self._procs:
+                log.debug('[%s] start: déjà en cours', svc_id)
                 return
 
         if svc['port'] and port_in_use(svc['port']):
+            log.info('[%s] Port %s occupé → libération', svc_id, svc['port'])
             self._emit_log(svc_id, f'[launcher] Port {svc["port"]} occupé → libération')
             kill_port(svc['port'])
             time.sleep(0.6)
 
+        log.info('[%s] Démarrage : %s', svc_id, svc['cmd'])
         self._emit_log(svc_id, '[launcher] Démarrage...')
         try:
             proc = subprocess.Popen(
@@ -136,9 +172,11 @@ class Manager(QObject):
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except Exception as e:
+            log.exception('[%s] Erreur Popen', svc_id)
             self._emit_log(svc_id, f'[launcher] Erreur spawn: {e}')
             return
 
+        log.info('[%s] Processus lancé (PID %s)', svc_id, proc.pid)
         with self._lock:
             self._procs[svc_id] = {'proc': proc, 'pid': proc.pid, 'started': time.time()}
 
@@ -150,9 +188,13 @@ class Manager(QObject):
             p = self._procs.get(svc_id)
         if not p:
             return
+        log.info('[%s] Arrêt (PID %s)', svc_id, p['pid'])
         self._emit_log(svc_id, '[launcher] Arrêt...')
-        subprocess.run(['taskkill', '/PID', str(p['pid']), '/T', '/F'],
-                       capture_output=True, timeout=5)
+        try:
+            subprocess.run(['taskkill', '/PID', str(p['pid']), '/T', '/F'],
+                           capture_output=True, timeout=5)
+        except Exception:
+            log.exception('[%s] Erreur taskkill', svc_id)
         with self._lock:
             self._procs.pop(svc_id, None)
         self._daemon_retried.discard(svc_id)
@@ -573,6 +615,7 @@ class MainWindow(QMainWindow):
 # ─── App entry point ──────────────────────────────────────────────────────────
 
 def main():
+    log.info('=== Worganic Launcher démarrage ===')
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     app.setApplicationName('Worganic Launcher')
@@ -594,11 +637,14 @@ def main():
     manager = Manager()
     window  = MainWindow(manager)
     window.show()
+    log.info('Fenêtre principale affichée')
 
     # Auto-start all services on launch
     threading.Thread(target=manager.start_all, daemon=True).start()
 
-    sys.exit(app.exec())
+    code = app.exec()
+    log.info('=== Worganic Launcher arrêt (code %s) ===', code)
+    sys.exit(code)
 
 
 if __name__ == '__main__':
