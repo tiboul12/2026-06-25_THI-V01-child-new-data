@@ -21,7 +21,12 @@ export class AuthService {
   isAuthenticated = signal(false);
   currentUser = signal<AuthUser | null>(null);
 
+  /** Promesse qui se résout quand la vérification initiale du token est terminée. */
+  readonly initDone: Promise<void>;
+  private _resolveInit!: () => void;
+
   constructor(private http: HttpClient) {
+    this.initDone = new Promise<void>(resolve => { this._resolveInit = resolve; });
     this.initFromStorage();
   }
 
@@ -34,11 +39,20 @@ export class AuthService {
         const user: AuthUser = JSON.parse(userStr);
         this.isAuthenticated.set(true);
         this.currentUser.set(user);
-        this.verify().catch(() => { /* keep session alive */ });
+        // Defer verify() to avoid circular DI: the interceptor injects AuthService
+        // which is still being constructed at this point in the constructor call stack.
+        Promise.resolve().then(() => {
+          this.verify()
+            .catch(() => { this.clearSession(); })
+            .finally(() => { this._resolveInit(); });
+        });
+        return;
       } catch {
         this.clearSession();
+        this._resolveInit();
       }
     }
+    this._resolveInit();
   }
 
   getToken(): string | null {

@@ -1,6 +1,88 @@
 {
   "modifications": [
     {
+      "id": "mod-235",
+      "version": "B-0.215",
+      "date": "2026-05-27T00:10:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs", "projets", "portail"],
+      "features": "portail:auth,projets:auth",
+      "title": "Fix auth: DI circulaire AuthService/authInterceptor au démarrage",
+      "description": "verify() était appelé synchroniquement dans le constructeur d'AuthService → déclenchait une requête HTTP → authInterceptor appelait inject(AuthService) alors qu'AuthService était encore en cours de construction → Angular lançait une erreur JS brute (pas HttpErrorResponse) avec status:undefined → catch la traitait comme un échec de vérification → clearSession() → redirect portail en boucle. Fix : verify() différé via Promise.resolve().then() pour s'exécuter après la fin du constructeur. Nettoyage des console.log de debug ajoutés pour le diagnostic.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/auth.service.ts",
+        "apps/projets/src/app/auth.guard.ts",
+        "apps/projets/src/main.ts",
+        "apps/portail/src/app/shared/utils/navigate-to-projets.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Le login semble réussir mais je reviens sur la page d'accueil non connecté",
+      "startedAt": "2026-05-27T00:05:00.000Z",
+      "completedAt": "2026-05-27T00:15:00.000Z"
+    },
+    {
+      "id": "mod-234",
+      "version": "B-0.215",
+      "date": "2026-05-27T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs", "portail"],
+      "features": "portail:auth,projets:auth",
+      "title": "Fix auth: initDone non résolu + collision NG0912 WoToolsAdmin",
+      "description": "1) initFromStorage() : le bloc catch oubliait d'appeler _resolveInit() quand le JSON du frankenstein_user était corrompu → la Promise initDone ne se résolvait jamais → authGuard projets bloqué en await. 2) admin-tools.component.ts importait WoToolsAdminComponent depuis le chemin local portail au lieu de @worganic/shared/ui → collision NG0912 car deux classes avec le même sélecteur coexistaient.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/auth.service.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tools/admin-tools.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je n'arrive toujours pas à me connecté avec mon compte admin@admin.com [vite] connecting... wo-tools-admin.component.ts:19 NG0912...",
+      "startedAt": "2026-05-27T00:00:00.000Z",
+      "completedAt": "2026-05-27T00:05:00.000Z"
+    },
+    {
+      "id": "mod-233",
+      "version": "B-0.215",
+      "date": "2026-05-26T21:40:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "libs"],
+      "features": "portail:auth,projets:auth",
+      "title": "Fix auth : initDone promise évite la double vérification concurrente",
+      "description": "AuthService expose initDone (Promise<void>) qui se résout quand la vérification initiale du token est terminée. Le guard projets attend initDone au lieu de refaire verify() indépendamment — élimine la race condition où clearSession() d'initFromStorage() supprimait le token avant que le guard puisse l'utiliser.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/auth.service.ts",
+        "apps/projets/src/app/auth.guard.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "la page d'accueil s'affiche bien mais lorsque j'essai de me connecter je reviens sur la page d'accueil non connecté",
+      "startedAt": "2026-05-26T21:30:00.000Z",
+      "completedAt": "2026-05-26T21:40:00.000Z"
+    },
+    {
+      "id": "mod-232",
+      "version": "B-0.215",
+      "date": "2026-05-26T21:20:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "libs"],
+      "features": "portail:auth,projets:auth",
+      "title": "Fix auth : pages protégées accessibles sans connexion",
+      "description": "Double fix : 1) AuthService.initFromStorage() appelle clearSession() quand verify() échoue (au lieu d'ignorer silencieusement le token périmé). 2) authGuard de projets devient async et vérifie le token côté serveur avant d'autoriser la navigation — si invalide, clearSession() + redirect vers portail.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/auth.service.ts",
+        "apps/projets/src/app/auth.guard.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je viens de me déconnecté et au lieu de retournée sur la page d'accueil je me retrouve sur la page mes projet en mode deconnecté, je ne devrait pas pouvoir être sur cette page et les autres pages du site admin projet document sans être connecté",
+      "startedAt": "2026-05-26T21:10:00.000Z",
+      "completedAt": "2026-05-26T21:20:00.000Z"
+    },
+    {
       "id": "mod-231",
       "version": "B-0.214",
       "date": "2026-05-26T21:00:00.000Z",
