@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-236",
+      "version": "B-0.216",
+      "date": "2026-05-27T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "libs", "server"],
+      "features": "projets:copy-project",
+      "title": "Copie de projet avec modal de renommage",
+      "description": "Ajout d'un bouton Copier dans la barre d'actions de chaque projet. Un popup demande le nouveau nom (défaut : <titre>_v2). La copie duplique : l'entrée frank_projects en BDD, toutes les étapes (frank_project_steps), le dossier data/projets/<id>/ (sans .git), l'entrée file_project_meta si elle existe.",
+      "files": [
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/project.service.ts",
+        "apps/projets/src/app/pages/projets/projets.component.ts",
+        "apps/projets/src/app/pages/projets/projets.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "ajoute une option à l'outils projet, dans l'encart rajoute un bouton copie, le but est de copier le projet et tous le contenue du projet (data/projets/...) lors de la copie il faut rajouté un popup pour demandé le nouveau nom avec par defaut le même nom suivi de _v2, cela doit copié l'intégralité du projet, avec son contenu sur la bdd mais aussi le contenue (fichiers du projet)",
+      "startedAt": "2026-05-27T00:20:00.000Z",
+      "completedAt": "2026-05-27T00:35:00.000Z"
+    },
+    {
       "id": "mod-235",
       "version": "B-0.215",
       "date": "2026-05-27T00:10:00.000Z",

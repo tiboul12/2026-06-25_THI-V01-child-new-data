@@ -85,6 +85,12 @@ export class ProjectService {
     );
   }
 
+  copyProject(id: string, title: string): Promise<Project> {
+    return firstValueFrom(
+      this.http.post<Project>(`${this.apiUrl}/api/frank/projects/${id}/copy`, { title }, { headers: this.headers() })
+    );
+  }
+
   getSteps(projectId: string): Promise<ProjectStep[]> {
     return firstValueFrom(
       this.http.get<ProjectStep[]>(`${this.apiUrl}/api/frank/projects/${projectId}/steps`, { headers: this.headers() })
