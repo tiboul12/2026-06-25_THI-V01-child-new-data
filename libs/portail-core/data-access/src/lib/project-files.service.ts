@@ -151,4 +151,8 @@ export class ProjectFilesService {
   getGithubReachable(): Promise<{ reachable: boolean; reason?: string }> {
     return firstValueFrom(this.http.get<any>(`${this.apiUrl}/api/github/reachable`, { headers: this.h() }));
   }
+
+  openFolder(name: string): Promise<{ success: boolean }> {
+    return firstValueFrom(this.http.post<any>(`${this.apiUrl}/api/file-projects/${name}/open-folder`, {}, { headers: this.h() }));
+  }
 }

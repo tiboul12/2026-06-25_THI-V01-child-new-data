@@ -35,6 +35,12 @@ export class ProjetsComponent implements OnInit {
   // Confirmation suppression
   deletingId = signal<string | null>(null);
 
+  // Modale copie
+  showCopyModal = signal(false);
+  copySourceProject = signal<Project | null>(null);
+  copyTitle = '';
+  copying = signal(false);
+
   githubReachable = signal<boolean | null>(null);
   projectsWithRemote = signal<Set<string>>(new Set());
 
@@ -176,6 +182,46 @@ export class ProjetsComponent implements OnInit {
     }
   }
 
+  openCopyModal(project: Project, event: Event) {
+    event.stopPropagation();
+    this.copySourceProject.set(project);
+    this.copyTitle = `${project.title}_v2`;
+    this.showCopyModal.set(true);
+  }
+
+  closeCopyModal() {
+    this.showCopyModal.set(false);
+    this.copySourceProject.set(null);
+    this.copyTitle = '';
+  }
+
+  async executeCopy() {
+    const src = this.copySourceProject();
+    if (!src || !this.copyTitle.trim()) return;
+    this.copying.set(true);
+    this.error.set('');
+    try {
+      const newProject = await this.projectService.copyProject(src.id, this.copyTitle.trim());
+      this.woHistory.track({
+        section: 'projets',
+        actionType: 'create',
+        label: `Copie du projet «${src.title}» → «${newProject.title}»`,
+        entityType: 'project',
+        entityId: newProject.id,
+        entityLabel: newProject.title,
+        afterState: { title: newProject.title, copiedFrom: src.id },
+        undoable: true,
+        undoAction: { endpoint: `/api/frank/projects/${newProject.id}`, method: 'DELETE' }
+      }).catch(() => {});
+      this.closeCopyModal();
+      await this.loadProjects();
+    } catch (e: any) {
+      this.error.set(e?.error?.error || 'Erreur lors de la copie');
+    } finally {
+      this.copying.set(false);
+    }
+  }
+
   confirmDelete(id: string, event: Event) {
     event.stopPropagation();
     this.deletingId.set(id);
@@ -205,6 +251,11 @@ export class ProjetsComponent implements OnInit {
       this.error.set(e?.error?.error || 'Erreur lors de la suppression');
       this.deletingId.set(null);
     }
+  }
+
+  openProjectFolder(id: string, event: Event) {
+    event.stopPropagation();
+    this.projectFilesService.openFolder(id).catch(() => {});
   }
 
   formatDate(iso: string): string {

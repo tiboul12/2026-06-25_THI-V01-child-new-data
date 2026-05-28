@@ -4386,6 +4386,111 @@ app.delete('/api/frank/projects/:id/steps/:stepId', async (req, res) => {
 const PROJECTS_DIR = path.join(BASE_DIR, 'projets');
 const CONVERSATIONS_DIR = path.join(PROJECTS_DIR, 'conversations');
 
+// POST /api/frank/projects/:id/copy — copie complète (DB + steps + fichiers)
+app.post('/api/frank/projects/:id/copy', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        // 1. Récupérer le projet source
+        const [rows] = await pool.query(
+            `SELECT fp.*, u.username AS owner_username FROM frank_projects fp
+             LEFT JOIN users u ON fp.user_id = u.id WHERE fp.id = ?`,
+            [req.params.id]
+        );
+        if (!rows[0]) return res.status(404).json({ error: 'Projet non trouvé' });
+        const src = rows[0];
+        if (user.role !== 'admin' && src.user_id !== user.id)
+            return res.status(403).json({ error: 'Accès refusé' });
+
+        const newId = crypto.randomUUID();
+        const now = new Date().toISOString();
+        const newTitle = (req.body.title || `${src.title}_v2`).trim();
+
+        // 2. Copier le projet en BDD
+        await pool.query(
+            `INSERT INTO frank_projects
+             (id, title, description, content, status, user_id, ia_instructions,
+              backup_type, backup_server, backup_username, backup_password, backup_port,
+              backup_directory, backup_owner_type, backup_repo_name, backup_visibility,
+              created_at, updated_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [newId, newTitle, src.description || '', src.content || '', src.status || 'draft',
+             user.id, src.ia_instructions || null,
+             src.backup_type || null, src.backup_server || null, src.backup_username || null,
+             src.backup_password || null, src.backup_port || null, src.backup_directory || null,
+             src.backup_owner_type || null, src.backup_repo_name || null, src.backup_visibility || null,
+             now, now]
+        );
+
+        // 3. Copier les steps
+        const [steps] = await pool.query(
+            'SELECT * FROM frank_project_steps WHERE project_id = ? ORDER BY step_number',
+            [req.params.id]
+        );
+        for (const step of steps) {
+            await pool.query(
+                `INSERT INTO frank_project_steps
+                 (id, project_id, step_number, content, linked_doc_id, linked_doc_title,
+                  result, result_status, user_id, username, notes, created_at)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+                [crypto.randomUUID(), newId, step.step_number, step.content || '',
+                 step.linked_doc_id || null, step.linked_doc_title || null,
+                 step.result || null, step.result_status || 'pending',
+                 step.user_id, step.username, step.notes || null, step.created_at]
+            );
+        }
+
+        // 4. Copier les fichiers (data/projets/<id>/) sans le dossier .git
+        const srcDir = path.join(PROJECTS_DIR, req.params.id);
+        const dstDir = path.join(PROJECTS_DIR, newId);
+        if (fs.existsSync(srcDir)) {
+            fs.cpSync(srcDir, dstDir, {
+                recursive: true,
+                filter: (src) => !src.replace(/\\/g, '/').includes('/.git')
+            });
+            // Mettre à jour config.json avec le nouveau nom et timestamps
+            const configPath = path.join(dstDir, 'config.json');
+            if (fs.existsSync(configPath)) {
+                try {
+                    const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+                    cfg.projectName = newTitle;
+                    cfg.createdAt = now;
+                    cfg.updatedAt = now;
+                    fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2));
+                } catch {}
+            }
+            // Copier file_project_meta si présent
+            try {
+                const [metaRows] = await pool.query(
+                    'SELECT * FROM file_project_meta WHERE id = ?', [req.params.id]
+                );
+                if (metaRows[0]) {
+                    const m = metaRows[0];
+                    await pool.query(
+                        `INSERT INTO file_project_meta
+                         (id, display_name, git_remote_url, structure, owner_user_id, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?)`,
+                        [newId, newTitle, null,
+                         typeof m.structure === 'string' ? m.structure : JSON.stringify(m.structure || []),
+                         user.id, now, now]
+                    );
+                }
+            } catch {}
+        }
+
+        // 5. Retourner le nouveau projet
+        const [newRows] = await pool.query(
+            `SELECT fp.*, u.username AS owner_username FROM frank_projects fp
+             LEFT JOIN users u ON fp.user_id = u.id WHERE fp.id = ?`,
+            [newId]
+        );
+        res.status(201).json(frankRowToObj(newRows[0]));
+    } catch (e) {
+        console.error('[FRANK] Copy error:', e);
+        res.status(500).json({ error: 'Erreur lors de la copie du projet' });
+    }
+});
+
 if (!fs.existsSync(CONVERSATIONS_DIR)) {
     fs.mkdirSync(CONVERSATIONS_DIR, { recursive: true });
 }
@@ -5489,6 +5594,23 @@ app.post('/api/file-projects/:name/pull', (req, res) => {
     }
 });
 
+// POST /api/file-projects/:name/open-folder
+//   Ouvre l'explorateur Windows sur le dossier local du projet.
+app.post('/api/file-projects/:name/open-folder', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    if (!fs.existsSync(projetPath)) return res.status(404).json({ error: 'Dossier non trouvé' });
+    try {
+        const { exec } = require('child_process');
+        const safe = projetPath.replace(/"/g, '\\"');
+        exec(`explorer "${safe}"`);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // POST /api/file-projects/:name/auto-sync
 //   Synchronise automatiquement le projet avec GitHub au chargement :
 //   pull si remote en avance, push si local en avance, signale la divergence sinon.
@@ -5689,10 +5811,15 @@ app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
         // Cas orphelin : dossier local sans .git, mais un remote existe en BDD
         // → re-clone depuis GitHub pour récupérer tous les fichiers committés (images, etc.)
         try {
-            const [rows] = await pool.query('SELECT git_remote_url FROM file_project_meta WHERE id = ?', [req.params.name]);
+            const [rows] = await pool.query('SELECT git_remote_url, display_name FROM file_project_meta WHERE id = ?', [req.params.name]);
             const gitRemoteUrl = rows[0]?.git_remote_url;
             if (!gitRemoteUrl) {
-                // Pas de remote connu, on garde le dossier local tel quel
+                // Pas de remote connu : on s'assure que config.json existe (sinon les endpoints folders/files renvoient 404)
+                const cfgPath = path.join(projetPath, 'config.json');
+                if (!fs.existsSync(cfgPath)) {
+                    const displayName = rows[0]?.display_name || req.params.name;
+                    fs.writeFileSync(cfgPath, JSON.stringify({ projectName: displayName, structure: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, null, 2), 'utf8');
+                }
                 return res.json({ status: 'ready' });
             }
             console.log(`[ensure-local] dossier orphelin (sans .git) détecté pour ${req.params.name} — re-clone depuis GitHub`);

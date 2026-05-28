@@ -184,6 +184,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   private projectFolderName = '';
   private savedStatusTimer: any;
   private pendingFolders = new Set<string>();
+  private pendingFolderNames = new Set<string>(); // noms de dossiers en cours de création (protection anti-suppression)
   private isSaving = false;
   private pendingSections: SectionInfo[] | null = null;
   private history = inject(WoActionHistoryService);
@@ -420,6 +421,15 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   async onFolderCreated(info: { name: string; parentId: string | null }) {
+    // Protège le nouveau dossier contre une suppression accidentelle par processSectionsChange
+    // qui pourrait s'exécuter avec des sections stales (avant que le signal files() soit propagé
+    // à l'editor zone, ou via un save différé déclenché entre temps : blur textarea, timer 2s…).
+    this.pendingFolderNames.add(info.name);
+    let waited = 0;
+    while (this.isSaving && waited < 5000) {
+      await new Promise(r => setTimeout(r, 50));
+      waited += 50;
+    }
     await this.loadFiles();
     if (!info.parentId) {
       this.editorZone?.appendSection(info.name, 1);
@@ -430,6 +440,11 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         this.editorZone?.insertSectionInParent(parent.name, depth, info.name);
       }
     }
+    // On retient la protection assez longtemps pour couvrir tout save différé (timer 2 s)
+    // et le ngOnChanges de l'editor zone qui reconstruit le texte avec le nouveau dossier.
+    // Tant que la protection est active, processSectionsChange ne supprimera pas ce dossier
+    // même si le texte parsé ne le contient pas encore.
+    setTimeout(() => this.pendingFolderNames.delete(info.name), 5000);
   }
 
   async onSectionsChange(sections: SectionInfo[]) {
@@ -668,7 +683,10 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     for (const [fp, folder] of allFolderPaths) {
       // Si le dossier a été renommé, on ne le supprime pas (son ID est dans renamedIds)
       if (renamedIds.has(folder.id)) continue;
-      
+      // Si le dossier vient d'être créé via la sidebar, on le protège d'une suppression
+      // accidentelle (race entre le signal parent mis à jour et l'@Input editor zone stale)
+      if (this.pendingFolderNames.has(folder.name)) continue;
+
       // Si le chemin n'existe plus dans le texte, c'est un orphelin
       if (!sectionPaths.has(fp)) {
           // On vérifie si un ancêtre est déjà orphelin (pour ne pas supprimer récursivement inutilement, 

@@ -11,8 +11,8 @@ const PORT = 9000;
 const SERVICES = [
   { id: 'api',      name: 'API',      port: 3001, cmd: 'node',       args: ['server/server-data.js'],                                     color: '#10b981' },
   { id: 'agent',    name: 'Agent',    port: 3002, cmd: 'node',       args: ['server/server-agent.js'],                                    color: '#6366f1' },
-  { id: 'portail',  name: 'Portail',  port: 4202, cmd: 'npx',        args: ['nx', 'serve', 'portail'],                                    color: '#f59e0b' },
-  { id: 'projets',  name: 'Projets',  port: 4203, cmd: 'npx',        args: ['nx', 'serve', 'projets'],                                    color: '#3b82f6' },
+  { id: 'portail',  name: 'Portail',  port: 4202, cmd: 'npx',        args: ['nx', 'serve', 'portail'],  env: { NX_DAEMON: 'false' },   color: '#f59e0b' },
+  { id: 'projets',  name: 'Projets',  port: 4203, cmd: 'npx',        args: ['nx', 'serve', 'projets'],  env: { NX_DAEMON: 'false' },   color: '#3b82f6' },
   { id: 'electron', name: 'Electron', port: null, cmd: 'powershell', args: ['-ExecutionPolicy', 'Bypass', '-File', 'start-electron.ps1'], color: '#a855f7' },
 ];
 
@@ -74,6 +74,7 @@ async function start(id) {
   const proc = spawn(svc.cmd, svc.args, {
     cwd: ROOT, shell: true, windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...(svc.env ?? {}) },
   });
 
   procs[id] = { proc, pid: proc.pid, startedAt: Date.now() };
