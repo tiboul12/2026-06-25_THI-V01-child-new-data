@@ -302,20 +302,38 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   private async ensureProjectFolder(proj: Project) {
+    const isFtp = proj.backupType === 'ftp';
+    if (isFtp) this.initMessage.set('Récupération des fichiers FTP…');
+    let result;
     try {
-      const result = await this.projectFilesService.ensureLocal(this.projectFolderName);
-      if (result.status === 'no-remote') {
-        this.localUnavailable.set(result.message || 'Ce projet n\'est pas disponible localement — un remote Git doit être configuré par le propriétaire.');
-        return;
-      }
+      result = await this.projectFilesService.ensureLocal(this.projectFolderName);
     } catch (e) {
       console.warn('ensureProjectFolder error:', e);
+      this.initMessage.set(null);
+      return;
+    }
+    this.initMessage.set(null);
+
+    if (result.status === 'no-remote') {
+      this.localUnavailable.set(result.message || 'Ce projet n\'est pas disponible localement — un remote Git doit être configuré par le propriétaire.');
+      return;
+    }
+    if (result.status === 'ftp-no-config') {
+      this.localUnavailable.set(result.message || 'Ce projet n\'a pas de configuration FTP — les fichiers ne peuvent pas être récupérés automatiquement.');
+      return;
+    }
+    if (result.status === 'ftp-error') {
+      this.localUnavailable.set(result.message || 'Connexion FTP impossible — vérifiez la configuration FTP du projet.');
+      return;
+    }
+    if (result.status === 'ftp-pulled') {
+      // Première ouverture : fichiers récupérés depuis FTP, pas de re-sync dans l'autre sens
       return;
     }
 
-    // Synchronisation FTP à l'ouverture
-    if (proj.backupType === 'ftp') {
-      this.initMessage.set('Vérification de la connexion FTP…');
+    // Synchronisation FTP (upload local → FTP) à l'ouverture pour projets déjà présents localement
+    if (isFtp) {
+      this.initMessage.set('Synchronisation FTP…');
       try {
         await this.projectFilesService.ftpSync(this.projectFolderName);
       } catch (e: any) {

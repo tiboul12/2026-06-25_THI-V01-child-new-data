@@ -23,11 +23,13 @@ export interface ProjectFilesConfig {
   structure: FileNode[];
 }
 
-export type EnsureLocalStatus = 'ready' | 'cloned' | 'no-remote';
+export type EnsureLocalStatus = 'ready' | 'cloned' | 're-cloned' | 'no-remote' | 'ftp-pulled' | 'ftp-no-config' | 'ftp-error';
 export interface EnsureLocalResult {
   status: EnsureLocalStatus;
   message?: string;
   gitRemoteUrl?: string;
+  downloaded?: number;
+  errors?: any[];
 }
 
 @Injectable({ providedIn: 'root' })
