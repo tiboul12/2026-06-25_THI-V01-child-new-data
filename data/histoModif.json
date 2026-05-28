@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-239",
+      "version": "B-0.217",
+      "date": "2026-05-28T14:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "projets", "libs"],
+      "features": "projets:editor,server:file-projects",
+      "title": "Récupération FTP auto à la première ouverture d'un projet",
+      "description": "À l'ouverture d'un projet FTP, sync FTP+local avec la BDD comme source de vérité unique. ftp-service.js : syncFromFtp(expectedFiles, expectedDirs) télécharge les fichiers attendus depuis FTP, supprime du FTP ET du local tout ce qui n'est pas dans la structure BDD (.git et config.json préservés). buildExpectedFromStructure() construit les sets depuis config.structure. ensure-local appelle ces deux fonctions avec config.structure (depuis MySQL). Résultat : les 3 stockages (BDD, FTP, local) restent strictement alignés. Mode offline si FTP KO et dossier local présent. Client : EnsureLocalStatus étendu (ftp-pulled, ftp-no-config, ftp-error).",
+      "files": [
+        "server/modules/ftp-service.js",
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/project-files.service.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu check le chargement d'un projet et notamment si celui ci est récupéré pour la première fois, si un projet est ouvert dans l'editor il faut affiché la liste des noms des dossiers, document et fichier (c'est déjà le cas), mais il faut aussi vérifié si le dossier du projet à bien été créé dans le dossier @data/projets\\ Si ce n'est pas le cas il faut le créé et rappatrié tous les fichiers via le ftp du projet.",
+      "startedAt": "2026-05-28T13:30:00.000Z",
+      "completedAt": "2026-05-28T14:00:00.000Z"
+    },
+    {
       "id": "mod-238",
       "version": "B-0.216",
       "date": "2026-05-28T12:00:00.000Z",

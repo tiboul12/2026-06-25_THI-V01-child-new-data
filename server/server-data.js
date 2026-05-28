@@ -5779,18 +5779,57 @@ app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
     const projetPath = path.join(PROJECTS_DIR, req.params.name);
     const { execSync } = require('child_process');
 
-    // Projets FTP : pas de remote git requis — on s'assure juste que le dossier local existe
+    // Projets FTP : à chaque ouverture, télécharger depuis FTP les fichiers absents en local.
+    // - Dossier absent → créer + tout télécharger (première ouverture / dossier supprimé)
+    // - Dossier présent → télécharger seulement les fichiers manquants (skipExisting)
+    // Erreur explicite si FTP non configuré ou inaccessible.
     try {
         const backupType = await ftpService.getBackupType(pool, req.params.name);
         if (backupType === 'ftp') {
-            if (!fs.existsSync(projetPath)) {
-                fs.mkdirSync(projetPath, { recursive: true });
-                const cfgPath = path.join(projetPath, 'config.json');
-                if (!fs.existsSync(cfgPath)) {
-                    fs.writeFileSync(cfgPath, JSON.stringify({ projectName: req.params.name, structure: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, null, 2), 'utf8');
-                }
+            const ftpConfig = await ftpService.getFtpConfig(pool, req.params.name);
+            if (!ftpConfig) {
+                return res.json({ status: 'ftp-no-config', message: 'Ce projet n\'a pas de configuration FTP — les fichiers ne peuvent pas être récupérés automatiquement.' });
             }
-            return res.json({ status: 'ready', message: 'FTP project — local folder ready' });
+            try {
+                await ftpService.testConnection(ftpConfig);
+            } catch (connErr) {
+                // Si le dossier local existe déjà, on laisse quand même passer (mode offline)
+                if (fs.existsSync(projetPath)) {
+                    console.warn(`[ensure-local] FTP KO mais dossier local présent — mode offline : ${connErr.message}`);
+                    return res.json({ status: 'ready', message: 'FTP inaccessible — ouverture en mode local' });
+                }
+                return res.json({ status: 'ftp-error', message: `Connexion FTP impossible : ${connErr.message}` });
+            }
+            // Récupérer la structure depuis MySQL (pour config.json + préserver les IDs)
+            const config = await getProjectConfig(req.params.name);
+            if (!config) {
+                return res.status(404).json({ error: 'Projet non trouvé en BDD' });
+            }
+            // Créer le dossier local + (re)écrire config.json depuis MySQL
+            // (MySQL est la source de vérité pour la structure avec les IDs)
+            fs.mkdirSync(projetPath, { recursive: true });
+            const cfgPath = path.join(projetPath, 'config.json');
+            fs.writeFileSync(cfgPath, JSON.stringify(config, null, 2), 'utf8');
+            // Sync FTP ↔ local d'après la BDD (source de vérité) :
+            //  - télécharge depuis FTP les fichiers attendus
+            //  - supprime du FTP ET du local ce qui n'est pas dans la structure BDD
+            //  - préserve .git et config.json (artefacts locaux)
+            const { files: expectedFiles, dirs: expectedDirs } = ftpService.buildExpectedFromStructure(config.structure || []);
+            const pullResult = await ftpService.syncFromFtp(
+                ftpConfig,
+                `projets/${req.params.name}`,
+                projetPath,
+                expectedFiles,
+                expectedDirs,
+                ['.git', 'config.json']
+            );
+            console.log(`[ensure-local FTP sync] ${req.params.name} : ${pullResult.downloaded} téléchargés, ${pullResult.deletedLocal} supprimés local, ${pullResult.deletedRemote} supprimés FTP, ${pullResult.errors.length} erreurs`);
+            console.log(`[ensure-local FTP sync DEBUG] expectedDirs=${pullResult.debug.expectedDirsCount}, expectedFiles=${pullResult.debug.expectedFilesCount}, unexpectedLocal sample :`, pullResult.debug.unexpectedLocal);
+            console.log(`[ensure-local FTP sync DEBUG] structure root names :`, (config.structure || []).map(n => `${n.type}:${n.name}:path=${n.path}`).slice(0, 50));
+            if (pullResult.errors.length > 0) {
+                console.warn('[ensure-local FTP sync] erreurs :', pullResult.errors);
+            }
+            return res.json({ status: 'ftp-pulled', downloaded: pullResult.downloaded, deletedLocal: pullResult.deletedLocal, deletedRemote: pullResult.deletedRemote, errors: pullResult.errors });
         }
     } catch (e) {
         console.warn('[ensure-local] backup_type lookup error:', e.message);
