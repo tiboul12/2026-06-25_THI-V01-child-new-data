@@ -116,6 +116,11 @@
                 <span class="material-symbols-outlined text-sm">content_copy</span>
                 Copier
               </button>
+              <button (click)="openProjectFolder(project.id, $event)"
+                      title="Ouvrir dans l'explorateur de fichiers"
+                      class="flex items-center justify-center gap-1 px-3 py-2.5 text-xs font-medium text-light-text-muted dark:text-white/40 hover:text-amber-400 hover:bg-amber-500/5 transition-all border-r border-light-border dark:border-white/5">
+                <span class="material-symbols-outlined text-sm">folder_open</span>
+              </button>
               <button (click)="confirmDelete(project.id, $event)"
                       class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-light-text-muted dark:text-white/40 hover:text-red-400 hover:bg-red-500/5 transition-all">
                 <span class="material-symbols-outlined text-sm">delete</span>

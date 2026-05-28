@@ -253,6 +253,11 @@ export class ProjetsComponent implements OnInit {
     }
   }
 
+  openProjectFolder(id: string, event: Event) {
+    event.stopPropagation();
+    this.projectFilesService.openFolder(id).catch(() => {});
+  }
+
   formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('fr-FR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
