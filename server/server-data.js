@@ -5594,6 +5594,23 @@ app.post('/api/file-projects/:name/pull', (req, res) => {
     }
 });
 
+// POST /api/file-projects/:name/open-folder
+//   Ouvre l'explorateur Windows sur le dossier local du projet.
+app.post('/api/file-projects/:name/open-folder', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    if (!fs.existsSync(projetPath)) return res.status(404).json({ error: 'Dossier non trouvé' });
+    try {
+        const { exec } = require('child_process');
+        const safe = projetPath.replace(/"/g, '\\"');
+        exec(`explorer "${safe}"`);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // POST /api/file-projects/:name/auto-sync
 //   Synchronise automatiquement le projet avec GitHub au chargement :
 //   pull si remote en avance, push si local en avance, signale la divergence sinon.
@@ -5794,10 +5811,15 @@ app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
         // Cas orphelin : dossier local sans .git, mais un remote existe en BDD
         // → re-clone depuis GitHub pour récupérer tous les fichiers committés (images, etc.)
         try {
-            const [rows] = await pool.query('SELECT git_remote_url FROM file_project_meta WHERE id = ?', [req.params.name]);
+            const [rows] = await pool.query('SELECT git_remote_url, display_name FROM file_project_meta WHERE id = ?', [req.params.name]);
             const gitRemoteUrl = rows[0]?.git_remote_url;
             if (!gitRemoteUrl) {
-                // Pas de remote connu, on garde le dossier local tel quel
+                // Pas de remote connu : on s'assure que config.json existe (sinon les endpoints folders/files renvoient 404)
+                const cfgPath = path.join(projetPath, 'config.json');
+                if (!fs.existsSync(cfgPath)) {
+                    const displayName = rows[0]?.display_name || req.params.name;
+                    fs.writeFileSync(cfgPath, JSON.stringify({ projectName: displayName, structure: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, null, 2), 'utf8');
+                }
                 return res.json({ status: 'ready' });
             }
             console.log(`[ensure-local] dossier orphelin (sans .git) détecté pour ${req.params.name} — re-clone depuis GitHub`);

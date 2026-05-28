@@ -1,6 +1,46 @@
 {
   "modifications": [
     {
+      "id": "mod-238",
+      "version": "B-0.216",
+      "date": "2026-05-28T12:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Création dossier : 404 sur projets sans config.json + protection anti-suppression",
+      "description": "Cause réelle : POST /folders renvoyait 404 (Projet non trouvé) pour les projets dont le dossier local existait mais sans config.json (cas des projets Frank ouverts sans setup file-project complet). ensure-local retournait 'ready' sans créer le config.json quand pas de remote git connu. Fix serveur : créer config.json vide dans cette branche, comme déjà fait pour FTP. Fix client (complémentaire, déjà appliqué dans le même commit) : prolonger la protection pendingFolderNames à 5 s pour couvrir les saves différés.",
+      "files": ["server/server-data.js", "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-7",
+      "prompt": "je n'arrive toujours pas à créé de nouveau dossier",
+      "startedAt": "2026-05-28T11:55:00.000Z",
+      "completedAt": "2026-05-28T12:00:00.000Z"
+    },
+    {
+      "id": "mod-237",
+      "version": "B-0.216",
+      "date": "2026-05-27T10:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "server", "libs"],
+      "features": "projets:sidebar-folder,projets:open-folder",
+      "title": "Fix disparition dossier sidebar + lien explorateur dans cartes projet",
+      "description": "Correction du bug où un dossier créé via la sidebar disparaissait : protection de pendingFolderNames dans processSectionsChange pour éviter la suppression accidentelle lors d'une race entre le signal files() parent et l'@Input editor zone. onFolderCreated attend maintenant la fin de tout processSectionsChange en cours avant d'appeler loadFiles(). Ajout d'un bouton icône dans la barre d'actions de chaque carte projet pour ouvrir l'explorateur Windows directement dans data/projets/<uuid>/ (endpoint POST /api/file-projects/:name/open-folder).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projets/projets.component.ts",
+        "apps/projets/src/app/pages/projets/projets.component.html",
+        "libs/portail-core/data-access/src/lib/project-files.service.ts",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "si je veux rajouté un dossier à un projet je fait clic droit 'Nouveau dossier' je remplis la zone de titre, je valide avec le bouton entré. Mais le menu dossier créé disparait. Vérifi le système et corrige le problème. Dans l'encart des projets rajoute un lien vers l'explorateur de fichier directement dans le dossier /data/projet/Nom du projet",
+      "startedAt": "2026-05-27T09:00:00.000Z",
+      "completedAt": "2026-05-27T10:00:00.000Z"
+    },
+    {
       "id": "mod-236",
       "version": "B-0.216",
       "date": "2026-05-27T00:00:00.000Z",
