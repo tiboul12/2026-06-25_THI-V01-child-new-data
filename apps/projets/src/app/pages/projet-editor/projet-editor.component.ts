@@ -397,13 +397,8 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   onNodeActive(nodeId: string) {
-    // Toujours mettre à jour le highlight visuel
+    // Zone 4 : ne jamais changer activeNodeId — la sélection reste réservée à la zone 3
     this.highlightNodeId.set(nodeId);
-    if (this.activeNodeId() === nodeId) return;
-    // Clic dans l'éditeur zone 4 : ignorer le focus si le nœud est un descendant du nœud actif courant
-    const currentId = this.activeNodeId();
-    if (currentId && this.isDescendantInTree(nodeId, currentId)) return;
-    this.activeNodeId.set(nodeId);
   }
 
   private isDescendantInTree(nodeId: string, ancestorId: string): boolean {

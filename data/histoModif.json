@@ -1,6 +1,40 @@
 {
   "modifications": [
     {
+      "id": "mod-241",
+      "version": "B-0.218",
+      "date": "2026-05-30T00:10:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Zone 4 : aucune interaction ne change la section affichée",
+      "description": "onNodeActive ne modifie plus jamais activeNodeId. Les clics sur des listes, headings, blocs ou tout contenu dans la zone 4 (edit, visu, structure) ne changent plus la section sélectionnée dans le menu zone 3. Seule la zone 3 peut changer activeNodeId via onNodeSelect.",
+      "files": ["apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Il faut faire la même chose avec les listes, si on clique dessus dans l'editor cela ne doit pas modifié l'affichage du dossier selectionné dans le menu, les selections dans l'editor ne doit pas changer la section affiché",
+      "startedAt": "2026-05-30T00:06:00.000Z",
+      "completedAt": "2026-05-30T00:12:00.000Z"
+    },
+    {
+      "id": "mod-240",
+      "version": "B-0.218",
+      "date": "2026-05-30T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Désactivation sélection sous-dossier depuis zone 4",
+      "description": "Dans l'éditeur zone 4, le clic sur un heading de sous-dossier ne change plus le nœud actif. La sélection et la navigation dans les dossiers sont désormais réservées exclusivement à la zone 3 (menu sidebar).",
+      "files": ["apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu projet et dans l'editor lorsqu'on à selectionné un dossier dans le menu, on peut avoir du contenu dans ce dossier, ainsi dans la zone 4 de l'editor on à le dossier avec son contenue et donc les sous dossiers et des documents (code, img etc) dans l'editor si on clique sur un sous dossier cela selectionne directement le sous dossier. Je veux que tu enlève la selection d'un sous dossier dans l'editor, la selection et l'affichage d'un sous dossier ou d'un contenue ne peut être effectué que dans le menu zone 3",
+      "startedAt": "2026-05-30T00:00:00.000Z",
+      "completedAt": "2026-05-30T00:05:00.000Z"
+    },
+    {
       "id": "mod-239",
       "version": "B-0.217",
       "date": "2026-05-28T14:00:00.000Z",
