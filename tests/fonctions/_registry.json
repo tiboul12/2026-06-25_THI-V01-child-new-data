@@ -1,0 +1,33 @@
+{
+  "1":       "non-connecte",
+  "1-1":     "non-connecte/landing",
+
+  "2":       "connecte",
+  "2-1":     "connecte/admin",
+  "2-1-1":   "connecte/admin/config",
+  "2-1-2":   "connecte/admin/deploiements",
+  "2-1-3":   "connecte/admin/theme",
+  "2-1-4":   "connecte/admin/utilisateurs",
+  "2-1-5":   "connecte/admin/tests",
+
+  "2-2":     "connecte/config",
+  "2-3":     "connecte/deploiements",
+
+  "2-4":     "connecte/outils",
+  "2-4-1":   "connecte/outils/actions-ia",
+  "2-4-2":   "connecte/outils/cahier-recette",
+  "2-4-3":   "connecte/outils/tchat-ia",
+  "2-4-4":   "connecte/outils/tickets",
+
+  "2-5":     "connecte/projets",
+  "2-5-1":   "connecte/projets/accueil",
+  "2-5-2":   "connecte/projets/editor",
+  "2-5-2-1": "connecte/projets/editor/commentaires-f6",
+  "2-5-2-2": "connecte/projets/editor/sidebar",
+  "2-5-2-3": "connecte/projets/editor/toolbar",
+  "2-5-2-4": "connecte/projets/editor/zone-code",
+  "2-5-2-5": "connecte/projets/editor/zone-preview",
+  "2-5-2-6": "connecte/projets/editor/zone-structure",
+  "2-5-2-7": "connecte/projets/editor/zone5-conversation",
+  "2-5-2-8": "connecte/projets/editor/zone5-historique"
+}

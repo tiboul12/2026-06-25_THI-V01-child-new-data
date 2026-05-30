@@ -7202,6 +7202,233 @@ app.delete('/api/collab/:projetId/nodes/:nodeId/lock', async (req, res) => {
 });
 
 // ============================================================
+// Admin Tests — Sessions de tests manuels sur fonctions.md
+// ============================================================
+
+const ADMIN_TESTS_RUNS_DIR  = path.join(BASE_DIR, 'tests-admin');
+const ADMIN_TESTS_RUNS_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'runs.json');
+const FONCTIONS_DIR         = path.join(__dirname, '..', 'tests', 'fonctions');
+const FONCTIONS_REGISTRY    = path.join(FONCTIONS_DIR, '_registry.json');
+
+function loadFonctionsRegistry() {
+    try {
+        if (fs.existsSync(FONCTIONS_REGISTRY)) return JSON.parse(fs.readFileSync(FONCTIONS_REGISTRY, 'utf8'));
+    } catch (e) { console.error('[ADMIN-TESTS] registry load error:', e); }
+    return {};
+}
+
+function buildPathToId(registry) {
+    const inv = {};
+    for (const [id, p] of Object.entries(registry)) inv[p] = id;
+    return inv;
+}
+
+function testsAdminLoad() {
+    try {
+        if (fs.existsSync(ADMIN_TESTS_RUNS_FILE)) return JSON.parse(fs.readFileSync(ADMIN_TESTS_RUNS_FILE, 'utf8'));
+    } catch (e) { console.error('[ADMIN-TESTS] load error:', e); }
+    return { runs: [] };
+}
+
+function testsAdminSave(data) {
+    try {
+        fs.mkdirSync(ADMIN_TESTS_RUNS_DIR, { recursive: true });
+        fs.writeFileSync(ADMIN_TESTS_RUNS_FILE, JSON.stringify(data, null, 2), 'utf8');
+        return true;
+    } catch (e) { console.error('[ADMIN-TESTS] save error:', e); return false; }
+}
+
+function testsAdminId() {
+    return `trun-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function computeRunStats(run) {
+    const total   = run.results.length;
+    const ok      = run.results.filter(r => r.status === 'ok').length;
+    const ko      = run.results.filter(r => r.status === 'ko').length;
+    const pending = run.results.filter(r => r.status === 'pending').length;
+    const okPct   = total > 0 ? Math.round((ok / total) * 100) : 0;
+    return { total, ok, ko, pending, okPct };
+}
+
+function computeTopKo(runs) {
+    const koCount = {};
+    for (const run of runs) {
+        if (run.status !== 'completed') continue;
+        for (const result of run.results) {
+            if (result.status === 'ko') koCount[result.itemId] = (koCount[result.itemId] || 0) + 1;
+        }
+    }
+    return Object.entries(koCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([itemId, count]) => ({ itemId, count }));
+}
+
+function parseFonctionsMd(relPath, content, pathToId) {
+    const lines     = content.split('\n');
+    let pageTitle   = '';
+    const items     = [];
+    const folderId  = pathToId[relPath] || relPath;
+    let fallbackIdx = 0;
+
+    for (const line of lines) {
+        if (line.startsWith('# ') && !pageTitle) {
+            pageTitle = line.slice(2).trim();
+        } else if (line.startsWith('## ')) {
+            const raw = line.slice(3).trim();
+            // Format attendu : `2-5-2-3-1` — Navigation (tiret long U+2014)
+            const m = raw.match(/^`([0-9-]+)`\s*[—–-]\s*(.+)$/);
+            const id      = m ? m[1] : `${folderId}-${++fallbackIdx}`;
+            const section = m ? m[2].trim() : raw;
+            items.push({ id, folderId, path: relPath, pageTitle, section });
+        }
+    }
+    return items;
+}
+
+let _functionItemsCache = null;
+
+function scanAllFunctions() {
+    if (!fs.existsSync(FONCTIONS_DIR)) return [];
+    const pathToId = buildPathToId(loadFonctionsRegistry());
+    const items = [];
+
+    function walk(dir, relBase) {
+        let entries;
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
+        catch (e) { return; }
+        for (const entry of entries) {
+            if (entry.name.startsWith('_')) continue; // ignore _registry.json etc.
+            if (entry.isDirectory()) {
+                walk(path.join(dir, entry.name), relBase ? `${relBase}/${entry.name}` : entry.name);
+            } else if (entry.name === 'fonctions.md') {
+                try {
+                    const content = fs.readFileSync(path.join(dir, entry.name), 'utf8');
+                    items.push(...parseFonctionsMd(relBase || '', content, pathToId));
+                } catch (e) { console.error('[ADMIN-TESTS] parse error:', entry.name, e.message); }
+            }
+        }
+    }
+
+    walk(FONCTIONS_DIR, '');
+    return items;
+}
+
+// GET /api/admin/tests/functions — liste tous les items testables
+app.get('/api/admin/tests/functions', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    try {
+        if (!_functionItemsCache) _functionItemsCache = scanAllFunctions();
+        res.json({ functions: _functionItemsCache, total: _functionItemsCache.length });
+    } catch (e) {
+        console.error('[ADMIN-TESTS] scan error:', e);
+        res.status(500).json({ error: 'Erreur scan des fonctions' });
+    }
+});
+
+// POST /api/admin/tests/functions/refresh — invalide le cache
+app.post('/api/admin/tests/functions/refresh', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    _functionItemsCache = null;
+    res.json({ ok: true });
+});
+
+// GET /api/admin/tests/runs — liste tous les runs avec stats et topKo
+app.get('/api/admin/tests/runs', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const data = testsAdminLoad();
+    const runs = [...data.runs].reverse().map(run => ({
+        id:          run.id,
+        name:        run.name,
+        tester:      run.tester,
+        startedAt:   run.startedAt,
+        completedAt: run.completedAt,
+        status:      run.status,
+        stats:       computeRunStats(run)
+    }));
+    res.json({ runs, topKo: computeTopKo(data.runs) });
+});
+
+// POST /api/admin/tests/runs — crée un nouveau run
+app.post('/api/admin/tests/runs', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    if (!_functionItemsCache) _functionItemsCache = scanAllFunctions();
+    const { name, tester } = req.body;
+    const newRun = {
+        id:        testsAdminId(),
+        name:      name || null,
+        tester:    tester || user.username || 'admin',
+        startedAt: new Date().toISOString(),
+        status:    'in_progress',
+        results:   _functionItemsCache.map(item => ({ itemId: item.id, status: 'pending' }))
+    };
+    const data = testsAdminLoad();
+    data.runs.push(newRun);
+    testsAdminSave(data);
+    res.json({ ...newRun, stats: computeRunStats(newRun) });
+});
+
+// GET /api/admin/tests/runs/:id — détail complet d'un run
+app.get('/api/admin/tests/runs/:id', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const data = testsAdminLoad();
+    const run  = data.runs.find(r => r.id === req.params.id);
+    if (!run) return res.status(404).json({ error: 'Run introuvable' });
+    res.json({ ...run, stats: computeRunStats(run) });
+});
+
+// PUT /api/admin/tests/runs/:id — patch résultats / finalisation
+app.put('/api/admin/tests/runs/:id', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const data = testsAdminLoad();
+    const idx  = data.runs.findIndex(r => r.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Run introuvable' });
+
+    const { results, name, status } = req.body;
+
+    if (name !== undefined) data.runs[idx].name = name;
+
+    if (results && Array.isArray(results)) {
+        const now = new Date().toISOString();
+        for (const incoming of results) {
+            const existing = data.runs[idx].results.find(r => r.itemId === incoming.itemId);
+            if (existing) {
+                existing.status   = incoming.status;
+                existing.note     = incoming.note;
+                existing.testedAt = now;
+            }
+        }
+    }
+
+    if (status === 'completed' && data.runs[idx].status !== 'completed') {
+        data.runs[idx].status      = 'completed';
+        data.runs[idx].completedAt = new Date().toISOString();
+    }
+
+    testsAdminSave(data);
+    res.json({ ...data.runs[idx], stats: computeRunStats(data.runs[idx]) });
+});
+
+// DELETE /api/admin/tests/runs/:id — supprime un run
+app.delete('/api/admin/tests/runs/:id', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const data   = testsAdminLoad();
+    const before = data.runs.length;
+    data.runs    = data.runs.filter(r => r.id !== req.params.id);
+    if (data.runs.length === before) return res.status(404).json({ error: 'Run introuvable' });
+    testsAdminSave(data);
+    res.json({ ok: true });
+});
+
+// ============================================================
 // Server Startup
 // ============================================================
 

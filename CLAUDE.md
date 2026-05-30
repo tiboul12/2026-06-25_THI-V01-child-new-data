@@ -153,6 +153,95 @@ Question 3 : "Titre du commit ?"
 
 ---
 
+## Règle obligatoire : Mise à jour des fonctions.md
+
+**À chaque ajout, modification ou suppression d'une fonctionnalité**, mettre à jour le fichier `fonctions.md` correspondant dans `tests/fonctions/`.
+
+### Table de correspondance Composant → fichier fonctions.md
+
+| Composant / Zone | Fichier |
+|-----------------|---------|
+| Admin › Utilisateurs | `connecte/admin/utilisateurs/` |
+| Admin › Déploiements | `connecte/admin/deploiements/` |
+| Admin › Config | `connecte/admin/config/` |
+| Admin › Thème | `connecte/admin/theme/` |
+| Admin › Tests | `connecte/admin/tests/` |
+| Page Config utilisateur | `connecte/config/` |
+| Page Déploiements | `connecte/deploiements/` |
+| Outil Tchat IA | `connecte/outils/tchat-ia/` |
+| Outil Cahier Recette | `connecte/outils/cahier-recette/` |
+| Outil Tickets | `connecte/outils/tickets/` |
+| Outil Actions IA | `connecte/outils/actions-ia/` |
+| Projets › Accueil | `connecte/projets/accueil/` |
+| Éditeur › Toolbar | `connecte/projets/editor/toolbar/` |
+| Éditeur › Sidebar | `connecte/projets/editor/sidebar/` |
+| Éditeur › Zone Code | `connecte/projets/editor/zone-code/` |
+| Éditeur › Zone Structure | `connecte/projets/editor/zone-structure/` |
+| Éditeur › Zone Preview | `connecte/projets/editor/zone-preview/` |
+| Éditeur › Conversation | `connecte/projets/editor/zone5-conversation/` |
+| Éditeur › Historique | `connecte/projets/editor/zone5-historique/` |
+| Éditeur › Commentaires F6 | `connecte/projets/editor/commentaires-f6/` |
+| Landing | `non-connecte/landing/` |
+
+### Procédure
+
+1. Identifier le fichier `fonctions.md` correspondant au composant modifié.
+2. **Nouvelle fonctionnalité** → ajouter un `##` heading avec ID + items.
+3. **Modification** → mettre à jour les items concernés.
+4. **Suppression** → retirer le `##` heading ou les items.
+5. Inclure le chemin du fichier `fonctions.md` modifié dans `histoModif.json files`.
+
+---
+
+## Règle obligatoire : IDs de fonctions testables
+
+Chaque `##` heading dans un `fonctions.md` est une fonction testable avec un **ID unique hiérarchique**.
+
+### Format obligatoire des headings
+
+```markdown
+## `{folderID}-{N}` — Libellé de la fonction
+```
+
+Exemple : `## \`2-5-2-3-4\` — Onglets de mode`
+
+Le tiret entre l'ID et le libellé est un **tiret long** (—, U+2014).
+
+### Registre des IDs de dossiers
+
+Le fichier `tests/fonctions/_registry.json` est la source de vérité. Il mappe chaque chemin de dossier à son ID hiérarchique.
+
+Extrait :
+```
+"2-5-2-3" → "connecte/projets/editor/toolbar"
+"2-5-2-4" → "connecte/projets/editor/zone-code"
+```
+
+### Attribution d'un ID à une nouvelle fonction
+
+1. Lire `tests/fonctions/_registry.json` → trouver l'ID du dossier (ex: `2-5-2-3`)
+2. Lire le `fonctions.md` → identifier le dernier `N` utilisé
+3. Incrémenter : si le dernier est `2-5-2-3-7`, le prochain est `2-5-2-3-8`
+4. Écrire : `## \`2-5-2-3-8\` — Nom de la nouvelle fonction`
+
+### Création d'un nouveau dossier tests/fonctions/
+
+1. Choisir le prochain ID disponible dans la hiérarchie
+2. Ajouter l'entrée dans `tests/fonctions/_registry.json`
+3. Créer le fichier `fonctions.md` avec les headings et IDs
+
+### Règles d'immuabilité
+
+- Un ID attribué **ne change jamais**, même si la section est renommée
+- Si une fonction est supprimée, son ID est **définitivement retiré** (jamais réattribué)
+- Ne pas renuméroter les IDs existants pour combler les trous
+
+### Utilité pour les tests IA
+
+L'ID permet à un agent IA de référencer une fonction précise, ex: "teste la fonction `2-5-2-3-4`".
+
+---
+
 ## Règle obligatoire : Gestion de version
 
 ### Format

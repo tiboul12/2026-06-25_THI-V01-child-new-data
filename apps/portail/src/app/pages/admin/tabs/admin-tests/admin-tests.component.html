@@ -1,0 +1,279 @@
+<div class="space-y-6">
+
+  <!-- ── Vue DASHBOARD ─────────────────────────────────────────── -->
+  @if (view() === 'dashboard') {
+
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-bold text-light-text dark:text-white">Sessions de test</h2>
+        <p class="text-sm text-light-text-muted dark:text-white/40 mt-0.5">Validation manuelle des fonctions métier</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button (click)="refreshFunctions()"
+                title="Rafraîchir la liste des fonctions"
+                class="p-2 rounded-lg text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface dark:hover:bg-white/5 border border-light-border dark:border-white/10 transition-all">
+          <span class="material-symbols-outlined text-base">refresh</span>
+        </button>
+        <button (click)="startNewRun()"
+                [disabled]="loadingFunctions()"
+                class="flex items-center gap-2 px-4 py-2 bg-light-primary dark:bg-primary text-white dark:text-btn-text text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-50 transition-all shadow-sm">
+          <span class="material-symbols-outlined text-base">play_arrow</span>
+          Lancer un nouveau test
+        </button>
+      </div>
+    </div>
+
+    @if (runsError()) {
+      <div class="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{{ runsError() }}</div>
+    }
+
+    @if (loadingRuns() || loadingFunctions()) {
+      <div class="flex justify-center py-12">
+        <span class="material-symbols-outlined text-3xl text-light-primary dark:text-primary animate-spin">progress_activity</span>
+      </div>
+    }
+
+    @if (!loadingRuns()) {
+      <!-- KO les plus fréquents -->
+      @if (topKo().length > 0) {
+        <div class="p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
+          <h3 class="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base">warning</span>
+            Fonctions les plus souvent KO
+          </h3>
+          <div class="flex flex-col gap-1.5">
+            @for (ko of topKo(); track ko.itemId) {
+              <div class="flex items-center gap-3 text-sm">
+                <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 flex-shrink-0">{{ ko.itemId }}</span>
+                <span class="text-light-text-muted dark:text-white/60 flex-1 truncate">{{ getFunctionLabel(ko.itemId) }}</span>
+                <span class="px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 text-xs font-bold flex-shrink-0">{{ ko.count }}×</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Liste des runs -->
+      @if (runs().length === 0) {
+        <div class="text-center py-16 text-light-text-muted dark:text-white/30">
+          <span class="material-symbols-outlined text-4xl mb-2 block">science</span>
+          Aucune session de test — lancez votre premier test
+        </div>
+      }
+
+      @for (run of runs(); track run.id) {
+        <div class="p-4 bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-xl flex items-center gap-4 hover:border-light-primary/30 dark:hover:border-primary/30 transition-all cursor-pointer"
+             (click)="openDetail(run.id)">
+          <div [ngClass]="run.status === 'in_progress' ? 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0' : 'w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0'"></div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-medium text-light-text dark:text-white text-sm">{{ run.tester }}</span>
+              @if (run.name) { <span class="text-xs text-light-text-muted dark:text-white/40">— {{ run.name }}</span> }
+              @if (run.status === 'in_progress') {
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-semibold">En cours</span>
+              }
+            </div>
+            <div class="text-xs text-light-text-muted dark:text-white/40 mt-0.5">{{ formatDate(run.startedAt) }}</div>
+          </div>
+          <div class="flex items-center gap-3 text-xs flex-shrink-0">
+            <span class="text-green-400 font-bold">{{ run.stats.ok }} OK</span>
+            <span class="text-red-400 font-bold">{{ run.stats.ko }} KO</span>
+            <span class="text-light-text-muted dark:text-white/40">{{ run.stats.pending }} ND</span>
+            <span class="font-bold text-light-primary dark:text-primary">{{ run.stats.okPct }}%</span>
+          </div>
+          <span class="material-symbols-outlined text-base text-light-text-muted dark:text-white/30 flex-shrink-0">arrow_forward</span>
+        </div>
+      }
+    }
+  }
+
+  <!-- ── Vue RUNNER ──────────────────────────────────────────────── -->
+  @if (view() === 'runner' && activeRun()) {
+
+    <div class="flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <button (click)="view.set('dashboard')"
+                class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+          <span class="material-symbols-outlined text-base">arrow_back</span>
+        </button>
+        <div>
+          <span class="text-sm font-semibold text-light-text dark:text-white">Test en cours — {{ activeRun()!.tester }}</span>
+          <div class="text-xs text-light-text-muted dark:text-white/40">
+            {{ runnerProgress() }}% — {{ runnerDecided() }} / {{ activeRun()!.results.length }} fonctions testées
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        @if (saving()) {
+          <span class="text-xs text-light-text-muted dark:text-white/40 flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Sauvegarde…
+          </span>
+        }
+        <button (click)="completeRun()"
+                class="px-4 py-2 bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg text-sm font-semibold hover:bg-green-500/25 transition-all">
+          <span class="material-symbols-outlined text-base align-middle mr-1">done_all</span>
+          Terminer le test
+        </button>
+      </div>
+    </div>
+
+    <!-- Barre de progression -->
+    <div class="w-full bg-light-border dark:bg-white/10 rounded-full h-1.5">
+      <div class="bg-light-primary dark:bg-primary h-1.5 rounded-full transition-all duration-300"
+           [style.width.%]="runnerProgress()"></div>
+    </div>
+
+    <!-- Groupes de fonctions -->
+    @for (group of groupedFunctions(); track group.path) {
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs font-bold text-light-text-muted dark:text-white/40 uppercase tracking-wider">{{ group.pageTitle }}</span>
+          <span class="font-mono text-[9px] px-1 py-0.5 rounded bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/30">{{ group.folderId }}</span>
+        </div>
+        <div class="border border-light-border dark:border-white/10 rounded-xl overflow-hidden">
+          @for (item of group.items; track item.id; let last = $last) {
+            <div [ngClass]="last ? 'p-3.5' : 'p-3.5 border-b border-light-border dark:border-white/5'">
+              <div class="flex items-start gap-3">
+                <!-- Badge ID cliquable -->
+                <button (click)="copyId(item.id); $event.stopPropagation()"
+                        title="Copier l'ID {{ item.id }}"
+                        class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary hover:border-light-primary/30 dark:hover:border-primary/30 transition-all cursor-pointer flex-shrink-0 mt-0.5">
+                  {{ item.id }}
+                </button>
+                <!-- Libellé -->
+                <span class="text-sm text-light-text dark:text-white flex-1 pt-0.5">{{ item.section }}</span>
+                <!-- Boutons OK / KO / ND -->
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <button (click)="setResult(item.id, 'ok')"
+                          title="OK"
+                          [ngClass]="getResult(item.id).status === 'ok'
+                            ? 'w-8 h-8 rounded-lg flex items-center justify-center border-2 bg-green-500/20 border-green-500 text-green-400 transition-all'
+                            : 'w-8 h-8 rounded-lg flex items-center justify-center border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/30 hover:border-green-500/50 hover:text-green-400 transition-all'">
+                    <span class="material-symbols-outlined text-sm">check</span>
+                  </button>
+                  <button (click)="setResult(item.id, 'ko')"
+                          title="KO"
+                          [ngClass]="getResult(item.id).status === 'ko'
+                            ? 'w-8 h-8 rounded-lg flex items-center justify-center border-2 bg-red-500/20 border-red-500 text-red-400 transition-all'
+                            : 'w-8 h-8 rounded-lg flex items-center justify-center border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/30 hover:border-red-500/50 hover:text-red-400 transition-all'">
+                    <span class="material-symbols-outlined text-sm">close</span>
+                  </button>
+                  <button (click)="setResult(item.id, 'pending')"
+                          title="Non décidé"
+                          [ngClass]="getResult(item.id).status === 'pending'
+                            ? 'w-8 h-8 rounded-lg flex items-center justify-center border-2 bg-white/10 border-white/30 text-white/60 transition-all'
+                            : 'w-8 h-8 rounded-lg flex items-center justify-center border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/30 hover:border-white/30 transition-all'">
+                    <span class="material-symbols-outlined text-sm">remove</span>
+                  </button>
+                </div>
+              </div>
+              <!-- Note si KO -->
+              @if (getResult(item.id).status === 'ko') {
+                <input type="text"
+                       placeholder="Note (optionnel)…"
+                       [value]="getResult(item.id).note || ''"
+                       (input)="setNote(item.id, $any($event.target).value)"
+                       class="mt-2 w-full px-3 py-1.5 text-xs rounded-lg bg-light-surface dark:bg-white/5 border border-red-500/30 text-light-text dark:text-white placeholder:text-light-text-muted dark:placeholder:text-white/30 focus:outline-none focus:border-red-400 transition-colors" />
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ── Vue DETAIL ─────────────────────────────────────────────── -->
+  @if (view() === 'detail') {
+
+    <div class="flex items-center gap-3">
+      <button (click)="view.set('dashboard'); detailRun.set(null)"
+              class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+        <span class="material-symbols-outlined text-base">arrow_back</span>
+      </button>
+
+      @if (detailRun()) {
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-semibold text-light-text dark:text-white text-sm">{{ detailRun()!.tester }}</span>
+            @if (detailRun()!.name) { <span class="text-xs text-light-text-muted dark:text-white/40">— {{ detailRun()!.name }}</span> }
+            @if (detailRun()!.status === 'in_progress') {
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-semibold">En cours</span>
+            }
+          </div>
+          <div class="flex items-center gap-3 text-xs mt-0.5">
+            <span class="text-green-400 font-bold">{{ detailRun()!.stats.ok }} OK</span>
+            <span class="text-red-400 font-bold">{{ detailRun()!.stats.ko }} KO</span>
+            <span class="text-light-text-muted dark:text-white/40">{{ detailRun()!.stats.pending }} ND</span>
+            <span class="font-bold text-light-primary dark:text-primary">{{ detailRun()!.stats.okPct }}%</span>
+            <span class="text-light-text-muted dark:text-white/40">{{ formatDate(detailRun()!.startedAt) }}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          @if (detailRun()!.status === 'in_progress') {
+            <button (click)="resumeRun()"
+                    class="px-3 py-1.5 text-sm bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/25 transition-all">
+              Reprendre
+            </button>
+          }
+          <button (click)="deleteRun(detailRun()!.id)"
+                  title="Supprimer ce run"
+                  class="p-1.5 rounded-lg hover:bg-red-500/10 text-light-text-muted dark:text-white/30 hover:text-red-400 border border-transparent hover:border-red-500/20 transition-all">
+            <span class="material-symbols-outlined text-base">delete</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- Filtre -->
+    <div class="flex gap-1 p-1 bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-lg w-fit">
+      <button (click)="detailFilter.set('all')"
+              [ngClass]="detailFilter() === 'all'
+                ? 'px-3 py-1 rounded text-sm font-semibold bg-white dark:bg-background text-light-primary dark:text-primary shadow-sm border border-light-border dark:border-white/10'
+                : 'px-3 py-1 rounded text-sm text-light-text-muted dark:text-white/50'">
+        Tout
+      </button>
+      <button (click)="detailFilter.set('ko')"
+              [ngClass]="detailFilter() === 'ko'
+                ? 'px-3 py-1 rounded text-sm font-semibold bg-white dark:bg-background text-red-400 shadow-sm border border-light-border dark:border-white/10'
+                : 'px-3 py-1 rounded text-sm text-light-text-muted dark:text-white/50'">
+        KO uniquement
+      </button>
+    </div>
+
+    @if (loadingDetail()) {
+      <div class="flex justify-center py-12">
+        <span class="material-symbols-outlined text-3xl text-light-primary dark:text-primary animate-spin">progress_activity</span>
+      </div>
+    }
+
+    @if (!loadingDetail() && detailRun()) {
+      @for (result of detailResultsSorted(); track result.itemId) {
+        <div class="flex items-start gap-3 p-3 mb-1.5 rounded-xl border transition-all"
+             [ngClass]="{
+               'border-green-500/20 bg-green-500/5': result.status === 'ok',
+               'border-red-500/20 bg-red-500/5': result.status === 'ko',
+               'border-light-border dark:border-white/5': result.status === 'pending'
+             }">
+          <span class="material-symbols-outlined text-base mt-0.5 flex-shrink-0"
+                [ngClass]="{'text-green-400': result.status==='ok', 'text-red-400': result.status==='ko', 'text-light-text-muted dark:text-white/30': result.status==='pending'}">
+            {{ getStatusIcon(result.status) }}
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <button (click)="copyId(result.itemId)"
+                      title="Copier l'ID"
+                      class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all cursor-pointer flex-shrink-0">
+                {{ result.itemId }}
+              </button>
+              <span class="text-sm text-light-text dark:text-white">{{ getFunctionLabel(result.itemId) }}</span>
+            </div>
+            @if (result.note) {
+              <p class="text-xs text-red-400 mt-1 italic">{{ result.note }}</p>
+            }
+          </div>
+        </div>
+      }
+    }
+  }
+
+</div>
