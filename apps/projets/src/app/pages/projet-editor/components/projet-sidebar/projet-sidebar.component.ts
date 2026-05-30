@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, signal, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { FileNode, ProjectFilesService } from '@worganic/portail-core/data-access';
+import { FileNode, ProjectFilesService, FtpNodeSyncStatus } from '@worganic/portail-core/data-access';
 import { ConversationService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { ProjetCollabService, LockInfo } from '@worganic/portail-core/data-access';
@@ -33,6 +33,8 @@ export class ProjetSidebarComponent implements OnChanges {
   @Input() activeFileId: string | null = null;
   @Input() projetId = '';
   @Input() nestedImagesMap: Record<string, string[]> = {};
+  @Input() nodeSyncStatus: Map<string, FtpNodeSyncStatus> = new Map();
+  @Input() hasFtpBackup = false;
   @Output() fileSelect = new EventEmitter<FileNode>();
   @Output() folderCreated = new EventEmitter<{ name: string; parentId: string | null }>();
   @Output() refresh = new EventEmitter<void>();

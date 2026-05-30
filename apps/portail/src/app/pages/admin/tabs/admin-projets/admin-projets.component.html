@@ -2,6 +2,54 @@
   <div class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{{ projectsError() }}</div>
 }
 
+<!-- Modal transfert initial vers le nouveau système de backup -->
+@if (initialPushPending()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-surface rounded-2xl border border-light-border dark:border-white/10 shadow-2xl w-full max-w-md mx-4 p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="material-symbols-outlined text-2xl text-cyan-400">cloud_upload</span>
+        <h3 class="font-semibold text-light-text dark:text-white">Transférer les fichiers locaux</h3>
+      </div>
+      <p class="text-sm text-light-text-muted dark:text-white/60 mb-5">
+        Le système de sauvegarde vient d'être configuré. Voulez-vous transférer les fichiers locaux du projet
+        <strong class="text-light-text dark:text-white">{{ initialPushPending()!.title }}</strong>
+        vers ce backup maintenant ?
+      </p>
+      @if (initialPushStatus() === 'done') {
+        <div class="flex items-center gap-2 text-green-400 text-sm mb-4">
+          <span class="material-symbols-outlined text-base">check_circle</span>
+          <span>Transfert réussi — {{ initialPushResult()?.uploaded ?? 0 }} fichier(s) transféré(s)</span>
+        </div>
+      }
+      @if (initialPushStatus() === 'error') {
+        <div class="flex items-center gap-2 text-red-400 text-sm mb-4">
+          <span class="material-symbols-outlined text-base">error</span>
+          <span>{{ initialPushResult()?.error || 'Erreur lors du transfert' }}</span>
+        </div>
+      }
+      <div class="flex items-center justify-end gap-3">
+        <button class="px-4 py-2 text-sm text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors"
+                (click)="dismissInitialPush()">
+          {{ initialPushStatus() === 'done' ? 'Fermer' : 'Plus tard' }}
+        </button>
+        @if (initialPushStatus() !== 'done') {
+          <button class="px-4 py-2 text-sm font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/30 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  [disabled]="initialPushStatus() === 'pushing'"
+                  (click)="runInitialBackupPush()">
+            @if (initialPushStatus() === 'pushing') {
+              <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+              Transfert en cours…
+            } @else {
+              <span class="material-symbols-outlined text-sm">upload</span>
+              Transférer maintenant
+            }
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
 @if (loadingProjects()) {
   <div class="flex items-center justify-center py-16">
     <span class="material-symbols-outlined text-3xl text-light-primary dark:text-primary animate-spin">progress_activity</span>

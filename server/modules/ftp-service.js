@@ -336,4 +336,75 @@ async function getBackupType(pool, projectName) {
     return rows[0]?.backup_type || null;
 }
 
-module.exports = { testConnection, listRemoteFiles, uploadFile, uploadFiles, downloadFile, downloadFiles, syncFromFtp, buildExpectedFromStructure, getFtpConfig, getBackupType };
+/**
+ * Synchronise les fichiers d'UN dossier (et ses sous-dossiers) depuis FTP vers local.
+ * Télécharge les fichiers absents ou de taille différente. Ne supprime rien (sens FTP→local uniquement).
+ * folderNode = { id, path, children: FileNode[] }
+ * projectName = UUID du projet (nom du dossier local)
+ * localBase    = chemin absolu du dossier parent des projets (PROJECTS_DIR)
+ * Retourne { folderId, status: 'in-sync'|'updated'|'error', downloaded, errors }
+ */
+async function syncFolderFilesFromFtp(ftpCfg, projectName, folderNode, localBase) {
+    const { server, username, password, port, directory } = ftpCfg;
+    const baseDir = (directory || '/').replace(/\/?$/, '/');
+    const errors = [];
+    let downloaded = 0;
+
+    // Collecte récursive de tous les fichiers attendus dans ce sous-arbre
+    const collectFiles = (nodes) => {
+        const list = [];
+        for (const n of (nodes || [])) {
+            if (n.type === 'file' && n.path) list.push(n);
+            if (n.children) list.push(...collectFiles(n.children));
+        }
+        return list;
+    };
+    const expectedFiles = collectFiles([folderNode]);
+
+    if (expectedFiles.length === 0) {
+        return { folderId: folderNode.id, status: 'in-sync', downloaded: 0, errors: [] };
+    }
+
+    const client = new ftp.Client(120000);
+    try {
+        await client.access({ host: server, user: username, password, port: port || 21, secure: false });
+
+        for (const fileNode of expectedFiles) {
+            const relPath = fileNode.path.replace(/\\/g, '/');
+            const localPath = path.join(localBase, projectName, fileNode.path);
+            const remoteFullPath = (baseDir + `projets/${projectName}/` + relPath).replace(/\/+/g, '/');
+
+            // Récupérer la taille FTP sans télécharger le fichier
+            let ftpSize = -1;
+            try {
+                ftpSize = await client.size(remoteFullPath);
+            } catch (_) {
+                // Fichier absent du FTP → fichier local seul, on ne touche pas
+                continue;
+            }
+
+            const localExists = fs.existsSync(localPath);
+            const localSize = localExists ? fs.statSync(localPath).size : -1;
+
+            // Télécharger si absent ou taille différente
+            if (!localExists || localSize !== ftpSize) {
+                try {
+                    fs.mkdirSync(path.dirname(localPath), { recursive: true });
+                    await client.downloadTo(localPath, remoteFullPath);
+                    downloaded++;
+                } catch (e) {
+                    errors.push({ path: relPath, error: e.message });
+                }
+            }
+        }
+    } catch (e) {
+        errors.push({ path: folderNode.path, error: e.message });
+    } finally {
+        client.close();
+    }
+
+    const status = errors.length > 0 ? 'error' : (downloaded > 0 ? 'updated' : 'in-sync');
+    return { folderId: folderNode.id, status, downloaded, errors };
+}
+
+module.exports = { testConnection, listRemoteFiles, uploadFile, uploadFiles, downloadFile, downloadFiles, syncFromFtp, buildExpectedFromStructure, getFtpConfig, getBackupType, syncFolderFilesFromFtp };

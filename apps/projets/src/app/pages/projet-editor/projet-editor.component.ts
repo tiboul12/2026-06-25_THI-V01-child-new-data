@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
-import { ProjectFilesService, FileNode } from '@worganic/portail-core/data-access';
+import { ProjectFilesService, FileNode, FtpNodeSyncStatus } from '@worganic/portail-core/data-access';
 import { ConfigService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { LayoutService } from '@worganic/portail-core/data-access';
@@ -56,6 +56,9 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   localUnavailable = signal<string | null>(null);
   initMessage = signal<string | null>(null);
   saveStatus = signal<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
+  nodeSyncStatus = signal<Map<string, FtpNodeSyncStatus>>(new Map());
+  ftpSyncGlobalStatus = signal<'idle' | 'syncing' | 'done' | 'error'>('idle');
+  private wasCreatedLocal = false;
   activeNodeId = signal<string | null>(null);
   highlightNodeId = signal<string | null>(null);
   scrollToNodeId = signal<string | null>(null);
@@ -71,6 +74,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
   aiEditService = inject(ProjetAiEditService);
   hasPendingEdit = computed(() => !!this.aiEditService.pendingEdit());
+  hasFtpBackup = computed(() => this.project()?.backupType === 'ftp');
 
   // Nom + icône du noeud actuellement sélectionné, affichés sous les onglets de la zone 5b
   readonly activeNodeInfo = computed<{ name: string; icon: string } | null>(() => {
@@ -214,15 +218,34 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     } catch {
       this.router.navigate(['/projets']);
       return;
-    } finally {
-      this.loading.set(false);
     }
-    await this.ensureProjectFolder(this.project()!);
-    if (this.localUnavailable()) return;
+
+    // Phase 1 — Affichage immédiat : structure locale sans FTP
+    try {
+      const fast = await this.projectFilesService.ensureFast(this.projectFolderName);
+      this.wasCreatedLocal = fast.status === 'created-local';
+    } catch (e) {
+      console.warn('ensureFast error:', e);
+    }
     await this.loadFiles();
-    this.autoSyncProject(this.projectFolderName);
+    this.loading.set(false);
+
+    // Connexion collaboration + abonnements (inclut les événements FTP SSE)
     this.collab.connect(this.projectFolderName);
     this.subscribeToCollabEvents();
+
+    // Phase 2 — Sync FTP en arrière-plan (non-bloquant)
+    if (this.hasFtpBackup()) {
+      this.initAllFoldersSyncStatus('unknown');
+      this.ftpSyncGlobalStatus.set('syncing');
+      this.projectFilesService.startFtpSyncBackground(this.projectFolderName).catch(() => {
+        this.ftpSyncGlobalStatus.set('error');
+      });
+    } else {
+      // Git : auto-sync non-bloquant
+      this.autoSyncProject(this.projectFolderName);
+    }
+
     // F4 — Scroll vers une section si fournie en queryParam (depuis la recherche)
     const sectionFromSearch = this.route.snapshot.queryParamMap.get('section');
     if (sectionFromSearch) {
@@ -230,6 +253,20 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     }
     // F6 — Charger les compteurs de commentaires par section
     this.loadCommentCounts();
+  }
+
+  private initAllFoldersSyncStatus(status: FtpNodeSyncStatus): void {
+    const map = new Map<string, FtpNodeSyncStatus>();
+    const walk = (nodes: FileNode[]) => {
+      for (const n of nodes) {
+        if (n.type === 'folder') {
+          map.set(n.id, status);
+          if (n.children) walk(n.children);
+        }
+      }
+    };
+    walk(this.files());
+    this.nodeSyncStatus.set(map);
   }
 
   // F6 — Commentaires inline
@@ -272,6 +309,17 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       }),
       this.collab.sectionPublished$.subscribe(() => {
         this.autoPullAndRefresh();
+      }),
+      this.collab.ftpFolderSynced$.subscribe(({ folderId, status }) => {
+        this.nodeSyncStatus.update(m => new Map(m).set(folderId, status));
+      }),
+      this.collab.ftpSyncComplete$.subscribe(async ({ status, downloaded }) => {
+        this.ftpSyncGlobalStatus.set(status === 'error' ? 'error' : 'done');
+        // Si le projet venait d'être créé localement, recharger les fichiers maintenant téléchargés
+        if (this.wasCreatedLocal && downloaded > 0) {
+          this.wasCreatedLocal = false;
+          await this.loadFiles();
+        }
       })
     );
   }
@@ -301,49 +349,6 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     } catch { /* silencieux — pas bloquant */ }
   }
 
-  private async ensureProjectFolder(proj: Project) {
-    const isFtp = proj.backupType === 'ftp';
-    if (isFtp) this.initMessage.set('Récupération des fichiers FTP…');
-    let result;
-    try {
-      result = await this.projectFilesService.ensureLocal(this.projectFolderName);
-    } catch (e) {
-      console.warn('ensureProjectFolder error:', e);
-      this.initMessage.set(null);
-      return;
-    }
-    this.initMessage.set(null);
-
-    if (result.status === 'no-remote') {
-      this.localUnavailable.set(result.message || 'Ce projet n\'est pas disponible localement — un remote Git doit être configuré par le propriétaire.');
-      return;
-    }
-    if (result.status === 'ftp-no-config') {
-      this.localUnavailable.set(result.message || 'Ce projet n\'a pas de configuration FTP — les fichiers ne peuvent pas être récupérés automatiquement.');
-      return;
-    }
-    if (result.status === 'ftp-error') {
-      this.localUnavailable.set(result.message || 'Connexion FTP impossible — vérifiez la configuration FTP du projet.');
-      return;
-    }
-    if (result.status === 'ftp-pulled') {
-      // Première ouverture : fichiers récupérés depuis FTP, pas de re-sync dans l'autre sens
-      return;
-    }
-
-    // Synchronisation FTP (upload local → FTP) à l'ouverture pour projets déjà présents localement
-    if (isFtp) {
-      this.initMessage.set('Synchronisation FTP…');
-      try {
-        await this.projectFilesService.ftpSync(this.projectFolderName);
-      } catch (e: any) {
-        const msg = e?.error?.error || e?.message || 'Erreur de connexion FTP';
-        this.localUnavailable.set(`Connexion FTP impossible : ${msg}`);
-      } finally {
-        this.initMessage.set(null);
-      }
-    }
-  }
 
   async loadFiles() {
     try {

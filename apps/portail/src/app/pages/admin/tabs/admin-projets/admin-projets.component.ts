@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { navigateToProjets } from '../../../../shared/utils/navigate-to-projets';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
+import { ProjectFilesService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 
@@ -43,11 +44,15 @@ export class AdminProjetsComponent implements OnInit {
   savingBackup = signal(false);
   testingFtp = signal(false);
   ftpTestResult = signal<{ success: boolean; message: string; directory?: { accessible: boolean; files?: number; error?: string } | null } | null>(null);
+  initialPushPending = signal<Project | null>(null);
+  initialPushStatus = signal<'idle' | 'pushing' | 'done' | 'error'>('idle');
+  initialPushResult = signal<{ uploaded?: number; pushed?: boolean; error?: string } | null>(null);
 
   private woHistory = inject(WoActionHistoryService);
 
   constructor(
     private projectService: ProjectService,
+    private projectFilesService: ProjectFilesService,
     private authService: AuthService,
     private router: Router
   ) {}
@@ -160,6 +165,8 @@ export class AdminProjetsComponent implements OnInit {
   async saveBackup() {
     const proj = this.editingBackup();
     if (!proj) return;
+    const wasNoBackup = !proj.backupType;
+    const isNewBackup = wasNoBackup && !!this.backupType;
     this.savingBackup.set(true);
     try {
       await this.projectService.updateProject(proj.id, {
@@ -175,10 +182,37 @@ export class AdminProjetsComponent implements OnInit {
       });
       this.closeEditBackup();
       await this.loadProjects();
+      // Proposer le transfert initial si c'est la première configuration d'un backup
+      if (isNewBackup) {
+        this.initialPushPending.set(proj);
+        this.initialPushStatus.set('idle');
+        this.initialPushResult.set(null);
+      }
     } catch (e: any) {
       this.projectsError.set(e?.error?.error || 'Erreur sauvegarde backup');
     } finally {
       this.savingBackup.set(false);
+    }
+  }
+
+  dismissInitialPush() {
+    this.initialPushPending.set(null);
+    this.initialPushStatus.set('idle');
+    this.initialPushResult.set(null);
+  }
+
+  async runInitialBackupPush() {
+    const proj = this.initialPushPending();
+    if (!proj) return;
+    this.initialPushStatus.set('pushing');
+    this.initialPushResult.set(null);
+    try {
+      const result = await this.projectFilesService.initialBackupPush(proj.id);
+      this.initialPushResult.set(result);
+      this.initialPushStatus.set(result.success ? 'done' : 'error');
+    } catch (e: any) {
+      this.initialPushResult.set({ error: e?.error?.error || 'Erreur lors du transfert' });
+      this.initialPushStatus.set('error');
     }
   }
 

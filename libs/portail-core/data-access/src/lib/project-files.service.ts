@@ -32,6 +32,13 @@ export interface EnsureLocalResult {
   errors?: any[];
 }
 
+export type FtpNodeSyncStatus = 'unknown' | 'syncing' | 'in-sync' | 'updated' | 'error' | 'no-backup';
+
+export interface EnsureFastResult {
+  status: 'ready' | 'created-local';
+  structure?: FileNode[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProjectFilesService {
   private apiUrl = inject(API_DATA_URL);
@@ -49,6 +56,18 @@ export class ProjectFilesService {
 
   ensureLocal(name: string): Promise<EnsureLocalResult> {
     return firstValueFrom(this.http.post<EnsureLocalResult>(`${this.apiUrl}/api/file-projects/${name}/ensure-local`, {}, { headers: this.h() }));
+  }
+
+  ensureFast(name: string): Promise<EnsureFastResult> {
+    return firstValueFrom(this.http.post<EnsureFastResult>(`${this.apiUrl}/api/file-projects/${name}/ensure-fast`, {}, { headers: this.h() }));
+  }
+
+  startFtpSyncBackground(name: string): Promise<{ started: boolean; reason?: string; totalFolders?: number }> {
+    return firstValueFrom(this.http.post<any>(`${this.apiUrl}/api/file-projects/${name}/ftp-sync-background`, {}, { headers: this.h() }));
+  }
+
+  initialBackupPush(name: string): Promise<{ success: boolean; uploaded?: number; pushed?: boolean; errors?: any[]; error?: string }> {
+    return firstValueFrom(this.http.post<any>(`${this.apiUrl}/api/file-projects/${name}/initial-backup-push`, {}, { headers: this.h() }));
   }
 
   getFiles(name: string): Promise<{ success: boolean; project: string; files: FileNode[] }> {

@@ -5889,6 +5889,179 @@ app.post('/api/file-projects/:name/ensure-local', async (req, res) => {
     }
 });
 
+// POST /api/file-projects/:name/ensure-fast
+//   Version rapide de ensure-local : crée le dossier local depuis la BDD sans aucun appel FTP/Git.
+//   Utilisé par le client pour afficher l'UI immédiatement, la sync FTP se fait ensuite en arrière-plan.
+app.post('/api/file-projects/:name/ensure-fast', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projetPath = path.join(PROJECTS_DIR, req.params.name);
+    try {
+        const config = await getProjectConfig(req.params.name);
+        if (!config) return res.status(404).json({ error: 'Projet non trouvé en BDD' });
+        const alreadyExists = fs.existsSync(projetPath);
+        if (!alreadyExists) {
+            // Créer le dossier + config.json depuis la BDD (sans télécharger les fichiers)
+            fs.mkdirSync(projetPath, { recursive: true });
+            const cfgPath = path.join(projetPath, 'config.json');
+            fs.writeFileSync(cfgPath, JSON.stringify(config, null, 2), 'utf8');
+            // Créer les dossiers physiques de la structure (fichiers vides pour l'instant)
+            const createDirs = (nodes) => {
+                for (const n of (nodes || [])) {
+                    if (n.type === 'folder' && n.path) {
+                        fs.mkdirSync(path.join(projetPath, n.path), { recursive: true });
+                    }
+                    if (n.children) createDirs(n.children);
+                }
+            };
+            createDirs(config.structure || []);
+            return res.json({ status: 'created-local', structure: config.structure || [] });
+        }
+        return res.json({ status: 'ready', structure: config.structure || [] });
+    } catch (e) {
+        console.warn('[ensure-fast] error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/file-projects/:name/ftp-sync-background
+//   Démarre la sync FTP en arrière-plan et retourne immédiatement.
+//   Progresse dossier par dossier, chaque résultat est broadcasté via SSE (ftp_folder_synced).
+//   Fin de sync broadcastée via SSE (ftp_sync_complete).
+app.post('/api/file-projects/:name/ftp-sync-background', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projectName = req.params.name;
+    const projetPath = path.join(PROJECTS_DIR, projectName);
+
+    try {
+        const ftpConfig = await ftpService.getFtpConfig(pool, projectName);
+        if (!ftpConfig) {
+            return res.json({ started: false, reason: 'no-ftp-config' });
+        }
+        const config = await getProjectConfig(projectName);
+        if (!config) return res.status(404).json({ error: 'Projet non trouvé en BDD' });
+        const topFolders = (config.structure || []).filter(n => n.type === 'folder');
+        if (topFolders.length === 0) {
+            return res.json({ started: false, reason: 'no-folders' });
+        }
+
+        // Répondre immédiatement
+        res.json({ started: true, totalFolders: topFolders.length });
+
+        // Lancer la sync en arrière-plan (sans await dans le handler)
+        (async () => {
+            broadcastToProject(projectName, 'ftp_sync_start', { totalFolders: topFolders.length });
+            let totalDownloaded = 0;
+            const allErrors = [];
+            for (const folder of topFolders) {
+                try {
+                    const result = await ftpService.syncFolderFilesFromFtp(ftpConfig, projectName, folder, PROJECTS_DIR);
+                    totalDownloaded += result.downloaded;
+                    if (result.errors.length > 0) allErrors.push(...result.errors);
+                    broadcastToProject(projectName, 'ftp_folder_synced', {
+                        folderId: folder.id,
+                        status: result.status,
+                        downloaded: result.downloaded,
+                        errors: result.errors
+                    });
+                } catch (e) {
+                    allErrors.push({ path: folder.path, error: e.message });
+                    broadcastToProject(projectName, 'ftp_folder_synced', {
+                        folderId: folder.id,
+                        status: 'error',
+                        downloaded: 0,
+                        errors: [{ path: folder.path, error: e.message }]
+                    });
+                }
+            }
+            broadcastToProject(projectName, 'ftp_sync_complete', {
+                status: allErrors.length > 0 ? 'error' : 'done',
+                downloaded: totalDownloaded,
+                errors: allErrors
+            });
+        })().catch(e => console.warn('[ftp-sync-background] async error:', e.message));
+
+    } catch (e) {
+        console.warn('[ftp-sync-background] error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/file-projects/:name/initial-backup-push
+//   Transfère tous les fichiers locaux vers le système de sauvegarde nouvellement configuré.
+//   Utilisé quand un backup est ajouté pour la première fois sur un projet local existant.
+app.post('/api/file-projects/:name/initial-backup-push', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const projectName = req.params.name;
+    const projetPath = path.join(PROJECTS_DIR, projectName);
+
+    if (!fs.existsSync(projetPath)) {
+        return res.status(404).json({ error: 'Dossier projet introuvable localement' });
+    }
+
+    try {
+        const [projRows] = await pool.query(
+            'SELECT backup_type, backup_server, backup_username, backup_password, backup_port, backup_directory, git_remote_url FROM frank_projects fp LEFT JOIN file_project_meta fpm ON fpm.id = fp.id WHERE fp.id = ?',
+            [projectName]
+        );
+        if (!projRows.length) return res.status(404).json({ error: 'Projet non trouvé' });
+        const proj = projRows[0];
+        const backupType = proj.backup_type;
+
+        if (backupType === 'ftp') {
+            const ftpConfig = await ftpService.getFtpConfig(pool, projectName);
+            if (!ftpConfig) return res.status(400).json({ error: 'Config FTP introuvable' });
+            // Tester la connexion
+            try { await ftpService.testConnection(ftpConfig); } catch (e) {
+                return res.status(503).json({ error: `Connexion FTP impossible : ${e.message}` });
+            }
+            // Collecter tous les fichiers locaux
+            const config = await getProjectConfig(projectName);
+            const fileList = [];
+            const collectFiles = (nodes) => {
+                for (const n of (nodes || [])) {
+                    if (n.type === 'file' && n.path) {
+                        const localPath = path.join(projetPath, n.path);
+                        if (fs.existsSync(localPath)) {
+                            fileList.push({ localPath, remotePath: `projets/${projectName}/${n.path.replace(/\\/g, '/')}` });
+                        }
+                    }
+                    if (n.children) collectFiles(n.children);
+                }
+            };
+            collectFiles(config?.structure || []);
+            const result = await ftpService.uploadFiles(ftpConfig, fileList);
+            return res.json({ success: result.errors.length === 0, uploaded: result.uploaded, errors: result.errors });
+        }
+
+        if (backupType === 'github' || backupType === 'gitlab') {
+            const gitRemoteUrl = proj.git_remote_url;
+            if (!gitRemoteUrl) {
+                return res.status(400).json({ error: 'Aucun remote Git configuré — configurez d\'abord un dépôt distant via le setup GitHub.' });
+            }
+            if (!projetGit.isRepo(projetPath)) {
+                return res.status(400).json({ error: 'Le dossier projet n\'est pas un repo Git — initialisez-le d\'abord.' });
+            }
+            if (!projetGit.hasRemote(projetPath)) {
+                const { execSync } = require('child_process');
+                execSync(`git -C "${projetPath}" remote add origin "${gitRemoteUrl}"`, { timeout: 10000 });
+            }
+            const pushResult = projetGit.pushMain(projetPath);
+            if (!pushResult.success && !pushResult.skipped) {
+                return res.status(500).json({ error: pushResult.error || 'Erreur lors du push Git' });
+            }
+            return res.json({ success: true, pushed: true });
+        }
+
+        return res.status(400).json({ error: `Type de backup non supporté : ${backupType}` });
+    } catch (e) {
+        console.warn('[initial-backup-push] error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // POST /api/file-projects/:name/push
 //   Push manuel de main vers le remote (utile au retour en ligne après travail offline)
 app.post('/api/file-projects/:name/push', (req, res) => {

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
 import { API_DATA_URL } from './tokens';
+import { FtpNodeSyncStatus } from './project-files.service';
 
 export interface LockInfo {
   nodeId: string;
@@ -119,6 +120,8 @@ export class ProjetCollabService {
   readonly structureUpdate$ = new Subject<StructureUpdateEvent>();
   readonly sectionPublished$ = new Subject<SectionPublishedEvent>();
   readonly projectSynced$ = new Subject<ProjectSyncedEvent>();
+  readonly ftpFolderSynced$ = new Subject<{ folderId: string; status: FtpNodeSyncStatus; downloaded: number; errors: any[] }>();
+  readonly ftpSyncComplete$ = new Subject<{ status: 'done' | 'error'; downloaded: number; errors: any[] }>();
 
   private eventSource: EventSource | null = null;
   private currentProjetId: string | null = null;
@@ -277,6 +280,24 @@ export class ProjetCollabService {
           this.zone.run(() => this.projectSynced$.next(evt));
         } catch (err) {
           console.warn('[Collab] SSE project_synced parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('ftp_folder_synced', (e: MessageEvent) => {
+        try {
+          const evt = JSON.parse(e.data);
+          this.zone.run(() => this.ftpFolderSynced$.next(evt));
+        } catch (err) {
+          console.warn('[Collab] SSE ftp_folder_synced parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('ftp_sync_complete', (e: MessageEvent) => {
+        try {
+          const evt = JSON.parse(e.data);
+          this.zone.run(() => this.ftpSyncComplete$.next(evt));
+        } catch (err) {
+          console.warn('[Collab] SSE ftp_sync_complete parse error:', err);
         }
       });
 

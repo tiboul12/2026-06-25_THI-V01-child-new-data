@@ -1,6 +1,34 @@
 {
   "modifications": [
     {
+      "id": "mod-242",
+      "version": "B-0.219",
+      "date": "2026-05-30T00:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "portail", "server", "libs"],
+      "features": "projets:editor,projets:sidebar,portail:admin,server:ftp",
+      "title": "Ouverture rapide + sync FTP arrière-plan + indicateurs visuels",
+      "description": "Refonte complète de l'ouverture de projet : Phase 1 affiche l'UI en < 500ms via /ensure-fast (structure BDD sans FTP). Phase 2 synchronise le FTP en arrière-plan via SSE avec indicateurs par dossier dans la zone 3 (point jaune/vert/rouge). Indicateur global de sync dans la toolbar. Gestion du premier accès (fichiers vides rechargés après sync). Route /initial-backup-push pour transférer les fichiers locaux vers un nouveau système de backup avec modal de confirmation dans l'admin.",
+      "files": [
+        "server/modules/ftp-service.js",
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/project-files.service.ts",
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu améliore l'ouverture d'un projet... [voir plan complet]",
+      "startedAt": "2026-05-30T00:13:00.000Z",
+      "completedAt": "2026-05-30T00:35:00.000Z"
+    },
+    {
       "id": "mod-241",
       "version": "B-0.218",
       "date": "2026-05-30T00:10:00.000Z",

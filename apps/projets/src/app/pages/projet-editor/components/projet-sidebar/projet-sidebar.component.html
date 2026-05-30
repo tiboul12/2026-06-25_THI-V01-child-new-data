@@ -112,6 +112,27 @@
           {{ node.type === 'file' ? node.name.replace('.md', '') : node.name }}
         </span>
 
+        <!-- Indicateur sync FTP (dossiers uniquement) -->
+        @if (hasFtpBackup && node.type === 'folder') {
+          @switch (nodeSyncStatus.get(node.id)) {
+            @case ('syncing') {
+              <span class="material-symbols-outlined text-[9px] flex-shrink-0 text-blue-400 animate-spin ml-0.5" title="Synchronisation FTP en cours…">sync</span>
+            }
+            @case ('in-sync') {
+              <span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block ml-0.5 flex-shrink-0" title="À jour avec le FTP"></span>
+            }
+            @case ('updated') {
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block ml-0.5 flex-shrink-0" title="Fichiers mis à jour depuis le FTP"></span>
+            }
+            @case ('error') {
+              <span class="material-symbols-outlined text-[9px] flex-shrink-0 text-red-400 ml-0.5" title="Erreur de synchronisation FTP">error</span>
+            }
+            @default {
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400/50 inline-block ml-0.5 flex-shrink-0" title="Non synchronisé avec le FTP"></span>
+            }
+          }
+        }
+
         <!-- Icône Conversation (Forum) -->
         @if (hasConversation(node.id)) {
           <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-light-primary dark:text-primary animate-pulse ml-1 opacity-70">
