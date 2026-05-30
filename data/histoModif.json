@@ -1,6 +1,40 @@
 {
   "modifications": [
     {
+      "id": "mod-255",
+      "version": "B-0.228",
+      "date": "2026-05-30T04:10:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Fix barre de progression sync FTP : display block sur les spans",
+      "description": "Les spans inline ignorent width/height en CSS. Ajout de 'block' sur le conteneur et le fill de la barre de progression — la largeur du fill s'applique maintenant correctement.",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois toujours pas la progression en live",
+      "startedAt": "2026-05-30T04:05:00.000Z",
+      "completedAt": "2026-05-30T04:10:00.000Z"
+    },
+    {
+      "id": "mod-254",
+      "version": "B-0.228",
+      "date": "2026-05-30T04:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Fix barre de progression sync FTP : largeur et visibilité",
+      "description": "Remplacement de [style.width.%] (pouvait retourner NaN%) par [style.width] avec valeur string explicite. Barre élargie (w-24, h-1.5), fond plus contrasté (bg-white/10), transition plus douce (500ms ease-out).",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "la progress bar de la synchro des fichiers n'affiche pas la progression",
+      "startedAt": "2026-05-30T03:50:00.000Z",
+      "completedAt": "2026-05-30T04:00:00.000Z"
+    },
+    {
       "id": "mod-253",
       "version": "B-0.227",
       "date": "2026-05-30T03:45:00.000Z",

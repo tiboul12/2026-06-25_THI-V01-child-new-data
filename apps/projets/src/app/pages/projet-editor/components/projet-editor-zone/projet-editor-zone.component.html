@@ -59,9 +59,9 @@
               }
             </span>
             @if (ftpSyncProgress.total > 0) {
-              <span class="w-20 h-1 rounded-full bg-blue-500/20 overflow-hidden flex-shrink-0">
-                <span class="h-full rounded-full bg-blue-400 transition-all duration-300"
-                      [style.width.%]="(ftpSyncProgress.checked / ftpSyncProgress.total) * 100"></span>
+              <span class="block w-24 h-1.5 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
+                <span class="block h-full bg-blue-400 transition-all duration-500 ease-out"
+                      [style.width]="(ftpSyncProgress.total > 0 ? (ftpSyncProgress.checked / ftpSyncProgress.total * 100) : 0) + '%'"></span>
               </span>
             }
           </span>
