@@ -250,14 +250,20 @@
           @for (item of group.items; track item.id; let last = $last) {
             <div [ngClass]="last ? 'p-3.5' : 'p-3.5 border-b border-light-border dark:border-white/5'">
               <div class="flex items-start gap-3">
-                <!-- Badge ID cliquable -->
-                <button (click)="copyId(item.id); $event.stopPropagation()"
+                <!-- Badge ID + titre : cliquable pour afficher/masquer le détail -->
+                <div class="flex items-start gap-2 flex-1 min-w-0 cursor-pointer group"
+                     (click)="toggleItemExpand(item.id)">
+                  <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/30 flex-shrink-0 mt-1 transition-transform duration-100"
+                        [style.transform]="isItemExpanded(item.id) ? 'rotate(90deg)' : 'rotate(0deg)'">
+                    chevron_right
+                  </span>
+                  <span (click)="copyId(item.id); $event.stopPropagation()"
                         title="Copier l'ID {{ item.id }}"
                         class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary hover:border-light-primary/30 dark:hover:border-primary/30 transition-all cursor-pointer flex-shrink-0 mt-0.5">
-                  {{ item.id }}
-                </button>
-                <!-- Libellé -->
-                <span class="text-sm text-light-text dark:text-white flex-1 pt-0.5">{{ item.section }}</span>
+                    {{ item.id }}
+                  </span>
+                  <span class="text-sm text-light-text dark:text-white pt-0.5 group-hover:text-light-primary dark:group-hover:text-primary transition-colors">{{ item.section }}</span>
+                </div>
                 <!-- Boutons OK / KO / ND -->
                 <div class="flex items-center gap-1.5 flex-shrink-0">
                   <button (click)="setResult(item.id, 'ok')"
@@ -283,6 +289,12 @@
                   </button>
                 </div>
               </div>
+              <!-- Contenu détaillé du test (visible si expandé) -->
+              @if (isItemExpanded(item.id) && item.content) {
+                <div class="mt-2 ml-10 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/8 text-[11px] text-light-text-muted dark:text-white/55 leading-relaxed"
+                     [innerHTML]="renderContent(item.content)">
+                </div>
+              }
               <!-- Note si KO -->
               @if (getResult(item.id).status === 'ko') {
                 <input type="text"

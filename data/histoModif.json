@@ -1,6 +1,23 @@
 {
   "modifications": [
     {
+      "id": "mod-264",
+      "version": "B-0.235",
+      "date": "2026-05-30T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin-tests",
+      "title": "Runner : détail de chaque fonction expandable pendant le test",
+      "description": "Dans la vue Runner, chaque fonction affiche maintenant un chevron cliquable pour voir le détail complet (bullet points, descriptions) de ce qu'il faut tester. Le contenu s'affiche en dessous du titre, avec rendu HTML simplifié (gras, listes, code inline).",
+      "files": ["apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je lance un test je n'ai pas le détails du tests à effectué juste l'id et le titre, il faut affiché le détails pour pouvoir effectué le test",
+      "startedAt": "2026-05-30T00:00:00.000Z",
+      "completedAt": "2026-05-30T00:00:00.000Z"
+    },
+    {
       "id": "mod-263",
       "version": "B-0.234",
       "date": "2026-05-30T00:00:00.000Z",
