@@ -96,7 +96,29 @@
       <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
     }
 
-    @if (backupType && backupBadge[backupType]) {
+    @if (backupType === 'ftp') {
+      @if (ftpSyncGlobalStatus === 'syncing') {
+        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-blue-400 border-blue-500/30 bg-blue-500/10">
+          <span class="material-symbols-outlined text-[11px] animate-spin">sync</span>
+          Synchronisation FTP en cours…
+        </span>
+      } @else if (ftpSyncGlobalStatus === 'done') {
+        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
+          <span class="material-symbols-outlined text-[11px]">dns</span>
+          FTP à jour
+        </span>
+      } @else if (ftpSyncGlobalStatus === 'error') {
+        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-red-400 border-red-500/30 bg-red-500/10">
+          <span class="material-symbols-outlined text-[11px]">dns</span>
+          FTP — erreur sync
+        </span>
+      } @else {
+        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
+          <span class="material-symbols-outlined text-[11px]">dns</span>
+          FTP
+        </span>
+      }
+    } @else if (backupType && backupBadge[backupType]) {
       <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2"
             [ngClass]="backupBadge[backupType].css">
         <span class="material-symbols-outlined text-[11px]">{{ backupBadge[backupType].icon }}</span>

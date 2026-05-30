@@ -8,11 +8,30 @@
       <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/30">expand_more</span>
     </div>
 
-    <!-- Badge backend FTP -->
-    <div *ngIf="backupType === 'ftp'" class="flex items-center gap-1 px-2 py-0.5 rounded border border-green-500/30 bg-green-500/5">
-      <span class="material-symbols-outlined text-xs text-green-500">dns</span>
-      <span class="font-semibold text-green-500">FTP</span>
-    </div>
+    <!-- Badge backend FTP / état de sync -->
+    @if (backupType === 'ftp') {
+      @if (ftpSyncGlobalStatus === 'syncing') {
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-blue-500/30 bg-blue-500/5">
+          <span class="material-symbols-outlined text-xs text-blue-400 animate-spin">sync</span>
+          <span class="font-semibold text-blue-400">Synchronisation FTP en cours…</span>
+        </div>
+      } @else if (ftpSyncGlobalStatus === 'done') {
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-green-500/30 bg-green-500/5">
+          <span class="material-symbols-outlined text-xs text-green-500">dns</span>
+          <span class="font-semibold text-green-500">FTP à jour</span>
+        </div>
+      } @else if (ftpSyncGlobalStatus === 'error') {
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-red-500/30 bg-red-500/5">
+          <span class="material-symbols-outlined text-xs text-red-400">dns</span>
+          <span class="font-semibold text-red-400">FTP — erreur sync</span>
+        </div>
+      } @else {
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-green-500/30 bg-green-500/5">
+          <span class="material-symbols-outlined text-xs text-green-500">dns</span>
+          <span class="font-semibold text-green-500">FTP</span>
+        </div>
+      }
+    }
 
     <!-- Indicateur dirty -->
     <span *ngIf="isDirty" class="text-yellow-500 font-medium">● Non sauvegardé</span>

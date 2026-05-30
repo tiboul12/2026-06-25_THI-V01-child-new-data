@@ -1,6 +1,48 @@
 {
   "modifications": [
     {
+      "id": "mod-244",
+      "version": "B-0.220",
+      "date": "2026-05-30T01:15:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Indicateur sync FTP dans la card FTP de la barre d'outils zone 4",
+      "description": "La card FTP dans la barre d'outils de l'éditeur (zone 4) remplace son texte selon l'état de sync FTP : pendant la sync affiche 'Synchronisation FTP en cours…' en bleu avec icône animée, quand terminée affiche 'FTP à jour' en cyan, en erreur affiche 'FTP — erreur sync' en rouge. L'état idle/initial affiche la card FTP normale.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois plus l'information synchronisation en cours, il faut toujours l'affiché mais à la place de l'encart FTP et ensuite lorsque la synchro est ok remettre l'encart FTP Mise à jour",
+      "startedAt": "2026-05-30T01:05:00.000Z",
+      "completedAt": "2026-05-30T01:15:00.000Z"
+    },
+    {
+      "id": "mod-243",
+      "version": "B-0.220",
+      "date": "2026-05-30T01:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:statusbar",
+      "title": "Indicateur sync FTP déplacé dans la card FTP de la statusbar",
+      "description": "L'indicateur de synchronisation FTP remplace la card FTP dans la statusbar (bas de l'éditeur) : pendant la sync affiche 'Synchronisation FTP en cours…' en bleu, quand terminée affiche 'FTP à jour' en vert, en erreur affiche 'FTP — erreur sync' en rouge. Le bandeau global au-dessus de la sidebar a été supprimé.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-statusbar/projet-statusbar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-statusbar/projet-statusbar.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "déplace l'information Synchronisation FTP en cours à la place de la card FTP et lorsque la synchro est terminé la card est de nouveau affiché avec la mentions 'FTP à jour'.",
+      "startedAt": "2026-05-30T00:55:00.000Z",
+      "completedAt": "2026-05-30T01:00:00.000Z"
+    },
+    {
       "id": "mod-242",
       "version": "B-0.219",
       "date": "2026-05-30T00:30:00.000Z",

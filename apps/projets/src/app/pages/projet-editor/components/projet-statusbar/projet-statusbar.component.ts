@@ -12,4 +12,5 @@ export class ProjetStatusbarComponent {
   @Input() linkedDoc = '';
   @Input() isDirty = false;
   @Input() backupType: string | null = null;
+  @Input() ftpSyncGlobalStatus: 'idle' | 'syncing' | 'done' | 'error' = 'idle';
 }

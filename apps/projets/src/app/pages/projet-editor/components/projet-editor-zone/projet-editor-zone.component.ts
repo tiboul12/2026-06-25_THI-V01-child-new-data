@@ -162,6 +162,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Input() activeNodeId: string | null = null;
   @Input() highlightNodeId: string | null = null;
   @Input() backupType: string | null = null;
+  @Input() ftpSyncGlobalStatus: 'idle' | 'syncing' | 'done' | 'error' = 'idle';
 
   readonly backupBadge: Record<string, { icon: string; label: string; css: string }> = {
     ftp:         { icon: 'dns',          label: 'FTP',     css: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' },
