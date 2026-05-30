@@ -264,6 +264,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // Snapshots du contenu original par section (clé = sectionId / focusedHandle.id)
   // Permet de restaurer le contenu original via "Annuler" même après navigation entre sections
   private codeSectionSnapshots = new Map<string, string>();
+  // Snapshot pré-édition du document complet quand on édite SANS mode focus (vue racine).
+  // Permet le "Annuler" au niveau document pour les projets avec sauvegarde externe.
+  private codeDocSnapshot: string | null = null;
   private dirtyVisuSectionIds = new Set<string>();
   private visuSectionLockSnapshot = new Map<string, string>();
   private pendingVisuDeletions = new Map<string, { node: any; sectionId: string }>();
@@ -1242,6 +1245,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   enterFocusMode(handle: DragHandle, ev?: MouseEvent) {
     if (ev) { ev.stopPropagation(); ev.preventDefault(); }
     clearTimeout(this.saveTimeout);
+    // On bascule en contexte section → le snapshot document devient caduc
+    this.codeDocSnapshot = null;
 
     if (this.focusedHandle) {
       // Déjà en mode focus : sortir d'abord (merge + recompute du doc complet),
@@ -1398,6 +1403,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return this.collab.localPendingSections().has(hId) && !this.structEntityLocks.has(hId);
   }
 
+  // Barre Annuler/Partager mode Code — réservée aux projets avec sauvegarde externe.
+  // En mode focus : selon hasPendingCode (curseur dans l'entité verrouillée).
+  // En vue document (pas de focus) : dès qu'une entité est verrouillée par l'édition courante.
+  get showCodePublishBar(): boolean {
+    if (!this.backupType || this.mode !== 'edit') return false;
+    if (this.focusedHandle) return this.hasPendingCode;
+    return this.activeEntityLocks.size > 0;
+  }
+
   // Sections visu filtrées selon la sélection active (null = tout afficher)
   // Les sections avec modifications locales en attente (localPendingSections) sont toujours
   // incluses, même si la navigation pointe vers une autre section — ainsi le DOM de la section
@@ -1515,49 +1529,60 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.focusedHandle && !this.codeSectionSnapshots.has(this.focusedHandle.id)) {
       this.codeSectionSnapshots.set(this.focusedHandle.id, this.lastSavedContent);
     }
+    // Édition au niveau document (pas de mode focus) : capturer le snapshot pré-édition
+    // pour permettre "Annuler" sur les projets avec sauvegarde externe.
+    if (!this.focusedHandle && this.codeDocSnapshot === null) {
+      this.codeDocSnapshot = this.lastSavedContent;
+    }
     const entity = this.getCursorEntity();
     // Mettre à jour le signal de position pour hasPendingCode (barre Annuler/Partager contextuelle)
     this.cursorEntityId.set(entity?.id ?? this.focusedHandle?.id ?? null);
     if (entity) {
       this.modifiedEntities.set(entity.id, entity.folderId);
-      // Marquer uniquement l'entité précise comme pending + verrouiller
-      // → le dossier parent n'apparaît PAS comme verrouillé dans la zone 3
-      if (!this.activeEntityLocks.has(entity.id)) {
-        this.activeEntityLocks.add(entity.id);
-        this.collab.addLocalPending(entity.id);
-        if (this.projectName) this.collab.lockNode(this.projectName, entity.id).catch(() => {});
+      // État de partage/verrou : uniquement pour les projets avec sauvegarde externe.
+      // Les projets locaux s'auto-sauvegardent sans étape de publication → pas de pending/lock.
+      if (this.backupType) {
+        // Marquer uniquement l'entité précise comme pending + verrouiller
+        // → le dossier parent n'apparaît PAS comme verrouillé dans la zone 3
+        if (!this.activeEntityLocks.has(entity.id)) {
+          this.activeEntityLocks.add(entity.id);
+          this.collab.addLocalPending(entity.id);
+          if (this.projectName) this.collab.lockNode(this.projectName, entity.id).catch(() => {});
+        }
+        // Affichage live grisé dans le panneau historique tant que le save n'est pas fait
+        const isBlock = entity.id.includes('##');
+        const node = isBlock ? null : this.findNode(entity.id, this.files);
+        const label = isBlock
+          ? `Modification — ${this.blockKindLabel(entity.id)}`
+          : `Modification de texte — «${node?.name || entity.id}»`;
+        this.collab.upsertPending({
+          entityId: entity.id,
+          label,
+          username: this.authSvc.currentUser()?.username || 'Vous',
+          timestamp: new Date().toISOString(),
+          state: 'editing'
+        });
       }
-      // Affichage live grisé dans le panneau historique tant que le save n'est pas fait
-      const isBlock = entity.id.includes('##');
-      const node = isBlock ? null : this.findNode(entity.id, this.files);
-      const label = isBlock
-        ? `Modification — ${this.blockKindLabel(entity.id)}`
-        : `Modification de texte — «${node?.name || entity.id}»`;
-      this.collab.upsertPending({
-        entityId: entity.id,
-        label,
-        username: this.authSvc.currentUser()?.username || 'Vous',
-        timestamp: new Date().toISOString(),
-        state: 'editing'
-      });
     } else if (this.focusedHandle) {
       // Fichier direct (pas de ## Section header) : getCursorEntity retourne null
       // → fallback sur focusedHandle.id qui est le fileId lui-même
       const hId = this.focusedHandle.id;
       this.modifiedEntities.set(hId, hId);
-      if (!this.activeEntityLocks.has(hId)) {
-        this.activeEntityLocks.add(hId);
-        this.collab.addLocalPending(hId);
-        if (this.projectName) this.collab.lockNode(this.projectName, hId).catch(() => {});
+      if (this.backupType) {
+        if (!this.activeEntityLocks.has(hId)) {
+          this.activeEntityLocks.add(hId);
+          this.collab.addLocalPending(hId);
+          if (this.projectName) this.collab.lockNode(this.projectName, hId).catch(() => {});
+        }
+        const node = this.findNode(hId, this.files);
+        this.collab.upsertPending({
+          entityId: hId,
+          label: `Modification de texte — «${node?.name || hId}»`,
+          username: this.authSvc.currentUser()?.username || 'Vous',
+          timestamp: new Date().toISOString(),
+          state: 'editing'
+        });
       }
-      const node = this.findNode(hId, this.files);
-      this.collab.upsertPending({
-        entityId: hId,
-        label: `Modification de texte — «${node?.name || hId}»`,
-        username: this.authSvc.currentUser()?.username || 'Vous',
-        timestamp: new Date().toISOString(),
-        state: 'editing'
-      });
     }
   }
 
@@ -2274,7 +2299,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.localDirty = true;
       this.dirtyChange.emit(true);
       // Activer la barre "Modifications en cours" pour la section focusée (mode edit)
-      if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
+      // — uniquement pour les projets avec sauvegarde externe.
+      if (this.backupType && this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
         if (!this.codeSectionSnapshots.has(this.focusedHandle.id)) {
           this.codeSectionSnapshots.set(this.focusedHandle.id, snapshotBeforeImageSave);
         }
@@ -2434,7 +2460,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // n'est pas encore effective : l'utilisateur doit cliquer "Partager".
     this.localDirty = true;
     this.dirtyChange.emit(true);
-    if (this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
+    if (this.backupType && this.focusedHandle && !this.collab.isLocalPending(this.focusedHandle.id)) {
       if (!this.codeSectionSnapshots.has(this.focusedHandle.id)) {
         this.codeSectionSnapshots.set(this.focusedHandle.id, snapshotBeforeDelete);
       }
@@ -3028,6 +3054,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.activeVisuSectionId = sectionId;
     this.suppressScrollOnNextActiveChange = true;
     this.nodeActive.emit(sectionId);
+    // Projets locaux : pas d'étape de partage → édition libre, auto-sauvegarde au blur,
+    // sans verrou ni état "en cours d'édition".
+    if (!this.backupType) return;
     // Acquérir le lock et noter qu'on édite cette section
     if (this.projectName && this.editingVisuSectionId() !== sectionId) {
       // Capturer le snapshot original uniquement si pas déjà capturé (évite l'écrasement au retour sur une section dirty)
@@ -3162,7 +3191,31 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // ── Mode Code : Annuler / Partager ──────────────────────────
   async cancelCodeEdit(): Promise<void> {
-    if (!this.focusedHandle) return;
+    if (!this.focusedHandle) {
+      // Annulation en vue document (pas de mode focus) : restaurer le snapshot pré-édition
+      // et libérer toutes les entités verrouillées par l'édition courante.
+      if (this.codeDocSnapshot === null) return;
+      const snap = this.codeDocSnapshot;
+      this.unifiedContent = snap;
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = snap;
+      clearTimeout(this.saveTimeout);
+      this.lastSavedContent = snap;
+      this.recomputeAll();
+      this.saveAll();
+      for (const id of [...this.activeEntityLocks]) {
+        this.collab.clearPending(id);
+        this.collab.removeLocalPending(id);
+        if (this.projectName) this.collab.unlockNode(this.projectName, id).catch(() => {});
+      }
+      this.activeEntityLocks.clear();
+      this.modifiedEntities.clear();
+      this.cursorEntityId.set(null);
+      this.codeDocSnapshot = null;
+      this.localDirty = false;
+      this.dirtyChange.emit(false);
+      return;
+    }
     const sectionId = this.focusedHandle.id;
     const entityId = this.cursorEntityId();
     if (!entityId || !this.activeEntityLocks.has(entityId)) return;
@@ -3239,9 +3292,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   async publishCodeEdit(): Promise<void> {
-    if (!this.projectName || !this.focusedHandle) return;
+    if (!this.projectName) return;
+    // Mode focus : section ciblée. Vue document : au moins une entité verrouillée par l'édition.
+    if (!this.focusedHandle && this.activeEntityLocks.size === 0) return;
     this.isPublishing.set(true);
-    const sectionId = this.focusedHandle.id;
+    // En vue document (pas de focus), sectionId vide → flushContentModifications traite TOUTES
+    // les entités modifiées (le filtre falsy est ignoré).
+    const sectionId = this.focusedHandle?.id ?? '';
     clearTimeout(this.saveTimeout);
     // Flusher l'historique de CETTE section AVANT unfoldAll (ranges encore valides en mode focus)
     this.flushContentModifications(sectionId);
@@ -3284,6 +3341,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
       // Section partagée : retirer du pending + libérer les verrous granulaires
       this.codeSectionSnapshots.delete(sectionId);
+      this.codeDocSnapshot = null;
       for (const entityId of this.activeEntityLocks) this.collab.removeLocalPending(entityId);
       this.collab.removeLocalPending(sectionId);
       if (this.projectName) {
@@ -3295,9 +3353,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.woHistory.track({
         section: 'projets/fichiers',
         actionType: 'update',
-        label: `Publication section «${this.focusedHandle?.label || sectionId}»`,
+        label: `Publication ${this.focusedHandle ? `section «${this.focusedHandle.label || sectionId}»` : 'du document'}`,
         entityType: 'section',
-        entityId: sectionId,
+        entityId: sectionId || this.projectName,
         context: { projectId: this.projectName },
         undoable: false
       }).catch(() => {});
@@ -3325,17 +3383,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   onVisuSectionInput(sectionId: string) {
     this.dirtyVisuSectionIds.add(sectionId);
-    this.collab.addLocalPending(sectionId);
-    // Afficher une entrée grisée dans le panneau historique dès la première frappe
-    if (!this.collab.pending().some(e => e.entityId === sectionId)) {
-      const node = this.findNode(sectionId, this.files);
-      this.collab.upsertPending({
-        entityId: sectionId,
-        label: `Modification visu — «${node?.name || sectionId}»`,
-        username: this.authSvc.currentUser()?.username || 'Vous',
-        timestamp: new Date().toISOString(),
-        state: 'editing'
-      });
+    // État de partage/pending : uniquement pour les projets avec sauvegarde externe.
+    if (this.backupType) {
+      this.collab.addLocalPending(sectionId);
+      // Afficher une entrée grisée dans le panneau historique dès la première frappe
+      if (!this.collab.pending().some(e => e.entityId === sectionId)) {
+        const node = this.findNode(sectionId, this.files);
+        this.collab.upsertPending({
+          entityId: sectionId,
+          label: `Modification visu — «${node?.name || sectionId}»`,
+          username: this.authSvc.currentUser()?.username || 'Vous',
+          timestamp: new Date().toISOString(),
+          state: 'editing'
+        });
+      }
     }
     if (!this.localDirty) {
       this.localDirty = true;
@@ -3752,17 +3813,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.dirtyVisuSectionIds.add(sectionId);
         this.localDirty = true;
         this.dirtyChange.emit(true);
-        // Activer la barre "Modifications en cours" (mode visu)
-        if (!this.visuSectionLockSnapshot.has(sectionId)) {
-          const vs = this.visuSections.find(v => v.sectionId === sectionId);
-          if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
-        }
-        if (!this.editingVisuSectionId()) {
-          this.editingVisuSectionId.set(sectionId);
-        }
-        this.collab.addLocalPending(sectionId);
-        if (this.projectName) {
-          this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+        // Activer la barre "Modifications en cours" (mode visu) — projets backup uniquement
+        if (this.backupType) {
+          if (!this.visuSectionLockSnapshot.has(sectionId)) {
+            const vs = this.visuSections.find(v => v.sectionId === sectionId);
+            if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+          }
+          if (!this.editingVisuSectionId()) {
+            this.editingVisuSectionId.set(sectionId);
+          }
+          this.collab.addLocalPending(sectionId);
+          if (this.projectName) {
+            this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+          }
         }
         this.refresh.emit();
         setTimeout(() => this.initVisuSectionHtml(), 80);
@@ -3804,13 +3867,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.dirtyVisuSectionIds.add(sectionId);
       this.localDirty = true;
       this.dirtyChange.emit(true);
-      if (!this.visuSectionLockSnapshot.has(sectionId)) {
-        const vs = this.visuSections.find(v => v.sectionId === sectionId);
-        if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+      if (this.backupType) {
+        if (!this.visuSectionLockSnapshot.has(sectionId)) {
+          const vs = this.visuSections.find(v => v.sectionId === sectionId);
+          if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+        }
+        if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
+        this.collab.addLocalPending(sectionId);
+        if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
       }
-      if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
-      this.collab.addLocalPending(sectionId);
-      if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
     }
     setTimeout(() => this.initVisuSectionHtml(), 80);
   }
@@ -4067,6 +4132,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }
     }
 
+    // État de partage/verrou : uniquement pour les projets avec sauvegarde externe.
+    if (!this.backupType) return;
     if (this.structEntityLocks.has(entityId)) return;
     // Vérifier que l'entité n'est pas verrouillée par un autre user
     if (this.collab.isLockedByOther(entityId)) return;

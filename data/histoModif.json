@@ -1,6 +1,60 @@
 {
   "modifications": [
     {
+      "id": "mod-259",
+      "version": "B-0.230",
+      "date": "2026-05-30T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-code,projets:editor-visu,projets:editor-structure",
+      "title": "Partager disponible en vue document pour les projets backup + pas de lock sur projets locaux",
+      "description": "Deux corrections liées au partage : (1) La barre Annuler/Partager mode Code n'apparaissait qu'en mode focus (section sélectionnée). En vue document complet (racine) d'un projet avec sauvegarde externe, l'édition créait des locks/pending sans aucune UI pour publier → impossible de pousser vers le serveur distant. Ajout d'un getter showCodePublishBar + snapshot document (codeDocSnapshot) + généralisation de publishCodeEdit/cancelCodeEdit au cas sans focus. (2) Les projets SANS sauvegarde externe créaient quand même des locks/pending (Code, Preview, Structure, upload/suppression d'images) qui ne se nettoyaient plus depuis le masquage de la barre (mod-258). Ces états collab/partage sont désormais réservés aux projets backup ; les projets locaux s'auto-sauvegardent sans verrou ni état 'en attente'.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "l'option de partage ne fonctionne plus. Pour les projets sans sauvegarde l'option annule/Partage n'est pas actif (OK). Pour les projets avec option sauvegarde des fichiers, l'option devrait être présente et ce n'est pas le cas. Projet sans sauvegarde : pas de partage (local + bdd). Projet avec sauvegarde : option de partage des fichiers.",
+      "startedAt": "2026-05-30T00:00:00.000Z",
+      "completedAt": "2026-05-30T00:00:00.000Z"
+    },
+    {
+      "id": "mod-258",
+      "version": "B-0.230",
+      "date": "2026-05-30T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-code,projets:editor-structure,projets:editor-visu",
+      "title": "Barres Annuler/Partager masquées pour les projets locaux sans backup",
+      "description": "Les barres Annuler/Partager (modes Code, Structure et Preview) s'affichaient aussi pour les projets sans sauvegarde externe. Correction : ajout de la condition backupType sur les 3 barres — elles ne s'affichent que si le projet a un backend FTP, GitHub ou GitLab. Pour les projets locaux, la sauvegarde automatique suffit.",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Attention cette validation de modification doit être appliqué uniquement pour les projets qui on un système de sauvegarde lié comme ftp github ou gitlab, pour les projets uniquement local cette fonction ne doit pas être mis en place (et affiché) uniquement l'information de Sauvegarde (dans le fichier local).",
+      "startedAt": "2026-05-30T00:00:00.000Z",
+      "completedAt": "2026-05-30T00:00:00.000Z"
+    },
+    {
+      "id": "mod-257",
+      "version": "B-0.230",
+      "date": "2026-05-30T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-visu",
+      "title": "Fix barre Annuler/Partager masquée dans les projets FTP",
+      "description": "En mode Preview, la condition contenteditable bloquait l'édition des sections pendant la synchronisation FTP initiale (statut 'unknown'), ce qui empêchait onVisuSectionFocus d'être appelé et donc editingVisuSectionId de s'activer. La barre Annuler/Partager n'apparaissait jamais. Correction : suppression du blocage FTP sur contenteditable en mode visu. Le badge de sync reste affiché à titre indicatif mais n'empêche plus l'édition.",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je suis dans un projet avec sauvegarde FTP et lorsque je sélectionne une section et que je la modifie je ne vois plus les bouton annule et Partage. Cette fonction doit toujours être disponible pour les projets avec sauvegarde externe.",
+      "startedAt": "2026-05-30T00:00:00.000Z",
+      "completedAt": "2026-05-30T00:00:00.000Z"
+    },
+    {
       "id": "mod-256",
       "version": "B-0.229",
       "date": "2026-05-30T04:30:00.000Z",

@@ -157,8 +157,8 @@
     </div>
   }
 
-  <!-- Barre Annuler/Partager mode Code -->
-  @if (mode === 'edit' && focusedHandle && hasPendingCode) {
+  <!-- Barre Annuler/Partager mode Code (projets avec sauvegarde externe uniquement) -->
+  @if (showCodePublishBar) {
     <div class="code-publish-bar">
       <span class="code-publish-bar__info">
         <span class="material-symbols-outlined">edit</span>
@@ -174,8 +174,8 @@
     </div>
   }
 
-  <!-- Barre Annuler/Partager mode Structure (visible aussi en mode Code/Preview si lock structure actif) -->
-  @if (structureHasPending()) {
+  <!-- Barre Annuler/Partager mode Structure (projets avec sauvegarde externe uniquement) -->
+  @if (backupType && structureHasPending()) {
     <div class="code-publish-bar">
       <span class="code-publish-bar__info">
         <span class="material-symbols-outlined">edit</span>
@@ -191,8 +191,8 @@
     </div>
   }
 
-  <!-- Barre Annuler/Partager mode Preview (même design que mode Code) -->
-  @if (mode === 'visu' && editingVisuSectionId()) {
+  <!-- Barre Annuler/Partager mode Preview (projets avec sauvegarde externe uniquement) -->
+  @if (backupType && mode === 'visu' && editingVisuSectionId()) {
     <div class="code-publish-bar">
       <span class="code-publish-bar__info">
         <span class="material-symbols-outlined">edit</span>
@@ -655,18 +655,18 @@
                 </div>
               }
 
-              <!-- Badge FTP lecture seule si section non synchronisée -->
+              <!-- Badge FTP sync en cours (indicatif uniquement, n'empêche pas l'édition) -->
               @if (hasFtpBackup && ftpSyncGlobalStatus === 'syncing' && nodeSyncStatus.get(sec.sectionId) === 'unknown') {
                 <div class="flex items-center gap-1.5 px-2 py-1 mb-1 rounded border border-blue-500/30 bg-blue-500/5 text-blue-400 text-[10px] font-medium">
                   <span class="material-symbols-outlined text-xs animate-spin">sync</span>
-                  Synchronisation en cours — lecture seule
+                  Synchronisation FTP en cours…
                 </div>
               }
 
               <!-- Corps éditable (contenteditable) -->
               <div #visuSectionEl
                    class="visu-sec-content"
-                   [attr.contenteditable]="(collab.isLockedByOther(sec.sectionId) || (hasFtpBackup && ftpSyncGlobalStatus === 'syncing' && nodeSyncStatus.get(sec.sectionId) === 'unknown')) ? 'false' : 'true'"
+                   [attr.contenteditable]="collab.isLockedByOther(sec.sectionId) ? 'false' : 'true'"
                    [attr.data-section-id]="sec.sectionId"
                    (focus)="onVisuSectionFocus(sec.sectionId)"
                    (blur)="onVisuSectionBlur(sec.sectionId)"
