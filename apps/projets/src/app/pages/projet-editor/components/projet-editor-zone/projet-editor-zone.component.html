@@ -213,6 +213,14 @@
     </div>
   }
 
+  <!-- Bannière lecture seule sync FTP -->
+  @if (isActiveSectionUnsynced) {
+    <div class="flex items-center gap-2 px-3 py-1.5 border-b border-blue-500/20 bg-blue-500/8 text-blue-400 text-xs font-medium flex-shrink-0">
+      <span class="material-symbols-outlined text-sm animate-spin">sync</span>
+      Synchronisation FTP en cours — lecture seule jusqu'à la mise à jour
+    </div>
+  }
+
   <!-- Vide -->
   @if (docSections.length === 0) {
     <div class="flex-1 px-6 py-4">
@@ -313,15 +321,6 @@
                   (keyup)="onTextareaCursor($event)"
                   (mouseup)="onTextareaCursor($event)"
                   (blur)="onTextareaBlur()"></textarea>
-
-        @if (isActiveSectionUnsynced) {
-          <div class="absolute inset-0 flex items-start justify-center pt-6 pointer-events-none">
-            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-medium shadow-lg pointer-events-auto">
-              <span class="material-symbols-outlined text-sm animate-spin">sync</span>
-              Synchronisation FTP en cours — lecture seule jusqu'à la mise à jour
-            </div>
-          </div>
-        }
 
         <!-- F1 — Menu des slash commands (mode Code) -->
         <app-slash-command-menu

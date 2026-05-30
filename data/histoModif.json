@@ -1,6 +1,23 @@
 {
   "modifications": [
     {
+      "id": "mod-252",
+      "version": "B-0.226",
+      "date": "2026-05-30T03:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Bannière sync FTP déplacée au-dessus de la zone texte",
+      "description": "La bannière 'Synchronisation FTP en cours — lecture seule' est déplacée de l'overlay absolu (superposé sur le texte) vers une barre fixe entre la toolbar et la zone de contenu éditable.",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "l'information lorsqu'une section n'est pas encore synchro est très mal placé, déplace l'info en bleu au dessus de la zone de texte editable en dessous de la barre d'outils",
+      "startedAt": "2026-05-30T03:20:00.000Z",
+      "completedAt": "2026-05-30T03:30:00.000Z"
+    },
+    {
       "id": "mod-251",
       "version": "B-0.225",
       "date": "2026-05-30T03:15:00.000Z",
