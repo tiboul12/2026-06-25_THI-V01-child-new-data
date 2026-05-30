@@ -84,6 +84,122 @@
           <span class="material-symbols-outlined text-base text-light-text-muted dark:text-white/30 flex-shrink-0">arrow_forward</span>
         </div>
       }
+
+      <!-- ── Référentiel de fonctions (arbre collapsible) ── -->
+      <div class="border border-light-border dark:border-white/10 rounded-xl overflow-hidden">
+        <!-- En-tête toggle -->
+        <button type="button"
+                (click)="showFunctionsTree.set(!showFunctionsTree()); loadFunctions()"
+                class="w-full flex items-center gap-3 px-4 py-3 bg-light-surface dark:bg-surface hover:bg-light-surface/80 dark:hover:bg-white/5 transition-all text-left">
+          <span class="material-symbols-outlined text-base text-light-text-muted dark:text-white/40">
+            {{ showFunctionsTree() ? 'expand_less' : 'expand_more' }}
+          </span>
+          <span class="text-sm font-semibold text-light-text dark:text-white flex-1">
+            Référentiel de fonctions
+          </span>
+          @if (functions().length > 0) {
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary font-bold">
+              {{ functions().length }} fonctions
+            </span>
+          }
+          <span class="material-symbols-outlined text-base text-light-text-muted dark:text-white/30">folder_open</span>
+        </button>
+
+        <!-- Contenu de l'arbre -->
+        @if (showFunctionsTree()) {
+          @if (loadingFunctions()) {
+            <div class="flex justify-center py-8">
+              <span class="material-symbols-outlined text-2xl text-light-primary dark:text-primary animate-spin">progress_activity</span>
+            </div>
+          } @else {
+            <!-- Boutons Tout ouvrir / Tout fermer -->
+            <div class="flex items-center gap-2 px-4 py-2 border-t border-light-border dark:border-white/10 bg-light-surface/50 dark:bg-surface">
+              <button (click)="expandAll()"
+                      class="text-xs text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-colors flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">unfold_more</span>
+                Tout ouvrir
+              </button>
+              <span class="text-light-border dark:text-white/10">|</span>
+              <button (click)="collapseAll()"
+                      class="text-xs text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-colors flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">unfold_less</span>
+                Tout fermer
+              </button>
+            </div>
+
+            <!-- Nœuds de l'arbre : tous collapsibles via le même mécanisme -->
+            <div class="px-3 py-2 max-h-[60vh] overflow-y-auto">
+              @for (node of flatTree(); track node.fullPath) {
+                @if (isNodeVisible(node.fullPath)) {
+                  <div [style.paddingLeft.px]="node.depth * 16 + 4">
+
+                    <!-- Ligne du nœud (dossier branch ou feuille) — toujours cliquable -->
+                    <button type="button"
+                            (click)="toggleTreeNode(node.fullPath)"
+                            class="w-full flex items-center gap-2 py-1.5 text-left">
+                      <!-- Chevron (rotation si ouvert) -->
+                      <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/40 flex-shrink-0 transition-transform duration-150"
+                            [style.transform]="isExpanded(node.fullPath) ? 'rotate(90deg)' : 'rotate(0deg)'">
+                        chevron_right
+                      </span>
+                      <!-- ID badge à gauche du titre -->
+                      @if (node.folderId) {
+                        <span [ngClass]="node.hasChildren
+                              ? 'font-mono text-[9px] px-1.5 py-0.5 rounded bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/30 flex-shrink-0'
+                              : 'font-mono text-[9px] px-1.5 py-0.5 rounded bg-light-primary/10 dark:bg-primary/10 border border-light-primary/20 dark:border-primary/20 text-light-primary dark:text-primary flex-shrink-0'">
+                          {{ node.folderId }}
+                        </span>
+                      }
+                      <!-- Icône dossier -->
+                      <span class="material-symbols-outlined text-sm flex-shrink-0"
+                            [ngClass]="isExpanded(node.fullPath) ? 'text-light-primary dark:text-primary' : 'text-light-text-muted dark:text-white/40'">
+                        {{ node.hasChildren ? (isExpanded(node.fullPath) ? 'folder_open' : 'folder') : 'description' }}
+                      </span>
+                      <!-- Nom + compteur fonctions -->
+                      <span class="text-sm font-medium text-light-text dark:text-white">{{ node.name }}</span>
+                      @if (node.items.length > 0) {
+                        <span class="text-xs text-light-text-muted dark:text-white/40">({{ node.items.length }})</span>
+                      }
+                    </button>
+
+                    <!-- Fonctions du nœud feuille — visibles si le nœud est ouvert -->
+                    @if (!node.hasChildren && node.items.length > 0 && isExpanded(node.fullPath)) {
+                      @for (item of node.items; track item.id) {
+                        <!-- Ligne titre de la fonction (div cliquable — pas de button imbriqué) -->
+                        <div class="flex items-center gap-2 py-0.5 pl-7 cursor-pointer group"
+                             (click)="toggleItemExpand(item.id)">
+                          <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/30 flex-shrink-0 transition-transform duration-100"
+                                [style.transform]="isItemExpanded(item.id) ? 'rotate(90deg)' : 'rotate(0deg)'">
+                            chevron_right
+                          </span>
+                          <span (click)="copyId(item.id); $event.stopPropagation()"
+                                title="Copier l'ID {{ item.id }}"
+                                class="font-mono text-[9px] px-1.5 py-0.5 rounded bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary hover:border-light-primary/30 dark:hover:border-primary/30 transition-all cursor-pointer flex-shrink-0">
+                            {{ item.id }}
+                          </span>
+                          <span class="text-xs text-light-text-muted dark:text-white/60 group-hover:text-light-text dark:group-hover:text-white/80 transition-colors truncate">{{ item.section }}</span>
+                        </div>
+                        <!-- Contenu détaillé (visible si item expandé) -->
+                        @if (isItemExpanded(item.id)) {
+                          <div class="ml-12 mr-2 mb-1 mt-0.5 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/8 text-[11px] text-light-text-muted dark:text-white/50 leading-relaxed">
+                            @if (item.content) {
+                              <div [innerHTML]="renderContent(item.content)"></div>
+                            } @else {
+                              <span class="italic text-light-text-muted dark:text-white/25">Rechargez les fonctions (↺) pour voir le contenu</span>
+                            }
+                          </div>
+                        }
+                      }
+                    }
+
+                  </div>
+                }
+              }
+            </div>
+          }
+        }
+      </div>
+
     }
   }
 

@@ -7266,24 +7266,44 @@ function computeTopKo(runs) {
 }
 
 function parseFonctionsMd(relPath, content, pathToId) {
-    const lines     = content.split('\n');
-    let pageTitle   = '';
-    const items     = [];
-    const folderId  = pathToId[relPath] || relPath;
-    let fallbackIdx = 0;
+    const lines      = content.split('\n');
+    let pageTitle    = '';
+    const items      = [];
+    const folderId   = pathToId[relPath] || relPath;
+    let fallbackIdx  = 0;
+    let currentItem  = null;
+    let contentLines = [];
+
+    const flushItem = () => {
+        if (currentItem) {
+            // Nettoyage : supprimer séparateurs "---" et lignes vides de début/fin
+            const cleaned = contentLines
+                .filter(l => l.trim() !== '---')
+                .join('\n')
+                .trim();
+            currentItem.content = cleaned;
+            items.push(currentItem);
+        }
+        currentItem  = null;
+        contentLines = [];
+    };
 
     for (const line of lines) {
         if (line.startsWith('# ') && !pageTitle) {
             pageTitle = line.slice(2).trim();
         } else if (line.startsWith('## ')) {
+            flushItem();
             const raw = line.slice(3).trim();
             // Format attendu : `2-5-2-3-1` — Navigation (tiret long U+2014)
             const m = raw.match(/^`([0-9-]+)`\s*[—–-]\s*(.+)$/);
             const id      = m ? m[1] : `${folderId}-${++fallbackIdx}`;
             const section = m ? m[2].trim() : raw;
-            items.push({ id, folderId, path: relPath, pageTitle, section });
+            currentItem = { id, folderId, path: relPath, pageTitle, section, content: '' };
+        } else if (currentItem) {
+            contentLines.push(line);
         }
     }
+    flushItem();
     return items;
 }
 

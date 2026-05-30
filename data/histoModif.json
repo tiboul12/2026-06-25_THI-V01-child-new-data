@@ -1,6 +1,47 @@
 {
   "modifications": [
     {
+      "id": "mod-263",
+      "version": "B-0.234",
+      "date": "2026-05-30T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:admin-tests",
+      "title": "Référentiel fonctions : arbre collapsible + contenu détail par fonction",
+      "description": "Amélioration du référentiel de fonctions dans Admin Tests : (1) parseFonctionsMd côté serveur capture maintenant le contenu markdown complet sous chaque ## heading (nettoyé des séparateurs). (2) Chaque fonction dans l'arbre est expandable pour voir son contenu détaillé (bullet points, gras, code inline). (3) Fix HTML invalide : button imbriqué dans button remplacé par div+span cliquable. (4) Signal expandedItemIds pour l'état d'expansion par item. (5) renderContent() convertit markdown basique en HTML sécurisé. (6) Fix collapseAll vide le Set completement. (7) IDs des dossiers à gauche des titres, compteur entre parenthèses.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "corrections itératives : couleurs dark mode, IDs à gauche, liste fonctions visible, tout fermer, contenu détail des fonctions",
+      "startedAt": "2026-05-30T00:00:00.000Z",
+      "completedAt": "2026-05-30T00:00:00.000Z"
+    },
+    {
+      "id": "mod-262",
+      "version": "B-0.233",
+      "date": "2026-05-30T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin-tests",
+      "title": "Admin Tests : référentiel de fonctions hiérarchique collapsible",
+      "description": "Ajout d'une section 'Référentiel de fonctions' dans le dashboard de l'onglet Tests. Affiche l'arborescence complète (dossiers + fonctions) dérivée des fichiers fonctions.md. Collapsible par défaut, ouverture nœud par nœud. Boutons 'Tout ouvrir' / 'Tout fermer'. Chaque nœud dossier affiche son ID de registre, chaque fonction affiche son ID cliquable (copie presse-papiers). Scroll interne limité à 60vh.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans l'admin/tests ajoute de façon hierarchique l'ensemble des dossiers et fonctions comme un menu, il sert uniquement d'affichage et d'information, il faut qu'il soi caché et qu'on puisse ouvrir cette section pour voir tous les menus et les fonctions.",
+      "startedAt": "2026-05-30T00:00:00.000Z",
+      "completedAt": "2026-05-30T00:00:00.000Z"
+    },
+    {
       "id": "mod-261",
       "version": "B-0.232",
       "date": "2026-05-30T00:00:00.000Z",

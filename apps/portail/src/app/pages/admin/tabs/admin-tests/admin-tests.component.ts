@@ -12,6 +12,7 @@ interface FunctionItem {
   path: string;
   pageTitle: string;
   section: string;
+  content: string;   // contenu markdown sous le ## heading
 }
 
 interface TestResult {
@@ -33,6 +34,16 @@ interface TestRunSummary {
 interface TestRunDetail extends TestRunSummary { results: TestResult[]; }
 
 interface TopKoEntry { itemId: string; count: number; }
+
+interface FlatTreeNode {
+  depth: number;
+  name: string;
+  fullPath: string;
+  folderId: string;    // '' pour les nœuds intermédiaires sans fonctions.md
+  pageTitle: string;
+  items: FunctionItem[];
+  hasChildren: boolean;
+}
 
 type View = 'dashboard' | 'runner' | 'detail';
 
@@ -69,6 +80,97 @@ export class AdminTestsComponent implements OnInit {
     }
     return [...groups.values()];
   });
+
+  // Référentiel de fonctions — arbre hiérarchique (dashboard)
+  showFunctionsTree  = signal(false);
+  treeExpandedPaths  = signal<Set<string>>(new Set<string>());
+  expandedItemIds    = signal<Set<string>>(new Set<string>());
+
+  flatTree = computed((): FlatTreeNode[] => {
+    const fns = this.functions();
+    if (fns.length === 0) return [];
+
+    // Grouper les items par path (= dossier contenant un fonctions.md)
+    const byPath = new Map<string, FunctionItem[]>();
+    for (const fn of fns) {
+      if (!byPath.has(fn.path)) byPath.set(fn.path, []);
+      byPath.get(fn.path)!.push(fn);
+    }
+
+    // Collecter tous les chemins intermédiaires
+    const allPaths = new Set<string>();
+    for (const p of byPath.keys()) {
+      const parts = p.split('/');
+      for (let i = 1; i <= parts.length; i++) {
+        allPaths.add(parts.slice(0, i).join('/'));
+      }
+    }
+
+    return [...allPaths].sort().map(p => {
+      const depth      = p.split('/').length - 1;
+      const name       = p.split('/').pop()!;
+      const items      = byPath.get(p) || [];
+      const folderId   = items.length > 0 ? items[0].folderId : '';
+      const pageTitle  = items.length > 0 ? items[0].pageTitle : '';
+      const hasChildren = [...allPaths].some(other => other.startsWith(p + '/'));
+      return { depth, name, fullPath: p, folderId, pageTitle, items, hasChildren };
+    });
+  });
+
+  isNodeVisible(fullPath: string): boolean {
+    const parts   = fullPath.split('/');
+    const expanded = this.treeExpandedPaths();
+    if (parts.length === 1) return true;
+    for (let i = 1; i < parts.length; i++) {
+      if (!expanded.has(parts.slice(0, i).join('/'))) return false;
+    }
+    return true;
+  }
+
+  isExpanded(path: string): boolean { return this.treeExpandedPaths().has(path); }
+
+  toggleTreeNode(path: string) {
+    this.treeExpandedPaths.update(s => {
+      const next = new Set(s);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }
+
+  expandAll() {
+    // Inclut dossiers branch ET feuilles pour que les fonctions s'affichent aussi
+    const allPaths = this.flatTree().map(n => n.fullPath);
+    this.treeExpandedPaths.set(new Set(allPaths));
+  }
+
+  collapseAll() {
+    this.treeExpandedPaths.set(new Set<string>());
+    this.expandedItemIds.set(new Set<string>());
+  }
+
+  isItemExpanded(id: string): boolean { return this.expandedItemIds().has(id); }
+
+  toggleItemExpand(id: string) {
+    this.expandedItemIds.update(s => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Rendu du contenu markdown en HTML simplifié (listes, gras, code inline)
+  renderContent(raw: string): string {
+    if (!raw) return '';
+    return raw
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.+?)`/g, '<code class="font-mono text-[10px] px-1 bg-white/10 rounded">$1</code>')
+      .replace(/^- (.+)$/gm, '<span class="flex gap-1"><span class="text-light-text-muted dark:text-white/30 flex-shrink-0">•</span><span>$1</span></span>')
+      .replace(/^\| (.+)$/gm, '<span class="text-light-text-muted dark:text-white/40 text-[10px]">| $1</span>')
+      .replace(/\n/g, '<br>');
+  }
 
   runnerProgress = computed(() => {
     const run = this.activeRun();
