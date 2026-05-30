@@ -225,8 +225,22 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     try {
       const fast = await this.projectFilesService.ensureFast(this.projectFolderName);
       this.wasCreatedLocal = fast.status === 'created-local';
-    } catch (e) {
-      console.warn('ensureFast error:', e);
+    } catch (e: any) {
+      // Fallback sur ensure-local si ensure-fast échoue (projet manquant en BDD, config.json absent…)
+      // Pour les projets FTP on reste sur le fast-path pour ne pas déclencher la sync bloquante
+      console.warn('ensureFast error, fallback ensureLocal:', e);
+      if (this.project()?.backupType !== 'ftp') {
+        try {
+          const fallback = await this.projectFilesService.ensureLocal(this.projectFolderName);
+          if (fallback.status === 'no-remote') {
+            this.localUnavailable.set(fallback.message || 'Projet non disponible localement.');
+            this.loading.set(false);
+            return;
+          }
+        } catch (e2) {
+          console.warn('ensureLocal fallback error:', e2);
+        }
+      }
     }
     await this.loadFiles();
     this.loading.set(false);

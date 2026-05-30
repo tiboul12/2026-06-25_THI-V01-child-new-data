@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-250",
+      "version": "B-0.224",
+      "date": "2026-05-30T03:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "server"],
+      "features": "projets:editor,server:file-projects",
+      "title": "Fix création de dossier dans un projet vierge sans sauvegarde",
+      "description": "Régression : dans un projet sans backup, le premier dossier créé disparaissait car ensure-fast ne créait pas config.json si le dossier existait déjà sans lui, et ne créait pas file_project_meta si le projet n'y était pas. Fix : ensure-fast crée file_project_meta depuis frank_projects si absent, garantit config.json dans tous les cas. Côté client : fallback sur ensureLocal si ensureFast échoue (sauf FTP).",
+      "files": [
+        "server/server-data.js",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai un soucis qui avait été corrigé, dans un projet sans sauvegarde et vierge je n'arrive pas à créé le premier dossier",
+      "startedAt": "2026-05-30T02:30:00.000Z",
+      "completedAt": "2026-05-30T03:00:00.000Z"
+    },
+    {
       "id": "mod-249",
       "version": "B-0.223",
       "date": "2026-05-30T02:30:00.000Z",

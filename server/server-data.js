@@ -5897,26 +5897,48 @@ app.post('/api/file-projects/:name/ensure-fast', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const projetPath = path.join(PROJECTS_DIR, req.params.name);
     try {
-        const config = await getProjectConfig(req.params.name);
-        if (!config) return res.status(404).json({ error: 'Projet non trouvé en BDD' });
+        let config = await getProjectConfig(req.params.name);
+
+        // Si file_project_meta n'existe pas, créer l'entrée depuis frank_projects
+        // (projet créé côté portail mais pas encore initialisé côté file-projects)
+        if (!config) {
+            try {
+                const [rows] = await pool.query('SELECT title FROM frank_projects WHERE id = ?', [req.params.name]);
+                const displayName = rows[0]?.title || req.params.name;
+                const now = new Date().toISOString();
+                await pool.query(
+                    'INSERT IGNORE INTO file_project_meta (id, display_name, structure, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+                    [req.params.name, displayName, JSON.stringify([]), now, now]
+                );
+                config = { projectName: displayName, structure: [], createdAt: now, updatedAt: now, gitRemoteUrl: null };
+            } catch (e2) {
+                console.warn('[ensure-fast] auto-create file_project_meta failed:', e2.message);
+                return res.status(404).json({ error: 'Projet non trouvé en BDD' });
+            }
+        }
+
         const alreadyExists = fs.existsSync(projetPath);
         if (!alreadyExists) {
-            // Créer le dossier + config.json depuis la BDD (sans télécharger les fichiers)
             fs.mkdirSync(projetPath, { recursive: true });
             const cfgPath = path.join(projetPath, 'config.json');
             fs.writeFileSync(cfgPath, JSON.stringify(config, null, 2), 'utf8');
-            // Créer les dossiers physiques de la structure (fichiers vides pour l'instant)
             const createDirs = (nodes) => {
                 for (const n of (nodes || [])) {
-                    if (n.type === 'folder' && n.path) {
-                        fs.mkdirSync(path.join(projetPath, n.path), { recursive: true });
-                    }
+                    if (n.type === 'folder' && n.path) fs.mkdirSync(path.join(projetPath, n.path), { recursive: true });
                     if (n.children) createDirs(n.children);
                 }
             };
             createDirs(config.structure || []);
             return res.json({ status: 'created-local', structure: config.structure || [] });
         }
+
+        // Garantir que config.json existe même si le dossier était déjà présent sans lui
+        // (sinon les endpoints folders/files renvoient 404 — régression connue)
+        const cfgPath = path.join(projetPath, 'config.json');
+        if (!fs.existsSync(cfgPath)) {
+            try { fs.writeFileSync(cfgPath, JSON.stringify(config, null, 2), 'utf8'); } catch {}
+        }
+
         return res.json({ status: 'ready', structure: config.structure || [] });
     } catch (e) {
         console.warn('[ensure-fast] error:', e.message);
