@@ -64,6 +64,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   highlightNodeId = signal<string | null>(null);
   scrollToNodeId = signal<string | null>(null);
   zone5Tab = signal<'conversation' | 'history'>('conversation');
+  zone5Collapsed = signal(false);
   // F6 — Drawer des commentaires de section
   commentsDrawer = signal<{ visible: boolean; folderId: string | null; folderName: string }>({
     visible: false, folderId: null, folderName: ''
