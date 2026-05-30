@@ -1,6 +1,40 @@
 {
   "modifications": [
     {
+      "id": "mod-248",
+      "version": "B-0.222",
+      "date": "2026-05-30T02:15:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Fix ordre toolbar zone 4 : sauvegarde/FTP au-dessus des tabs",
+      "description": "Correction de l'ordre des deux lignes dans la barre d'outils : ligne 1 = sauvegarde + badge FTP/sync, ligne 2 = tabs Code/Structure/Preview + boutons de formatage. Suppression du doublon laissé par l'édition précédente.",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "la zone d'info de synchro et de sauvegarde doit être placé au dessus de la barre d'outils, elle est encore en dessous, déplace la zone au dessus",
+      "startedAt": "2026-05-30T02:05:00.000Z",
+      "completedAt": "2026-05-30T02:15:00.000Z"
+    },
+    {
+      "id": "mod-247",
+      "version": "B-0.222",
+      "date": "2026-05-30T02:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Toolbar zone 4 : sauvegarde + FTP sync déplacés sous la barre de formatage",
+      "description": "La barre d'outils de l'éditeur zone 4 est restructurée en 2 lignes : ligne 1 = tabs (Code/Structure/Preview) + boutons de formatage, ligne 2 = statut sauvegarde + badge FTP/sync. La ligne 2 apparaît sous la barre de formatage, au-dessus du contenu.",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "deplace l'information de la synchro et de la sauvegarde au dessus de la barre de formatage",
+      "startedAt": "2026-05-30T01:50:00.000Z",
+      "completedAt": "2026-05-30T02:00:00.000Z"
+    },
+    {
       "id": "mod-246",
       "version": "B-0.221",
       "date": "2026-05-30T01:45:00.000Z",

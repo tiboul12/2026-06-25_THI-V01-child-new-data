@@ -27,114 +27,123 @@
   }
 
   <!-- Barre d'outils -->
-  <div class="flex flex-wrap items-center gap-1 p-2 bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
+  <div class="flex flex-col bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
 
-    <!-- Tabs Code / Structure / Preview -->
-    <div class="ed-mode-tabs mr-2">
-      <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'edit'" (click)="setMode('edit')">
-        <span class="material-symbols-outlined">code</span>
-        Code
-      </button>
-      <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'structure'" (click)="setMode('structure')">
-        <span class="material-symbols-outlined">account_tree</span>
-        Structure
-      </button>
-      <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'visu'" (click)="setMode('visu')">
-        <span class="material-symbols-outlined">visibility</span>
-        Preview
-      </button>
-    </div>
+    <!-- Ligne 1 : Sauvegarde + badge FTP/sync -->
+    <div class="flex items-center gap-3 px-3 pt-1.5 pb-1">
 
-    @if (mode === 'edit') {
-      <!-- Formatage inline -->
-      <button type="button" class="ed-tb-btn" title="Gras" (click)="insertAt('**', '**')"><strong>B</strong></button>
-      <button type="button" class="ed-tb-btn" title="Italique" (click)="insertAt('*', '*')"><em>I</em></button>
-      <button type="button" class="ed-tb-btn" title="Barré" (click)="insertAt('~~', '~~')"><s>S</s></button>
-      <div class="ed-tb-sep"></div>
-      <!-- Titres -->
-      <button type="button" class="ed-tb-btn ed-tb-btn--h1" title="Titre 1" (click)="insertAt('\n# ', '')">H1</button>
-      <button type="button" class="ed-tb-btn ed-tb-btn--h2" title="Titre 2" (click)="insertAt('\n## ', '')">H2</button>
-      <button type="button" class="ed-tb-btn ed-tb-btn--h3" title="Titre 3" (click)="insertAt('\n### ', '')">H3</button>
-      <button type="button" class="ed-tb-btn ed-tb-btn--h4" title="Titre 4" (click)="insertAt('\n#### ', '')">H4</button>
-      <div class="ed-tb-sep"></div>
-      <!-- Listes & blocs -->
-      <button type="button" class="ed-tb-btn" title="Liste à puces" (click)="insertAt('- ')">&#8226; Liste</button>
-      <button type="button" class="ed-tb-btn" title="Citation / Blockquote" (click)="insertAt('\n> ', '')">
-        <span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_quote</span>
-      </button>
-      <button type="button" class="ed-tb-btn" title="Séparateur horizontal" (click)="insertAt('\n---\n', '')">&#8212;</button>
-      <div class="ed-tb-sep"></div>
-      <!-- Code -->
-      <button type="button" class="ed-tb-btn ed-tb-btn--code" title="Code inline" (click)="insertAt('`', '`')">&lt;/&gt;</button>
-      <button type="button" class="ed-tb-btn ed-tb-btn--code" title="Bloc de code" (click)="insertCodeBlock()">```</button>
-      <!-- Table -->
-      <button type="button" class="ed-tb-btn" title="Insérer un tableau" (click)="insertTable()">
-        <span class="material-symbols-outlined" style="font-size:14px;line-height:1">table</span>
-      </button>
-      <div class="ed-tb-sep"></div>
-      <!-- Image -->
-      <button type="button" class="ed-tb-btn flex items-center gap-1" title="Insérer une image" (click)="triggerImageUpload()" [disabled]="isUploading()">
-        <span class="material-symbols-outlined text-sm leading-none">image</span>
-      </button>
-      <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
-    }
+      <!-- Statut sauvegarde -->
+      @if (saveStatus === 'saving') {
+        <span class="text-xs text-yellow-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Sauvegarde…</span>
+      } @else if (saveStatus === 'dirty') {
+        <button type="button"
+                (click)="forceSave()"
+                title="Cliquer pour sauvegarder maintenant"
+                class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 px-2 py-0.5 rounded border border-orange-400/30 hover:border-orange-300/50 hover:bg-orange-400/10 transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-sm">save</span> Non sauvegardé
+        </button>
+      } @else if (saveStatus === 'error') {
+        <span class="text-xs text-red-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span> Erreur</span>
+      } @else {
+        <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
+      }
 
-    <div class="flex-1"></div>
-
-    @if (saveStatus === 'saving') {
-      <span class="text-xs text-yellow-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Sauvegarde…</span>
-    } @else if (saveStatus === 'dirty') {
-      <button type="button"
-              (click)="forceSave()"
-              title="Cliquer pour sauvegarder maintenant"
-              class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 px-2 py-0.5 rounded border border-orange-400/30 hover:border-orange-300/50 hover:bg-orange-400/10 transition-colors cursor-pointer">
-        <span class="material-symbols-outlined text-sm">save</span> Non sauvegardé
-      </button>
-    } @else if (saveStatus === 'error') {
-      <span class="text-xs text-red-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span> Erreur</span>
-    } @else {
-      <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
-    }
-
-    @if (backupType === 'ftp') {
-      @if (ftpSyncGlobalStatus === 'syncing') {
-        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded border ml-2 text-blue-400 border-blue-500/30 bg-blue-500/10">
-          <span class="material-symbols-outlined text-[11px] animate-spin flex-shrink-0">sync</span>
-          <span class="text-[10px] font-semibold whitespace-nowrap">Sync FTP
+      <!-- Badge FTP / état sync -->
+      @if (backupType === 'ftp') {
+        @if (ftpSyncGlobalStatus === 'syncing') {
+          <span class="flex items-center gap-1.5 px-2 py-0.5 rounded border text-blue-400 border-blue-500/30 bg-blue-500/10">
+            <span class="material-symbols-outlined text-[11px] animate-spin flex-shrink-0">sync</span>
+            <span class="text-[10px] font-semibold whitespace-nowrap">Sync FTP
+              @if (ftpSyncProgress.total > 0) {
+                {{ ftpSyncProgress.checked }}/{{ ftpSyncProgress.total }}
+              }
+            </span>
             @if (ftpSyncProgress.total > 0) {
-              {{ ftpSyncProgress.checked }}/{{ ftpSyncProgress.total }}
+              <span class="w-20 h-1 rounded-full bg-blue-500/20 overflow-hidden flex-shrink-0">
+                <span class="h-full rounded-full bg-blue-400 transition-all duration-300"
+                      [style.width.%]="(ftpSyncProgress.checked / ftpSyncProgress.total) * 100"></span>
+              </span>
             }
           </span>
-          @if (ftpSyncProgress.total > 0) {
-            <span class="w-16 h-1 rounded-full bg-blue-500/20 overflow-hidden flex-shrink-0">
-              <span class="h-full rounded-full bg-blue-400 transition-all duration-300"
-                    [style.width.%]="(ftpSyncProgress.checked / ftpSyncProgress.total) * 100"></span>
-            </span>
-          }
-        </span>
-      } @else if (ftpSyncGlobalStatus === 'done') {
-        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
-          <span class="material-symbols-outlined text-[11px]">dns</span>
-          FTP à jour
-        </span>
-      } @else if (ftpSyncGlobalStatus === 'error') {
-        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-red-400 border-red-500/30 bg-red-500/10">
-          <span class="material-symbols-outlined text-[11px]">dns</span>
-          FTP — erreur sync
-        </span>
-      } @else {
-        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
-          <span class="material-symbols-outlined text-[11px]">dns</span>
-          FTP
+        } @else if (ftpSyncGlobalStatus === 'done') {
+          <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
+            <span class="material-symbols-outlined text-[11px]">dns</span>
+            FTP à jour
+          </span>
+        } @else if (ftpSyncGlobalStatus === 'error') {
+          <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-red-400 border-red-500/30 bg-red-500/10">
+            <span class="material-symbols-outlined text-[11px]">dns</span>
+            FTP — erreur sync
+          </span>
+        } @else {
+          <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
+            <span class="material-symbols-outlined text-[11px]">dns</span>
+            FTP
+          </span>
+        }
+      } @else if (backupType && backupBadge[backupType]) {
+        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border"
+              [ngClass]="backupBadge[backupType].css">
+          <span class="material-symbols-outlined text-[11px]">{{ backupBadge[backupType].icon }}</span>
+          {{ backupBadge[backupType].label }}
         </span>
       }
-    } @else if (backupType && backupBadge[backupType]) {
-      <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2"
-            [ngClass]="backupBadge[backupType].css">
-        <span class="material-symbols-outlined text-[11px]">{{ backupBadge[backupType].icon }}</span>
-        {{ backupBadge[backupType].label }}
-      </span>
-    }
+    </div>
+
+    <!-- Ligne 2 : Tabs + boutons de formatage -->
+    <div class="flex flex-wrap items-center gap-1 px-2 pt-1 pb-2 border-t border-light-border/40 dark:border-white/5">
+
+      <!-- Tabs Code / Structure / Preview -->
+      <div class="ed-mode-tabs mr-2">
+        <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'edit'" (click)="setMode('edit')">
+          <span class="material-symbols-outlined">code</span>
+          Code
+        </button>
+        <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'structure'" (click)="setMode('structure')">
+          <span class="material-symbols-outlined">account_tree</span>
+          Structure
+        </button>
+        <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'visu'" (click)="setMode('visu')">
+          <span class="material-symbols-outlined">visibility</span>
+          Preview
+        </button>
+      </div>
+
+      @if (mode === 'edit') {
+        <!-- Formatage inline -->
+        <button type="button" class="ed-tb-btn" title="Gras" (click)="insertAt('**', '**')"><strong>B</strong></button>
+        <button type="button" class="ed-tb-btn" title="Italique" (click)="insertAt('*', '*')"><em>I</em></button>
+        <button type="button" class="ed-tb-btn" title="Barré" (click)="insertAt('~~', '~~')"><s>S</s></button>
+        <div class="ed-tb-sep"></div>
+        <!-- Titres -->
+        <button type="button" class="ed-tb-btn ed-tb-btn--h1" title="Titre 1" (click)="insertAt('\n# ', '')">H1</button>
+        <button type="button" class="ed-tb-btn ed-tb-btn--h2" title="Titre 2" (click)="insertAt('\n## ', '')">H2</button>
+        <button type="button" class="ed-tb-btn ed-tb-btn--h3" title="Titre 3" (click)="insertAt('\n### ', '')">H3</button>
+        <button type="button" class="ed-tb-btn ed-tb-btn--h4" title="Titre 4" (click)="insertAt('\n#### ', '')">H4</button>
+        <div class="ed-tb-sep"></div>
+        <!-- Listes & blocs -->
+        <button type="button" class="ed-tb-btn" title="Liste à puces" (click)="insertAt('- ')">&#8226; Liste</button>
+        <button type="button" class="ed-tb-btn" title="Citation / Blockquote" (click)="insertAt('\n> ', '')">
+          <span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_quote</span>
+        </button>
+        <button type="button" class="ed-tb-btn" title="Séparateur horizontal" (click)="insertAt('\n---\n', '')">&#8212;</button>
+        <div class="ed-tb-sep"></div>
+        <!-- Code -->
+        <button type="button" class="ed-tb-btn ed-tb-btn--code" title="Code inline" (click)="insertAt('`', '`')">&lt;/&gt;</button>
+        <button type="button" class="ed-tb-btn ed-tb-btn--code" title="Bloc de code" (click)="insertCodeBlock()">```</button>
+        <!-- Table -->
+        <button type="button" class="ed-tb-btn" title="Insérer un tableau" (click)="insertTable()">
+          <span class="material-symbols-outlined" style="font-size:14px;line-height:1">table</span>
+        </button>
+        <div class="ed-tb-sep"></div>
+        <!-- Image -->
+        <button type="button" class="ed-tb-btn flex items-center gap-1" title="Insérer une image" (click)="triggerImageUpload()" [disabled]="isUploading()">
+          <span class="material-symbols-outlined text-sm leading-none">image</span>
+        </button>
+        <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
+      }
+    </div>
+
   </div>
 
   <!-- Erreur upload image -->
