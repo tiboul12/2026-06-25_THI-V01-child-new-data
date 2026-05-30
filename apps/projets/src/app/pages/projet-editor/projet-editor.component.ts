@@ -365,6 +365,15 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         this.ftpSyncGlobalStatus.set(status === 'error' ? 'error' : 'done');
         const t = this.ftpSyncProgress().total;
         this.ftpSyncProgress.set({ checked: t, total: t });
+        // Marquer tous les dossiers encore à 'unknown' comme 'in-sync'
+        // (les sous-dossiers ne reçoivent pas d'événement ftp_folder_synced individuel)
+        this.nodeSyncStatus.update(m => {
+          const next = new Map(m);
+          for (const [id, s] of next) {
+            if (s === 'unknown') next.set(id, 'in-sync');
+          }
+          return next;
+        });
         // Si le projet venait d'être créé localement, recharger les fichiers maintenant téléchargés
         if (this.wasCreatedLocal && downloaded > 0) {
           this.wasCreatedLocal = false;

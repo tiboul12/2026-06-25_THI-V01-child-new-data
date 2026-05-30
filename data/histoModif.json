@@ -1,6 +1,23 @@
 {
   "modifications": [
     {
+      "id": "mod-253",
+      "version": "B-0.227",
+      "date": "2026-05-30T03:45:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Fix sync FTP : sous-dossiers marqués 'in-sync' à la fin de la synchronisation",
+      "description": "Les sous-dossiers restaient en statut 'unknown' (fond orange) même après la fin de la sync car ftp_folder_synced ne couvre que les dossiers top-level. À la réception de ftp_sync_complete, tous les dossiers encore 'unknown' sont maintenant basculés en 'in-sync'.",
+      "files": ["apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "certain dossiers sont toujours indiqué comme non synchronisé alors que le projet est indiqué comme synchronisé",
+      "startedAt": "2026-05-30T03:35:00.000Z",
+      "completedAt": "2026-05-30T03:45:00.000Z"
+    },
+    {
       "id": "mod-252",
       "version": "B-0.226",
       "date": "2026-05-30T03:30:00.000Z",
