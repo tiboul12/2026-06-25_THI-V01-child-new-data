@@ -174,6 +174,23 @@
     </div>
   }
 
+  <!-- Barre Code pending persistante — visible en Structure et Preview si une modif Code n'a pas été publiée -->
+  @if (showCrossModePendingBar) {
+    <div class="code-publish-bar">
+      <span class="code-publish-bar__info">
+        <span class="material-symbols-outlined">edit</span>
+        Modifications Code en attente
+      </span>
+      <div class="code-publish-bar__actions">
+        <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
+        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
+          <span class="material-symbols-outlined">share</span>
+          Partager mes modifications
+        </button>
+      </div>
+    </div>
+  }
+
   <!-- Barre Annuler/Partager mode Structure (projets avec sauvegarde externe uniquement) -->
   @if (backupType && structureHasPending()) {
     <div class="code-publish-bar">

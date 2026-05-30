@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-260",
+      "version": "B-0.231",
+      "date": "2026-05-30T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor-code,projets:editor-structure,projets:editor-visu",
+      "title": "Barre Annuler/Partager persistante entre modes quand des modifs Code sont en attente",
+      "description": "Quand une section est modifiée en mode Code et que l'utilisateur bascule en Structure ou Preview sans avoir publié/annulé, la barre 'Modifications Code en attente' s'affiche dans ces autres modes. Le bouton Annuler restaure le contenu original depuis codeSectionSnapshots (snapshot pris avant le premier keystroke). Le bouton Partager publie les sections pending vers le serveur distant (FTP/Git). Le getter showCrossModePendingBar lit collab.localPendingSections() filtré des locks structure. publishCodeEdit et cancelCodeEdit ont chacun une branche cross-mode (pas de focusedHandle, pas de activeEntityLocks).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans un projet avec sauvegarde des fichiers lorsqu'on modifie une section cela affiche les boutons annule et partage dans le mode Code. Si une modif est toujours en cours dans une section et ni annulé ni partagé, il faut que la zone annule/partage s'affiche aussi dans les autres modes.",
+      "startedAt": "2026-05-30T00:00:00.000Z",
+      "completedAt": "2026-05-30T00:00:00.000Z"
+    },
+    {
       "id": "mod-259",
       "version": "B-0.230",
       "date": "2026-05-30T00:00:00.000Z",

@@ -1412,6 +1412,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return this.activeEntityLocks.size > 0;
   }
 
+  // Barre Annuler/Partager persistante en modes Structure et Preview quand des modifications
+  // Code non publiées existent (section verrouillée en attente d'un Partager ou Annuler).
+  get showCrossModePendingBar(): boolean {
+    if (!this.backupType || this.mode === 'edit') return false;
+    const pending = this.collab.localPendingSections();
+    if (pending.size === 0) return false;
+    for (const id of pending) {
+      if (!this.structEntityLocks.has(id)) return true;
+    }
+    return false;
+  }
+
+  // IDs des sections avec pending Code (hors structure) — utilisés pour publish/cancel cross-mode.
+  private get crossModePendingIds(): string[] {
+    return [...this.collab.localPendingSections()].filter(id => !this.structEntityLocks.has(id));
+  }
+
   // Sections visu filtrées selon la sélection active (null = tout afficher)
   // Les sections avec modifications locales en attente (localPendingSections) sont toujours
   // incluses, même si la navigation pointe vers une autre section — ainsi le DOM de la section
@@ -3192,8 +3209,47 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // ── Mode Code : Annuler / Partager ──────────────────────────
   async cancelCodeEdit(): Promise<void> {
     if (!this.focusedHandle) {
-      // Annulation en vue document (pas de mode focus) : restaurer le snapshot pré-édition
-      // et libérer toutes les entités verrouillées par l'édition courante.
+      // Cas cross-mode (Structure/Preview) : restaurer les sections depuis codeSectionSnapshots.
+      const ids = this.crossModePendingIds;
+      if (ids.length > 0 && this.codeSectionSnapshots.size > 0) {
+        let restored = this.unifiedContent;
+        for (const [sectionId, originalContent] of this.codeSectionSnapshots) {
+          const range = this.sectionRanges.find(r => r.folderId === sectionId);
+          if (!range) continue;
+          const lines = restored.split('\n');
+          const headingLine = lines[range.lineStart];
+          let directEnd = range.lineEnd;
+          for (let j = range.lineStart + 1; j <= range.lineEnd; j++) {
+            if (/^#{1,4} /.test(lines[j])) { directEnd = j - 1; break; }
+          }
+          const origLines = originalContent.split('\n').slice(1); // skip heading
+          restored = [
+            ...lines.slice(0, range.lineStart),
+            headingLine,
+            ...origLines,
+            ...lines.slice(directEnd + 1)
+          ].join('\n');
+        }
+        this.unifiedContent = restored;
+        const ta = this.textareaRef?.nativeElement;
+        if (ta) ta.value = restored;
+        clearTimeout(this.saveTimeout);
+        this.lastSavedContent = restored;
+        this.recomputeAll();
+        this.saveAll();
+        for (const id of ids) {
+          this.collab.clearPending(id);
+          this.collab.removeLocalPending(id);
+          if (this.projectName) this.collab.unlockNode(this.projectName, id).catch(() => {});
+        }
+        this.codeSectionSnapshots.clear();
+        this.codeDocSnapshot = null;
+        this.modifiedEntities.clear();
+        this.localDirty = false;
+        this.dirtyChange.emit(false);
+        return;
+      }
+      // Annulation en vue document sans focus (snapshot doc entier) : restaurer le snapshot pré-édition.
       if (this.codeDocSnapshot === null) return;
       const snap = this.codeDocSnapshot;
       this.unifiedContent = snap;
@@ -3293,6 +3349,50 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   async publishCodeEdit(): Promise<void> {
     if (!this.projectName) return;
+    // Cas cross-mode (Structure/Preview) : des sections Code pending existent sans mode focus actif.
+    if (!this.focusedHandle && this.activeEntityLocks.size === 0) {
+      const ids = this.crossModePendingIds;
+      if (ids.length === 0) return;
+      this.isPublishing.set(true);
+      clearTimeout(this.saveTimeout);
+      this.flushContentModifications();
+      const sections = this.parseContent();
+      try {
+        await Promise.all(
+          sections
+            .filter(s => s.fileId && s.folderId && ids.includes(s.folderId))
+            .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+        );
+        this.lastSavedContent = this.unifiedContent;
+        this.localDirty = false;
+        this.dirtyChange.emit(false);
+        this.codeSectionSnapshots.clear();
+        this.codeDocSnapshot = null;
+        for (const id of ids) {
+          this.collab.removeLocalPending(id);
+          if (this.projectName) this.collab.unlockNode(this.projectName, id).catch(() => {});
+        }
+        this.showPublishToast();
+        this.woHistory.track({
+          section: 'projets/fichiers',
+          actionType: 'update',
+          label: 'Publication des modifications en attente',
+          entityType: 'section',
+          entityId: ids[0] || this.projectName,
+          context: { projectId: this.projectName },
+          undoable: false
+        }).catch(() => {});
+      } catch (e: any) {
+        console.warn('[PublishCode cross-mode] erreur:', e);
+        const msg = e?.error?.pushFailed
+          ? 'Sauvegardé localement — synchronisation échouée'
+          : 'Erreur lors du partage des modifications';
+        this.showPublishErrorToast(msg);
+      } finally {
+        this.isPublishing.set(false);
+      }
+      return;
+    }
     // Mode focus : section ciblée. Vue document : au moins une entité verrouillée par l'édition.
     if (!this.focusedHandle && this.activeEntityLocks.size === 0) return;
     this.isPublishing.set(true);
