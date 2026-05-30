@@ -79,6 +79,7 @@
       <div class="flex items-center gap-1 px-2 py-0.5 rounded mx-1 cursor-pointer group transition-colors"
            [class]="getNodeClasses(node)"
            [class.opacity-40]="isDragging(node.id)"
+           [style.background-color]="hasFtpBackup && node.type === 'folder' && nodeSyncStatus.get(node.id) === 'unknown' ? 'rgba(120,53,15,0.45)' : ''"
            [style.padding-left.px]="8 + depth * 10"
            draggable="true"
            (dragstart)="onDragStart($event, node, parentId)"
@@ -99,24 +100,12 @@
           <span class="w-3 flex-shrink-0"></span>
         }
 
-        <!-- Indicateur sync FTP (dossiers uniquement) — à gauche, avant l'icône -->
+        <!-- Indicateur sync FTP : uniquement les états actifs (spinning + erreur) -->
         @if (hasFtpBackup && node.type === 'folder') {
-          @switch (nodeSyncStatus.get(node.id)) {
-            @case ('syncing') {
-              <span class="material-symbols-outlined text-[9px] flex-shrink-0 text-blue-400 animate-spin" title="Synchronisation FTP en cours…">sync</span>
-            }
-            @case ('in-sync') {
-              <span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block flex-shrink-0" title="À jour avec le FTP"></span>
-            }
-            @case ('updated') {
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block flex-shrink-0" title="Fichiers mis à jour depuis le FTP"></span>
-            }
-            @case ('error') {
-              <span class="material-symbols-outlined text-[9px] flex-shrink-0 text-red-400" title="Erreur de synchronisation FTP">error</span>
-            }
-            @default {
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-400/50 inline-block flex-shrink-0" title="Non synchronisé avec le FTP"></span>
-            }
+          @if (nodeSyncStatus.get(node.id) === 'syncing') {
+            <span class="material-symbols-outlined text-[9px] flex-shrink-0 text-blue-400 animate-spin" title="Synchronisation FTP en cours…">sync</span>
+          } @else if (nodeSyncStatus.get(node.id) === 'error') {
+            <span class="material-symbols-outlined text-[9px] flex-shrink-0 text-red-400" title="Erreur de synchronisation FTP">error</span>
           }
         }
 

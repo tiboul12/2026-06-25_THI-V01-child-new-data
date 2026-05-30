@@ -1,6 +1,23 @@
 {
   "modifications": [
     {
+      "id": "mod-251",
+      "version": "B-0.225",
+      "date": "2026-05-30T03:15:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:sidebar",
+      "title": "Sidebar : ronds sync remplacés par fond ambré sur la ligne",
+      "description": "Suppression des ronds vert et orange de statut FTP dans la zone 3. Remplacement par un fond orange foncé (rgba 120,53,15 à 45%) sur toute la ligne lorsque le dossier est en statut 'unknown' (non synchronisé). Le fond disparaît automatiquement quand le dossier est synchronisé. Les icônes de syncing (spinner bleu) et d'erreur (rouge) sont conservées.",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je trouve le menu trop chargé, supprime les rond vert et orange et remplace le par une zone orange en fond lorsque la section n'est pas encore synchro et retire ce fond lorsque la section est synchronisé",
+      "startedAt": "2026-05-30T03:05:00.000Z",
+      "completedAt": "2026-05-30T03:15:00.000Z"
+    },
+    {
       "id": "mod-250",
       "version": "B-0.224",
       "date": "2026-05-30T03:00:00.000Z",
