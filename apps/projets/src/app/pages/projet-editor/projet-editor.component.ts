@@ -58,6 +58,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   saveStatus = signal<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
   nodeSyncStatus = signal<Map<string, FtpNodeSyncStatus>>(new Map());
   ftpSyncGlobalStatus = signal<'idle' | 'syncing' | 'done' | 'error'>('idle');
+  ftpSyncProgress = signal<{ checked: number; total: number }>({ checked: 0, total: 0 });
   private wasCreatedLocal = false;
   activeNodeId = signal<string | null>(null);
   highlightNodeId = signal<string | null>(null);
@@ -238,8 +239,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     if (this.hasFtpBackup()) {
       this.initAllFoldersSyncStatus('unknown');
       this.ftpSyncGlobalStatus.set('syncing');
-      this.projectFilesService.startFtpSyncBackground(this.projectFolderName).catch(() => {
-        this.ftpSyncGlobalStatus.set('error');
+      const total = this.countFileNodes(this.files());
+      this.ftpSyncProgress.set({ checked: 0, total });
+      // Attendre que le SSE soit connecté avant de démarrer la sync
+      // (évite de rater les événements ftp_folder_synced broadcastés avant la connexion)
+      this.waitForSseConnect().then(() => {
+        this.projectFilesService.startFtpSyncBackground(this.projectFolderName).catch(() => {
+          this.ftpSyncGlobalStatus.set('error');
+        });
       });
     } else {
       // Git : auto-sync non-bloquant
@@ -253,6 +260,32 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     }
     // F6 — Charger les compteurs de commentaires par section
     this.loadCommentCounts();
+  }
+
+  private waitForSseConnect(timeoutMs = 3000): Promise<void> {
+    return new Promise(resolve => {
+      if (this.collab.connected()) { resolve(); return; }
+      let done = false;
+      const poll = setInterval(() => {
+        if (this.collab.connected()) {
+          done = true;
+          clearInterval(poll);
+          resolve();
+        }
+      }, 100);
+      setTimeout(() => {
+        if (!done) { clearInterval(poll); resolve(); }
+      }, timeoutMs);
+    });
+  }
+
+  private countFileNodes(nodes: FileNode[]): number {
+    let count = 0;
+    for (const n of nodes) {
+      if (n.type === 'file') count++;
+      if (n.children) count += this.countFileNodes(n.children);
+    }
+    return count;
   }
 
   private initAllFoldersSyncStatus(status: FtpNodeSyncStatus): void {
@@ -310,11 +343,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       this.collab.sectionPublished$.subscribe(() => {
         this.autoPullAndRefresh();
       }),
-      this.collab.ftpFolderSynced$.subscribe(({ folderId, status }) => {
+      this.collab.ftpFolderSynced$.subscribe(({ folderId, status, totalChecked, totalFiles }) => {
         this.nodeSyncStatus.update(m => new Map(m).set(folderId, status));
+        this.ftpSyncProgress.set({ checked: totalChecked, total: totalFiles || this.ftpSyncProgress().total });
       }),
       this.collab.ftpSyncComplete$.subscribe(async ({ status, downloaded }) => {
         this.ftpSyncGlobalStatus.set(status === 'error' ? 'error' : 'done');
+        const t = this.ftpSyncProgress().total;
+        this.ftpSyncProgress.set({ checked: t, total: t });
         // Si le projet venait d'être créé localement, recharger les fichiers maintenant téléchargés
         if (this.wasCreatedLocal && downloaded > 0) {
           this.wasCreatedLocal = false;

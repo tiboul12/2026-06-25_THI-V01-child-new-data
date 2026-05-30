@@ -404,7 +404,7 @@ async function syncFolderFilesFromFtp(ftpCfg, projectName, folderNode, localBase
     }
 
     const status = errors.length > 0 ? 'error' : (downloaded > 0 ? 'updated' : 'in-sync');
-    return { folderId: folderNode.id, status, downloaded, errors };
+    return { folderId: folderNode.id, status, downloaded, checked: expectedFiles.length, errors };
 }
 
 module.exports = { testConnection, listRemoteFiles, uploadFile, uploadFiles, downloadFile, downloadFiles, syncFromFtp, buildExpectedFromStructure, getFtpConfig, getBackupType, syncFolderFilesFromFtp };

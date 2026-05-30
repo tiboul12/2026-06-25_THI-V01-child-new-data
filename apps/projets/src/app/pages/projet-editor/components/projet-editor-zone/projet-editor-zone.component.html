@@ -98,9 +98,19 @@
 
     @if (backupType === 'ftp') {
       @if (ftpSyncGlobalStatus === 'syncing') {
-        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-blue-400 border-blue-500/30 bg-blue-500/10">
-          <span class="material-symbols-outlined text-[11px] animate-spin">sync</span>
-          Synchronisation FTP en cours…
+        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded border ml-2 text-blue-400 border-blue-500/30 bg-blue-500/10">
+          <span class="material-symbols-outlined text-[11px] animate-spin flex-shrink-0">sync</span>
+          <span class="text-[10px] font-semibold whitespace-nowrap">Sync FTP
+            @if (ftpSyncProgress.total > 0) {
+              {{ ftpSyncProgress.checked }}/{{ ftpSyncProgress.total }}
+            }
+          </span>
+          @if (ftpSyncProgress.total > 0) {
+            <span class="w-16 h-1 rounded-full bg-blue-500/20 overflow-hidden flex-shrink-0">
+              <span class="h-full rounded-full bg-blue-400 transition-all duration-300"
+                    [style.width.%]="(ftpSyncProgress.checked / ftpSyncProgress.total) * 100"></span>
+            </span>
+          }
         </span>
       } @else if (ftpSyncGlobalStatus === 'done') {
         <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ml-2 text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
@@ -287,12 +297,22 @@
                   spellcheck="false"
                   wrap="off"
                   [value]="unifiedContent"
+                  [readonly]="isActiveSectionUnsynced"
                   (input)="onTextareaInput($event)"
                   (keydown)="onTextareaKeydown($event)"
                   (scroll)="onTextareaScroll($event)"
                   (keyup)="onTextareaCursor($event)"
                   (mouseup)="onTextareaCursor($event)"
                   (blur)="onTextareaBlur()"></textarea>
+
+        @if (isActiveSectionUnsynced) {
+          <div class="absolute inset-0 flex items-start justify-center pt-6 pointer-events-none">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-medium shadow-lg pointer-events-auto">
+              <span class="material-symbols-outlined text-sm animate-spin">sync</span>
+              Synchronisation FTP en cours — lecture seule jusqu'à la mise à jour
+            </div>
+          </div>
+        }
 
         <!-- F1 — Menu des slash commands (mode Code) -->
         <app-slash-command-menu
@@ -627,10 +647,18 @@
                 </div>
               }
 
+              <!-- Badge FTP lecture seule si section non synchronisée -->
+              @if (hasFtpBackup && ftpSyncGlobalStatus === 'syncing' && nodeSyncStatus.get(sec.sectionId) === 'unknown') {
+                <div class="flex items-center gap-1.5 px-2 py-1 mb-1 rounded border border-blue-500/30 bg-blue-500/5 text-blue-400 text-[10px] font-medium">
+                  <span class="material-symbols-outlined text-xs animate-spin">sync</span>
+                  Synchronisation en cours — lecture seule
+                </div>
+              }
+
               <!-- Corps éditable (contenteditable) -->
               <div #visuSectionEl
                    class="visu-sec-content"
-                   [attr.contenteditable]="collab.isLockedByOther(sec.sectionId) ? 'false' : 'true'"
+                   [attr.contenteditable]="(collab.isLockedByOther(sec.sectionId) || (hasFtpBackup && ftpSyncGlobalStatus === 'syncing' && nodeSyncStatus.get(sec.sectionId) === 'unknown')) ? 'false' : 'true'"
                    [attr.data-section-id]="sec.sectionId"
                    (focus)="onVisuSectionFocus(sec.sectionId)"
                    (blur)="onVisuSectionBlur(sec.sectionId)"

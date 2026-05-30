@@ -1,6 +1,48 @@
 {
   "modifications": [
     {
+      "id": "mod-246",
+      "version": "B-0.221",
+      "date": "2026-05-30T01:45:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Fix sync FTP : attendre connexion SSE avant de lancer la sync",
+      "description": "Le compteur 'checked' restait à 0 car les événements ftp_folder_synced étaient broadcastés avant que la connexion SSE (EventSource) soit établie. Le démarrage de la sync FTP attend maintenant que collab.connected() soit true (polling 100ms, timeout 3s).",
+      "files": ["apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "cela indique bien le nombre de fichiers/dossiers total mais pas ceux synchronisé en cours",
+      "startedAt": "2026-05-30T01:40:00.000Z",
+      "completedAt": "2026-05-30T01:45:00.000Z"
+    },
+    {
+      "id": "mod-245",
+      "version": "B-0.221",
+      "date": "2026-05-30T01:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "server", "libs"],
+      "features": "projets:editor,server:ftp,libs:collab",
+      "title": "Sync FTP : barre de progression + sections lecture seule",
+      "description": "Progress bar dans le badge FTP (ex : 'Sync FTP 12/45' + barre bleue animée). Sections non encore synchronisées passent en lecture seule (textarea [readonly] en mode Code, contenteditable=false en mode Preview) avec un badge 'Synchronisation en cours'. SSE ftp_sync_start avec totalFiles, ftp_folder_synced avec checked/totalChecked pour le suivi en temps réel.",
+      "files": [
+        "server/modules/ftp-service.js",
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "serait il possible quand la synchro est en cours d'affiché le nombre total de fichier à synchronisé et le nombre synchronisé pour avoir une sorte de progress bar. Autre chose, tant que la section n'a pas été synchronisé on doit pouvoir visionné la section mais pas la modifié pour ne pas avoir de conflit.",
+      "startedAt": "2026-05-30T01:15:00.000Z",
+      "completedAt": "2026-05-30T01:35:00.000Z"
+    },
+    {
       "id": "mod-244",
       "version": "B-0.220",
       "date": "2026-05-30T01:15:00.000Z",

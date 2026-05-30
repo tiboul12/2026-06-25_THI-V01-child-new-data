@@ -5946,23 +5946,33 @@ app.post('/api/file-projects/:name/ftp-sync-background', async (req, res) => {
             return res.json({ started: false, reason: 'no-folders' });
         }
 
+        // Compter le total de fichiers à synchroniser
+        let totalFiles = 0;
+        const countFiles = (nodes) => { for (const n of (nodes || [])) { if (n.type === 'file') totalFiles++; if (n.children) countFiles(n.children); } };
+        countFiles(config.structure || []);
+
         // Répondre immédiatement
-        res.json({ started: true, totalFolders: topFolders.length });
+        res.json({ started: true, totalFolders: topFolders.length, totalFiles });
 
         // Lancer la sync en arrière-plan (sans await dans le handler)
         (async () => {
-            broadcastToProject(projectName, 'ftp_sync_start', { totalFolders: topFolders.length });
+            broadcastToProject(projectName, 'ftp_sync_start', { totalFolders: topFolders.length, totalFiles });
             let totalDownloaded = 0;
+            let totalChecked = 0;
             const allErrors = [];
             for (const folder of topFolders) {
                 try {
                     const result = await ftpService.syncFolderFilesFromFtp(ftpConfig, projectName, folder, PROJECTS_DIR);
                     totalDownloaded += result.downloaded;
+                    totalChecked += result.checked || 0;
                     if (result.errors.length > 0) allErrors.push(...result.errors);
                     broadcastToProject(projectName, 'ftp_folder_synced', {
                         folderId: folder.id,
                         status: result.status,
                         downloaded: result.downloaded,
+                        checked: result.checked || 0,
+                        totalChecked,
+                        totalFiles,
                         errors: result.errors
                     });
                 } catch (e) {

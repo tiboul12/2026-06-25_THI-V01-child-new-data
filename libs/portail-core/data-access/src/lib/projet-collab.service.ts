@@ -120,7 +120,8 @@ export class ProjetCollabService {
   readonly structureUpdate$ = new Subject<StructureUpdateEvent>();
   readonly sectionPublished$ = new Subject<SectionPublishedEvent>();
   readonly projectSynced$ = new Subject<ProjectSyncedEvent>();
-  readonly ftpFolderSynced$ = new Subject<{ folderId: string; status: FtpNodeSyncStatus; downloaded: number; errors: any[] }>();
+  readonly ftpSyncStart$ = new Subject<{ totalFolders: number; totalFiles: number }>();
+  readonly ftpFolderSynced$ = new Subject<{ folderId: string; status: FtpNodeSyncStatus; downloaded: number; checked: number; totalChecked: number; totalFiles: number; errors: any[] }>();
   readonly ftpSyncComplete$ = new Subject<{ status: 'done' | 'error'; downloaded: number; errors: any[] }>();
 
   private eventSource: EventSource | null = null;
@@ -280,6 +281,15 @@ export class ProjetCollabService {
           this.zone.run(() => this.projectSynced$.next(evt));
         } catch (err) {
           console.warn('[Collab] SSE project_synced parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('ftp_sync_start', (e: MessageEvent) => {
+        try {
+          const evt = JSON.parse(e.data);
+          this.zone.run(() => this.ftpSyncStart$.next(evt));
+        } catch (err) {
+          console.warn('[Collab] SSE ftp_sync_start parse error:', err);
         }
       });
 

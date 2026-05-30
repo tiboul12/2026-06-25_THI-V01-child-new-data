@@ -163,6 +163,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Input() highlightNodeId: string | null = null;
   @Input() backupType: string | null = null;
   @Input() ftpSyncGlobalStatus: 'idle' | 'syncing' | 'done' | 'error' = 'idle';
+  @Input() ftpSyncProgress: { checked: number; total: number } = { checked: 0, total: 0 };
+  @Input() nodeSyncStatus: Map<string, any> = new Map();
+  @Input() hasFtpBackup = false;
+
+  get isActiveSectionUnsynced(): boolean {
+    if (!this.hasFtpBackup || this.ftpSyncGlobalStatus !== 'syncing') return false;
+    if (!this.activeNodeId) return false;
+    return this.nodeSyncStatus.get(this.activeNodeId) === 'unknown';
+  }
 
   readonly backupBadge: Record<string, { icon: string; label: string; css: string }> = {
     ftp:         { icon: 'dns',          label: 'FTP',     css: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' },
