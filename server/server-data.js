@@ -678,9 +678,9 @@ app.get('/api/config/keys', (req, res) => {
                 }
             },
             appVersion: globalConf.appVersion || '',
-            headerIaVisible: globalConf.headerIaVisible !== undefined ? globalConf.headerIaVisible : false,
-            cliIaEnabled: globalConf.cliIaEnabled !== undefined ? globalConf.cliIaEnabled : true,
-            apiKeysEnabled: globalConf.apiKeysEnabled !== undefined ? globalConf.apiKeysEnabled : true,
+            headerIaVisible: userConfig.headerIaVisible !== undefined ? userConfig.headerIaVisible : (globalConf.headerIaVisible !== undefined ? globalConf.headerIaVisible : false),
+            cliIaEnabled: userConfig.cliIaEnabled !== undefined ? userConfig.cliIaEnabled : (globalConf.cliIaEnabled !== undefined ? globalConf.cliIaEnabled : true),
+            apiKeysEnabled: userConfig.apiKeysEnabled !== undefined ? userConfig.apiKeysEnabled : (globalConf.apiKeysEnabled !== undefined ? globalConf.apiKeysEnabled : true),
             // Préférences outils par utilisateur — stockées en DB (priorité sur flags globaux conf.json)
             enabledTools: {
                 tickets: userEnabledTools.tickets !== undefined ? userEnabledTools.tickets : (globalConf.ticketsEnabled || false),
@@ -739,6 +739,11 @@ app.post('/api/config/keys', async (req, res) => {
             };
         }
 
+        // ── Config IA par utilisateur (toggles visibilité) ──────────────────
+        if (headerIaVisible !== undefined) userConfig.headerIaVisible = Boolean(headerIaVisible);
+        if (cliIaEnabled !== undefined) userConfig.cliIaEnabled = Boolean(cliIaEnabled);
+        if (apiKeysEnabled !== undefined) userConfig.apiKeysEnabled = Boolean(apiKeysEnabled);
+
         // ── Outils externes par utilisateur (DB) ────────────────────────────
         if (enabledTools !== undefined && typeof enabledTools === 'object') {
             const current = userConfig.enabledTools || {};
@@ -759,7 +764,6 @@ app.post('/api/config/keys', async (req, res) => {
 
         // ── Settings globaux (conf.json) — tous les champs peuvent être mis à jour ──
         if (appVersion !== undefined || ticketsEnabled !== undefined || recetteWidgetEnabled !== undefined ||
-            headerIaVisible !== undefined || cliIaEnabled !== undefined || apiKeysEnabled !== undefined ||
             enabledTabs !== undefined || navItems !== undefined) {
             let globalConf = {};
             if (fs.existsSync(CONFIG_FILE)) {
@@ -770,9 +774,6 @@ app.post('/api/config/keys', async (req, res) => {
             if (appVersion !== undefined) globalConf.appVersion = appVersion;
             if (ticketsEnabled !== undefined) globalConf.ticketsEnabled = ticketsEnabled;
             if (recetteWidgetEnabled !== undefined) globalConf.recetteWidgetEnabled = recetteWidgetEnabled;
-            if (headerIaVisible !== undefined) globalConf.headerIaVisible = Boolean(headerIaVisible);
-            if (cliIaEnabled !== undefined) globalConf.cliIaEnabled = Boolean(cliIaEnabled);
-            if (apiKeysEnabled !== undefined) globalConf.apiKeysEnabled = Boolean(apiKeysEnabled);
             if (enabledTabs !== undefined && typeof enabledTabs === 'object') {
                 globalConf.enabledTabs = { ...(globalConf.enabledTabs || {}), ...enabledTabs };
             }

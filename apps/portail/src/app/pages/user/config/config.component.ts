@@ -26,7 +26,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
   currentTheme: 'dark' | 'light' | 'pink' = 'dark';
 
   get headerIaVisible(): boolean { return this.configService.headerIaVisible(); }
-  toggleHeaderIa() { this.configService.saveHeaderIaVisible(!this.headerIaVisible); }
+  toggleHeaderIa() { this.configService.headerIaVisible.set(!this.headerIaVisible); }
 
   get woActionHistoryNavEnabled(): boolean { return this.configService.woActionHistoryNavEnabled(); }
   toggleWoActionHistoryNav() {
@@ -46,19 +46,11 @@ export class ConfigComponent implements OnInit, OnDestroy {
   ticketsEnabled = false;
   recetteWidgetEnabled = false;
 
-  get cliIaEnabled(): boolean { return this.configService.tchatIaEnabled(); }
-  toggleCliIa() {
-    const val = !this.cliIaEnabled;
-    this.configService.setTchatIaEnabled(val);
-    this.http.post(`${API}/api/config/keys`, { cliIaEnabled: val }).subscribe();
-  }
+  get cliIaEnabled(): boolean { return this.configService.cliIaEnabled(); }
+  toggleCliIa() { this.configService.cliIaEnabled.set(!this.cliIaEnabled); }
 
-  get apiKeysEnabled(): boolean { return this.configService.ticketsEnabled(); }
-  toggleApiKeys() {
-    const val = !this.apiKeysEnabled;
-    this.configService.setTicketsEnabled(val);
-    this.http.post(`${API}/api/config/keys`, { apiKeysEnabled: val }).subscribe();
-  }
+  get apiKeysEnabled(): boolean { return this.configService.apiKeysEnabled(); }
+  toggleApiKeys() { this.configService.apiKeysEnabled.set(!this.apiKeysEnabled); }
 
   // API Keys form
   geminiKey = '';
@@ -400,7 +392,10 @@ export class ConfigComponent implements OnInit, OnDestroy {
           claude: this.enabledModels.claude,
           gemini: this.enabledModels.gemini
         }
-      }
+      },
+      headerIaVisible: this.headerIaVisible,
+      apiKeysEnabled: this.apiKeysEnabled,
+      cliIaEnabled: this.cliIaEnabled
     };
 
     // Les paramètres généraux ne sont envoyés que lors d'une sauvegarde manuelle

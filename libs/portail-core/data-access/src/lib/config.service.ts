@@ -44,26 +44,13 @@ export class ConfigService {
   setTchatIaEnabled(val: boolean)       { this.tchatIaEnabled.set(val); }
   setActionsEnabled(val: boolean)       { this.actionsEnabled.set(val); }
 
-  setCliIaEnabled(val: boolean)   {
-    this.cliIaEnabled.set(val);
-    this.http.post(`${this.dataApiUrl}/api/config/keys`, { cliIaEnabled: val })
-      .subscribe({ error: () => console.warn('[ConfigService] Failed to save cliIaEnabled') });
-  }
-
-  setApiKeysEnabled(val: boolean) {
-    this.apiKeysEnabled.set(val);
-    this.http.post(`${this.dataApiUrl}/api/config/keys`, { apiKeysEnabled: val })
-      .subscribe({ error: () => console.warn('[ConfigService] Failed to save apiKeysEnabled') });
-  }
+  setCliIaEnabled(val: boolean)   { this.cliIaEnabled.set(val); }
+  setApiKeysEnabled(val: boolean) { this.apiKeysEnabled.set(val); }
 
   // Affichage zone IA dans le header principal
   headerIaVisible = signal<boolean>(false);
 
-  saveHeaderIaVisible(val: boolean) {
-    this.headerIaVisible.set(val);
-    this.http.post(`${this.dataApiUrl}/api/config/keys`, { headerIaVisible: val })
-      .subscribe({ error: () => console.warn('[ConfigService] Failed to save headerIaVisible') });
-  }
+  saveHeaderIaVisible(val: boolean) { this.headerIaVisible.set(val); }
 
   // Visibilité du menu Historique des actions dans la nav
   woActionHistoryNavEnabled = signal<boolean>(false);

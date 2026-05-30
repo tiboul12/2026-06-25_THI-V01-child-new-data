@@ -1,6 +1,61 @@
 {
   "modifications": [
     {
+      "id": "mod-267",
+      "version": "B-0.235",
+      "date": "2026-05-30T22:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["portail", "server"],
+      "features": "portail:admin-config",
+      "title": "Fix Config IA : toggles per-user + Save inclut headerIaVisible/apiKeysEnabled/cliIaEnabled",
+      "description": "Correction du bug où les toggles IA (Zone header, Clés API, Outils CLI) n'étaient pas sauvegardés par utilisateur. 1) Les getters du composant utilisaient les mauvais signaux (tchatIaEnabled/ticketsEnabled au lieu de cliIaEnabled/apiKeysEnabled). 2) saveKeys() n'incluait pas ces 3 valeurs dans le payload. 3) Le serveur les stockait en globalConf (partagé) au lieu de userConfig (par user). Maintenant : toggles locaux sans appel HTTP immédiat, sauvegarde via bouton Enregistrer, stockage en DB par utilisateur.",
+      "files": [
+        "apps/portail/src/app/pages/user/config/config.component.ts",
+        "libs/portail-core/data-access/src/lib/config.service.ts",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Lorsque j'appuys suyr Enregistré dans la zone Intelligence Artificielle cela n'a pas l'air d'enregistré les selected des options car lorsque je reviens dans admin/config l'option enregistré est revenu à l'état initial. Les infos de Admin/config/Intelligence Artificielle sont lié à un user spécifique, ainsi 2 utilisateurs différents aura des données enregistré différente",
+      "startedAt": "2026-05-30T22:00:00.000Z",
+      "completedAt": "2026-05-30T22:10:00.000Z"
+    },
+    {
+      "id": "mod-266",
+      "version": "B-0.235",
+      "date": "2026-05-30T21:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin-config",
+      "title": "Admin Config : sous-sections IA inline sous leurs toggles + bouton Save IA",
+      "description": "Dans la page Config, la section Intelligence Artificielle est restructurée en une seule carte : la zone Clés API apparaît directement sous le toggle Clés API, la zone CLI IA apparaît directement sous le toggle Outils CLI. Un bouton Sauvegarder est ajouté en bas de la carte IA. L'ancien découpage en sections séparées est supprimé.",
+      "files": ["apps/portail/src/app/pages/user/config/config.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Ajoute le bouton sauvegardé dans la zone Intelligence Artificielle et met la zone Clés API juste en dessous de Intelligence Artificielle/Clés API (Gemini / Claude) et la zone CLI IA juste en dessous de Intelligence Artificielle/Outils CLI (Gemini CLI / Claude Code); ces zone sont affiché si elle sont selectionné comme actuellement",
+      "startedAt": "2026-05-30T21:45:00.000Z",
+      "completedAt": "2026-05-30T21:55:00.000Z"
+    },
+    {
+      "id": "mod-265",
+      "version": "B-0.235",
+      "date": "2026-05-30T21:37:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["portail"],
+      "features": "portail:admin-config",
+      "title": "Fix compilation : </section> manquante dans admin/config",
+      "description": "Correction de l'erreur NG5002 (balise div inattendue) causée par la </section> manquante pour la section IA dans config.component.html. La séparation Général / Intelligence Artificielle était incomplète — la section IA (ligne 109) n'était pas fermée avant le </div> du wrapper principal.",
+      "files": ["apps/portail/src/app/pages/user/config/config.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "la dernière demande était : Dans admin/config sépare les données lié à des IA et les autres données et actuellement il y a des erreurs surement du car le boulot n'est pas fini",
+      "startedAt": "2026-05-30T21:37:00.000Z",
+      "completedAt": "2026-05-30T21:45:00.000Z"
+    },
+    {
       "id": "mod-264",
       "version": "B-0.235",
       "date": "2026-05-30T00:00:00.000Z",
