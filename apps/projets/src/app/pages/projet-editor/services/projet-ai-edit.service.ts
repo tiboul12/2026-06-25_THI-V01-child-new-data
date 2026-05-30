@@ -1,6 +1,6 @@
 import { Injectable, NgZone, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
-import { ProjectFilesService, API_EXECUTOR_URL } from '@worganic/portail-core/data-access';
+import { ProjectFilesService, API_EXECUTOR_URL, API_DATA_URL, AuthService } from '@worganic/portail-core/data-access';
 import { sanitizeIaContent } from '../utils/sanitize-ia-content';
 
 export interface PendingAiEdit {
@@ -21,6 +21,8 @@ export class ProjetAiEditService {
   private projectFilesService = inject(ProjectFilesService);
   private ngZone = inject(NgZone);
   private executorUrl = inject(API_EXECUTOR_URL);
+  private dataUrl = inject(API_DATA_URL);
+  private authService = inject(AuthService);
 
   pendingEdit = signal<PendingAiEdit | null>(null);
   isStreaming = signal(false);
@@ -47,11 +49,19 @@ export class ProjetAiEditService {
     this.tokenInfo.set(null);
     let accumulated = '';
 
-    fetch(`${this.executorUrl}/execute-file-prompt`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName, promptContent, fileContent: originalContent, provider, model, ...(systemInstructions ? { systemInstructions } : {}) })
-    }).then(response => {
+    const payload = JSON.stringify({ fileName, promptContent, fileContent: originalContent, provider, model, ...(systemInstructions ? { systemInstructions } : {}) });
+
+    // Tente l'executor Electron (port 3002) d'abord, fallback vers le serveur data (port 3001)
+    const tryFetch = (url: string, withAuth = false): Promise<Response> => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (withAuth) {
+        const token = this.authService.getToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      }
+      return fetch(url, { method: 'POST', headers, body: payload });
+    };
+
+    const doStream = (response: Response) => {
       if (!response.ok || !response.body) {
         this.ngZone.run(() => {
           this.isStreaming.set(false);
@@ -96,21 +106,20 @@ export class ProjetAiEditService {
           const line = part.trim();
           if (!line.startsWith('data:')) continue;
           try {
-            const payload = JSON.parse(line.slice(5).trim()) as { type: string; message: string; used?: number; total?: number; remaining?: number };
-            if (payload.type === 'stdout' && payload.message) {
-              accumulated += payload.message;
-              this.ngZone.run(() => this.chunk$.next(payload.message));
-            } else if (payload.type === 'tokens') {
-              // Événement tokens explicite (execute-prompt)
+            const evt = JSON.parse(line.slice(5).trim()) as { type: string; message: string; used?: number; total?: number; remaining?: number };
+            if (evt.type === 'stdout' && evt.message) {
+              accumulated += evt.message;
+              this.ngZone.run(() => this.chunk$.next(evt.message));
+            } else if (evt.type === 'tokens') {
               this.ngZone.run(() => this.tokenInfo.set({
-                used: payload.used ?? 0,
-                total: payload.total ?? 0,
-                remaining: payload.remaining ?? 0
+                used: evt.used ?? 0,
+                total: evt.total ?? 0,
+                remaining: evt.remaining ?? 0
               }));
-            } else if (payload.type === 'error') {
+            } else if (evt.type === 'error') {
               this.ngZone.run(() => {
                 this.isStreaming.set(false);
-                this.error$.next(payload.message);
+                this.error$.next(evt.message);
               });
             }
           } catch { /* ligne SSE non JSON, ignorée */ }
@@ -125,12 +134,22 @@ export class ProjetAiEditService {
           this.error$.next(err.message || 'Erreur de connexion');
         });
       });
-    }).catch(err => {
-      this.ngZone.run(() => {
-        this.isStreaming.set(false);
-        this.error$.next(err.message || 'Impossible de joindre l\'executor');
+    };
+
+    // Essaie l'executor Electron d'abord, fallback vers le serveur data si non disponible
+    tryFetch(`${this.executorUrl}/execute-file-prompt`)
+      .then(response => doStream(response))
+      .catch(() => {
+        // Executor non disponible → serveur data (API directe)
+        tryFetch(`${this.dataUrl}/api/ai/execute-file-prompt`, true)
+          .then(response => doStream(response))
+          .catch(err => {
+            this.ngZone.run(() => {
+              this.isStreaming.set(false);
+              this.error$.next(err.message || 'Impossible de joindre le serveur IA');
+            });
+          });
       });
-    });
   }
 
   async acceptEdit(projectName: string): Promise<void> {

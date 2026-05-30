@@ -1,6 +1,44 @@
 {
   "modifications": [
     {
+      "id": "mod-269",
+      "version": "B-0.236",
+      "date": "2026-05-30T23:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "portail:editor",
+      "title": "Fix CORS executor : ajout port 4203 (app projets)",
+      "description": "Le port 4203 (app projets NX) n'était pas dans la liste CORS de l'executor (port 3002). Les appels IA depuis l'éditeur de projets étaient bloqués par le navigateur avec 'Failed to fetch'. Ajout de http://localhost:4203 et http://127.0.0.1:4203 dans la liste d'origines autorisées.",
+      "files": ["electron/executor/server-executor.js"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai toujours la même erreur [Failed to fetch] - cela ne fonctionne pas car il m'indique Erreur : Clé API Claude non configurée alors que l'option choisi sont les AI cli et non les api key",
+      "startedAt": "2026-05-30T23:00:00.000Z",
+      "completedAt": "2026-05-30T23:05:00.000Z"
+    },
+    {
+      "id": "mod-268",
+      "version": "B-0.236",
+      "date": "2026-05-30T22:20:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:editor,server:ai",
+      "title": "Éditeur IA : fallback API directe si executor Electron non disponible",
+      "description": "Quand l'executor Electron (port 3002) n'est pas joignable, l'éditeur tombe en fallback sur une route /api/ai/execute-file-prompt du serveur principal (port 3001). Cette route utilise la clé API Claude/Gemini stockée dans le userConfig en DB pour appeler l'API Anthropic ou Google directement avec streaming SSE. Le SDK @anthropic-ai/sdk est installé. Le service Angular ProjetAiEditService essaie d'abord l'executor, puis le serveur.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/services/projet-ai-edit.service.ts",
+        "server/server-data.js",
+        "package.json"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai voulu utiliser l'IA dans projet/editor et j'ai une erreur ⚠️ Erreur : Failed to fetch",
+      "startedAt": "2026-05-30T22:20:00.000Z",
+      "completedAt": "2026-05-30T22:35:00.000Z"
+    },
+    {
       "id": "mod-267",
       "version": "B-0.235",
       "date": "2026-05-30T22:00:00.000Z",

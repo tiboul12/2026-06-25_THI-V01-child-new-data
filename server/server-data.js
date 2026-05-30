@@ -7450,6 +7450,126 @@ app.delete('/api/admin/tests/runs/:id', (req, res) => {
 });
 
 // ============================================================
+// POST /api/ai/execute-file-prompt — Appel IA direct (sans executor Electron)
+// Utilise la clé API stockée dans le userConfig en DB
+// SSE format identique à l'executor
+// ============================================================
+app.post('/api/ai/execute-file-prompt', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+
+    const { fileName, promptContent, fileContent, systemInstructions, provider: bodyProvider, model: bodyModel } = req.body;
+    if (!fileName || !promptContent) {
+        return res.status(400).json({ error: 'fileName et promptContent requis' });
+    }
+
+    const rawCfg = user.config || {};
+    const userConfig = typeof rawCfg === 'string' ? (() => { try { return JSON.parse(rawCfg); } catch { return {}; } })() : rawCfg;
+    const apiKeys = userConfig.apiKeys || {};
+
+    const provider = (bodyProvider || 'claude').split('-')[0];
+    let model = bodyModel || 'claude-sonnet-4-6';
+
+    // SSE setup
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sseWrite = (type, message, extra = {}) => {
+        res.write(`data: ${JSON.stringify({ type, message, ...extra })}\n\n`);
+    };
+
+    sseWrite('start', `> Calling ${provider}/${model} directly...\n`);
+
+    try {
+        if (provider === 'gemini') {
+            const geminiKey = apiKeys.gemini?.key || '';
+            if (!geminiKey) { sseWrite('error', 'Clé API Gemini non configurée'); res.end(); return; }
+
+            const systemBlock = systemInstructions ? `${systemInstructions}\n\n` : '';
+            const fullPrompt = systemBlock + (fileContent
+                ? `${promptContent}\n\n---\n\n**Fichier actuel (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\`\n\nRetourne UNIQUEMENT le contenu complet du fichier modifié, sans explications.`
+                : promptContent);
+
+            if (!model.startsWith('gemini-')) model = 'gemini-2.5-flash';
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${geminiKey}`;
+            const https = require('https');
+            const body = JSON.stringify({ contents: [{ role: 'user', parts: [{ text: fullPrompt }] }] });
+            const urlObj = new URL(url);
+            const options = { hostname: urlObj.hostname, path: urlObj.pathname + urlObj.search, method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } };
+
+            const apiReq = https.request(options, (apiRes) => {
+                let buffer = '';
+                apiRes.on('data', (chunk) => {
+                    buffer += chunk.toString();
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() ?? '';
+                    for (const line of lines) {
+                        if (!line.startsWith('data:')) continue;
+                        try {
+                            const data = JSON.parse(line.slice(5).trim());
+                            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                            if (text) sseWrite('stdout', text);
+                        } catch {}
+                    }
+                });
+                apiRes.on('end', () => { sseWrite('end', '\nTerminé', { code: 0 }); res.end(); });
+            });
+            apiReq.on('error', (e) => { sseWrite('error', e.message); res.end(); });
+            apiReq.write(body);
+            apiReq.end();
+
+        } else {
+            // Claude
+            const claudeKey = apiKeys.claude?.key || '';
+            if (!claudeKey) { sseWrite('error', 'Clé API Claude non configurée. Configures ta clé dans Admin > Config > Intelligence Artificielle.'); res.end(); return; }
+
+            if (!model.startsWith('claude-')) model = 'claude-sonnet-4-6';
+
+            const Anthropic = require('@anthropic-ai/sdk');
+            const client = new Anthropic.default({ apiKey: claudeKey });
+
+            const systemBlock = systemInstructions
+                ? `The following project-specific instructions OVERRIDE all other context. Follow ONLY these instructions for this task:\n\n${systemInstructions}`
+                : 'You are a helpful assistant for modifying file content. Return ONLY the complete modified file content, without additional explanations.';
+
+            const userContent = fileContent
+                ? `${promptContent}\n\n---\n\n**Current file (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\`\n\nReturn ONLY the complete modified file content.`
+                : promptContent;
+
+            const stream = await client.messages.stream({
+                model,
+                max_tokens: 8096,
+                system: systemBlock,
+                messages: [{ role: 'user', content: userContent }]
+            });
+
+            for await (const event of stream) {
+                if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+                    sseWrite('stdout', event.delta.text);
+                }
+            }
+
+            const finalMsg = await stream.finalMessage();
+            const usage = finalMsg.usage;
+            if (usage) {
+                sseWrite('tokens', '', {
+                    used: usage.input_tokens + usage.output_tokens,
+                    total: 200000,
+                    remaining: 200000 - usage.input_tokens - usage.output_tokens
+                });
+            }
+            sseWrite('end', '\nTerminé', { code: 0 });
+            res.end();
+        }
+    } catch (err) {
+        sseWrite('error', err.message || 'Erreur API IA');
+        res.end();
+    }
+});
+
+// ============================================================
 // Server Startup
 // ============================================================
 

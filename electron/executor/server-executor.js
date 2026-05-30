@@ -136,10 +136,12 @@ app.use(cors({
         'http://localhost:4200',
         'http://localhost:4201',
         'http://localhost:4202',
+        'http://localhost:4203',
         'http://localhost:3001',
         'http://127.0.0.1:4200',
         'http://127.0.0.1:4201',
         'http://127.0.0.1:4202',
+        'http://127.0.0.1:4203',
         // Ajouter l'URL de prod Angular ici :
         // 'https://app.worganic.com'
     ],
