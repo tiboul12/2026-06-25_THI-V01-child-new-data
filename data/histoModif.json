@@ -1,6 +1,23 @@
 {
   "modifications": [
     {
+      "id": "mod-249",
+      "version": "B-0.223",
+      "date": "2026-05-30T02:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:sidebar",
+      "title": "Sidebar : indicateur sync FTP déplacé à gauche (avant l'icône dossier)",
+      "description": "Les ronds/icônes de statut sync FTP dans la zone 3 sont déplacés à gauche du nom du dossier (entre le chevron et l'icône de dossier). Les autres indicateurs (cadenas, conversation) restent à droite.",
+      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "deplace les rond d'info synchronisation du menu zone 3 à gauche du menu, laisse les autres icones d'info (cadenas etc) à droite du menu",
+      "startedAt": "2026-05-30T02:25:00.000Z",
+      "completedAt": "2026-05-30T02:30:00.000Z"
+    },
+    {
       "id": "mod-248",
       "version": "B-0.222",
       "date": "2026-05-30T02:15:00.000Z",
