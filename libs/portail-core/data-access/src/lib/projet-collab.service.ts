@@ -224,6 +224,17 @@ export class ProjetCollabService {
         }
       });
 
+      this.eventSource.addEventListener('entries_undone', (e: MessageEvent) => {
+        try {
+          const { ids } = JSON.parse(e.data) as { ids: string[] };
+          if (!ids?.length) return;
+          const set = new Set(ids);
+          this.history.update(list => list.map(en => set.has(en.id) ? { ...en, undone: true } : en));
+        } catch (err) {
+          console.warn('[Collab] SSE entries_undone parse error:', err);
+        }
+      });
+
       this.eventSource.addEventListener('lock', (e: MessageEvent) => {
         const lock: LockInfo = JSON.parse(e.data);
         this.zone.run(() => {

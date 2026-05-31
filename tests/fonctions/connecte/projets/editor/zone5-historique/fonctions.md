@@ -59,9 +59,10 @@ Données : via `ProjetCollabService`, temps réel WebSocket
 
 - **Déclenchement** : bouton `undo` (icône `undo`) visible au hover sur les entrées `undoable && !undone`
 - **Action** : `undoEntry(entry)` → `woHistory.undo(id)` → POST `/api/wo-action-history/:id/undo`
-- **Feedback** : spinner pendant l'opération, entrée marquée "annulé" localement (optimistic update)
-- **SSE** : le serveur broadcast une nouvelle entrée "Annulation : ..." → reçue en temps réel
-- **Résultat** : le contenu du fichier est restauré à `beforeState`; l'éditeur se met à jour via SSE
+- **Réponse serveur** : `{ restored: { nodeId, content } }` → émis via `(restored)` au parent → patch `files` + incrément `restoreToken` → reconstruction de la zone éditeur (mode focus préservé)
+- **Grisage** : événement SSE `entries_undone` (vérité serveur) → la collab marque l'entrée `undone` → grisée + boutons retirés. Survit aux rechargements (`undoable`/`undone` renvoyés par la route de chargement)
+- **Nouvelle entrée** : le serveur crée et diffuse (SSE `history`) une entrée "Annulation : ..." elle-même `undoable` (réapplique l'`afterState`) → permet d'annuler l'annulation
+- **Résultat** : le contenu du fichier est restauré à `beforeState`; l'éditeur se met à jour automatiquement
 
 ---
 

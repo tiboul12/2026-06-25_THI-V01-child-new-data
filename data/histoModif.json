@@ -5330,6 +5330,51 @@
       "prompt": "toutes les informations de modifications d une section est enregistré dans la zone historique. Prépare moi un plan pour pouvoir mettre en place l annulation de modification à partir de la zone historique, exemple, option annulé une modification, ou annulé l action et toutes les suivantes pour revenir à une ancienne version. Dans l historique il doit aussi y avoir les modifications lié à un prompt d une IA, exemple ajout ou modification d un texte via une IA doit pouvoir être enregistré dans l historique et ainsi pouvoir être annulé.",
       "startedAt": "2026-05-31T00:00:00.000Z",
       "completedAt": "2026-05-31T16:30:16.251Z"
+    },
+    {
+      "id": "mod-272",
+      "version": "B-0.248",
+      "date": "2026-05-31T19:17:34.137Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server",
+        "libs"
+      ],
+      "features": "projets:historique,server:wo-action-history",
+      "title": "Historique : entrée annulation diffusée + grisage des entrées annulées",
+      "description": "Fix suite annulation : insertWoActionEntry (undo/redo/cascade) ne diffusait pas l événement SSE history, donc l entrée Annulation n apparaissait pas. Ajout du broadcast. Nouvel événement SSE entries_undone (vérité serveur) pour griser les entrées annulées chez tous les clients, survit aux rechargements. La route GET /api/collab/:projetId/history renvoie désormais undoable (sinon les boutons d annulation disparaissaient après reload). Handler entries_undone côté collab service. Fix undo infini : le contenu du fichier est désormais lu depuis le disque AVANT d exécuter l undo → stocké comme afterState de l entrée de tracking → reapplyAction toujours valide quelle que soit la profondeur de la chaîne d annulation (annuler une annulation d une annulation fonctionne).",
+      "files": [
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "tests/fonctions/connecte/projets/editor/zone5-historique/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "l editor ce met bien à jour mais je n ai pas d indication de l action de retour en arrière (annulation) dans l historique les 2 actions de création via IA sont toujours active alors qu elles devraient être grisé (mais gardé les options d annulation disponible)",
+      "startedAt": "2026-05-31T18:00:00.000Z",
+      "completedAt": "2026-05-31T19:17:34.138Z"
+    },
+    {
+      "id": "mod-273",
+      "version": "B-0.248",
+      "date": "2026-05-31T19:32:06.417Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "projets:historique,server:wo-action-history",
+      "title": "Historique : chaîne d'annulation infinie (undo d'undo)",
+      "description": "Fix : annuler une annulation créait une entrée non-annulable car l'afterState des entrées de tracking était null. Désormais le contenu du fichier est lu depuis le disque AVANT d'exécuter l'undo et stocké comme afterState du tracking. Quelle que soit la profondeur de la chaîne (annuler une annulation d'une annulation...), chaque entrée reste undoable:true.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Toutes les actions doivent pouvoir être annulé, mais actuellement j'ai annulé une annulation et je ne peux plus l'annulé",
+      "startedAt": "2026-05-31T19:32:06.419Z",
+      "completedAt": "2026-05-31T19:32:06.419Z"
     }
   ]
 }

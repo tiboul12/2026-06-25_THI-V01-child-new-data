@@ -2748,6 +2748,22 @@ async function insertWoActionEntry(payload) {
          payload.redoAction ? JSON.stringify(payload.redoAction) : null,
          payload.meta ? JSON.stringify(payload.meta) : null]
     );
+
+    // Diffuser l'entrée aux clients du projet (sinon les actions undo/redo/cascade
+    // n'apparaissent pas dans l'historique en temps réel)
+    const entry = {
+        id, timestamp: now.toISOString(),
+        section: payload.section, subsection: payload.subsection, actionType: payload.actionType,
+        label: payload.label, entityType: payload.entityType, entityId: payload.entityId,
+        entityLabel: payload.entityLabel, beforeState: payload.beforeState, afterState: payload.afterState,
+        userId: payload.userId, username: payload.username, context: payload.context,
+        undoable: !!payload.undoable, undone: false,
+        undoAction: payload.undoAction, redoAction: payload.redoAction, meta: payload.meta
+    };
+    const projetId = payload.context?.projectId;
+    if (projetId) {
+        try { broadcastToProject(projetId, 'history', entry); } catch (_) {}
+    }
     return { id, timestamp: now };
 }
 
@@ -2766,6 +2782,27 @@ app.post('/api/wo-action-history/:id/undo', async (req, res) => {
 
         if (!undoAction?.endpoint || !undoAction?.method) {
             return res.status(400).json({ error: "Aucune action d'annulation définie" });
+        }
+
+        // Lire le contenu actuel du fichier AVANT d'exécuter l'undo
+        // → capturé comme afterState du tracking, peu importe la profondeur de la chaîne
+        let currentFileContent = null;
+        if (undoAction.endpoint?.includes('/api/file-projects/') && undoAction.payload?.content != null) {
+            try {
+                const parts = undoAction.endpoint.split('/');
+                const projectNameForRead = parts[3];
+                const fileIdForRead = parts[5];
+                const configForRead = await getProjectConfig(projectNameForRead);
+                const itemForRead = configForRead ? findNodeById(configForRead.structure, fileIdForRead) : null;
+                if (itemForRead?.path) {
+                    const fullPath = safeProjectPath(projectNameForRead, itemForRead.path);
+                    if (fullPath && fs.existsSync(fullPath)) {
+                        currentFileContent = fs.readFileSync(fullPath, 'utf8');
+                    }
+                }
+            } catch (e) {
+                console.warn('[WO_ACTION_HISTORY] Could not read current file before undo:', e.message);
+            }
         }
 
         const port = process.env.PORT || 3001;
@@ -2799,11 +2836,9 @@ app.post('/api/wo-action-history/:id/undo', async (req, res) => {
         console.log(`[WO_ACTION_HISTORY] Undo: ${req.params.id} — ${entry.label} by ${undoneBy}`);
 
         // Contenu restauré renvoyé au client + broadcast SSE pour les autres collaborateurs
-        // (le PUT interne skip le broadcast publish:true et content_update est filtré si même auteur)
         let restored = null;
         if (undoAction.endpoint?.includes('/api/file-projects/') && undoAction.payload?.content != null) {
             const parts = undoAction.endpoint.split('/');
-            // /api/file-projects/:name/files/:id → parts[3]=name, parts[5]=id
             const projectName = parts[3];
             const nodeId = parts[5];
             restored = { nodeId, folderId: undoAction.payload.folderId || null, content: undoAction.payload.content };
@@ -2820,18 +2855,23 @@ app.post('/api/wo-action-history/:id/undo', async (req, res) => {
             }
         }
 
+        // Diffuser l'état "annulé" pour que tous les clients grisent l'entrée (vérité serveur)
+        const entryContext = typeof entry.context === 'string' ? JSON.parse(entry.context || '{}') : (entry.context || {});
+        if (entryContext.projectId) {
+            try { broadcastToProject(entryContext.projectId, 'entries_undone', { ids: [req.params.id] }); } catch (_) {}
+        }
+
         // Tracking de l'annulation comme nouvelle action (sauf si appel interne en cascade)
         let trackedEntry = null;
         if (req.headers['x-internal-call'] !== '1') {
             try {
                 const sessionUser = getSessionUser(req);
-                // Pour "annuler l'annulation" : réappliquer directement l'afterState sur le fichier
-                // plutôt que passer par le redo de l'entrée originale (qui n'a pas toujours de redo_action)
-                const afterState = typeof entry.after_state === 'string'
-                    ? JSON.parse(entry.after_state)
-                    : entry.after_state;
-                const reapplyAction = (afterState?.content != null && undoAction?.endpoint)
-                    ? { endpoint: undoAction.endpoint, method: undoAction.method, payload: { content: afterState.content } }
+                // afterState = contenu qui était dans le fichier AVANT cet undo (lu depuis le disque)
+                // → permet de construire un reapplyAction valide peu importe la profondeur de la chaîne
+                const afterStateForTracking = currentFileContent != null ? { content: currentFileContent } : null;
+                const beforeStateForTracking = undoAction.payload?.content != null ? { content: undoAction.payload.content } : null;
+                const reapplyAction = (afterStateForTracking != null && undoAction?.endpoint)
+                    ? { endpoint: undoAction.endpoint, method: undoAction.method, payload: { content: afterStateForTracking.content } }
                     : null;
 
                 trackedEntry = await insertWoActionEntry({
@@ -2845,6 +2885,8 @@ app.post('/api/wo-action-history/:id/undo', async (req, res) => {
                     userId: sessionUser?.id || null,
                     username: undoneBy || sessionUser?.username || '',
                     context: typeof entry.context === 'string' ? JSON.parse(entry.context) : (entry.context || {}),
+                    beforeState: beforeStateForTracking,
+                    afterState: afterStateForTracking,
                     undoable: reapplyAction != null,
                     undoAction: reapplyAction
                 });
@@ -3026,6 +3068,12 @@ app.post('/api/wo-action-history/:id/undo-cascade', async (req, res) => {
             } catch (broadcastErr) {
                 console.warn('[WO_ACTION_HISTORY] broadcast after cascade failed:', broadcastErr.message);
             }
+        }
+
+        // Diffuser l'état "annulé" pour toutes les entrées de la cascade (grisage chez tous les clients)
+        const targetContext = typeof target.context === 'string' ? JSON.parse(target.context || '{}') : (target.context || {});
+        if (targetContext.projectId) {
+            try { broadcastToProject(targetContext.projectId, 'entries_undone', { ids: undoneIds }); } catch (_) {}
         }
 
         // Entrée récapitulative dans l'historique
@@ -7249,7 +7297,7 @@ app.get('/api/collab/:projetId/history', async (req, res) => {
     try {
         const [rows] = await pool.query(
             `SELECT id, timestamp, section, action_type, label, entity_type, entity_id, entity_label,
-                    user_id, username, undone, before_state, after_state
+                    user_id, username, undone, undoable, before_state, after_state
              FROM wo_action_history
              WHERE section LIKE 'projets/%'
                AND JSON_UNQUOTE(JSON_EXTRACT(context, '$.projectId')) = ?
@@ -7260,7 +7308,7 @@ app.get('/api/collab/:projetId/history', async (req, res) => {
             id: r.id, timestamp: r.timestamp, section: r.section,
             actionType: r.action_type, label: r.label,
             entityType: r.entity_type, entityId: r.entity_id, entityLabel: r.entity_label,
-            userId: r.user_id, username: r.username, undone: !!r.undone,
+            userId: r.user_id, username: r.username, undone: !!r.undone, undoable: !!r.undoable,
             beforeState: r.before_state ? (typeof r.before_state === 'string' ? JSON.parse(r.before_state) : r.before_state) : null,
             afterState: r.after_state ? (typeof r.after_state === 'string' ? JSON.parse(r.after_state) : r.after_state) : null
         })));
