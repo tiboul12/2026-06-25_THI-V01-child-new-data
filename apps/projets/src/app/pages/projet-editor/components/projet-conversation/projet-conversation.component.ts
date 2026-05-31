@@ -44,6 +44,8 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   selectedModel = signal('');
   // Afficher/masquer le sélecteur de modèle
   showModelSelect = signal(false);
+  // Popup infos IA du projet
+  showIaInfo = signal(false);
 
   // Liste consolidée de tous les modèles disponibles
   readonly allModels = computed(() => {
@@ -219,6 +221,8 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
       role: 'user'
     };
     this.messages = [...this.messages, userMsg];
+    // Persiste le message utilisateur (même route que sendChat)
+    this.convService.sendMessage(this.sectionId!, userMsg.text).subscribe();
 
     // Placeholder IA
     const aiMsg: Message = {

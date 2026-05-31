@@ -5026,6 +5026,49 @@
       "prompt": "dans le menu admin/projets lorsqu'on selectionne une option d'un projet (IA, modification, sauvegarde) et qu'on selectionne une option d'un autre projet cela doit fermé toutes les options des autres projet",
       "startedAt": "2026-05-31T12:25:00.000Z",
       "completedAt": "2026-05-31T12:35:00.000Z"
+    },
+    {
+      "id": "mod-062",
+      "version": "B-0.239",
+      "date": "2026-05-31T12:50:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:conversation-ia",
+      "title": "Conversation IA : popup infos IA du projet (lecture seule)",
+      "description": "Ajout d'un bouton info dans la toolbar de la conversation IA. Ouvre un popup affichant le modèle actif et les instructions système du projet (en lecture seule). Le bouton est violet si des instructions sont configurées, gris sinon.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans le menu/projet/editor/conversation IA ajouté un bouton qui ouvre un popup avec les informations IA lié à ce projet. le texte n'est pas modifiable dans ce popup juste informatif",
+      "startedAt": "2026-05-31T12:40:00.000Z",
+      "completedAt": "2026-05-31T12:50:00.000Z"
+    },
+    {
+      "id": "mod-063",
+      "version": "B-0.240",
+      "date": "2026-05-31T13:05:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:conversation-ia",
+      "title": "Conversation IA : sauvegarde du message utilisateur dans l'historique",
+      "description": "En mode IA Edit (@ia), le message utilisateur était ajouté à l'UI en mémoire mais jamais persisté sur le serveur. Après reload, seule la réponse IA était visible. Fix : appel à convService.sendMessage() après ajout du message user à l'UI, identique à sendChat().",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai créé une conversation avec l'IA qui ma bien répondus, mais je ne vois plus la conversation que j'ai créé uniquement sa réponse, toutes conversation avec l'IA ou les autres conversation classique doivent être enregistré et affiché dans l'historique de conversation",
+      "startedAt": "2026-05-31T12:55:00.000Z",
+      "completedAt": "2026-05-31T13:05:00.000Z"
     }
   ]
 }
