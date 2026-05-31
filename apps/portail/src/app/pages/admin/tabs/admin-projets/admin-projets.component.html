@@ -50,6 +50,52 @@
   </div>
 }
 
+<!-- Modal application d'une instruction IA à un projet -->
+@if (applyingDoc()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-surface rounded-2xl border border-light-border dark:border-white/10 shadow-2xl w-full max-w-md mx-4 p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="material-symbols-outlined text-2xl text-violet-400">auto_awesome</span>
+        <h3 class="font-semibold text-light-text dark:text-white">Appliquer l'instruction au projet</h3>
+      </div>
+      <p class="text-sm text-light-text-muted dark:text-white/60 mb-1">
+        L'instruction <strong class="text-light-text dark:text-white">{{ applyingDoc()!.title }}</strong> sera copiée dans les instructions IA du projet sélectionné.
+      </p>
+      <p class="text-xs text-light-text-muted dark:text-white/40 mb-5">Les instructions existantes du projet seront remplacées.</p>
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Projet cible</label>
+        <select [(ngModel)]="applyTargetProjectId"
+                class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-violet-500 transition-colors dark:[color-scheme:dark]">
+          <option value="">— Choisir un projet —</option>
+          @for (p of projects(); track p.id) {
+            <option [value]="p.id">{{ p.title }}</option>
+          }
+        </select>
+      </div>
+      @if (iaDocsError()) {
+        <div class="mb-3 text-xs text-red-400">{{ iaDocsError() }}</div>
+      }
+      <div class="flex items-center justify-end gap-3">
+        <button class="px-4 py-2 text-sm text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors"
+                (click)="closeApplyDoc()">
+          Annuler
+        </button>
+        <button class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-violet-600 text-white transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-violet-500/20"
+                [disabled]="!applyTargetProjectId || applyingToProject()"
+                (click)="applyDoc()">
+          @if (applyingToProject()) {
+            <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+            Application…
+          } @else {
+            <span class="material-symbols-outlined text-base">download_for_offline</span>
+            Appliquer
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
 @if (loadingProjects()) {
   <div class="flex items-center justify-center py-16">
     <span class="material-symbols-outlined text-3xl text-light-primary dark:text-primary animate-spin">progress_activity</span>
@@ -58,336 +104,507 @@
 
 @if (!loadingProjects()) {
 
-  <!-- Panneau instructions IA -->
-  @if (editingIa()) {
-    <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-violet-500/30 overflow-hidden">
-      <div class="px-5 py-3 bg-violet-500/5 border-b border-violet-500/20 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm text-violet-400">psychology</span>
-          <span class="text-sm font-semibold text-light-text dark:text-white">Instructions IA — {{ editingIa()!.title }}</span>
-        </div>
-        <button (click)="closeEditIa()" class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
-          <span class="material-symbols-outlined text-sm">close</span>
-        </button>
-      </div>
-      <div class="px-5 py-4 space-y-3">
-        <p class="text-xs text-light-text-muted dark:text-white/40 leading-relaxed">
-          Ces instructions seront injectées comme contexte système lors de chaque appel à l'IA pour ce projet.<br>
-          Si renseignées, elles remplacent tout autre contexte (CLAUDE.md, etc.).
-        </p>
-        <textarea [(ngModel)]="editIaInstructions"
-                  rows="8"
-                  placeholder="Ex: Tu es un expert en accessibilité web. Ce projet suit les normes WCAG 2.1 AA. Le code doit être en TypeScript strict. Toujours commenter les fonctions complexes en français…"
-                  class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-violet-500/20 text-light-text dark:text-white text-sm focus:outline-none focus:border-violet-500/60 transition-colors resize-none leading-relaxed font-mono placeholder-light-text-muted/40 dark:placeholder-white/20"></textarea>
-        @if (editIaInstructions.trim()) {
-          <div class="flex items-center gap-1.5 px-0.5">
-            <span class="material-symbols-outlined text-[11px] text-violet-400">check_circle</span>
-            <span class="text-[10px] text-violet-400/70">{{ editIaInstructions.trim().length }} caractères · instructions actives</span>
+  <!-- Barre de sous-onglets -->
+  <div class="flex gap-1 mb-6 p-1 bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 rounded-xl w-fit">
+    <button (click)="switchSubTab('projets')"
+            class="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+            [ngClass]="activeSubTab() === 'projets'
+              ? 'bg-white dark:bg-background text-light-primary dark:text-primary shadow-sm border border-light-border dark:border-white/10'
+              : 'text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white'">
+      <span class="material-symbols-outlined text-base">folder_open</span>
+      Projets
+      @if (projects().length > 0) {
+        <span class="text-[10px] bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary px-1.5 py-0.5 rounded-full font-bold">{{ projects().length }}</span>
+      }
+    </button>
+    <button (click)="switchSubTab('ia-instructions')"
+            class="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+            [ngClass]="activeSubTab() === 'ia-instructions'
+              ? 'bg-white dark:bg-background text-violet-400 shadow-sm border border-violet-500/20'
+              : 'text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white'">
+      <span class="material-symbols-outlined text-base">auto_awesome</span>
+      Instructions IA
+      @if (iaDocuments().length > 0) {
+        <span class="text-[10px] bg-violet-500/10 text-violet-400 px-1.5 py-0.5 rounded-full font-bold">{{ iaDocuments().length }}</span>
+      }
+    </button>
+  </div>
+
+  <!-- ── Onglet Projets ─────────────────────────────────────────── -->
+  @if (activeSubTab() === 'projets') {
+
+    <!-- Panneau instructions IA -->
+    @if (editingIa()) {
+      <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-violet-500/30 overflow-hidden">
+        <div class="px-5 py-3 bg-violet-500/5 border-b border-violet-500/20 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm text-violet-400">psychology</span>
+            <span class="text-sm font-semibold text-light-text dark:text-white">Instructions IA — {{ editingIa()!.title }}</span>
           </div>
-        } @else {
-          <div class="flex items-center gap-1.5 px-0.5">
-            <span class="material-symbols-outlined text-[11px] text-light-text-muted dark:text-white/30">info</span>
-            <span class="text-[10px] text-light-text-muted dark:text-white/30">Vide = pas d'override, le contexte par défaut s'applique</span>
-          </div>
-        }
-      </div>
-      <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
-        <button (click)="closeEditIa()"
-                class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
-          Annuler
-        </button>
-        <button (click)="saveIa()" [disabled]="savingIa()"
-                class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-violet-600 text-white transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-violet-500/20">
-          @if (savingIa()) {
-            <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-          } @else {
-            <span class="material-symbols-outlined text-base">save</span>
-          }
-          Enregistrer
-        </button>
-      </div>
-    </div>
-  }
-
-  <!-- Panneau édition sauvegarde -->
-  @if (editingBackup()) {
-    <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-light-primary/30 dark:border-primary/20 overflow-hidden">
-      <div class="px-5 py-3 bg-light-primary/5 dark:bg-primary/5 border-b border-light-primary/20 dark:border-primary/10 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm text-light-primary dark:text-primary">cloud_upload</span>
-          <span class="text-sm font-semibold text-light-text dark:text-white">Sauvegarde — {{ editingBackup()!.title }}</span>
+          <button (click)="closeEditIa()" class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
         </div>
-        <button (click)="closeEditBackup()" class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
-          <span class="material-symbols-outlined text-sm">close</span>
-        </button>
-      </div>
+        <div class="px-5 py-4 space-y-3">
+          <p class="text-xs text-light-text-muted dark:text-white/40 leading-relaxed">
+            Ces instructions seront injectées comme contexte système lors de chaque appel à l'IA pour ce projet.<br>
+            Si renseignées, elles remplacent tout autre contexte (CLAUDE.md, etc.).
+          </p>
 
-      <div class="px-5 py-4 space-y-4">
-        <!-- Type -->
-        <div>
-          <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Type de sauvegarde</label>
-          <select [(ngModel)]="backupType"
-                  class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors dark:[color-scheme:dark]">
-            <option value="">— Aucun —</option>
-            <option value="github">GitHub</option>
-            <option value="gitlab">GitLab</option>
-            <option value="ftp">FTP</option>
-            <option value="googledrive">Google Drive</option>
-          </select>
-        </div>
-
-        @if (backupType) {
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Serveur/IP/Owner -->
-            <div>
-              <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">
-                {{ backupType === 'ftp' ? 'Serveur / IP' : 'Owner / Email' }}
-              </label>
-              <input type="text" [(ngModel)]="backupServer" placeholder="{{ backupType === 'ftp' ? 'ex: ftp.monsite.com' : 'ex: moncompte' }}"
-                     class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
-            </div>
-
-            <!-- Mot de passe / Token -->
-            <div>
-              <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Mot de passe / Token</label>
-              <input type="password" [(ngModel)]="backupPassword" placeholder="••••••••"
-                     class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
-            </div>
+          <!-- Bouton charger depuis la bibliothèque -->
+          <div class="flex items-center gap-2">
+            <button (click)="showDocPicker.set(!showDocPicker())"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-violet-500/30 bg-violet-500/5 text-violet-400 hover:bg-violet-500/15 transition-all">
+              <span class="material-symbols-outlined text-sm">auto_awesome</span>
+              Charger depuis la bibliothèque
+              <span class="material-symbols-outlined text-xs">{{ showDocPicker() ? 'expand_less' : 'expand_more' }}</span>
+            </button>
           </div>
 
-          <!-- FTP : champs spécifiques -->
-          @if (backupType === 'ftp') {
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Nom d'utilisateur FTP</label>
-                <input type="text" [(ngModel)]="backupUsername" placeholder="ex: user&#64;monsite.com"
-                       class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Port FTP</label>
-                <input type="number" [(ngModel)]="backupPort" placeholder="21"
-                       class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Répertoire</label>
-                <input type="text" [(ngModel)]="backupDirectory" placeholder="ex: /public_html/monsite"
-                       class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
-              </div>
-            </div>
-
-            <!-- Bouton test FTP + résultat -->
-            <div class="flex items-center gap-3 flex-wrap">
-              <button (click)="testFtpConnection()" [disabled]="testingFtp() || !backupServer || !backupUsername || !backupPassword"
-                      class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-light-border dark:border-white/10 bg-light-surface dark:bg-white/5 text-light-text dark:text-white hover:bg-light-primary/5 dark:hover:bg-primary/5 hover:border-light-primary dark:hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                @if (testingFtp()) {
+          <!-- Picker de documents -->
+          @if (showDocPicker()) {
+            <div class="rounded-lg border border-violet-500/20 bg-violet-500/5 overflow-hidden">
+              @if (loadingIaDocs()) {
+                <div class="px-4 py-3 flex items-center gap-2 text-xs text-light-text-muted dark:text-white/40">
                   <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                  Test en cours…
-                } @else {
-                  <span class="material-symbols-outlined text-sm">wifi_tethering</span>
-                  Tester la connexion FTP
-                }
-              </button>
-
-              @if (ftpTestResult()) {
-                <div class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium"
-                     [ngClass]="ftpTestResult()!.success
-                       ? 'bg-green-500/10 border border-green-500/20 text-green-500'
-                       : 'bg-red-500/10 border border-red-500/20 text-red-400'">
-                  <span class="material-symbols-outlined text-sm">{{ ftpTestResult()!.success ? 'check_circle' : 'error' }}</span>
-                  <span>{{ ftpTestResult()!.message }}</span>
-                  @if (ftpTestResult()!.success && ftpTestResult()!.directory) {
-                    <span class="text-green-400/70">
-                      — Répertoire :
-                      @if (ftpTestResult()!.directory!.accessible) {
-                        {{ ftpTestResult()!.directory!.files }} fichier(s)
-                      } @else {
-                        inaccessible ({{ ftpTestResult()!.directory!.error }})
+                  Chargement…
+                </div>
+              } @else if (iaDocuments().length === 0) {
+                <div class="px-4 py-3 text-xs text-light-text-muted dark:text-white/40 italic">
+                  Aucun modèle — créez-en dans Documents (catégorie "Instructions IA")
+                </div>
+              } @else {
+                <div class="max-h-48 overflow-y-auto">
+                  @for (doc of iaDocuments(); track doc.id) {
+                    <button (click)="loadDocIntoIa(doc)"
+                            class="w-full text-left px-4 py-2.5 border-b border-violet-500/10 last:border-0 hover:bg-violet-500/10 transition-colors">
+                      <div class="text-xs font-semibold text-light-text dark:text-white">{{ doc.title }}</div>
+                      @if (doc.description) {
+                        <div class="text-[11px] text-light-text-muted dark:text-white/40 mt-0.5">{{ doc.description }}</div>
                       }
-                    </span>
+                    </button>
                   }
                 </div>
               }
             </div>
           }
 
-          <!-- GitHub / GitLab : ownerType, repoName, visibility -->
-          @if (backupType === 'github' || backupType === 'gitlab') {
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <textarea [(ngModel)]="editIaInstructions"
+                    rows="8"
+                    placeholder="Ex: Tu es un expert en accessibilité web. Ce projet suit les normes WCAG 2.1 AA. Le code doit être en TypeScript strict. Toujours commenter les fonctions complexes en français…"
+                    class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-violet-500/20 text-light-text dark:text-white text-sm focus:outline-none focus:border-violet-500/60 transition-colors resize-none leading-relaxed font-mono placeholder-light-text-muted/40 dark:placeholder-white/20"></textarea>
+          @if (editIaInstructions.trim()) {
+            <div class="flex items-center gap-1.5 px-0.5">
+              <span class="material-symbols-outlined text-[11px] text-violet-400">check_circle</span>
+              <span class="text-[10px] text-violet-400/70">{{ editIaInstructions.trim().length }} caractères · instructions actives</span>
+            </div>
+          } @else {
+            <div class="flex items-center gap-1.5 px-0.5">
+              <span class="material-symbols-outlined text-[11px] text-light-text-muted dark:text-white/30">info</span>
+              <span class="text-[10px] text-light-text-muted dark:text-white/30">Vide = pas d'override, le contexte par défaut s'applique</span>
+            </div>
+          }
+        </div>
+        <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
+          <button (click)="closeEditIa()"
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+            Annuler
+          </button>
+          <button (click)="saveIa()" [disabled]="savingIa()"
+                  class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-violet-600 text-white transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-violet-500/20">
+            @if (savingIa()) {
+              <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+            } @else {
+              <span class="material-symbols-outlined text-base">save</span>
+            }
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Panneau édition sauvegarde -->
+    @if (editingBackup()) {
+      <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-light-primary/30 dark:border-primary/20 overflow-hidden">
+        <div class="px-5 py-3 bg-light-primary/5 dark:bg-primary/5 border-b border-light-primary/20 dark:border-primary/10 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm text-light-primary dark:text-primary">cloud_upload</span>
+            <span class="text-sm font-semibold text-light-text dark:text-white">Sauvegarde — {{ editingBackup()!.title }}</span>
+          </div>
+          <button (click)="closeEditBackup()" class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+
+        <div class="px-5 py-4 space-y-4">
+          <!-- Type -->
+          <div>
+            <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Type de sauvegarde</label>
+            <select [(ngModel)]="backupType"
+                    class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors dark:[color-scheme:dark]">
+              <option value="">— Aucun —</option>
+              <option value="github">GitHub</option>
+              <option value="gitlab">GitLab</option>
+              <option value="ftp">FTP</option>
+              <option value="googledrive">Google Drive</option>
+            </select>
+          </div>
+
+          @if (backupType) {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Serveur/IP/Owner -->
               <div>
-                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Owner Type</label>
-                <input type="text" [(ngModel)]="backupOwnerType" placeholder="ex: user ou org"
+                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">
+                  {{ backupType === 'ftp' ? 'Serveur / IP' : 'Owner / Email' }}
+                </label>
+                <input type="text" [(ngModel)]="backupServer" placeholder="{{ backupType === 'ftp' ? 'ex: ftp.monsite.com' : 'ex: moncompte' }}"
                        class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
               </div>
+
+              <!-- Mot de passe / Token -->
               <div>
-                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Nom du repo</label>
-                <input type="text" [(ngModel)]="backupRepoName" placeholder="ex: mon-projet"
-                       class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Visibilité</label>
-                <input type="text" [(ngModel)]="backupVisibility" placeholder="ex: public ou private"
+                <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Mot de passe / Token</label>
+                <input type="password" [(ngModel)]="backupPassword" placeholder="••••••••"
                        class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
               </div>
             </div>
+
+            <!-- FTP : champs spécifiques -->
+            @if (backupType === 'ftp') {
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Nom d'utilisateur FTP</label>
+                  <input type="text" [(ngModel)]="backupUsername" placeholder="ex: user&#64;monsite.com"
+                         class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Port FTP</label>
+                  <input type="number" [(ngModel)]="backupPort" placeholder="21"
+                         class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Répertoire</label>
+                  <input type="text" [(ngModel)]="backupDirectory" placeholder="ex: /public_html/monsite"
+                         class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+                </div>
+              </div>
+
+              <!-- Bouton test FTP + résultat -->
+              <div class="flex items-center gap-3 flex-wrap">
+                <button (click)="testFtpConnection()" [disabled]="testingFtp() || !backupServer || !backupUsername || !backupPassword"
+                        class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-light-border dark:border-white/10 bg-light-surface dark:bg-white/5 text-light-text dark:text-white hover:bg-light-primary/5 dark:hover:bg-primary/5 hover:border-light-primary dark:hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                  @if (testingFtp()) {
+                    <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                    Test en cours…
+                  } @else {
+                    <span class="material-symbols-outlined text-sm">wifi_tethering</span>
+                    Tester la connexion FTP
+                  }
+                </button>
+
+                @if (ftpTestResult()) {
+                  <div class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium"
+                       [ngClass]="ftpTestResult()!.success
+                         ? 'bg-green-500/10 border border-green-500/20 text-green-500'
+                         : 'bg-red-500/10 border border-red-500/20 text-red-400'">
+                    <span class="material-symbols-outlined text-sm">{{ ftpTestResult()!.success ? 'check_circle' : 'error' }}</span>
+                    <span>{{ ftpTestResult()!.message }}</span>
+                    @if (ftpTestResult()!.success && ftpTestResult()!.directory) {
+                      <span class="text-green-400/70">
+                        — Répertoire :
+                        @if (ftpTestResult()!.directory!.accessible) {
+                          {{ ftpTestResult()!.directory!.files }} fichier(s)
+                        } @else {
+                          inaccessible ({{ ftpTestResult()!.directory!.error }})
+                        }
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- GitHub / GitLab : ownerType, repoName, visibility -->
+            @if (backupType === 'github' || backupType === 'gitlab') {
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Owner Type</label>
+                  <input type="text" [(ngModel)]="backupOwnerType" placeholder="ex: user ou org"
+                         class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Nom du repo</label>
+                  <input type="text" [(ngModel)]="backupRepoName" placeholder="ex: mon-projet"
+                         class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Visibilité</label>
+                  <input type="text" [(ngModel)]="backupVisibility" placeholder="ex: public ou private"
+                         class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+                </div>
+              </div>
+            }
           }
+        </div>
+
+        <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
+          <button (click)="closeEditBackup()"
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+            Annuler
+          </button>
+          <button (click)="saveBackup()" [disabled]="savingBackup()"
+                  class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-light-primary dark:bg-primary text-white dark:text-btn-text transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-light-primary/20 dark:shadow-primary/20">
+            @if (savingBackup()) {
+              <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+            } @else {
+              <span class="material-symbols-outlined text-base">save</span>
+            }
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Formulaire édition projet -->
+    @if (editingProject()) {
+      <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-light-primary/30 dark:border-primary/20 overflow-hidden">
+        <div class="px-5 py-3 bg-light-primary/5 dark:bg-primary/5 border-b border-light-primary/20 dark:border-primary/10 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm text-light-primary dark:text-primary">edit</span>
+            <span class="text-sm font-semibold text-light-text dark:text-white">Modifier le projet</span>
+            <span class="text-xs text-light-text-muted dark:text-white/40 font-mono">{{ editingProject()!.id | slice:0:8 }}</span>
+          </div>
+          <button (click)="closeEditProject()" class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+        <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Titre</label>
+            <input type="text" [(ngModel)]="editTitle"
+                   class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Statut</label>
+            <select [(ngModel)]="editStatus"
+                    class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors dark:[color-scheme:dark]">
+              <option value="draft">Brouillon</option>
+              <option value="published">Publié</option>
+            </select>
+          </div>
+        </div>
+        <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
+          <button (click)="closeEditProject()"
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+            Annuler
+          </button>
+          <button (click)="saveProject()" [disabled]="savingProject()"
+                  class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-light-primary dark:bg-primary text-white dark:text-btn-text transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-light-primary/20 dark:shadow-primary/20">
+            @if (savingProject()) {
+              <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+            } @else {
+              <span class="material-symbols-outlined text-base">save</span>
+            }
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Tableau projets -->
+    <div class="bg-white dark:bg-surface rounded-xl border border-light-border dark:border-white/10 overflow-hidden">
+      <div class="px-5 py-3 border-b border-light-border dark:border-white/10 flex items-center justify-between">
+        <span class="text-sm font-semibold text-light-text dark:text-white">Tous les projets</span>
+        <button (click)="loadProjects()"
+                class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all" title="Rafraîchir">
+          <span class="material-symbols-outlined text-sm">refresh</span>
+        </button>
+      </div>
+
+      @if (projects().length === 0) {
+        <div class="text-center py-12 text-light-text-muted dark:text-white/40 text-sm">Aucun projet</div>
+      }
+
+      @if (projects().length > 0) {
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-light-border dark:border-white/10 text-[11px] uppercase tracking-wider text-light-text-muted dark:text-white/30">
+                <th class="text-left px-5 py-3">Titre</th>
+                <th class="text-left px-5 py-3">Auteur</th>
+                <th class="text-left px-5 py-3">Statut</th>
+                <th class="text-left px-5 py-3">Modifié</th>
+                <th class="text-right px-5 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (project of projects(); track project.id) {
+                <tr class="border-b border-light-border/50 dark:border-white/5 transition-colors"
+                    [class]="editingProject()?.id === project.id
+                      ? 'bg-light-primary/5 dark:bg-primary/5'
+                      : 'hover:bg-light-primary/5 dark:hover:bg-primary/5'">
+                  <td class="px-5 py-3">
+                    <span class="font-medium text-light-text dark:text-white">{{ project.title }}</span>
+                    <span class="ml-2 text-[10px] font-mono text-light-text-muted/50 dark:text-white/20">{{ project.id | slice:0:8 }}</span>
+                  </td>
+                  <td class="px-5 py-3 text-light-text-muted dark:text-white/50">{{ project._ownerUsername || '—' }}</td>
+                  <td class="px-5 py-3">
+                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          [class]="project.status === 'published'
+                            ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                            : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'">
+                      {{ statusLabel(project.status) }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3 text-light-text-muted dark:text-white/40 text-xs">{{ formatDate(project.updatedAt) }}</td>
+                  <td class="px-5 py-3">
+                    <div class="flex items-center gap-1 justify-end">
+                      <button (click)="openProject(project.id)"
+                              class="p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all" title="Ouvrir">
+                        <span class="material-symbols-outlined text-sm">open_in_new</span>
+                      </button>
+                      <button (click)="openEditProject(project)"
+                              class="p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all" title="Modifier">
+                        <span class="material-symbols-outlined text-sm">edit</span>
+                      </button>
+                      <button (click)="openEditIa(project)"
+                              [ngClass]="project.iaInstructions
+                                ? 'p-1.5 rounded-lg text-violet-400 hover:bg-violet-500/10 transition-all'
+                                : 'p-1.5 rounded-lg hover:bg-violet-500/10 text-light-text-muted dark:text-white/40 hover:text-violet-400 transition-all'"
+                              title="{{ project.iaInstructions ? 'Instructions IA actives' : 'Configurer instructions IA' }}">
+                        <span class="material-symbols-outlined text-sm">psychology</span>
+                      </button>
+                      <button (click)="openEditBackup(project)"
+                              [ngClass]="project.backupType
+                                ? 'p-1.5 rounded-lg text-light-primary dark:text-primary hover:bg-light-primary/10 dark:hover:bg-primary/10 transition-all'
+                                : 'p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all'"
+                              title="{{ project.backupType ? 'Sauvegarde : ' + backupTypeLabel(project.backupType) : 'Configurer sauvegarde' }}">
+                        <span class="material-symbols-outlined text-sm">cloud_upload</span>
+                      </button>
+                      @if (deletingProjectId() === project.id) {
+                        <div class="flex items-center gap-1">
+                          <span class="text-xs text-red-400">Confirmer ?</span>
+                          <button (click)="deleteProject(project.id)"
+                                  class="px-2 py-1 rounded text-xs font-bold bg-red-500 text-white hover:bg-red-600 transition-all">Oui</button>
+                          <button (click)="cancelDeleteProject()"
+                                  class="px-2 py-1 rounded text-xs font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 transition-all">Non</button>
+                        </div>
+                      } @else {
+                        <button (click)="confirmDeleteProject(project.id)"
+                                class="p-1.5 rounded-lg hover:bg-red-500/10 text-light-text-muted dark:text-white/40 hover:text-red-400 transition-all" title="Supprimer">
+                          <span class="material-symbols-outlined text-sm">delete</span>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+  }
+
+  <!-- ── Onglet Instructions IA ─────────────────────────────────── -->
+  @if (activeSubTab() === 'ia-instructions') {
+
+    @if (iaDocsError()) {
+      <div class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{{ iaDocsError() }}</div>
+    }
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-violet-400">auto_awesome</span>
+        <h2 class="text-sm font-semibold text-light-text dark:text-white">Bibliothèque d'instructions IA</h2>
+        @if (iaCategory()) {
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+            catégorie "Instructions IA" · Documents
+          </span>
         }
       </div>
-
-      <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
-        <button (click)="closeEditBackup()"
-                class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
-          Annuler
-        </button>
-        <button (click)="saveBackup()" [disabled]="savingBackup()"
-                class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-light-primary dark:bg-primary text-white dark:text-btn-text transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-light-primary/20 dark:shadow-primary/20">
-          @if (savingBackup()) {
-            <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-          } @else {
-            <span class="material-symbols-outlined text-base">save</span>
-          }
-          Enregistrer
-        </button>
-      </div>
-    </div>
-  }
-
-  <!-- Formulaire édition projet -->
-  @if (editingProject()) {
-    <div class="mb-4 bg-white dark:bg-surface rounded-xl border border-light-primary/30 dark:border-primary/20 overflow-hidden">
-      <div class="px-5 py-3 bg-light-primary/5 dark:bg-primary/5 border-b border-light-primary/20 dark:border-primary/10 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm text-light-primary dark:text-primary">edit</span>
-          <span class="text-sm font-semibold text-light-text dark:text-white">Modifier le projet</span>
-          <span class="text-xs text-light-text-muted dark:text-white/40 font-mono">{{ editingProject()!.id | slice:0:8 }}</span>
-        </div>
-        <button (click)="closeEditProject()" class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
-          <span class="material-symbols-outlined text-sm">close</span>
-        </button>
-      </div>
-      <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Titre</label>
-          <input type="text" [(ngModel)]="editTitle"
-                 class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors" />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-light-text-muted dark:text-white/50 mb-1.5 uppercase tracking-wider">Statut</label>
-          <select [(ngModel)]="editStatus"
-                  class="w-full px-3 py-2.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white text-sm focus:outline-none focus:border-light-primary dark:focus:border-primary transition-colors dark:[color-scheme:dark]">
-            <option value="draft">Brouillon</option>
-            <option value="published">Publié</option>
-          </select>
-        </div>
-      </div>
-      <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end gap-3">
-        <button (click)="closeEditProject()"
-                class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
-          Annuler
-        </button>
-        <button (click)="saveProject()" [disabled]="savingProject()"
-                class="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-light-primary dark:bg-primary text-white dark:text-btn-text transition-all hover:scale-105 disabled:opacity-50 shadow-sm shadow-light-primary/20 dark:shadow-primary/20">
-          @if (savingProject()) {
-            <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-          } @else {
-            <span class="material-symbols-outlined text-base">save</span>
-          }
-          Enregistrer
-        </button>
-      </div>
-    </div>
-  }
-
-  <!-- Tableau projets -->
-  <div class="bg-white dark:bg-surface rounded-xl border border-light-border dark:border-white/10 overflow-hidden">
-    <div class="px-5 py-3 border-b border-light-border dark:border-white/10 flex items-center justify-between">
-      <span class="text-sm font-semibold text-light-text dark:text-white">Tous les projets</span>
-      <button (click)="loadProjects()"
-              class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all" title="Rafraîchir">
-        <span class="material-symbols-outlined text-sm">refresh</span>
+      <button (click)="goToDocuments()"
+              class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border border-light-border dark:border-white/10 bg-light-surface dark:bg-white/5 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:border-violet-500/30 transition-all">
+        <span class="material-symbols-outlined text-sm">open_in_new</span>
+        Gérer dans Documents
       </button>
     </div>
 
-    @if (projects().length === 0) {
-      <div class="text-center py-12 text-light-text-muted dark:text-white/40 text-sm">Aucun projet</div>
-    }
-
-    @if (projects().length > 0) {
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-light-border dark:border-white/10 text-[11px] uppercase tracking-wider text-light-text-muted dark:text-white/30">
-              <th class="text-left px-5 py-3">Titre</th>
-              <th class="text-left px-5 py-3">Auteur</th>
-              <th class="text-left px-5 py-3">Statut</th>
-              <th class="text-left px-5 py-3">Modifié</th>
-              <th class="text-right px-5 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (project of projects(); track project.id) {
-              <tr class="border-b border-light-border/50 dark:border-white/5 transition-colors"
-                  [class]="editingProject()?.id === project.id
-                    ? 'bg-light-primary/5 dark:bg-primary/5'
-                    : 'hover:bg-light-primary/5 dark:hover:bg-primary/5'">
-                <td class="px-5 py-3">
-                  <span class="font-medium text-light-text dark:text-white">{{ project.title }}</span>
-                  <span class="ml-2 text-[10px] font-mono text-light-text-muted/50 dark:text-white/20">{{ project.id | slice:0:8 }}</span>
-                </td>
-                <td class="px-5 py-3 text-light-text-muted dark:text-white/50">{{ project._ownerUsername || '—' }}</td>
-                <td class="px-5 py-3">
-                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                        [class]="project.status === 'published'
-                          ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                          : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'">
-                    {{ statusLabel(project.status) }}
-                  </span>
-                </td>
-                <td class="px-5 py-3 text-light-text-muted dark:text-white/40 text-xs">{{ formatDate(project.updatedAt) }}</td>
-                <td class="px-5 py-3">
-                  <div class="flex items-center gap-1 justify-end">
-                    <button (click)="openProject(project.id)"
-                            class="p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all" title="Ouvrir">
-                      <span class="material-symbols-outlined text-sm">open_in_new</span>
-                    </button>
-                    <button (click)="openEditProject(project)"
-                            class="p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all" title="Modifier">
-                      <span class="material-symbols-outlined text-sm">edit</span>
-                    </button>
-                    <button (click)="openEditIa(project)"
-                            [ngClass]="project.iaInstructions
-                              ? 'p-1.5 rounded-lg text-violet-400 hover:bg-violet-500/10 transition-all'
-                              : 'p-1.5 rounded-lg hover:bg-violet-500/10 text-light-text-muted dark:text-white/40 hover:text-violet-400 transition-all'"
-                            title="{{ project.iaInstructions ? 'Instructions IA actives' : 'Configurer instructions IA' }}">
-                      <span class="material-symbols-outlined text-sm">psychology</span>
-                    </button>
-                    <button (click)="openEditBackup(project)"
-                            [ngClass]="project.backupType
-                              ? 'p-1.5 rounded-lg text-light-primary dark:text-primary hover:bg-light-primary/10 dark:hover:bg-primary/10 transition-all'
-                              : 'p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all'"
-                            title="{{ project.backupType ? 'Sauvegarde : ' + backupTypeLabel(project.backupType) : 'Configurer sauvegarde' }}">
-                      <span class="material-symbols-outlined text-sm">cloud_upload</span>
-                    </button>
-                    @if (deletingProjectId() === project.id) {
-                      <div class="flex items-center gap-1">
-                        <span class="text-xs text-red-400">Confirmer ?</span>
-                        <button (click)="deleteProject(project.id)"
-                                class="px-2 py-1 rounded text-xs font-bold bg-red-500 text-white hover:bg-red-600 transition-all">Oui</button>
-                        <button (click)="cancelDeleteProject()"
-                                class="px-2 py-1 rounded text-xs font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 transition-all">Non</button>
-                      </div>
-                    } @else {
-                      <button (click)="confirmDeleteProject(project.id)"
-                              class="p-1.5 rounded-lg hover:bg-red-500/10 text-light-text-muted dark:text-white/40 hover:text-red-400 transition-all" title="Supprimer">
-                        <span class="material-symbols-outlined text-sm">delete</span>
-                      </button>
-                    }
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+    <!-- Chargement -->
+    @if (loadingIaDocs()) {
+      <div class="flex items-center justify-center py-16">
+        <span class="material-symbols-outlined text-3xl text-violet-400 animate-spin">progress_activity</span>
       </div>
     }
-  </div>
+
+    <!-- État vide -->
+    @if (!loadingIaDocs() && iaDocuments().length === 0) {
+      <div class="bg-white dark:bg-surface rounded-xl border border-light-border dark:border-white/10 p-10 text-center">
+        <span class="material-symbols-outlined text-4xl text-violet-400/40 mb-3 block">auto_awesome</span>
+        <p class="text-sm font-semibold text-light-text dark:text-white mb-1">Aucune instruction IA enregistrée</p>
+        <p class="text-xs text-light-text-muted dark:text-white/40 mb-4">
+          Créez des instructions dans la page Documents, dans la catégorie <strong>"Instructions IA"</strong>.<br>
+          Elles apparaîtront ici et pourront être appliquées à vos projets.
+        </p>
+        <button (click)="goToDocuments()"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold bg-violet-600 text-white hover:scale-105 transition-all shadow-sm shadow-violet-500/20">
+          <span class="material-symbols-outlined text-base">description</span>
+          Aller dans Documents
+        </button>
+      </div>
+    }
+
+    <!-- Liste des instructions -->
+    @if (!loadingIaDocs() && iaDocuments().length > 0) {
+      <div class="bg-white dark:bg-surface rounded-xl border border-light-border dark:border-white/10 overflow-hidden">
+        <div class="px-5 py-3 border-b border-light-border dark:border-white/10 flex items-center justify-between">
+          <span class="text-sm font-semibold text-light-text dark:text-white">
+            {{ iaDocuments().length }} instruction{{ iaDocuments().length > 1 ? 's' : '' }}
+          </span>
+          <button (click)="loadIaDocuments()"
+                  class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all" title="Rafraîchir">
+            <span class="material-symbols-outlined text-sm">refresh</span>
+          </button>
+        </div>
+        <div class="divide-y divide-light-border/50 dark:divide-white/5">
+          @for (doc of iaDocuments(); track doc.id) {
+            <div class="px-5 py-4 hover:bg-light-primary/5 dark:hover:bg-violet-500/5 transition-colors">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-sm font-semibold text-light-text dark:text-white">{{ doc.title }}</span>
+                    @if (doc.isPublic) {
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20">Public</span>
+                    } @else {
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-light-surface dark:bg-white/5 text-light-text-muted dark:text-white/40 border border-light-border dark:border-white/10">Privé</span>
+                    }
+                  </div>
+                  @if (doc.description) {
+                    <p class="text-xs text-light-text-muted dark:text-white/50 mb-2">{{ doc.description }}</p>
+                  }
+                  @if (doc.text) {
+                    <p class="text-xs text-light-text-muted dark:text-white/30 font-mono leading-relaxed line-clamp-2">{{ doc.text.slice(0, 120) }}{{ doc.text.length > 120 ? '…' : '' }}</p>
+                  }
+                  <div class="mt-1.5 text-[10px] text-light-text-muted dark:text-white/25">
+                    Créé le {{ formatDate(doc.createdAt) }} par {{ doc.createdByUsername }}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <button (click)="openApplyDoc(doc)"
+                          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600 text-white hover:scale-105 transition-all shadow-sm shadow-violet-500/20">
+                    <span class="material-symbols-outlined text-sm">download_for_offline</span>
+                    Appliquer à un projet
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+  }
+
 }

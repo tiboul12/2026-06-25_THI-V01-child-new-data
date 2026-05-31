@@ -6,11 +6,15 @@
       "date": "2026-05-30T23:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "portail:editor",
       "title": "Fix CORS executor : ajout port 4203 (app projets)",
       "description": "Le port 4203 (app projets NX) n'était pas dans la liste CORS de l'executor (port 3002). Les appels IA depuis l'éditeur de projets étaient bloqués par le navigateur avec 'Failed to fetch'. Ajout de http://localhost:4203 et http://127.0.0.1:4203 dans la liste d'origines autorisées.",
-      "files": ["electron/executor/server-executor.js"],
+      "files": [
+        "electron/executor/server-executor.js"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "j'ai toujours la même erreur [Failed to fetch] - cela ne fonctionne pas car il m'indique Erreur : Clé API Claude non configurée alors que l'option choisi sont les AI cli et non les api key",
@@ -23,7 +27,10 @@
       "date": "2026-05-30T22:20:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server"],
+      "scope": [
+        "portail",
+        "server"
+      ],
       "features": "portail:editor,server:ai",
       "title": "Éditeur IA : fallback API directe si executor Electron non disponible",
       "description": "Quand l'executor Electron (port 3002) n'est pas joignable, l'éditeur tombe en fallback sur une route /api/ai/execute-file-prompt du serveur principal (port 3001). Cette route utilise la clé API Claude/Gemini stockée dans le userConfig en DB pour appeler l'API Anthropic ou Google directement avec streaming SSE. Le SDK @anthropic-ai/sdk est installé. Le service Angular ProjetAiEditService essaie d'abord l'executor, puis le serveur.",
@@ -44,7 +51,10 @@
       "date": "2026-05-30T22:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["portail", "server"],
+      "scope": [
+        "portail",
+        "server"
+      ],
       "features": "portail:admin-config",
       "title": "Fix Config IA : toggles per-user + Save inclut headerIaVisible/apiKeysEnabled/cliIaEnabled",
       "description": "Correction du bug où les toggles IA (Zone header, Clés API, Outils CLI) n'étaient pas sauvegardés par utilisateur. 1) Les getters du composant utilisaient les mauvais signaux (tchatIaEnabled/ticketsEnabled au lieu de cliIaEnabled/apiKeysEnabled). 2) saveKeys() n'incluait pas ces 3 valeurs dans le payload. 3) Le serveur les stockait en globalConf (partagé) au lieu de userConfig (par user). Maintenant : toggles locaux sans appel HTTP immédiat, sauvegarde via bouton Enregistrer, stockage en DB par utilisateur.",
@@ -65,11 +75,15 @@
       "date": "2026-05-30T21:45:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail"],
+      "scope": [
+        "portail"
+      ],
       "features": "portail:admin-config",
       "title": "Admin Config : sous-sections IA inline sous leurs toggles + bouton Save IA",
       "description": "Dans la page Config, la section Intelligence Artificielle est restructurée en une seule carte : la zone Clés API apparaît directement sous le toggle Clés API, la zone CLI IA apparaît directement sous le toggle Outils CLI. Un bouton Sauvegarder est ajouté en bas de la carte IA. L'ancien découpage en sections séparées est supprimé.",
-      "files": ["apps/portail/src/app/pages/user/config/config.component.html"],
+      "files": [
+        "apps/portail/src/app/pages/user/config/config.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "Ajoute le bouton sauvegardé dans la zone Intelligence Artificielle et met la zone Clés API juste en dessous de Intelligence Artificielle/Clés API (Gemini / Claude) et la zone CLI IA juste en dessous de Intelligence Artificielle/Outils CLI (Gemini CLI / Claude Code); ces zone sont affiché si elle sont selectionné comme actuellement",
@@ -82,11 +96,15 @@
       "date": "2026-05-30T21:37:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["portail"],
+      "scope": [
+        "portail"
+      ],
       "features": "portail:admin-config",
       "title": "Fix compilation : </section> manquante dans admin/config",
       "description": "Correction de l'erreur NG5002 (balise div inattendue) causée par la </section> manquante pour la section IA dans config.component.html. La séparation Général / Intelligence Artificielle était incomplète — la section IA (ligne 109) n'était pas fermée avant le </div> du wrapper principal.",
-      "files": ["apps/portail/src/app/pages/user/config/config.component.html"],
+      "files": [
+        "apps/portail/src/app/pages/user/config/config.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "la dernière demande était : Dans admin/config sépare les données lié à des IA et les autres données et actuellement il y a des erreurs surement du car le boulot n'est pas fini",
@@ -99,11 +117,15 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail"],
+      "scope": [
+        "portail"
+      ],
       "features": "portail:admin-tests",
       "title": "Runner : détail de chaque fonction expandable pendant le test",
       "description": "Dans la vue Runner, chaque fonction affiche maintenant un chevron cliquable pour voir le détail complet (bullet points, descriptions) de ce qu'il faut tester. Le contenu s'affiche en dessous du titre, avec rendu HTML simplifié (gras, listes, code inline).",
-      "files": ["apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"],
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "lorsque je lance un test je n'ai pas le détails du tests à effectué juste l'id et le titre, il faut affiché le détails pour pouvoir effectué le test",
@@ -116,7 +138,10 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server"],
+      "scope": [
+        "portail",
+        "server"
+      ],
       "features": "portail:admin-tests",
       "title": "Référentiel fonctions : arbre collapsible + contenu détail par fonction",
       "description": "Amélioration du référentiel de fonctions dans Admin Tests : (1) parseFonctionsMd côté serveur capture maintenant le contenu markdown complet sous chaque ## heading (nettoyé des séparateurs). (2) Chaque fonction dans l'arbre est expandable pour voir son contenu détaillé (bullet points, gras, code inline). (3) Fix HTML invalide : button imbriqué dans button remplacé par div+span cliquable. (4) Signal expandedItemIds pour l'état d'expansion par item. (5) renderContent() convertit markdown basique en HTML sécurisé. (6) Fix collapseAll vide le Set completement. (7) IDs des dossiers à gauche des titres, compteur entre parenthèses.",
@@ -137,7 +162,9 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail"],
+      "scope": [
+        "portail"
+      ],
       "features": "portail:admin-tests",
       "title": "Admin Tests : référentiel de fonctions hiérarchique collapsible",
       "description": "Ajout d'une section 'Référentiel de fonctions' dans le dashboard de l'onglet Tests. Affiche l'arborescence complète (dossiers + fonctions) dérivée des fichiers fonctions.md. Collapsible par défaut, ouverture nœud par nœud. Boutons 'Tout ouvrir' / 'Tout fermer'. Chaque nœud dossier affiche son ID de registre, chaque fonction affiche son ID cliquable (copie presse-papiers). Scroll interne limité à 60vh.",
@@ -157,7 +184,12 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server", "system", "data"],
+      "scope": [
+        "portail",
+        "server",
+        "system",
+        "data"
+      ],
       "features": "portail:admin-tests,system:tests-fonctions",
       "title": "Admin › onglet Tests : sessions de test manuels + IDs hiérarchiques",
       "description": "Nouveau module de validation fonctionnelle. 1) IDs hiérarchiques uniques ajoutés sur tous les ## headings des 20 fichiers tests/fonctions/ (format `2-5-2-3-4`) + fichier registre _registry.json. 2) Onglet 'Tests' dans l'admin (AdminTestsComponent) : dashboard avec topKo, runner OK/KO/ND avec auto-save, vue détail avec filtre. Les IDs sont affichés comme badges cliquables (copie presse-papiers) pour référencer une fonction vers une IA. 3) Endpoints server /api/admin/tests/* : scan récursif fonctions.md, gestion des runs JSON. 4) Règles CLAUDE.md : mise à jour fonctions.md + attribution IDs.",
@@ -202,7 +234,9 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-code,projets:editor-structure,projets:editor-visu",
       "title": "Barre Annuler/Partager persistante entre modes quand des modifs Code sont en attente",
       "description": "Quand une section est modifiée en mode Code et que l'utilisateur bascule en Structure ou Preview sans avoir publié/annulé, la barre 'Modifications Code en attente' s'affiche dans ces autres modes. Le bouton Annuler restaure le contenu original depuis codeSectionSnapshots (snapshot pris avant le premier keystroke). Le bouton Partager publie les sections pending vers le serveur distant (FTP/Git). Le getter showCrossModePendingBar lit collab.localPendingSections() filtré des locks structure. publishCodeEdit et cancelCodeEdit ont chacun une branche cross-mode (pas de focusedHandle, pas de activeEntityLocks).",
@@ -222,7 +256,9 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-code,projets:editor-visu,projets:editor-structure",
       "title": "Partager disponible en vue document pour les projets backup + pas de lock sur projets locaux",
       "description": "Deux corrections liées au partage : (1) La barre Annuler/Partager mode Code n'apparaissait qu'en mode focus (section sélectionnée). En vue document complet (racine) d'un projet avec sauvegarde externe, l'édition créait des locks/pending sans aucune UI pour publier → impossible de pousser vers le serveur distant. Ajout d'un getter showCodePublishBar + snapshot document (codeDocSnapshot) + généralisation de publishCodeEdit/cancelCodeEdit au cas sans focus. (2) Les projets SANS sauvegarde externe créaient quand même des locks/pending (Code, Preview, Structure, upload/suppression d'images) qui ne se nettoyaient plus depuis le masquage de la barre (mod-258). Ces états collab/partage sont désormais réservés aux projets backup ; les projets locaux s'auto-sauvegardent sans verrou ni état 'en attente'.",
@@ -242,11 +278,15 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-code,projets:editor-structure,projets:editor-visu",
       "title": "Barres Annuler/Partager masquées pour les projets locaux sans backup",
       "description": "Les barres Annuler/Partager (modes Code, Structure et Preview) s'affichaient aussi pour les projets sans sauvegarde externe. Correction : ajout de la condition backupType sur les 3 barres — elles ne s'affichent que si le projet a un backend FTP, GitHub ou GitLab. Pour les projets locaux, la sauvegarde automatique suffit.",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "Attention cette validation de modification doit être appliqué uniquement pour les projets qui on un système de sauvegarde lié comme ftp github ou gitlab, pour les projets uniquement local cette fonction ne doit pas être mis en place (et affiché) uniquement l'information de Sauvegarde (dans le fichier local).",
@@ -259,11 +299,15 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-visu",
       "title": "Fix barre Annuler/Partager masquée dans les projets FTP",
       "description": "En mode Preview, la condition contenteditable bloquait l'édition des sections pendant la synchronisation FTP initiale (statut 'unknown'), ce qui empêchait onVisuSectionFocus d'être appelé et donc editingVisuSectionId de s'activer. La barre Annuler/Partager n'apparaissait jamais. Correction : suppression du blocage FTP sur contenteditable en mode visu. Le badge de sync reste affiché à titre indicatif mais n'empêche plus l'édition.",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "je suis dans un projet avec sauvegarde FTP et lorsque je sélectionne une section et que je la modifie je ne vois plus les bouton annule et Partage. Cette fonction doit toujours être disponible pour les projets avec sauvegarde externe.",
@@ -276,7 +320,9 @@
       "date": "2026-05-30T04:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Zone 5 : bouton réduire/rouvrir le volet conversation/historique",
       "description": "Ajout d'un bouton chevron dans l'onglet de la zone 5 pour réduire le volet à 30px. Le volet réduit affiche un bouton pour le rouvrir et un label vertical (Conv./Hist.). Signal zone5Collapsed géré localement.",
@@ -296,11 +342,15 @@
       "date": "2026-05-30T04:10:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Fix barre de progression sync FTP : display block sur les spans",
       "description": "Les spans inline ignorent width/height en CSS. Ajout de 'block' sur le conteneur et le fill de la barre de progression — la largeur du fill s'applique maintenant correctement.",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "je ne vois toujours pas la progression en live",
@@ -313,11 +363,15 @@
       "date": "2026-05-30T04:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Fix barre de progression sync FTP : largeur et visibilité",
       "description": "Remplacement de [style.width.%] (pouvait retourner NaN%) par [style.width] avec valeur string explicite. Barre élargie (w-24, h-1.5), fond plus contrasté (bg-white/10), transition plus douce (500ms ease-out).",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "la progress bar de la synchro des fichiers n'affiche pas la progression",
@@ -330,11 +384,15 @@
       "date": "2026-05-30T03:45:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Fix sync FTP : sous-dossiers marqués 'in-sync' à la fin de la synchronisation",
       "description": "Les sous-dossiers restaient en statut 'unknown' (fond orange) même après la fin de la sync car ftp_folder_synced ne couvre que les dossiers top-level. À la réception de ftp_sync_complete, tous les dossiers encore 'unknown' sont maintenant basculés en 'in-sync'.",
-      "files": ["apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "certain dossiers sont toujours indiqué comme non synchronisé alors que le projet est indiqué comme synchronisé",
@@ -347,11 +405,15 @@
       "date": "2026-05-30T03:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Bannière sync FTP déplacée au-dessus de la zone texte",
       "description": "La bannière 'Synchronisation FTP en cours — lecture seule' est déplacée de l'overlay absolu (superposé sur le texte) vers une barre fixe entre la toolbar et la zone de contenu éditable.",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "l'information lorsqu'une section n'est pas encore synchro est très mal placé, déplace l'info en bleu au dessus de la zone de texte editable en dessous de la barre d'outils",
@@ -364,11 +426,15 @@
       "date": "2026-05-30T03:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:sidebar",
       "title": "Sidebar : ronds sync remplacés par fond ambré sur la ligne",
       "description": "Suppression des ronds vert et orange de statut FTP dans la zone 3. Remplacement par un fond orange foncé (rgba 120,53,15 à 45%) sur toute la ligne lorsque le dossier est en statut 'unknown' (non synchronisé). Le fond disparaît automatiquement quand le dossier est synchronisé. Les icônes de syncing (spinner bleu) et d'erreur (rouge) sont conservées.",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "je trouve le menu trop chargé, supprime les rond vert et orange et remplace le par une zone orange en fond lorsque la section n'est pas encore synchro et retire ce fond lorsque la section est synchronisé",
@@ -381,7 +447,10 @@
       "date": "2026-05-30T03:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "server"],
+      "scope": [
+        "projets",
+        "server"
+      ],
       "features": "projets:editor,server:file-projects",
       "title": "Fix création de dossier dans un projet vierge sans sauvegarde",
       "description": "Régression : dans un projet sans backup, le premier dossier créé disparaissait car ensure-fast ne créait pas config.json si le dossier existait déjà sans lui, et ne créait pas file_project_meta si le projet n'y était pas. Fix : ensure-fast crée file_project_meta depuis frank_projects si absent, garantit config.json dans tous les cas. Côté client : fallback sur ensureLocal si ensureFast échoue (sauf FTP).",
@@ -401,11 +470,15 @@
       "date": "2026-05-30T02:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:sidebar",
       "title": "Sidebar : indicateur sync FTP déplacé à gauche (avant l'icône dossier)",
       "description": "Les ronds/icônes de statut sync FTP dans la zone 3 sont déplacés à gauche du nom du dossier (entre le chevron et l'icône de dossier). Les autres indicateurs (cadenas, conversation) restent à droite.",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "deplace les rond d'info synchronisation du menu zone 3 à gauche du menu, laisse les autres icones d'info (cadenas etc) à droite du menu",
@@ -418,11 +491,15 @@
       "date": "2026-05-30T02:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Fix ordre toolbar zone 4 : sauvegarde/FTP au-dessus des tabs",
       "description": "Correction de l'ordre des deux lignes dans la barre d'outils : ligne 1 = sauvegarde + badge FTP/sync, ligne 2 = tabs Code/Structure/Preview + boutons de formatage. Suppression du doublon laissé par l'édition précédente.",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "la zone d'info de synchro et de sauvegarde doit être placé au dessus de la barre d'outils, elle est encore en dessous, déplace la zone au dessus",
@@ -435,11 +512,15 @@
       "date": "2026-05-30T02:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Toolbar zone 4 : sauvegarde + FTP sync déplacés sous la barre de formatage",
       "description": "La barre d'outils de l'éditeur zone 4 est restructurée en 2 lignes : ligne 1 = tabs (Code/Structure/Preview) + boutons de formatage, ligne 2 = statut sauvegarde + badge FTP/sync. La ligne 2 apparaît sous la barre de formatage, au-dessus du contenu.",
-      "files": ["apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "deplace l'information de la synchro et de la sauvegarde au dessus de la barre de formatage",
@@ -452,11 +533,15 @@
       "date": "2026-05-30T01:45:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Fix sync FTP : attendre connexion SSE avant de lancer la sync",
       "description": "Le compteur 'checked' restait à 0 car les événements ftp_folder_synced étaient broadcastés avant que la connexion SSE (EventSource) soit établie. Le démarrage de la sync FTP attend maintenant que collab.connected() soit true (polling 100ms, timeout 3s).",
-      "files": ["apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "cela indique bien le nombre de fichiers/dossiers total mais pas ceux synchronisé en cours",
@@ -469,7 +554,11 @@
       "date": "2026-05-30T01:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "server", "libs"],
+      "scope": [
+        "projets",
+        "server",
+        "libs"
+      ],
       "features": "projets:editor,server:ftp,libs:collab",
       "title": "Sync FTP : barre de progression + sections lecture seule",
       "description": "Progress bar dans le badge FTP (ex : 'Sync FTP 12/45' + barre bleue animée). Sections non encore synchronisées passent en lecture seule (textarea [readonly] en mode Code, contenteditable=false en mode Preview) avec un badge 'Synchronisation en cours'. SSE ftp_sync_start avec totalFiles, ftp_folder_synced avec checked/totalChecked pour le suivi en temps réel.",
@@ -494,7 +583,9 @@
       "date": "2026-05-30T01:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Indicateur sync FTP dans la card FTP de la barre d'outils zone 4",
       "description": "La card FTP dans la barre d'outils de l'éditeur (zone 4) remplace son texte selon l'état de sync FTP : pendant la sync affiche 'Synchronisation FTP en cours…' en bleu avec icône animée, quand terminée affiche 'FTP à jour' en cyan, en erreur affiche 'FTP — erreur sync' en rouge. L'état idle/initial affiche la card FTP normale.",
@@ -515,7 +606,9 @@
       "date": "2026-05-30T01:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:statusbar",
       "title": "Indicateur sync FTP déplacé dans la card FTP de la statusbar",
       "description": "L'indicateur de synchronisation FTP remplace la card FTP dans la statusbar (bas de l'éditeur) : pendant la sync affiche 'Synchronisation FTP en cours…' en bleu, quand terminée affiche 'FTP à jour' en vert, en erreur affiche 'FTP — erreur sync' en rouge. Le bandeau global au-dessus de la sidebar a été supprimé.",
@@ -536,7 +629,12 @@
       "date": "2026-05-30T00:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "portail", "server", "libs"],
+      "scope": [
+        "projets",
+        "portail",
+        "server",
+        "libs"
+      ],
       "features": "projets:editor,projets:sidebar,portail:admin,server:ftp",
       "title": "Ouverture rapide + sync FTP arrière-plan + indicateurs visuels",
       "description": "Refonte complète de l'ouverture de projet : Phase 1 affiche l'UI en < 500ms via /ensure-fast (structure BDD sans FTP). Phase 2 synchronise le FTP en arrière-plan via SSE avec indicateurs par dossier dans la zone 3 (point jaune/vert/rouge). Indicateur global de sync dans la toolbar. Gestion du premier accès (fichiers vides rechargés après sync). Route /initial-backup-push pour transférer les fichiers locaux vers un nouveau système de backup avec modal de confirmation dans l'admin.",
@@ -564,11 +662,15 @@
       "date": "2026-05-30T00:10:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Zone 4 : aucune interaction ne change la section affichée",
       "description": "onNodeActive ne modifie plus jamais activeNodeId. Les clics sur des listes, headings, blocs ou tout contenu dans la zone 4 (edit, visu, structure) ne changent plus la section sélectionnée dans le menu zone 3. Seule la zone 3 peut changer activeNodeId via onNodeSelect.",
-      "files": ["apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "Il faut faire la même chose avec les listes, si on clique dessus dans l'editor cela ne doit pas modifié l'affichage du dossier selectionné dans le menu, les selections dans l'editor ne doit pas changer la section affiché",
@@ -581,11 +683,15 @@
       "date": "2026-05-30T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Désactivation sélection sous-dossier depuis zone 4",
       "description": "Dans l'éditeur zone 4, le clic sur un heading de sous-dossier ne change plus le nœud actif. La sélection et la navigation dans les dossiers sont désormais réservées exclusivement à la zone 3 (menu sidebar).",
-      "files": ["apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "dans le menu projet et dans l'editor lorsqu'on à selectionné un dossier dans le menu, on peut avoir du contenu dans ce dossier, ainsi dans la zone 4 de l'editor on à le dossier avec son contenue et donc les sous dossiers et des documents (code, img etc) dans l'editor si on clique sur un sous dossier cela selectionne directement le sous dossier. Je veux que tu enlève la selection d'un sous dossier dans l'editor, la selection et l'affichage d'un sous dossier ou d'un contenue ne peut être effectué que dans le menu zone 3",
@@ -598,7 +704,11 @@
       "date": "2026-05-28T14:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["server", "projets", "libs"],
+      "scope": [
+        "server",
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor,server:file-projects",
       "title": "Récupération FTP auto à la première ouverture d'un projet",
       "description": "À l'ouverture d'un projet FTP, sync FTP+local avec la BDD comme source de vérité unique. ftp-service.js : syncFromFtp(expectedFiles, expectedDirs) télécharge les fichiers attendus depuis FTP, supprime du FTP ET du local tout ce qui n'est pas dans la structure BDD (.git et config.json préservés). buildExpectedFromStructure() construit les sets depuis config.structure. ensure-local appelle ces deux fonctions avec config.structure (depuis MySQL). Résultat : les 3 stockages (BDD, FTP, local) restent strictement alignés. Mode offline si FTP KO et dossier local présent. Client : EnsureLocalStatus étendu (ftp-pulled, ftp-no-config, ftp-error).",
@@ -620,11 +730,16 @@
       "date": "2026-05-28T12:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Création dossier : 404 sur projets sans config.json + protection anti-suppression",
       "description": "Cause réelle : POST /folders renvoyait 404 (Projet non trouvé) pour les projets dont le dossier local existait mais sans config.json (cas des projets Frank ouverts sans setup file-project complet). ensure-local retournait 'ready' sans créer le config.json quand pas de remote git connu. Fix serveur : créer config.json vide dans cette branche, comme déjà fait pour FTP. Fix client (complémentaire, déjà appliqué dans le même commit) : prolonger la protection pendingFolderNames à 5 s pour couvrir les saves différés.",
-      "files": ["server/server-data.js", "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"],
+      "files": [
+        "server/server-data.js",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
       "ai": "Claude Code",
       "model": "claude-opus-4-7",
       "prompt": "je n'arrive toujours pas à créé de nouveau dossier",
@@ -637,7 +752,11 @@
       "date": "2026-05-27T10:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "server", "libs"],
+      "scope": [
+        "projets",
+        "server",
+        "libs"
+      ],
       "features": "projets:sidebar-folder,projets:open-folder",
       "title": "Fix disparition dossier sidebar + lien explorateur dans cartes projet",
       "description": "Correction du bug où un dossier créé via la sidebar disparaissait : protection de pendingFolderNames dans processSectionsChange pour éviter la suppression accidentelle lors d'une race entre le signal files() parent et l'@Input editor zone. onFolderCreated attend maintenant la fin de tout processSectionsChange en cours avant d'appeler loadFiles(). Ajout d'un bouton icône dans la barre d'actions de chaque carte projet pour ouvrir l'explorateur Windows directement dans data/projets/<uuid>/ (endpoint POST /api/file-projects/:name/open-folder).",
@@ -660,7 +779,11 @@
       "date": "2026-05-27T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs", "server"],
+      "scope": [
+        "projets",
+        "libs",
+        "server"
+      ],
       "features": "projets:copy-project",
       "title": "Copie de projet avec modal de renommage",
       "description": "Ajout d'un bouton Copier dans la barre d'actions de chaque projet. Un popup demande le nouveau nom (défaut : <titre>_v2). La copie duplique : l'entrée frank_projects en BDD, toutes les étapes (frank_project_steps), le dossier data/projets/<id>/ (sans .git), l'entrée file_project_meta si elle existe.",
@@ -682,7 +805,11 @@
       "date": "2026-05-27T00:10:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs", "projets", "portail"],
+      "scope": [
+        "libs",
+        "projets",
+        "portail"
+      ],
       "features": "portail:auth,projets:auth",
       "title": "Fix auth: DI circulaire AuthService/authInterceptor au démarrage",
       "description": "verify() était appelé synchroniquement dans le constructeur d'AuthService → déclenchait une requête HTTP → authInterceptor appelait inject(AuthService) alors qu'AuthService était encore en cours de construction → Angular lançait une erreur JS brute (pas HttpErrorResponse) avec status:undefined → catch la traitait comme un échec de vérification → clearSession() → redirect portail en boucle. Fix : verify() différé via Promise.resolve().then() pour s'exécuter après la fin du constructeur. Nettoyage des console.log de debug ajoutés pour le diagnostic.",
@@ -704,7 +831,10 @@
       "date": "2026-05-27T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs", "portail"],
+      "scope": [
+        "libs",
+        "portail"
+      ],
       "features": "portail:auth,projets:auth",
       "title": "Fix auth: initDone non résolu + collision NG0912 WoToolsAdmin",
       "description": "1) initFromStorage() : le bloc catch oubliait d'appeler _resolveInit() quand le JSON du frankenstein_user était corrompu → la Promise initDone ne se résolvait jamais → authGuard projets bloqué en await. 2) admin-tools.component.ts importait WoToolsAdminComponent depuis le chemin local portail au lieu de @worganic/shared/ui → collision NG0912 car deux classes avec le même sélecteur coexistaient.",
@@ -724,7 +854,10 @@
       "date": "2026-05-26T21:40:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "portail:auth,projets:auth",
       "title": "Fix auth : initDone promise évite la double vérification concurrente",
       "description": "AuthService expose initDone (Promise<void>) qui se résout quand la vérification initiale du token est terminée. Le guard projets attend initDone au lieu de refaire verify() indépendamment — élimine la race condition où clearSession() d'initFromStorage() supprimait le token avant que le guard puisse l'utiliser.",
@@ -744,7 +877,10 @@
       "date": "2026-05-26T21:20:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "portail:auth,projets:auth",
       "title": "Fix auth : pages protégées accessibles sans connexion",
       "description": "Double fix : 1) AuthService.initFromStorage() appelle clearSession() quand verify() échoue (au lieu d'ignorer silencieusement le token périmé). 2) authGuard de projets devient async et vérifie le token côté serveur avant d'autoriser la navigation — si invalide, clearSession() + redirect vers portail.",
@@ -764,11 +900,15 @@
       "date": "2026-05-26T21:00:00.000Z",
       "type": "fix",
       "commitType": "AMELIORATION",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:launcher",
       "title": "Ajout logging fichier launcher.log pour diagnostiquer les plantages",
       "description": "Ajout d'un logger Python (logging + fichier launcher.log) avec capture des exceptions non gérées sur main thread (sys.excepthook) et threads (threading.excepthook). Logs DEBUG/INFO/CRITICAL sur start, stop, _watch, Popen, taskkill et lifecycle app.",
-      "files": ["launcher_app.py"],
+      "files": [
+        "launcher_app.py"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "j'ai régulièrement des plantages de l'application launcher_app.py pourrais tu rajouté des logs pour comprendre ou sont les problèmes",
@@ -781,11 +921,15 @@
       "date": "2026-05-26T20:35:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:electron",
       "title": "Fix crash Electron EPIPE sur stdout pipe du launcher",
       "description": "Electron crash avec 'EPIPE: broken pipe' quand il écrit sur stdout alors que le pipe Python se ferme. Ajout d'un handler d'erreur EPIPE non-fatal sur process.stdout et process.stderr dans electron/main.js.",
-      "files": ["electron/main.js"],
+      "files": [
+        "electron/main.js"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "Error: EPIPE: broken pipe, write - A JavaScript error occurred in the main process",
@@ -798,11 +942,15 @@
       "date": "2026-05-26T20:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:launcher",
       "title": "Fix port Agent : 3002 → 3003 dans launcher_app.py",
       "description": "Le launcher vérifiait/libérait le port 3002 pour l'Agent mais server-agent.js écoute sur 3003. Corrigé.",
-      "files": ["launcher_app.py"],
+      "files": [
+        "launcher_app.py"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "l'agent n'a pas l'air de ce lancer : EADDRINUSE port 3003",
@@ -815,11 +963,15 @@
       "date": "2026-05-26T19:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:launcher",
       "title": "Encarts launcher responsives selon la largeur de fenêtre",
       "description": "Création de CardsContainer (QWidget) qui recalcule le nombre de colonnes en fonction de la largeur disponible (MIN_CARD_WIDTH=340px) via resizeEvent. Remplace la grille 2 colonnes fixes.",
-      "files": ["launcher_app.py"],
+      "files": [
+        "launcher_app.py"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "dans les encarts des projet de l'application launcher_app.py ne sont pas responsaive, corrige le problème pour que les encarts s'adapte à la taille horizontal",
@@ -832,11 +984,15 @@
       "date": "2026-05-26T18:50:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:launcher",
       "title": "Auto-restart Portail/Projets quand le daemon NX demande une relance",
       "description": "Dans launcher_app.py, le watcher détecte le message 'Please rerun the command' émis par NX quand son daemon doit redémarrer, et relance automatiquement le service concerné (une seule fois par session) après 1.5s.",
-      "files": ["launcher_app.py"],
+      "files": [
+        "launcher_app.py"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "lorsque je lance @Worganic Launcher.lnk cela lance l'appli @launcher_app.py cette appli doit lancer tous les services puis les application portails/projet puis Electron, hors Portail et Projet ne ce lance pas automatiquement",
@@ -849,11 +1005,15 @@
       "date": "2026-05-26T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "system:launcher",
       "title": "Fix race condition NX daemon au démarrage simultané de Portail et Projets",
       "description": "Correction du start-all dans launcher.js : les services NX (portail, projets) démarrent désormais séquentiellement avec 3s de délai entre chacun pour éviter l'EADDRINUSE sur le pipe socket du daemon NX.",
-      "files": ["server/launcher.js"],
+      "files": [
+        "server/launcher.js"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "l'application api n'a pas l'air de ce lancer pourrais regarder pourquoi",
@@ -866,11 +1026,17 @@
       "date": "2026-05-25T19:30:00.000Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:cleanup",
       "title": "Nettoyage racine — déplacement fichiers obsolètes",
       "description": "Déplacement de 14 fichiers obsolètes vers old/ (gitignore/CLAUDE/README/launch-frankenstein datés, old_install.bat, start-dev.js, THI-V01) et 2 documents projet vers docs/ (REGLES_GESTION_PROJET.md, THI-2026-04-gestion-fichiers-v2.md). Création du dossier old/. La racine ne contient plus que les 18 fichiers essentiels au lancement et à la configuration du projet.",
-      "files": ["old/", "docs/REGLES_GESTION_PROJET.md", "docs/THI-2026-04-gestion-fichiers-v2.md"],
+      "files": [
+        "old/",
+        "docs/REGLES_GESTION_PROJET.md",
+        "docs/THI-2026-04-gestion-fichiers-v2.md"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "examine tous les fichiers à la racine du projet et déplace tous les fichiers inutile dans un dossier old/ Je veux aussi qu'on ne trouve dans le dossier racine que les fichiers essentiels pour lancer le projet et les informations essentiel style README",
@@ -883,11 +1049,16 @@
       "date": "2026-05-25T19:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:workflow,system:launcher",
       "title": "Launcher natif Windows — PyQt6",
       "description": "Remplacement du dashboard web (Node.js) par une application native Windows PyQt6. Création de launcher_app.py : gestion des processus via subprocess, vérification et libération automatique des ports, cards par service avec status dot coloré, start/stop individuel, mini-log en temps réel (2 dernières lignes), onglets logs détaillés par service, boutons Start All / Stop All / ⏻ Shutdown, indicateur global actifs/total. Mise à jour de launch.bat : auto-install PyQt6 si absent, lance pythonw (sans console), réduit à 3 onglets wt (Claude, Gemini, Git).",
-      "files": ["launcher_app.py", "launch.bat"],
+      "files": [
+        "launcher_app.py",
+        "launch.bat"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "l'interface est très bien maios je ne la veux pas en version web mais en version appli windows en python ou C",
@@ -900,11 +1071,17 @@
       "date": "2026-05-25T18:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:workflow,system:launcher",
       "title": "Launcher Node.js + dashboard de gestion des services",
       "description": "Création de server/launcher.js : gestionnaire de processus Node.js qui vérifie et libère automatiquement les ports occupés (3001, 3002, 4202, 4203) avant de lancer les services, surveille les processus, sert un dashboard web sur le port 9000. Création de server/launcher-ui.html : mini app dark theme avec cards par service (API, Agent, Portail, Projets, Electron), boutons Start/Stop individuels, Start All / Stop All / Shutdown, indicateurs de port, logs en temps réel (polling 2.5s), uptime. Mise à jour de launch.bat : simplifié à 4 onglets (Launcher, Claude, Gemini, Git) avec ouverture automatique du dashboard dans le navigateur.",
-      "files": ["server/launcher.js", "server/launcher-ui.html", "launch.bat"],
+      "files": [
+        "server/launcher.js",
+        "server/launcher-ui.html",
+        "launch.bat"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "je veux pouvoir lancer tous les service et electron avec le projet mais aussi pouvoir le fermé proprement. Au lancement via par exemple @launch.bat je veux que tu verifi si les ports sont dispo et si non que tu ferme les processus lancé sur ces ports automatiquement pour lancer les services, tous doit être verifié, surveillé et relancer proprement, il serait peut ètre bon de créé une mini app avec bouton pour lancer arrété et voir l'état des différents service lancer et les port et processus utilisé.",
@@ -917,11 +1094,17 @@
       "date": "2026-05-24T21:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["system", "electron"],
+      "scope": [
+        "system",
+        "electron"
+      ],
       "features": "system:workflow,electron:launch",
       "title": "launch.bat : Windows Terminal multi-onglets + start-electron.ps1 HTTP polling",
       "description": "Réécriture de launch.bat pour ouvrir tous les services dans une seule fenêtre Windows Terminal (wt) avec 8 onglets : Claude, Portail, Projets, API, Agent, Electron, Gemini, git. Mise à jour de start-electron.ps1 : polling HTTP sur http://localhost:4202 toutes les 3s (au lieu de Test-NetConnection port) avec timeout 180s, puis npx electron . depuis le dossier electron/.",
-      "files": ["launch.bat", "start-electron.ps1"],
+      "files": [
+        "launch.bat",
+        "start-electron.ps1"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "il faut que tous ce lance dans une seul fenètre comme cela le fesait dans @launch-frankenstein.bat",
@@ -934,11 +1117,17 @@
       "date": "2026-05-24T18:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["system", "electron"],
+      "scope": [
+        "system",
+        "electron"
+      ],
       "features": "system:workflow,electron:launch",
       "title": "launch.bat : démarrage complet avec attente Angular avant Electron",
       "description": "Création de launch.bat à la racine : lance API, Portail et Projets dans des fenêtres CMD séparées, attend que http://localhost:4202 réponde (polling toutes les 3s via PowerShell), puis lance Electron. Ajout d'un mécanisme de retry dans electron/main.js (loadWithRetry, 20 tentatives × 3s) comme filet de sécurité si Angular tarde.",
-      "files": ["launch.bat", "electron/main.js"],
+      "files": [
+        "launch.bat",
+        "electron/main.js"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "lors du lancement avec npm run start:all electron ne ce lance pas, je voudrais qu'au lancement (via un .bat ou autre) cela lance tous les services/app et qu'electron ce lance avec l'application",
@@ -951,11 +1140,15 @@
       "date": "2026-05-24T17:25:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mini-header",
       "title": "Mini-header : bouton PORTAIL → BACK au hover",
       "description": "Le bouton retour de la mini-header affiche PORTAIL en état normal et BACK au hover (swap de texte via group-hover:hidden / group-hover:inline).",
-      "files": ["libs/shared/ui/src/lib/mini-header/worg-mini-header.component.html"],
+      "files": [
+        "libs/shared/ui/src/lib/mini-header/worg-mini-header.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "non ce n'est pas ça en mode normal (pas de passage de la sourie) cela doit indiqué PORTAIL, lorsque la sourie passe sur le bouton cela doit changer le texte en BACK",
@@ -968,11 +1161,15 @@
       "date": "2026-05-24T17:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mini-header",
       "title": "Mini-header : bouton Portail icône seule, texte animé au hover",
       "description": "Le bouton retour de la mini-header (ligne 1) passe en mode icône seule au repos. Le label (Portail) s'étend au hover avec la même animation que les autres boutons de la toolbar : group-hover max-w + opacity transition.",
-      "files": ["libs/shared/ui/src/lib/mini-header/worg-mini-header.component.html"],
+      "files": [
+        "libs/shared/ui/src/lib/mini-header/worg-mini-header.component.html"
+      ],
       "ai": "Claude Code",
       "model": "claude-sonnet-4-6",
       "prompt": "mettre le même effet sur le bouton portails (avec le mot back lorsque la sourie passe dessus), le texte Portail est présent lorsque la sourie n'est pas dessus",
@@ -985,7 +1182,10 @@
       "date": "2026-05-24T17:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor-toolbar,libs:mini-header",
       "title": "Editor : suppression logout ligne 2, style animé logout ligne 1",
       "description": "Suppression du bouton déconnexion de la toolbar ligne 2 (projet-toolbar) — il était dupliqué. Le bouton logout de la mini-header ligne 1 adopte le même style animé : icône seule au repos, texte DÉCONNEXION qui s'étend au hover (transition max-w + opacity).",
@@ -1005,7 +1205,10 @@
       "date": "2026-05-24T16:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server"],
+      "scope": [
+        "portail",
+        "server"
+      ],
       "features": "portail:admin-deployments,server:api",
       "title": "Admin/déploiements : commits git de branche dans l'historique",
       "description": "Nouveau endpoint /api/admin/branch-commits qui lit les commits git de la branche courante (vs main) sans fetch réseau. Quand le filtre branche est actif, les commits git sont affichés dans l'historique avec hash court, sujet, date et auteur — clairement distincts des enregistrements DB.",
@@ -1026,7 +1229,10 @@
       "date": "2026-05-24T16:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server"],
+      "scope": [
+        "portail",
+        "server"
+      ],
       "features": "portail:admin-deployments,server:api",
       "title": "Admin/déploiements : migration B.XXX/Br.XXX, git-local, surbrillance duale",
       "description": "Refonte de admin/deployments : nouveau format de version unifié B.XXX (main) et Br.XXX (branches). Migration automatique des versions legacy (THI-X.X, B0.X) via bouton dans l'UI. Endpoint /api/admin/git-local (sans fetch réseau) pour infos branche courante chargées au démarrage : nb commits, date/msg dernier commit. Surbrillance duale dans l'historique (jaune = version main locale, violet = commits de la branche courante). Filtre par branche dans l'historique. Mise à jour CLAUDE.md avec nouveau format.",
@@ -1048,7 +1254,10 @@
       "date": "2026-05-24T14:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server"],
+      "scope": [
+        "portail",
+        "server"
+      ],
       "features": "portail:admin-deployments,server:api",
       "title": "Admin/déploiements git-aware avec statut main + branche",
       "description": "Refonte complète de la page admin/déploiements : suppression de l'ancien mode base/child, ajout de deux panneaux de statut (version principale main et branche courante). Nouveau endpoint /api/admin/git-status pour vérifier l'état git (fetch, commits ahead/behind). Migration DB automatique pour ajouter la colonne branch à app_deployments. deploy-log.js accepte désormais --branch. Les versions non-main affichent leur branche dans l'historique.",
@@ -1070,7 +1279,9 @@
       "date": "2026-05-24T10:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Editor Code : Annuler granulaire par entité (main content vs bloc fichier)",
       "description": "cancelCodeEdit() restaurait l'intégralité du snapshot de section, annulant aussi bien le contenu principal du dossier que les blocs de fichiers enfants. Réécriture en restauration granulaire : le contenu est parsé en parties (main content + blocs additionnels via parseAdditionalBlocks). Seule la partie correspondant à cursorEntityId() est restaurée depuis le snapshot original. Les autres blocs/entités gardent leur contenu modifié et leurs verrous. Le snapshot de section est conservé jusqu'à ce que tous les verrous soient libérés.",
@@ -1089,7 +1300,9 @@
       "date": "2026-05-23T18:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Editor : hasPendingCode n'interfère plus avec les locks structure",
       "description": "Correction d'un bug où le fallback de hasPendingCode (localPendingSections().has(focusedHandle.id)) détectait à tort un lock provenant du mode Structure. En mode Code, si l'utilisateur entrait en focus sur un document verrouillé en mode Structure, la barre Code apparaissait. Cliquer 'Annuler' appelait cancelCodeEdit() qui supprimait le document de localPendingSections, effaçant le lock visuellement. Fix : le fallback de hasPendingCode exclut les IDs qui sont dans structEntityLocks.",
@@ -1108,7 +1321,9 @@
       "date": "2026-05-23T17:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Editor Structure : barre Annuler visible hors mode Structure",
       "description": "La barre Annuler/Partager du mode Structure s'affiche maintenant quelle que soit le mode actif (Code, Preview...) tant que structureHasPending() est vrai. Auparavant, la condition mode === 'structure' empêchait l'affichage après un changement de mode, laissant l'entité verrouillée sans possibilité d'action.",
@@ -1127,7 +1342,9 @@
       "date": "2026-05-23T16:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Editor Structure : Annuler granulaire par entité",
       "description": "Correction du comportement d'Annuler en mode Structure. Auparavant, un snapshot global était pris au premier edit et Annuler restaurait tout le contenu + vidait tous les verrous. Désormais, chaque entité a son propre snapshot (structEntitySnapshots Map) pris avant sa première modification. Annuler cible uniquement l'entité active (structFocusedEntityId signal, mis à jour à chaque frappe). Seules les données de cette entité sont restaurées dans structureNodes, puis reflushées. Les autres entités modifiées conservent leur verrou et leurs modifications. structFocusedEntityId est mis à jour vers une entité restante si d'autres locks existent encore.",
@@ -1146,7 +1363,9 @@
       "date": "2026-05-23T15:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Editor Structure : save/share collab (Annuler/Partager)",
       "description": "Le mode Structure bénéficie du même système collab que le mode Code. À la première modification d'un nœud (titre, contenu, bloc additionnel), un snapshot est pris et l'entité est verrouillée (structEntityLocks Set). La barre Annuler/Partager apparaît (structureHasPending signal). Partager flush les nœuds → parseContent → updateFile avec publish=true pour chaque section → unlock. Annuler restaure le snapshot, réinitialise les nœuds, déverrouille. Les entités bloc additionnels sont identifiées par leur fileId via getStructBlockEntityId(). ngOnDestroy libère les verrous restants.",
@@ -1166,7 +1385,9 @@
       "date": "2026-05-23T14:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Editor : verrouillage granulaire par entité (fichier, bloc, section)",
       "description": "Lorsqu'un utilisateur édite un fichier additionnel ou un bloc inline (code, tableau, citation, liste) dans une section dossier, seule cette entité précise est verrouillée côté collab — pas la section entière. addLocalPending() appelé sur entity.id (pas folderId) pour que le cadenas rouge dans la zone 3 apparaisse sur l'entité et non sur le dossier parent. Signal cursorEntityId trackée via onTextareaCursor (keyup/mouseup) et onTextareaInput. Getter hasPendingCode affiche la barre Annuler/Partager uniquement si le curseur est dans l'une des entités verrouillées (activeEntityLocks.has(cursorEntityId())). publish/cancel déverrouillent et remove-pending toutes les entités.",
@@ -1185,7 +1406,9 @@
       "date": "2026-05-23T12:45:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "SCSS : correction mixed-decls Sass deprecation sur struct-block",
       "description": "Dans .struct-block, les propriétés border-radius/border/overflow/background étaient placées après la règle imbriquée &--focused, provoquant 4 warnings Sass 'mixed-decls'. Déplacées avant la règle imbriquée conformément à la spécification CSS.",
@@ -1204,7 +1427,9 @@
       "date": "2026-05-23T12:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "server:workflow",
       "title": "FTP : suppression du déclenchement GitHub sur projets FTP",
       "description": "ensureGithubRemoteForProject() était appelée sans vérification du backup_type dans 2 routes : DELETE /api/file-projects/:name/files/:id (suppression fichier) et POST /api/file-projects/:name/upload-image (upload image). Pour un projet en mode FTP avec GitHub activé globalement, ces actions déclenchaient une tentative de création/connexion d'un repo GitHub. Fix : ajout du check backup_type !== 'ftp' (même pattern que la route PUT déjà correcte). En cas d'erreur DB sur le check, catch(() => null) retourne null → GitHub ne s'active pas (safe par défaut).",
@@ -1223,7 +1448,9 @@
       "date": "2026-05-23T12:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Editor Structure : filtrage fichier = comportement identique au mode Code",
       "description": "Quand un fichier (non-image) est sélectionné dans le menu zone 3, le mode Structure n'affiche plus toute la section parente mais uniquement le contenu correspondant : fichier principal (contenu.md) → seul le textContent est visible, blocs masqués ; fichier additionnel → seul le bloc dont le titre matche est visible, textContent masqué. Méthodes structNodeShowText() et structNodeShowBlock() gèrent ce filtrage. struct-block--focused applique un style pleine-largeur quand le bloc est seul.",
@@ -1244,7 +1471,9 @@
       "date": "2026-05-23T11:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Editor Structure : blocs additionnels séparés en sous-cartes",
       "description": "Les blocs de documents additionnels ('titre\\ncontenu\\n') n'apparaissent plus en texte brut dans le textarea du contenu principal. parseAdditionalBlocks() extrait les blocs (délimiteurs ', `, ^) depuis rawContent et les stocke dans StructureNode.additionalBlocks. Chaque bloc est affiché comme une sous-carte distincte avec badge délimiteur, input titre et textarea contenu éditables. rebuildNodeRawContent() reconstruit le contenu complet (textContent + blocs) pour le flush. Nouveaux handlers onStructBlockTitleInput/onStructBlockContentInput.",
@@ -1265,7 +1494,9 @@
       "date": "2026-05-23T11:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Editor Structure : filtrage par section active (zone 3)",
       "description": "Ajout du getter filteredStructureNodes qui filtre les StructureNode selon activeNodeId, exactement comme filteredVisuSections en mode Preview. Si activeNodeId pointe vers un dossier, seules les sections dont le folderId est dans getDescendantFolderIds() sont affichées. Si activeNodeId pointe vers un fichier/image, la section parente est affichée. Le template utilise filteredStructureNodes au lieu de structureNodes.",
@@ -1285,7 +1516,9 @@
       "date": "2026-05-23T10:45:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Editor : Mode Structure — vue hiérarchique des sections",
       "description": "Ajout d'un 3ème mode 'Structure' dans la zone éditeur (zone 4). Ce mode intermédiaire entre Code et Preview affiche chaque section markdown comme une carte visuelle indentée selon son niveau (H1→H4). Titre et contenu sont édités dans des zones séparées : l'input titre masque le # markdown, le textarea contenu masque les caractères de structure. Suppression uniquement via clic droit → 'Supprimer la section'. Barre colorée gauche par niveau (indigo H1, vert H2, orange H3, rouge H4). Les modifications sont flush vers unifiedContent avec debounce 800ms. Compilation Angular validée.",
@@ -1306,7 +1539,9 @@
       "date": "2026-05-23T10:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:projets",
       "title": "Editor zone 4 : plan refonte ergonomique 3 modes",
       "description": "Analyse de l'architecture existante de la zone 4 (projet-editor-zone, ~3660 lignes). Proposition d'un plan en 8 étapes pour implémenter 3 modes : Code (textarea actuel), Structure (vue hiérarchique avec indentation, titre/contenu séparés, syntaxe verrouillée, suppression clic droit), Preview (rendu + toolbar mise en forme). Plan validé par l'utilisateur.",
@@ -1323,7 +1558,9 @@
       "date": "2026-05-23T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["frankenstein"],
+      "scope": [
+        "frankenstein"
+      ],
       "features": "frankenstein:editor",
       "title": "Editor zone 4 : highlight section cliquée sans changer la vue",
       "description": "Découplage focus/highlight dans l'éditeur. Ajout d'un Input highlightNodeId dans ProjetEditorZoneComponent : recomputeHighlights utilise highlightNodeId ?? activeNodeId pour la couleur de surbrillance. Dans le parent, highlightNodeId est toujours mis à jour par onNodeActive (clic zone 4) et onNodeSelect (clic menu zone 3) ; activeNodeId est bloqué si le nœud cliqué est un descendant du focus courant. Résultat : clic zone 4 sur sous-section → surbrillance couleur (vert/bleu) sans changer la vue affichée.",
@@ -4719,6 +4956,33 @@
       "prompt": "A chaque fois qu'un message est envoyé par l'ia pour modifié un texte, il faut vérifié que la section est bien valide, avec un titre pour les dossier # Titre avec un titre pour les documents et un backtick au début et un backtick à la fin et un titre sur la première ligne : backtickTITRE, avec le bon format pour les images.",
       "startedAt": "2026-05-22T21:00:00.000Z",
       "completedAt": "2026-05-22T20:02:03.313Z"
+    },
+    {
+      "id": "mod-059",
+      "version": "B-0.237",
+      "date": "2026-05-31T12:05:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "libs"
+      ],
+      "features": "portail:admin-projets,libs:document-service",
+      "title": "Admin Projets : sous-section Instructions IA via Documents",
+      "description": "Ajout d'une sous-section \"Instructions IA\" dans Admin Projets. Réutilise le système de documents existant (catégorie \"Instructions IA\" auto-créée). Permet d'appliquer une instruction à un projet et de charger un modèle dans la modale IA. Création du service DocumentService dans portail-core/data-access.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/document.service.ts",
+        "libs/portail-core/data-access/src/index.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html",
+        "tests/fonctions/_registry.json",
+        "tests/fonctions/connecte/admin/projets/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "en sous section admin/projet je voudrais que tu me rajoute une sous section gestion des instruction IA. Le but de cette section est de pouvoir créé sauvegarder et ré-utilisé (CRUD) les instructions qui seront lié au IA dans les projets. On doit pouvoir géré les différentes instruction et pouvoir les copié dans un projet. Dans chaque projet on pourra récupéré une instrcution pré enregistré et la modifié spécifiquement pour le projet.",
+      "startedAt": "2026-05-31T11:30:00.000Z",
+      "completedAt": "2026-05-31T12:05:00.000Z"
     }
   ]
 }

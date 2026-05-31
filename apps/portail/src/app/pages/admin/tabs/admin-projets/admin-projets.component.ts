@@ -7,6 +7,7 @@ import { ProjectService, Project } from '@worganic/portail-core/data-access';
 import { ProjectFilesService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
+import { DocumentService, DocCategory, DocDocument } from '@worganic/portail-core/data-access';
 
 @Component({
   selector: 'app-admin-projets',
@@ -48,7 +49,18 @@ export class AdminProjetsComponent implements OnInit {
   initialPushStatus = signal<'idle' | 'pushing' | 'done' | 'error'>('idle');
   initialPushResult = signal<{ uploaded?: number; pushed?: boolean; error?: string } | null>(null);
 
+  activeSubTab = signal<'projets' | 'ia-instructions'>('projets');
+  iaCategory = signal<DocCategory | null>(null);
+  iaDocuments = signal<DocDocument[]>([]);
+  loadingIaDocs = signal(false);
+  iaDocsError = signal('');
+  applyingDoc = signal<DocDocument | null>(null);
+  applyTargetProjectId = '';
+  applyingToProject = signal(false);
+  showDocPicker = signal(false);
+
   private woHistory = inject(WoActionHistoryService);
+  private documentService = inject(DocumentService);
 
   constructor(
     private projectService: ProjectService,
@@ -120,10 +132,73 @@ export class AdminProjetsComponent implements OnInit {
   openEditIa(project: Project) {
     this.editingIa.set(project);
     this.editIaInstructions = project.iaInstructions || '';
+    this.showDocPicker.set(false);
+    if (this.iaDocuments().length === 0) this.loadIaDocuments();
   }
 
   closeEditIa() {
     this.editingIa.set(null);
+    this.showDocPicker.set(false);
+  }
+
+  async switchSubTab(tab: 'projets' | 'ia-instructions') {
+    this.activeSubTab.set(tab);
+    if (tab === 'ia-instructions') await this.loadIaDocuments();
+  }
+
+  async loadIaDocuments() {
+    this.loadingIaDocs.set(true);
+    this.iaDocsError.set('');
+    try {
+      const cats = await this.documentService.getCategories();
+      let cat = cats.find(c => c.name === 'Instructions IA') ?? null;
+      if (!cat) {
+        cat = await this.documentService.createCategory({
+          name: 'Instructions IA',
+          description: 'Modèles d\'instructions système réutilisables pour les projets IA'
+        });
+      }
+      this.iaCategory.set(cat);
+      const all = await this.documentService.getDocuments();
+      this.iaDocuments.set(all.filter(d => d.categoryId === cat!.id));
+    } catch (e: any) {
+      this.iaDocsError.set(e?.error?.error || 'Erreur chargement instructions');
+    } finally {
+      this.loadingIaDocs.set(false);
+    }
+  }
+
+  openApplyDoc(doc: DocDocument) {
+    this.applyingDoc.set(doc);
+    this.applyTargetProjectId = '';
+  }
+
+  closeApplyDoc() {
+    this.applyingDoc.set(null);
+  }
+
+  async applyDoc() {
+    const doc = this.applyingDoc();
+    if (!doc || !this.applyTargetProjectId) return;
+    this.applyingToProject.set(true);
+    try {
+      await this.projectService.updateProject(this.applyTargetProjectId, { iaInstructions: doc.text });
+      this.closeApplyDoc();
+      await this.loadProjects();
+    } catch (e: any) {
+      this.iaDocsError.set(e?.error?.error || 'Erreur application de l\'instruction');
+    } finally {
+      this.applyingToProject.set(false);
+    }
+  }
+
+  loadDocIntoIa(doc: DocDocument) {
+    this.editIaInstructions = doc.text;
+    this.showDocPicker.set(false);
+  }
+
+  goToDocuments() {
+    this.router.navigate(['/documents']);
   }
 
   async saveIa() {
