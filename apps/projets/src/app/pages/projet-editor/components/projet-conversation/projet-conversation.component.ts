@@ -52,9 +52,12 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   popupPrompt = '';
   // Inclure le document entier comme contexte (au lieu de la section seule)
   includeFullDocument = signal(false);
-  // Popup prompt complet (par message IA)
+  // Popup prompt complet (par message IA — session courante avec promptContext)
   showPromptInfo = signal(false);
   selectedPromptContext = signal<PromptContext | null>(null);
+  // Popup contexte IA lecture seule (messages historiques sans promptContext)
+  showContextView = signal(false);
+  contextViewUserPrompt = signal<string | null>(null);
   // Instruction globale : doc par défaut de la catégorie "Instructions IA"
   globalIaInstruction = signal<string | null>(null);
   // Infos de la section courante
@@ -184,6 +187,13 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   openPromptInfo(ctx: PromptContext) {
     this.selectedPromptContext.set(ctx);
     this.showPromptInfo.set(true);
+  }
+
+  openContextView(msg: Message) {
+    const idx = this.messages.indexOf(msg);
+    const prev = idx > 0 ? this.messages[idx - 1] : null;
+    this.contextViewUserPrompt.set(prev?.role === 'user' ? prev.text : null);
+    this.showContextView.set(true);
   }
 
   toggleFullDocument() {

@@ -5191,6 +5191,92 @@
       "prompt": "lorsque il y a 0 messages précédents dans l historique de conversation, le selecteur doit être disabled car il ne sert à rien",
       "startedAt": "2026-05-31T00:00:00.000Z",
       "completedAt": "2026-05-31T00:00:00.000Z"
+    },
+    {
+      "id": "mod-069",
+      "version": "B-0.244",
+      "date": "2026-05-31T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:conversation",
+      "title": "Conversation : bouton contexte IA visible sur tous les messages IA",
+      "description": "Le bouton \"Prompt\" était conditionné à msg.promptContext, absent pour les messages chargés depuis l historique. Désormais il s affiche sur tous les messages IA : si promptContext existe (session courante) → popup prompt détaillé ; sinon (historique) → popup info IA du projet avec le contexte actuel.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois pas dans l historique, avec la réponse de l IA, le bouton pour voir le détails du prompt",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T00:00:00.000Z"
+    },
+    {
+      "id": "mod-070",
+      "version": "B-0.244",
+      "date": "2026-05-31T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:conversation",
+      "title": "Conversation : popup contexte lecture seule pour messages historiques",
+      "description": "Le bouton sur les messages IA sans promptContext ouvrait le popup info IA avec textarea (mauvais). Ajout d un popup showContextView dédié, lecture seule (pas de textarea, pas d options), affichant le contexte actuel avec une note indiquant que le contexte d origine n est pas disponible.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je vois bien le bouton mais celui ci ouvre un popup avec les informations IA du projet pour un nouveau prompt, moi je veux l historique du prompt affiché, pas de possibilité de créé un nouveau prompt à partir de ce bouton qui ne sert que pour voir l historique du résultat du prompt selectionné",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T00:00:00.000Z"
+    },
+    {
+      "id": "mod-071",
+      "version": "B-0.244",
+      "date": "2026-05-31T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:conversation",
+      "title": "Conversation : popup contexte + prompt utilisateur + options",
+      "description": "Le popup lecture seule affichait seulement le modèle et les instructions. Ajout du prompt utilisateur (message précédant la réponse IA, récupéré via indexOf dans messages[]) et de l état des options (document entier ON/OFF, historique ON/OFF).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "il manque le prompt de l utilisateur et les informations de options comme la prise en compte du tous le texte dans le context",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T00:00:00.000Z"
+    },
+    {
+      "id": "mod-072",
+      "version": "B-0.244",
+      "date": "2026-05-31T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:conversation",
+      "title": "Conversation : bouton contexte IA déplacé à droite du titre du message",
+      "description": "Le bouton Prompt/Contexte IA était sous le texte de la réponse. Déplacé comme troisième élément flex-shrink-0 dans la row du message, aligné en haut à droite.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "deplace le bouton à droite du titre",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T00:00:00.000Z"
     }
   ]
 }
