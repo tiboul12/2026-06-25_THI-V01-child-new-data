@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProjetCollabService, CollabHistoryEntry } from '@worganic/portail-core/data-access';
-import { AuthService } from '@worganic/portail-core/data-access';
+import { AuthService, WoActionHistoryService, WoRestoredContent } from '@worganic/portail-core/data-access';
 
 export interface DisplayHistoryEntry extends CollabHistoryEntry {
   pendingState?: 'editing' | 'saving';
@@ -24,10 +24,19 @@ export class ProjetHistoryComponent implements OnChanges {
   @Input() projetId: string | null = null;
   @Input() activeIds: Set<string> | null = null;
   @Output() entryClick = new EventEmitter<CollabHistoryEntry>();
+  // Émis après une annulation réussie → le parent recharge l'éditeur avec le contenu restauré
+  @Output() restored = new EventEmitter<WoRestoredContent>();
 
   readonly collab = inject(ProjetCollabService);
   readonly auth = inject(AuthService);
+  readonly woHistory = inject(WoActionHistoryService);
   loadingEntryId: string | null = null;
+
+  // Undo
+  readonly undoingId = signal<string | null>(null);
+  readonly cascadeConfirmId = signal<string | null>(null);
+  // IDs marqués localement comme annulés (optimistic update, en attente du SSE)
+  readonly localUndoneIds = signal<Set<string>>(new Set());
 
   private readonly _activeIds = signal<Set<string> | null>(null);
 
@@ -50,6 +59,7 @@ export class ProjetHistoryComponent implements OnChanges {
     const saved = this.collab.history();
     const pending = this.collab.pending();
     const me = this.auth.currentUser();
+    const undoneIds = this.localUndoneIds();
     const pendingDisplay: DisplayHistoryEntry[] = pending.map(p => ({
       id: `pending-${p.entityId}`,
       timestamp: p.timestamp,
@@ -64,7 +74,10 @@ export class ProjetHistoryComponent implements OnChanges {
       undone: false,
       pendingState: p.state,
     }));
-    let entries: DisplayHistoryEntry[] = [...pendingDisplay, ...saved];
+    let entries: DisplayHistoryEntry[] = [
+      ...pendingDisplay,
+      ...saved.map(e => undoneIds.has(e.id) ? { ...e, undone: true } : e)
+    ];
     if (ids && ids.size > 0) entries = entries.filter(e => !!e.entityId && ids.has(e.entityId));
     return entries;
   });
@@ -160,6 +173,47 @@ export class ProjetHistoryComponent implements OnChanges {
     }
   }
 
+  isUndoable(entry: DisplayHistoryEntry): boolean {
+    return !entry.pendingState && !!entry.undoable && !entry.undone;
+  }
+
+  async undoEntry(entry: DisplayHistoryEntry) {
+    if (this.undoingId() || entry.pendingState) return;
+    this.undoingId.set(entry.id);
+    try {
+      const { restored } = await this.woHistory.undo(entry.id);
+      this.localUndoneIds.update(s => new Set([...s, entry.id]));
+      if (restored) this.restored.emit(restored);
+    } catch (e) {
+      console.warn('[History] undoEntry error:', e);
+    } finally {
+      this.undoingId.set(null);
+    }
+  }
+
+  requestCascade(entry: DisplayHistoryEntry) {
+    this.cascadeConfirmId.set(entry.id);
+  }
+
+  cancelCascade() {
+    this.cascadeConfirmId.set(null);
+  }
+
+  async confirmCascade(entry: DisplayHistoryEntry) {
+    if (this.undoingId() || entry.pendingState) return;
+    this.cascadeConfirmId.set(null);
+    this.undoingId.set(entry.id);
+    try {
+      const { undoneIds, restored } = await this.woHistory.undoCascade(entry.id);
+      this.localUndoneIds.update(s => new Set([...s, ...undoneIds]));
+      if (restored) this.restored.emit(restored);
+    } catch (e) {
+      console.warn('[History] undoCascade error:', e);
+    } finally {
+      this.undoingId.set(null);
+    }
+  }
+
   async onEntryClick(entry: DisplayHistoryEntry) {
     if (!this.isClickable(entry)) return;
     const hasLoaded = (
@@ -184,6 +238,7 @@ export class ProjetHistoryComponent implements OnChanges {
 
   getActionIcon(entry: CollabHistoryEntry): string {
     const { actionType, section } = entry;
+    if (actionType === 'ai-update') return 'auto_awesome';
     if (actionType === 'create') return section.includes('sections') ? 'create_new_folder' : 'note_add';
     if (actionType === 'delete') return 'delete';
     if (actionType === 'upload') return 'image';
@@ -196,6 +251,7 @@ export class ProjetHistoryComponent implements OnChanges {
 
   getIconBgColor(entry: CollabHistoryEntry): string {
     const { actionType } = entry;
+    if (actionType === 'ai-update') return 'bg-violet-500/20';
     if (actionType === 'create') return 'bg-green-500/20';
     if (actionType === 'delete') return 'bg-red-500/20';
     if (actionType === 'upload') return 'bg-blue-500/20';
@@ -206,6 +262,7 @@ export class ProjetHistoryComponent implements OnChanges {
 
   getIconColor(entry: CollabHistoryEntry): string {
     const { actionType } = entry;
+    if (actionType === 'ai-update') return 'text-violet-400';
     if (actionType === 'create') return 'text-green-400';
     if (actionType === 'delete') return 'text-red-400';
     if (actionType === 'upload') return 'text-blue-400';

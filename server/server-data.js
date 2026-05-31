@@ -2798,32 +2798,62 @@ app.post('/api/wo-action-history/:id/undo', async (req, res) => {
 
         console.log(`[WO_ACTION_HISTORY] Undo: ${req.params.id} — ${entry.label} by ${undoneBy}`);
 
+        // Contenu restauré renvoyé au client + broadcast SSE pour les autres collaborateurs
+        // (le PUT interne skip le broadcast publish:true et content_update est filtré si même auteur)
+        let restored = null;
+        if (undoAction.endpoint?.includes('/api/file-projects/') && undoAction.payload?.content != null) {
+            const parts = undoAction.endpoint.split('/');
+            // /api/file-projects/:name/files/:id → parts[3]=name, parts[5]=id
+            const projectName = parts[3];
+            const nodeId = parts[5];
+            restored = { nodeId, folderId: undoAction.payload.folderId || null, content: undoAction.payload.content };
+            try {
+                const sessionUser = getSessionUser(req);
+                broadcastToProject(projectName, 'file_restored', {
+                    ...restored,
+                    updatedBy: sessionUser?.id || '',
+                    updatedByName: undoneBy || sessionUser?.username || 'Système',
+                    timestamp: undoneAt.toISOString()
+                });
+            } catch (broadcastErr) {
+                console.warn('[WO_ACTION_HISTORY] broadcast after undo failed:', broadcastErr.message);
+            }
+        }
+
         // Tracking de l'annulation comme nouvelle action (sauf si appel interne en cascade)
         let trackedEntry = null;
         if (req.headers['x-internal-call'] !== '1') {
             try {
                 const sessionUser = getSessionUser(req);
+                // Pour "annuler l'annulation" : réappliquer directement l'afterState sur le fichier
+                // plutôt que passer par le redo de l'entrée originale (qui n'a pas toujours de redo_action)
+                const afterState = typeof entry.after_state === 'string'
+                    ? JSON.parse(entry.after_state)
+                    : entry.after_state;
+                const reapplyAction = (afterState?.content != null && undoAction?.endpoint)
+                    ? { endpoint: undoAction.endpoint, method: undoAction.method, payload: { content: afterState.content } }
+                    : null;
+
                 trackedEntry = await insertWoActionEntry({
                     section: entry.section,
                     subsection: entry.subsection,
                     actionType: 'undo',
                     label: `Annulation : ${entry.label}`,
-                    entityType: 'history-entry',
-                    entityId: entry.id,
-                    entityLabel: entry.label,
+                    entityType: entry.entity_type,
+                    entityId: entry.entity_id,
+                    entityLabel: entry.entity_label,
                     userId: sessionUser?.id || null,
                     username: undoneBy || sessionUser?.username || '',
-                    context: { originalSection: entry.section, originalActionType: entry.action_type },
-                    undoable: true,
-                    undoAction: { endpoint: `/api/wo-action-history/${entry.id}/redo`, method: 'POST' },
-                    redoAction: { endpoint: `/api/wo-action-history/${entry.id}/undo`, method: 'POST' }
+                    context: typeof entry.context === 'string' ? JSON.parse(entry.context) : (entry.context || {}),
+                    undoable: reapplyAction != null,
+                    undoAction: reapplyAction
                 });
             } catch (trackErr) {
                 console.warn('[WO_ACTION_HISTORY] Failed to track undo as new action:', trackErr.message);
             }
         }
 
-        res.json({ success: true, undoneAt: undoneAt.toISOString(), undoneBy, trackedActionId: trackedEntry?.id });
+        res.json({ success: true, undoneAt: undoneAt.toISOString(), undoneBy, trackedActionId: trackedEntry?.id, restored });
     } catch (e) {
         console.error('[WO_ACTION_HISTORY] Undo error:', e);
         res.status(500).json({ error: "Erreur lors de l'annulation" });
@@ -2904,6 +2934,139 @@ app.post('/api/wo-action-history/:id/redo', async (req, res) => {
     } catch (e) {
         console.error('[WO_ACTION_HISTORY] Redo error:', e);
         res.status(500).json({ error: "Erreur lors du rétablissement" });
+    }
+});
+
+app.post('/api/wo-action-history/:id/undo-cascade', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM wo_action_history WHERE id = ?', [req.params.id]);
+        if (!rows[0]) return res.status(404).json({ error: 'Action introuvable' });
+
+        const target = rows[0];
+        if (!target.undoable) return res.status(400).json({ error: "Cette action n'est pas réversible" });
+
+        // Toutes les entrées undoable, non annulées, même entity_id, >= timestamp cible (LIFO)
+        const [candidates] = await pool.query(
+            `SELECT * FROM wo_action_history
+             WHERE entity_id = ? AND undoable = 1 AND undone = 0
+               AND timestamp >= ?
+             ORDER BY timestamp DESC`,
+            [target.entity_id, target.timestamp]
+        );
+
+        if (candidates.length === 0) {
+            return res.status(400).json({ error: 'Aucune modification à annuler pour cette entité' });
+        }
+
+        const port = process.env.PORT || 3001;
+        const undoneAt = new Date();
+        const undoneBy = req.body?.undoneBy || '';
+        const undoneIds = [];
+        const errors = [];
+
+        for (const entry of candidates) {
+            const undoAction = typeof entry.undo_action === 'string'
+                ? JSON.parse(entry.undo_action)
+                : entry.undo_action;
+            if (!undoAction?.endpoint || !undoAction?.method) continue;
+
+            try {
+                const selfUrl = `http://localhost:${port}${undoAction.endpoint}`;
+                const fetchOptions = {
+                    method: undoAction.method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Internal-Call': '1',
+                        ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
+                        ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {})
+                    }
+                };
+                if (undoAction.payload && ['PUT', 'POST', 'PATCH'].includes(undoAction.method)) {
+                    fetchOptions.body = JSON.stringify(undoAction.payload);
+                }
+                const undoRes = await fetch(selfUrl, fetchOptions);
+                if (undoRes.ok || undoRes.status === 404) {
+                    await pool.query(
+                        'UPDATE wo_action_history SET undone = 1, undone_at = ?, undone_by = ? WHERE id = ?',
+                        [undoneAt, undoneBy, entry.id]
+                    );
+                    undoneIds.push(entry.id);
+                } else {
+                    errors.push(entry.id);
+                }
+            } catch (e) {
+                errors.push(entry.id);
+            }
+        }
+
+        if (undoneIds.length === 0) {
+            return res.status(500).json({ error: "Impossible d'annuler les modifications" });
+        }
+
+        console.log(`[WO_ACTION_HISTORY] Undo cascade: ${undoneIds.length} entrées annulées jusqu'à ${req.params.id} by ${undoneBy}`);
+
+        // Contenu restauré (undo_action de la cible = état le plus ancien) + broadcast SSE
+        const targetUndoAction = typeof target.undo_action === 'string'
+            ? JSON.parse(target.undo_action)
+            : target.undo_action;
+        let restored = null;
+        if (targetUndoAction?.endpoint?.includes('/api/file-projects/') && targetUndoAction.payload?.content != null) {
+            const parts = targetUndoAction.endpoint.split('/');
+            const projectName = parts[3];
+            const nodeId = parts[5];
+            restored = { nodeId, folderId: targetUndoAction.payload.folderId || null, content: targetUndoAction.payload.content };
+            try {
+                const sessionUser = getSessionUser(req);
+                broadcastToProject(projectName, 'file_restored', {
+                    ...restored,
+                    updatedBy: sessionUser?.id || '',
+                    updatedByName: undoneBy || sessionUser?.username || 'Système',
+                    timestamp: undoneAt.toISOString()
+                });
+            } catch (broadcastErr) {
+                console.warn('[WO_ACTION_HISTORY] broadcast after cascade failed:', broadcastErr.message);
+            }
+        }
+
+        // Entrée récapitulative dans l'historique
+        const targetDate = new Date(target.timestamp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+        // Pour "annuler le retour" : réappliquer le contenu le plus récent (afterState du 1er candidat = le plus récent)
+        const latestCandidate = candidates[0]; // LIFO : index 0 = plus récent
+        const latestAfterState = typeof latestCandidate?.after_state === 'string'
+            ? JSON.parse(latestCandidate.after_state)
+            : latestCandidate?.after_state;
+        const latestUndoAction = typeof latestCandidate?.undo_action === 'string'
+            ? JSON.parse(latestCandidate.undo_action)
+            : latestCandidate?.undo_action;
+        const cascadeReapplyAction = (latestAfterState?.content != null && latestUndoAction?.endpoint)
+            ? { endpoint: latestUndoAction.endpoint, method: latestUndoAction.method, payload: { content: latestAfterState.content } }
+            : null;
+
+        let trackedEntry = null;
+        try {
+            const sessionUser = getSessionUser(req);
+            trackedEntry = await insertWoActionEntry({
+                section: target.section,
+                subsection: target.subsection,
+                actionType: 'undo',
+                label: `Retour à la version du ${targetDate} (${undoneIds.length} modification${undoneIds.length > 1 ? 's' : ''} annulée${undoneIds.length > 1 ? 's' : ''})`,
+                entityType: target.entity_type,
+                entityId: target.entity_id,
+                entityLabel: target.entity_label,
+                userId: sessionUser?.id || null,
+                username: undoneBy || sessionUser?.username || '',
+                context: typeof target.context === 'string' ? JSON.parse(target.context) : (target.context || {}),
+                undoable: cascadeReapplyAction != null,
+                undoAction: cascadeReapplyAction
+            });
+        } catch (trackErr) {
+            console.warn('[WO_ACTION_HISTORY] Failed to track cascade undo:', trackErr.message);
+        }
+
+        res.json({ success: true, undoneIds, errors, trackedActionId: trackedEntry?.id, restored });
+    } catch (e) {
+        console.error('[WO_ACTION_HISTORY] Undo cascade error:', e);
+        res.status(500).json({ error: "Erreur lors de l'annulation en cascade" });
     }
 });
 

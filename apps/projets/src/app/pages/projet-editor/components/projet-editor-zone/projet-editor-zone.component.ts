@@ -156,6 +156,7 @@ interface StructContextMenu {
 })
 export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Input() files: FileNode[] = [];
+  @Input() restoreToken = 0;
   @Input() scrollToNodeId: string | null = null;
   @Input() saveStatus: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' = 'idle';
   @Input() projectName = '';
@@ -343,6 +344,51 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // ── Lifecycle ──────────────────────────────────────────────
   ngOnChanges(changes: SimpleChanges) {
+    // Rechargement forcé après un undo (historique) : reconstruit le contenu depuis
+    // les fichiers déjà patchés par le parent, en préservant le mode focus si actif.
+    if (changes['restoreToken'] && !changes['restoreToken'].firstChange) {
+      this.docSections = this.buildDocSections(this.files, 1);
+      this.allImages = this.collectAllImages(this.files).filter(im => !this.pendingVisuDeletions.has(im.id));
+      const newFullContent = this.reconstructFromSections();
+
+      if (this.focusedHandle) {
+        // Mode focus : recalcule la position de la section focusée dans le nouveau doc
+        const focusedId = this.focusedHandle.id;
+        const focusedKind = this.focusedHandle.kind;
+        const tmp = this.unifiedContent;
+        this.unifiedContent = newFullContent;
+        this.recomputeRanges();
+        this.unifiedContent = tmp;
+
+        let newRange: { lineStart: number; lineEnd: number } | null = null;
+        if (focusedKind === 'folder') {
+          const sr = this.sectionRanges.find(r => r.folderId === focusedId);
+          if (sr) newRange = { lineStart: sr.lineStart, lineEnd: sr.lineEnd };
+        } else if (focusedKind === 'file') {
+          const fr = this.fileRanges.find(r => r.fileId === focusedId);
+          if (fr) newRange = { lineStart: fr.lineStart, lineEnd: fr.lineEnd };
+        }
+
+        if (newRange) {
+          this.fullContentBackup = newFullContent;
+          this.focusedLineStart = newRange.lineStart;
+          this.focusedOriginalLineCount = newRange.lineEnd - newRange.lineStart + 1;
+          this.unifiedContent = newFullContent.split('\n').slice(newRange.lineStart, newRange.lineEnd + 1).join('\n');
+        } else {
+          // Section disparue → sortir du focus
+          this.focusedHandle = null;
+          this.fullContentBackup = '';
+          this.unifiedContent = newFullContent;
+        }
+      } else {
+        this.unifiedContent = newFullContent;
+      }
+
+      this.lastSavedContent = this.unifiedContent;
+      this.recomputeAll();
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = this.unifiedContent;
+    }
     if (changes['files']) {
       const currentStructure = this.getFileStructureKey(this.files);
       const hasStructuralChange = this.lastStructureKey !== null && this.lastStructureKey !== currentStructure;

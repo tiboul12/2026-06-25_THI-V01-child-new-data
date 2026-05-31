@@ -8,7 +8,7 @@ import { ProjectFilesService, FileNode, FtpNodeSyncStatus } from '@worganic/port
 import { ConfigService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { LayoutService } from '@worganic/portail-core/data-access';
-import { WoActionHistoryService } from '@worganic/portail-core/data-access';
+import { WoActionHistoryService, WoRestoredContent } from '@worganic/portail-core/data-access';
 import { ProjetCollabService, CollabHistoryEntry } from '@worganic/portail-core/data-access';
 
 import { WorgMiniHeaderComponent } from '@worganic/shared/ui';
@@ -74,6 +74,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   nestedImagesMap = signal<Record<string, string[]>>({});
   diffEntry = signal<CollabHistoryEntry | null>(null);
 
+  restoreToken = signal(0);
   aiEditService = inject(ProjetAiEditService);
   hasPendingEdit = computed(() => !!this.aiEditService.pendingEdit());
   hasFtpBackup = computed(() => this.project()?.backupType === 'ftp');
@@ -351,6 +352,10 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     this.collabSubs.push(
       this.collab.contentUpdate$.subscribe(event => {
         this.files.update(nodes => this.patchNodeContent(nodes, event.nodeId, event.content));
+      }),
+      this.collab.fileRestored$.subscribe(event => {
+        this.files.update(nodes => this.patchNodeContent(nodes, event.nodeId, event.content));
+        this.restoreToken.update(n => n + 1);
       }),
       this.collab.structureUpdate$.subscribe(() => {
         this.autoPullAndRefresh();
@@ -1334,6 +1339,13 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     this.diffEntry.set(entry);
   }
 
+  // Annulation depuis l'historique : patche le contenu restauré dans les fichiers
+  // puis force l'éditeur (zone 4) à se reconstruire via restoreToken.
+  onHistoryRestored(restored: WoRestoredContent) {
+    this.files.update(nodes => this.patchNodeContent(nodes, restored.nodeId, restored.content));
+    this.restoreToken.update(n => n + 1);
+  }
+
   closeDiff() {
     this.diffEntry.set(null);
   }
@@ -1346,6 +1358,25 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       await this.aiEditService.acceptEdit(projectName);
       // Patch le signal local immédiatement — évite la latence d'un onRefresh()
       this.files.update(nodes => this.patchNodeContent(nodes, edit.fileId, edit.proposedContent));
+      // Enregistrement dans l'historique
+      const sectionName = this.findFolderById(edit.sectionId, this.files())?.name ?? edit.sectionId;
+      this.history.track({
+        section: 'projets/contenu',
+        actionType: 'ai-update',
+        label: `Modification IA — «${sectionName}»`,
+        entityType: 'content',
+        entityId: edit.fileId,
+        entityLabel: sectionName,
+        beforeState: { content: edit.originalContent },
+        afterState: { content: edit.proposedContent },
+        context: { projectId: projectName },
+        undoable: true,
+        undoAction: {
+          endpoint: `/api/file-projects/${projectName}/files/${edit.fileId}`,
+          method: 'PUT',
+          payload: { content: edit.originalContent }
+        }
+      }).catch(() => {});
     } catch (e) {
       console.error('[AI Edit] Accept failed:', e);
       this.aiEditService.cancelEdit();

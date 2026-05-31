@@ -5300,6 +5300,36 @@
       "prompt": "dans projet/editor/zone editon/mode Code la zone horizontal ne doit pas dépassé la taille de la zone, il ne doit pas y avoir d'ascenseur horizontal, si le texte dépasse, il doit passé à la ligne. La zone doit être s'agrandir suivant la taille de la fenètre",
       "startedAt": "2026-05-31T00:00:00.000Z",
       "completedAt": "2026-05-31T16:08:54.581Z"
+    },
+    {
+      "id": "mod-271",
+      "version": "B-0.247",
+      "date": "2026-05-31T16:30:16.250Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets",
+        "server",
+        "libs"
+      ],
+      "features": "projets:historique,server:wo-action-history,libs:wo-action-history-service",
+      "title": "Historique : annulation + undo cascade + tracking IA",
+      "description": "Ajout de l annulation depuis la zone historique : bouton undo par entrée (undo simple via POST /api/wo-action-history/:id/undo) et bouton retour à une version (undo cascade via nouvelle route POST /api/wo-action-history/:id/undo-cascade qui annule toutes les modifications suivantes sur le même fichier). Ajout du type ai-update dans WoActionType + méthode undoCascade() dans WoActionHistoryService. Les modifications IA acceptées (onAcceptAiEdit) sont maintenant enregistrées dans l historique avec actionType ai-update, badge violet auto_awesome, undoable:true. Ajout de undoable?: boolean dans CollabHistoryEntry (projet-collab.service.ts). Fix : ajout broadcast SSE content_update depuis la route undo (le PUT interne skip le broadcast). Fix : la tracking entry de l undo stocke maintenant un undoAction direct (PUT avec afterState.content) au lieu de passer par le redo de l entrée originale — permet d annuler une annulation. Même correctif pour undo-cascade. Refonte du refresh éditeur après undo : approche chaînage direct (Output restored) au lieu du SSE seul. Le serveur retourne le contenu restauré, le composant historique l émet, le parent patche files + incrémente restoreToken. Le handler restoreToken de la zone éditeur préserve le mode focus en recalculant la tranche de la section focusée.",
+      "files": [
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/wo-action-history.service.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-history/projet-history.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-history/projet-history.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone5-historique/fonctions.md",
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "toutes les informations de modifications d une section est enregistré dans la zone historique. Prépare moi un plan pour pouvoir mettre en place l annulation de modification à partir de la zone historique, exemple, option annulé une modification, ou annulé l action et toutes les suivantes pour revenir à une ancienne version. Dans l historique il doit aussi y avoir les modifications lié à un prompt d une IA, exemple ajout ou modification d un texte via une IA doit pouvoir être enregistré dans l historique et ainsi pouvoir être annulé.",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T16:30:16.251Z"
     }
   ]
 }

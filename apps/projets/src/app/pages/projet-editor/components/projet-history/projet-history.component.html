@@ -35,8 +35,9 @@
       <!-- Entrées (visibles uniquement si jour déplié) -->
       @if (isDayExpanded(group.date, group.isToday)) {
       @for (entry of group.entries; track entry.id) {
-        <div class="flex items-start gap-2 py-1.5 px-1.5 rounded-lg transition-colors"
+        <div class="hist-entry group/entry flex items-start gap-2 py-1.5 px-1.5 rounded-lg transition-colors relative"
              [class.opacity-40]="entry.pendingState === 'editing'"
+             [class.opacity-50]="entry.undone"
              [class.animate-pulse]="entry.pendingState === 'saving'"
              [ngClass]="[
                isMine(entry) ? 'bg-yellow-400/5 hover:bg-yellow-400/10' : 'bg-blue-400/5 hover:bg-blue-400/10',
@@ -47,7 +48,7 @@
           <!-- Icône action -->
           <div class="w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center mt-0.5"
                [ngClass]="getIconBgColor(entry)">
-            @if (loadingEntryId === entry.id || entry.pendingState) {
+            @if (undoingId() === entry.id || loadingEntryId === entry.id || entry.pendingState) {
               <span class="material-symbols-outlined text-sm text-white/40 animate-spin">progress_activity</span>
             } @else {
               <span class="material-symbols-outlined text-sm" [ngClass]="getIconColor(entry)">
@@ -85,7 +86,53 @@
             </div>
           </div>
 
+          <!-- Actions undo (visibles au hover si undoable) -->
+          @if (isUndoable(entry)) {
+            <div class="flex items-center gap-0.5 opacity-0 group-hover/entry:opacity-100 transition-opacity flex-shrink-0"
+                 (click)="$event.stopPropagation()">
+              <!-- Undo simple -->
+              <button type="button"
+                      class="w-6 h-6 flex items-center justify-center rounded hover:bg-purple-500/20 text-white/30 hover:text-purple-400 transition-colors"
+                      [disabled]="undoingId() !== null"
+                      title="Annuler cette modification"
+                      (click)="undoEntry(entry)">
+                <span class="material-symbols-outlined text-[13px]">undo</span>
+              </button>
+              <!-- Undo cascade -->
+              <button type="button"
+                      class="w-6 h-6 flex items-center justify-center rounded hover:bg-orange-500/20 text-white/30 hover:text-orange-400 transition-colors"
+                      [disabled]="undoingId() !== null"
+                      title="Revenir à cette version (annule aussi les modifications suivantes sur ce fichier)"
+                      (click)="requestCascade(entry)">
+                <span class="material-symbols-outlined text-[13px]">history</span>
+              </button>
+            </div>
+          }
+
         </div>
+
+        <!-- Confirmation cascade (inline, juste sous l'entrée) -->
+        @if (cascadeConfirmId() === entry.id) {
+          <div class="mx-1.5 mb-1 px-2.5 py-2 rounded-lg bg-orange-500/8 border border-orange-500/25"
+               (click)="$event.stopPropagation()">
+            <p class="text-[10px] text-orange-300/90 leading-snug mb-1.5">
+              Revenir à cette version annule toutes les modifications suivantes sur ce fichier.
+            </p>
+            <div class="flex gap-1.5">
+              <button type="button"
+                      (click)="cancelCascade()"
+                      class="flex-1 text-[9px] py-1 rounded bg-white/5 hover:bg-white/8 text-white/50 transition-colors">
+                Annuler
+              </button>
+              <button type="button"
+                      (click)="confirmCascade(entry)"
+                      [disabled]="undoingId() !== null"
+                      class="flex-1 text-[9px] py-1 rounded bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 transition-colors disabled:opacity-40">
+                Confirmer le retour
+              </button>
+            </div>
+          </div>
+        }
       }
       }
 

@@ -55,6 +55,37 @@ Données : via `ProjetCollabService`, temps réel WebSocket
 
 ---
 
+## `2-5-2-8-9` — Annulation d'une modification (undo simple)
+
+- **Déclenchement** : bouton `undo` (icône `undo`) visible au hover sur les entrées `undoable && !undone`
+- **Action** : `undoEntry(entry)` → `woHistory.undo(id)` → POST `/api/wo-action-history/:id/undo`
+- **Feedback** : spinner pendant l'opération, entrée marquée "annulé" localement (optimistic update)
+- **SSE** : le serveur broadcast une nouvelle entrée "Annulation : ..." → reçue en temps réel
+- **Résultat** : le contenu du fichier est restauré à `beforeState`; l'éditeur se met à jour via SSE
+
+---
+
+## `2-5-2-8-10` — Retour à une ancienne version (undo cascade)
+
+- **Déclenchement** : bouton `history` (icône `history`) visible au hover → confirmation inline affichée
+- **Confirmation** : message + boutons "Annuler" / "Confirmer le retour"
+- **Action** : `confirmCascade(entry)` → `woHistory.undoCascade(id)` → POST `/api/wo-action-history/:id/undo-cascade`
+- **Périmètre** : uniquement le même fichier/entité (`entity_id`), toutes les modifications plus récentes non encore annulées
+- **Feedback** : spinner, toutes les entrées concernées marquées "annulé" localement
+- **Résultat** : le fichier revient à l'état juste avant la modification cible; une entrée récapitulative est créée dans l'historique
+
+---
+
+## `2-5-2-8-11` — Badge IA (actionType ai-update)
+
+- **Source** : modifications IA acceptées via `onAcceptAiEdit()` dans `ProjetEditorComponent`
+- **Icône** : `auto_awesome` (violet)
+- **Couleur** : fond `bg-violet-500/20`, texte `text-violet-400`
+- **Undoable** : oui — le `beforeState` est le contenu original avant la modification IA
+- **Annulable** : via undo simple ou cascade comme toute autre modification
+
+---
+
 ## `2-5-2-8-6` — Suppression de l'historique
 
 - **Ouverture** : `openClear()` → modal de confirmation avec `clearOpen.set(true)`

@@ -25,6 +25,7 @@ export interface CollabHistoryEntry {
   userId: string | null;
   username: string;
   undone: boolean;
+  undoable?: boolean;
   beforeState?: { content?: string } | null;
   afterState?: { content?: string } | null;
   context?: Record<string, any>;
@@ -117,6 +118,8 @@ export class ProjetCollabService {
   }
 
   readonly contentUpdate$ = new Subject<ContentUpdateEvent>();
+  // Déclenché par les opérations d'annulation (undo) — sans filtre d'auteur
+  readonly fileRestored$ = new Subject<ContentUpdateEvent>();
   readonly structureUpdate$ = new Subject<StructureUpdateEvent>();
   readonly sectionPublished$ = new Subject<SectionPublishedEvent>();
   readonly projectSynced$ = new Subject<ProjectSyncedEvent>();
@@ -242,6 +245,16 @@ export class ProjetCollabService {
           if (update.updatedBy !== me?.id) this.contentUpdate$.next(update);
         } catch (err) {
           console.warn('[Collab] SSE content_update parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('file_restored', (e: MessageEvent) => {
+        try {
+          const update: ContentUpdateEvent = JSON.parse(e.data);
+          // Pas de filtre d'auteur : un undo doit toujours rafraîchir l'éditeur
+          this.fileRestored$.next(update);
+        } catch (err) {
+          console.warn('[Collab] SSE file_restored parse error:', err);
         }
       });
 
