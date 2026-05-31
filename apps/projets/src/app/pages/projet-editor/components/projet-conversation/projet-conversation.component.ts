@@ -48,6 +48,10 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   showModelSelect = signal(false);
   // Popup infos IA du projet
   showIaInfo = signal(false);
+  // Prompt tapé dans le popup IA (partagé avec l'input principal via sendFromPopup)
+  popupPrompt = '';
+  // Inclure le document entier comme contexte (au lieu de la section seule)
+  includeFullDocument = signal(false);
   // Popup prompt complet (par message IA)
   showPromptInfo = signal(false);
   selectedPromptContext = signal<PromptContext | null>(null);
@@ -156,13 +160,22 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     }
   }
 
-  private buildSystemInstructions(subSectionsContent?: string | null): string | null {
+  private buildSystemInstructions(
+    subSectionsContent?: string | null,
+    fullDocContent?: string | null,
+    sectionName?: string | null
+  ): string | null {
     const global = this.globalIaInstruction();
     const project = this.iaInstructions;
     const parts: string[] = [];
     if (global) parts.push(global);
     if (project) parts.push(project);
-    if (subSectionsContent) {
+    if (fullDocContent) {
+      const header = sectionName
+        ? `[Document complet — contexte général]\nSection active ciblée : "${sectionName}"\n\n`
+        : `[Document complet — contexte général]\n\n`;
+      parts.push(`${header}${fullDocContent}`);
+    } else if (subSectionsContent) {
       parts.push(`[Sous-sections de la section courante — contexte supplémentaire]\n${subSectionsContent}`);
     }
     return parts.length > 0 ? parts.join('\n\n---\n\n') : null;
@@ -171,6 +184,25 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   openPromptInfo(ctx: PromptContext) {
     this.selectedPromptContext.set(ctx);
     this.showPromptInfo.set(true);
+  }
+
+  toggleFullDocument() {
+    this.includeFullDocument.update(v => !v);
+  }
+
+  sendFromPopup() {
+    if (!this.popupPrompt.trim() || !this.sectionId || this.aiEditService.isStreaming()) return;
+    const msg = this.popupPrompt;
+    this.popupPrompt = '';
+    this.showIaInfo.set(false);
+    this.sendAiEdit(msg);
+  }
+
+  onPopupKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.sendFromPopup();
+    }
   }
 
   ngAfterViewChecked() {
@@ -248,11 +280,13 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     });
   }
 
-  private sendAiEdit() {
+  private sendAiEdit(messageOverride?: string) {
     if (this.aiEditService.isStreaming()) return;
 
-    // Extraire le prompt : strip @ia si tapé manuellement, sinon message brut
-    const raw = this.inputMessage.trimStart();
+    // Extraire le prompt : depuis l'override (popup), ou depuis inputMessage
+    const raw = messageOverride !== undefined
+      ? messageOverride.trimStart()
+      : this.inputMessage.trimStart();
     const prompt = raw.toLowerCase().startsWith('@ia ')
       ? raw.slice(raw.toLowerCase().indexOf('@ia ') + 4).trim()
       : raw.trim();
@@ -272,8 +306,18 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     }
     const model = this.activeModel();
 
-    // Collecter le contenu des sous-sections pour enrichir le contexte
-    const subSectionsContent = this.collectSubSectionsContent(this.sectionId!, this.files);
+    // Contexte : document entier OU sous-sections selon l'option active
+    let subSectionsContent: string | null = null;
+    let fullDocumentContent: string | null = null;
+    let systemInstructions: string | null;
+
+    if (this.includeFullDocument()) {
+      fullDocumentContent = this.collectAllSectionsContent(this.files);
+      systemInstructions = this.buildSystemInstructions(null, fullDocumentContent, fileInfo.fileName);
+    } else {
+      subSectionsContent = this.collectSubSectionsContent(this.sectionId!, this.files);
+      systemInstructions = this.buildSystemInstructions(subSectionsContent);
+    }
 
     // Construire le prompt final (avec historique si option activée)
     let finalPrompt = prompt;
@@ -284,18 +328,21 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
       finalPrompt = `[Historique de la conversation]\n${historyLines}\n\n[Demande actuelle]\n${prompt}`;
     }
 
-    this.inputMessage = '';
+    // Effacer uniquement l'input source utilisé
+    if (messageOverride === undefined) {
+      this.inputMessage = '';
+    }
 
     // Message user dans la conversation
     const userMsg: Message = {
       user: 'Moi',
       userId: 'local',
-      text: this.iaMode() ? `@ia ${prompt}` : raw,
+      // Messages du popup sont toujours en mode IA
+      text: (this.iaMode() || messageOverride !== undefined) ? `@ia ${prompt}` : raw,
       timestamp: new Date().toISOString(),
       role: 'user'
     };
     this.messages = [...this.messages, userMsg];
-    // Persiste le message utilisateur (même route que sendChat)
     this.convService.sendMessage(this.sectionId!, userMsg.text).subscribe();
 
     // Contexte du prompt pour le popup d'informations
@@ -303,6 +350,7 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
       sectionName: fileInfo.fileName,
       sectionContent: fileInfo.content,
       subSectionsContent,
+      fullDocumentContent,
       globalInstruction: this.globalIaInstruction(),
       projectInstruction: this.iaInstructions,
       userPrompt: prompt,
@@ -333,7 +381,6 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     const doneSub = this.aiEditService.done$.subscribe(finalText => {
       sub.unsubscribe();
       doneSub.unsubscribe();
-      // Attacher les infos tokens au dernier message IA (en conservant promptContext)
       const tokens = this.aiEditService.tokenInfo();
       if (tokens) {
         const updated = [...this.messages];
@@ -366,7 +413,7 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
       fileInfo.fileName,
       provider,
       model,
-      this.buildSystemInstructions(subSectionsContent)
+      systemInstructions
     );
   }
 
@@ -408,6 +455,17 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
       if (subContent) parts.push(`### ${sub.name}\n\n${subContent}`);
     }
     return parts.join('\n\n');
+  }
+
+  private collectAllSectionsContent(nodes: FileNode[]): string {
+    const parts: string[] = [];
+    for (const node of nodes) {
+      if (node.type === 'folder') {
+        const content = this.collectFolderContent(node);
+        if (content) parts.push(`# ${node.name}\n\n${content}`);
+      }
+    }
+    return parts.join('\n\n---\n\n');
   }
 
   private findContenFile(sectionId: string, nodes: FileNode[]): { fileId: string; content: string; fileName: string } | null {

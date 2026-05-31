@@ -80,9 +80,22 @@ Contexte : lié à la section active (`activeNodeId`)
   - Modèle actif (valeur + label)
   - Niveau 1 — Instruction globale (doc par défaut catégorie "Instructions IA")
   - Niveau 2 — Instructions du projet (`iaInstructions`)
-  - Niveau 3 — Section sélectionnée : nom + aperçu du contenu (+ badge "sous-sections" si applicable)
-  - Niveau 4 — Rappel prompt utilisateur
+  - Niveau 3 — Section sélectionnée : nom + aperçu + badge "document entier" si option active
+  - Niveau 4 — Rappel prompt (saisi dans la textarea ci-dessous)
+  - **Options** : toggle "Inclure le document entier" + toggle "Inclure l'historique"
+  - **Textarea** : saisie du prompt + bouton Envoyer (Entrée = envoi, Maj+Entrée = nouvelle ligne)
+- **Même comportement** que l'input principal → appelle `sendAiEdit(message)` identique
 - **Mise à jour automatique** : la section se rafraîchit à chaque changement de `sectionId` ou `files`
+
+---
+
+## `2-5-2-7-11` — Option "Inclure le document entier"
+
+- **Signal** : `includeFullDocument = signal(false)`
+- **Activé** : `collectAllSectionsContent(files)` récupère tout le document → injecté dans `systemInstructions` avec la mention de la section ciblée
+- **Désactivé** : comportement standard (section seule + sous-sections si présentes)
+- **Indicateur** : `◈ Document entier en contexte` dans la barre d'outils
+- **Toggle** : disponible dans le popup IA ET via `toggleFullDocument()` (extensible)
 
 ---
 

@@ -7,6 +7,7 @@ export interface PromptContext {
   sectionName: string;
   sectionContent: string;
   subSectionsContent: string | null;
+  fullDocumentContent: string | null;
   globalInstruction: string | null;
   projectInstruction: string | null;
   userPrompt: string;

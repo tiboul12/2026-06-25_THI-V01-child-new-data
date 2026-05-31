@@ -5145,6 +5145,52 @@
       "prompt": "dans projets/editor pour interoger une IA via Conversation il faut avant tous selectionner une section (morceau du texte, dossier, document, code etc). Ensuite l IA récupère les informations de base lié au projet en général (document par defaut), les informations IA du projet, le texte de la section selectioné (et uniquement celui là) et le prompt. Si une section inclus plusieurs sous sections, le prompt doit prendre en compte l ensemble du texte et les sous sections et document. Dans le résumé des informations prise en compte (bouton information IA du projet) il faut rajouté aussi la section. Dans l historique de la conversation dans l encart réponse de l IA il faut rajouté un bouton pour affiché dans un popup les informations complète du prompt (comme le bouton information IA du projet)",
       "startedAt": "2026-05-31T00:00:00.000Z",
       "completedAt": "2026-05-31T00:00:00.000Z"
+    },
+    {
+      "id": "mod-067",
+      "version": "B-0.243",
+      "date": "2026-05-31T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets",
+        "libs"
+      ],
+      "features": "projets:conversation",
+      "title": "Conversation IA : option document entier + textarea dans popup info IA",
+      "description": "Ajout du toggle \"inclure le document entier\" : quand activé, toutes les sections du projet sont passées dans les system instructions avec indication de la section ciblée. Ajout dans le popup info IA d'un textarea pour créer et envoyer un prompt directement (même chemin d'exécution que l'input principal). Mise à jour du popup \"prompt complet\" pour afficher le document entier si utilisé.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html",
+        "libs/portail-core/data-access/src/lib/conversation.service.ts",
+        "tests/fonctions/connecte/projets/editor/zone5-conversation/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "rajoute une option pour integré l ensemble du document et non juste la section selectionné au context du prompt, il faut tous de même indiqué dans le prompt initial la section selectioné. Ajoute les options dans le popup informations IA du projet et ajoute un textarea dans ce popup pour créé directement le prompt user et pour lancer l execution (même fonction que celui dans la page principal de l editor/conversation). Il ne doit pas y avoir de différence entre les 2 façon d executé un prompt IA pour une section",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T00:00:00.000Z"
+    },
+    {
+      "id": "mod-068",
+      "version": "B-0.243",
+      "date": "2026-05-31T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:conversation",
+      "title": "Conversation : toggle historique disabled si 0 messages",
+      "description": "Le bouton \"inclure l historique\" est désactivé (disabled + opacité réduite) quand il n y a aucun message dans la conversation. Valable dans la barre d outils principale et dans le popup info IA. Le toggle affiche aussi \"Aucun message\" au lieu du compte.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque il y a 0 messages précédents dans l historique de conversation, le selecteur doit être disabled car il ne sert à rien",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T00:00:00.000Z"
     }
   ]
 }
