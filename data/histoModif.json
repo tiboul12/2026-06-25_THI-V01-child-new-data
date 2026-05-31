@@ -5069,6 +5069,35 @@
       "prompt": "j'ai créé une conversation avec l'IA qui ma bien répondus, mais je ne vois plus la conversation que j'ai créé uniquement sa réponse, toutes conversation avec l'IA ou les autres conversation classique doivent être enregistré et affiché dans l'historique de conversation",
       "startedAt": "2026-05-31T12:55:00.000Z",
       "completedAt": "2026-05-31T13:05:00.000Z"
+    },
+    {
+      "id": "mod-064",
+      "version": "B-0.241",
+      "date": "2026-05-31T14:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "projets",
+        "server",
+        "libs"
+      ],
+      "features": "portail:documents,projets:conversation-ia,libs:document-service",
+      "title": "Documents : doc par défaut par catégorie + IA 3 niveaux d'instructions",
+      "description": "Ajout d'un document par défaut par catégorie dans le menu Documents (migration DB, route PUT /default-document, UI colonne + bouton étoile). Dans la conversation IA du projet, les system instructions sont maintenant construites en 3 niveaux : 1) doc par défaut catégorie Instructions IA (global), 2) instructions IA du projet, 3) prompt utilisateur. Le popup info IA affiche les 3 niveaux.",
+      "files": [
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/document.service.ts",
+        "apps/portail/src/app/pages/user/documents/documents.component.ts",
+        "apps/portail/src/app/pages/user/documents/documents.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans le menu Documents ajoute un système ou il y aura un fichier par default par catégorie. / dans le menu projets/editor/conversation/IA et que l'ia est intéroger à partir du prompt de l'utilisateur tu doit utilisé en premier le document par default de la catégorie Instructions IA pour tous les projets et tu doit utilisé les informations IA lié au projet Instructions IA.",
+      "startedAt": "2026-05-31T13:30:00.000Z",
+      "completedAt": "2026-05-31T14:30:00.000Z"
     }
   ]
 }

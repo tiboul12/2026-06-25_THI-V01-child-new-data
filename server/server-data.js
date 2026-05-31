@@ -6547,6 +6547,7 @@ app.get('/api/doc-categories', async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM doc_categories ORDER BY name ASC');
         res.json(rows.map(r => ({
             id: r.id, name: r.name, description: r.description || '',
+            defaultDocumentId: r.default_document_id || null,
             createdBy: r.created_by, createdByUsername: r.created_by_username,
             createdAt: r.created_at
         })));
@@ -6600,6 +6601,34 @@ app.put('/api/doc-categories/:id', async (req, res) => {
             createdBy: r.created_by, createdByUsername: r.created_by_username, createdAt: r.created_at });
     } catch (e) {
         console.error('[DOC-CAT] Update error:', e);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// PUT définir le document par défaut d'une catégorie
+app.put('/api/doc-categories/:id/default-document', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { documentId } = req.body; // null pour retirer le défaut
+    try {
+        const [existing] = await pool.query('SELECT * FROM doc_categories WHERE id = ?', [req.params.id]);
+        if (!existing[0]) return res.status(404).json({ error: 'Catégorie introuvable' });
+        if (existing[0].created_by !== user.id && user.role !== 'admin') {
+            return res.status(403).json({ error: 'Non autorisé' });
+        }
+        // Vérifie que le document appartient bien à cette catégorie (si fourni)
+        if (documentId) {
+            const [doc] = await pool.query('SELECT id FROM documents WHERE id = ? AND category_id = ?', [documentId, req.params.id]);
+            if (!doc[0]) return res.status(400).json({ error: 'Ce document n\'appartient pas à cette catégorie' });
+        }
+        await pool.query('UPDATE doc_categories SET default_document_id = ? WHERE id = ?', [documentId || null, req.params.id]);
+        const [rows] = await pool.query('SELECT * FROM doc_categories WHERE id = ?', [req.params.id]);
+        const r = rows[0];
+        res.json({ id: r.id, name: r.name, description: r.description || '',
+            defaultDocumentId: r.default_document_id || null,
+            createdBy: r.created_by, createdByUsername: r.created_by_username, createdAt: r.created_at });
+    } catch (e) {
+        console.error('[DOC-CAT] Default-document error:', e);
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
@@ -7646,6 +7675,7 @@ app.listen(PORT, async () => {
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_username VARCHAR(128) DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_username:', e.message));
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_port INT DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_port:', e.message));
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS ia_instructions TEXT DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration ia_instructions:', e.message));
+    await pool.query(`ALTER TABLE doc_categories ADD COLUMN IF NOT EXISTS default_document_id VARCHAR(64) DEFAULT NULL`).catch(e => console.error('[DB] doc_categories migration default_document_id:', e.message));
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS frank_project_steps (

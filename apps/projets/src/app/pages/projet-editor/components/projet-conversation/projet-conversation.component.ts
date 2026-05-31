@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { ConversationService, Message } from '@worganic/portail-core/data-access';
 import { ConfigService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
+import { DocumentService } from '@worganic/portail-core/data-access';
 import { ProjetAiEditService } from '../../services/projet-ai-edit.service';
 import { FileNode } from '@worganic/portail-core/data-access';
 
@@ -27,6 +28,7 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   private convService = inject(ConversationService);
   configService = inject(ConfigService);
   private woHistory = inject(WoActionHistoryService);
+  private documentService = inject(DocumentService);
   aiEditService = inject(ProjetAiEditService);
 
   inputMessage = '';
@@ -46,6 +48,8 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   showModelSelect = signal(false);
   // Popup infos IA du projet
   showIaInfo = signal(false);
+  // Instruction globale : doc par défaut de la catégorie "Instructions IA"
+  globalIaInstruction = signal<string | null>(null);
 
   // Liste consolidée de tous les modèles disponibles
   readonly allModels = computed(() => {
@@ -95,11 +99,38 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
         this.messages = [];
       }
     }
-    // Init du modèle depuis la config au premier chargement
-    if (changes['projectId'] && !this.selectedModel()) {
-      const cfg = this.configService.cliConfig();
-      this.selectedModel.set(cfg.headerSelection?.model || '');
+    // Init du modèle et chargement de l'instruction globale au premier chargement du projet
+    if (changes['projectId']) {
+      if (!this.selectedModel()) {
+        const cfg = this.configService.cliConfig();
+        this.selectedModel.set(cfg.headerSelection?.model || '');
+      }
+      this.loadGlobalIaInstruction();
     }
+  }
+
+  private async loadGlobalIaInstruction() {
+    try {
+      const [cats, docs] = await Promise.all([
+        this.documentService.getCategories(),
+        this.documentService.getDocuments()
+      ]);
+      const iaCat = cats.find(c => c.name === 'Instructions IA');
+      if (!iaCat?.defaultDocumentId) { this.globalIaInstruction.set(null); return; }
+      const defaultDoc = docs.find(d => d.id === iaCat.defaultDocumentId);
+      this.globalIaInstruction.set(defaultDoc?.text || null);
+    } catch {
+      this.globalIaInstruction.set(null);
+    }
+  }
+
+  private buildSystemInstructions(): string | null {
+    const global = this.globalIaInstruction();
+    const project = this.iaInstructions;
+    if (global && project) return `${global}\n\n---\n\n${project}`;
+    if (global) return global;
+    if (project) return project;
+    return null;
   }
 
   ngAfterViewChecked() {
@@ -280,7 +311,7 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
       fileInfo.fileName,
       provider,
       model,
-      this.iaInstructions
+      this.buildSystemInstructions()
     );
   }
 

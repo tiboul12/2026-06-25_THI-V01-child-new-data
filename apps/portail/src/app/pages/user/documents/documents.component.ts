@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
-
+import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '@worganic/portail-core/data-access';
@@ -13,6 +13,7 @@ export interface DocCategory {
   id: string;
   name: string;
   description: string;
+  defaultDocumentId: string | null;
   createdBy: string;
   createdByUsername: string;
   createdAt: string;
@@ -35,7 +36,7 @@ export interface DocDocument {
 
 @Component({
     selector: 'app-documents',
-    imports: [FormsModule, MarkdownEditorComponent],
+    imports: [FormsModule, NgClass, MarkdownEditorComponent],
     templateUrl: './documents.component.html',
     styleUrl: './documents.component.scss'
 })
@@ -55,6 +56,11 @@ export class DocumentsComponent implements OnInit {
 
   catName = '';
   catDescription = '';
+
+  // Document par défaut
+  settingDefaultFor = signal<string | null>(null);
+  newDefaultDocId = '';
+  savingDefault = signal(false);
 
   // ── Documents ───────────────────────────────────────────────
   documents = signal<DocDocument[]>([]);
@@ -214,6 +220,90 @@ export class DocumentsComponent implements OnInit {
   }
 
   canEditCategory(cat: DocCategory): boolean {
+    return this.isAdmin || cat.createdBy === this.currentUser?.id;
+  }
+
+  openSetDefault(cat: DocCategory) {
+    this.settingDefaultFor.set(cat.id);
+    this.newDefaultDocId = cat.defaultDocumentId || '';
+  }
+
+  closeSetDefault() {
+    this.settingDefaultFor.set(null);
+    this.newDefaultDocId = '';
+  }
+
+  async saveDefaultDocument(catId: string) {
+    this.savingDefault.set(true);
+    this.categoriesError.set('');
+    try {
+      const res = await fetch(`${API}/api/doc-categories/${catId}/default-document`, {
+        method: 'PUT',
+        headers: this.authHeaders,
+        body: JSON.stringify({ documentId: this.newDefaultDocId || null })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Erreur');
+      this.closeSetDefault();
+      await this.loadCategories();
+    } catch (e: any) {
+      this.categoriesError.set(e?.message || 'Erreur définition du document par défaut');
+    } finally {
+      this.savingDefault.set(false);
+    }
+  }
+
+  async removeDefaultDocument(catId: string) {
+    this.categoriesError.set('');
+    try {
+      const res = await fetch(`${API}/api/doc-categories/${catId}/default-document`, {
+        method: 'PUT',
+        headers: this.authHeaders,
+        body: JSON.stringify({ documentId: null })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Erreur');
+      await this.loadCategories();
+    } catch (e: any) {
+      this.categoriesError.set(e?.message || 'Erreur suppression du document par défaut');
+    }
+  }
+
+  docsForCategory(catId: string): DocDocument[] {
+    return this.documents().filter(d => d.categoryId === catId);
+  }
+
+  getDefaultDocTitle(cat: DocCategory): string {
+    if (!cat.defaultDocumentId) return '';
+    return this.documents().find(d => d.id === cat.defaultDocumentId)?.title || '—';
+  }
+
+  isDefaultDoc(doc: DocDocument): boolean {
+    if (!doc.categoryId) return false;
+    return this.categories().find(c => c.id === doc.categoryId)?.defaultDocumentId === doc.id;
+  }
+
+  async toggleDefaultDoc(doc: DocDocument) {
+    if (!doc.categoryId) return;
+    const cat = this.categories().find(c => c.id === doc.categoryId);
+    if (!cat || (!this.isAdmin && cat.createdBy !== this.currentUser?.id)) return;
+    const newId = cat.defaultDocumentId === doc.id ? null : doc.id;
+    this.documentsError.set('');
+    try {
+      const res = await fetch(`${API}/api/doc-categories/${doc.categoryId}/default-document`, {
+        method: 'PUT',
+        headers: this.authHeaders,
+        body: JSON.stringify({ documentId: newId })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Erreur');
+      await this.loadCategories();
+    } catch (e: any) {
+      this.documentsError.set(e?.message || 'Erreur');
+    }
+  }
+
+  canSetDefaultDoc(doc: DocDocument): boolean {
+    if (!doc.categoryId) return false;
+    const cat = this.categories().find(c => c.id === doc.categoryId);
+    if (!cat) return false;
     return this.isAdmin || cat.createdBy === this.currentUser?.id;
   }
 

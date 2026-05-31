@@ -35,26 +35,52 @@
             </div>
           </div>
 
-          <!-- Instructions IA -->
+          <!-- Niveau 1 : Instruction globale (doc par défaut "Instructions IA") -->
           <div>
             <div class="flex items-center gap-2 mb-1.5">
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/30">Instructions système</div>
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20">1</span>
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/30">Instruction globale</div>
+              @if (globalIaInstruction()) {
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{{ globalIaInstruction()!.length }} car.</span>
+              }
+            </div>
+            @if (globalIaInstruction()) {
+              <div class="px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-amber-500/20 max-h-32 overflow-y-auto">
+                <pre class="text-[11px] text-light-text dark:text-white/80 whitespace-pre-wrap leading-relaxed font-mono">{{ globalIaInstruction() }}</pre>
+              </div>
+            } @else {
+              <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
+                <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/20">info</span>
+                <span class="text-xs text-light-text-muted dark:text-white/30 italic">Aucun doc par défaut dans la catégorie "Instructions IA"</span>
+              </div>
+            }
+          </div>
+
+          <!-- Niveau 2 : Instructions du projet -->
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">2</span>
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/30">Instructions du projet</div>
               @if (iaInstructions) {
-                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                  {{ iaInstructions.length }} car.
-                </span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">{{ iaInstructions.length }} car.</span>
               }
             </div>
             @if (iaInstructions) {
-              <div class="px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-violet-500/20 max-h-48 overflow-y-auto">
+              <div class="px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-violet-500/20 max-h-32 overflow-y-auto">
                 <pre class="text-[11px] text-light-text dark:text-white/80 whitespace-pre-wrap leading-relaxed font-mono">{{ iaInstructions }}</pre>
               </div>
             } @else {
-              <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
+              <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
                 <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/20">info</span>
                 <span class="text-xs text-light-text-muted dark:text-white/30 italic">Aucune instruction configurée pour ce projet</span>
               </div>
             }
+          </div>
+
+          <!-- Niveau 3 : rappel prompt utilisateur -->
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
+            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-light-primary/15 dark:bg-primary/15 text-light-primary dark:text-primary border border-light-primary/20 dark:border-primary/20">3</span>
+            <span class="text-xs text-light-text-muted dark:text-white/40">Prompt de la conversation (saisi par l'utilisateur)</span>
           </div>
 
         </div>

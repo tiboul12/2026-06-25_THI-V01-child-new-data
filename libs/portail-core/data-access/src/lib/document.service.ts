@@ -8,6 +8,7 @@ export interface DocCategory {
   id: string;
   name: string;
   description: string;
+  defaultDocumentId: string | null;
   createdBy: string;
   createdByUsername: string;
   createdAt: string;

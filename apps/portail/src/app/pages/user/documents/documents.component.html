@@ -113,6 +113,7 @@
               <tr class="border-b border-light-border dark:border-white/10 text-[11px] uppercase tracking-wider text-light-text-muted dark:text-white/30">
                 <th class="text-left px-5 py-3">Nom</th>
                 <th class="text-left px-5 py-3">Description</th>
+                <th class="text-left px-5 py-3">Doc. par défaut</th>
                 <th class="text-left px-5 py-3">Créée par</th>
                 <th class="text-left px-5 py-3">Date</th>
                 <th class="text-right px-5 py-3">Actions</th>
@@ -131,6 +132,64 @@
                     </div>
                   </td>
                   <td class="px-5 py-3 text-light-text-muted dark:text-white/50">{{ cat.description || '—' }}</td>
+
+                  <!-- Document par défaut -->
+                  <td class="px-5 py-3">
+                    @if (settingDefaultFor() === cat.id) {
+                      <!-- Picker inline -->
+                      <div class="flex items-center gap-2">
+                        <select [(ngModel)]="newDefaultDocId"
+                                class="flex-1 px-2 py-1.5 rounded-lg bg-light-surface dark:bg-surface border border-amber-500/40 text-light-text dark:text-white text-xs focus:outline-none focus:border-amber-500 transition-colors dark:[color-scheme:dark]">
+                          <option value="">— Aucun —</option>
+                          @for (d of docsForCategory(cat.id); track d.id) {
+                            <option [value]="d.id">{{ d.title }}</option>
+                          }
+                        </select>
+                        <button (click)="saveDefaultDocument(cat.id)" [disabled]="savingDefault()"
+                                class="p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-all disabled:opacity-50">
+                          @if (savingDefault()) {
+                            <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                          } @else {
+                            <span class="material-symbols-outlined text-sm">check</span>
+                          }
+                        </button>
+                        <button (click)="closeSetDefault()"
+                                class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+                          <span class="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      </div>
+                    } @else if (cat.defaultDocumentId) {
+                      <!-- Défaut défini -->
+                      <div class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-sm text-amber-400">star</span>
+                        <span class="text-xs text-light-text dark:text-white/80 font-medium truncate max-w-[140px]" [title]="getDefaultDocTitle(cat)">
+                          {{ getDefaultDocTitle(cat) }}
+                        </span>
+                        @if (canEditCategory(cat)) {
+                          <button (click)="openSetDefault(cat)"
+                                  class="p-0.5 rounded hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/60 transition-all" title="Changer">
+                            <span class="material-symbols-outlined text-[11px]">edit</span>
+                          </button>
+                          <button (click)="removeDefaultDocument(cat.id)"
+                                  class="p-0.5 rounded hover:bg-red-500/10 text-light-text-muted dark:text-white/30 hover:text-red-400 transition-all" title="Retirer">
+                            <span class="material-symbols-outlined text-[11px]">close</span>
+                          </button>
+                        }
+                      </div>
+                    } @else {
+                      <!-- Pas de défaut -->
+                      @if (canEditCategory(cat) && docsForCategory(cat.id).length > 0) {
+                        <button (click)="openSetDefault(cat)"
+                                class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border border-dashed border-light-border dark:border-white/15 text-light-text-muted dark:text-white/30 hover:border-amber-500/40 hover:text-amber-400 transition-all">
+                          <span class="material-symbols-outlined text-[11px]">star_outline</span>
+                          Définir
+                        </button>
+                      } @else {
+                        <span class="text-light-text-muted/30 dark:text-white/20 text-xs">—</span>
+                      }
+                    }
+                  </td>
+
                   <td class="px-5 py-3">
                     <span class="text-[11px] px-2 py-0.5 rounded-full bg-light-primary/10 dark:bg-primary/10 text-light-primary dark:text-primary border border-light-primary/20 dark:border-primary/20 font-medium">
                       {{ cat.createdByUsername }}
@@ -312,7 +371,15 @@
                       : 'hover:bg-light-primary/5 dark:hover:bg-primary/5'">
                   <td class="px-5 py-3">
                     <div>
-                      <p class="font-medium text-light-text dark:text-white">{{ doc.title }}</p>
+                      <div class="flex items-center gap-2">
+                        <p class="font-medium text-light-text dark:text-white">{{ doc.title }}</p>
+                        @if (isDefaultDoc(doc)) {
+                          <span class="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <span class="material-symbols-outlined text-[10px]">star</span>
+                            Défaut
+                          </span>
+                        }
+                      </div>
                       @if (doc.description) {
                         <p class="text-xs text-light-text-muted dark:text-white/40 mt-0.5">{{ doc.description }}</p>
                       }
@@ -351,6 +418,16 @@
                   </td>
                   <td class="px-5 py-3">
                     <div class="flex items-center gap-1 justify-end">
+                      @if (canSetDefaultDoc(doc)) {
+                        <button (click)="toggleDefaultDoc(doc)"
+                                [title]="isDefaultDoc(doc) ? 'Retirer comme document par défaut' : 'Définir comme document par défaut de la catégorie'"
+                                class="p-1.5 rounded-lg border transition-all"
+                                [ngClass]="isDefaultDoc(doc)
+                                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
+                                  : 'bg-light-surface dark:bg-white/5 border-light-border dark:border-white/10 text-light-text-muted dark:text-white/30 hover:border-amber-500/30 hover:text-amber-400'">
+                          <span class="material-symbols-outlined text-sm">{{ isDefaultDoc(doc) ? 'star' : 'star_outline' }}</span>
+                        </button>
+                      }
                       @if (canEditDocument(doc)) {
                         <button (click)="openEditDocument(doc)"
                                 class="p-1.5 rounded-lg hover:bg-light-primary/10 dark:hover:bg-primary/10 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-all" title="Modifier">
