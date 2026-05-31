@@ -439,10 +439,8 @@
             </thead>
             <tbody>
               @for (project of projects(); track project.id) {
-                <tr class="border-b border-light-border/50 dark:border-white/5 transition-colors"
-                    [class]="editingProject()?.id === project.id
-                      ? 'bg-light-primary/5 dark:bg-primary/5'
-                      : 'hover:bg-light-primary/5 dark:hover:bg-primary/5'">
+                <tr class="border-b border-light-border/50 dark:border-white/5 hover:bg-light-primary/5 dark:hover:bg-primary/5 transition-all"
+                    [style]="rowStyle(project)">
                   <td class="px-5 py-3">
                     <span class="font-medium text-light-text dark:text-white">{{ project.title }}</span>
                     <span class="ml-2 text-[10px] font-mono text-light-text-muted/50 dark:text-white/20">{{ project.id | slice:0:8 }}</span>

@@ -88,6 +88,10 @@ export class AdminProjetsComponent implements OnInit {
   }
 
   openEditProject(project: Project) {
+    this.editingIa.set(null);
+    this.showDocPicker.set(false);
+    this.editingBackup.set(null);
+    this.ftpTestResult.set(null);
     this.editingProject.set(project);
     this.editTitle = project.title;
     this.editStatus = project.status;
@@ -130,6 +134,9 @@ export class AdminProjetsComponent implements OnInit {
   }
 
   openEditIa(project: Project) {
+    this.editingProject.set(null);
+    this.editingBackup.set(null);
+    this.ftpTestResult.set(null);
     this.editingIa.set(project);
     this.editIaInstructions = project.iaInstructions || '';
     this.showDocPicker.set(false);
@@ -219,6 +226,9 @@ export class AdminProjetsComponent implements OnInit {
   }
 
   openEditBackup(project: Project) {
+    this.editingProject.set(null);
+    this.editingIa.set(null);
+    this.showDocPicker.set(false);
     this.editingBackup.set(project);
     this.backupType = (project.backupType as any) || '';
     this.backupServer = project.backupServer || '';
@@ -344,6 +354,16 @@ export class AdminProjetsComponent implements OnInit {
       this.projectsError.set(e?.error?.error || 'Erreur suppression');
       this.deletingProjectId.set(null);
     }
+  }
+
+  rowStyle(project: Project): Record<string, string> {
+    if (this.editingIa()?.id === project.id) {
+      return { background: 'rgba(139,92,246,0.15)', borderLeft: '3px solid rgba(139,92,246,0.8)' };
+    }
+    if (this.editingProject()?.id === project.id || this.editingBackup()?.id === project.id) {
+      return { background: 'rgba(139,92,246,0.08)', borderLeft: '3px solid rgba(139,92,246,0.4)' };
+    }
+    return {};
   }
 
   statusLabel(status: string): string {

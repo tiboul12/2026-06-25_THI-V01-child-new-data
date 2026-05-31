@@ -4983,6 +4983,49 @@
       "prompt": "en sous section admin/projet je voudrais que tu me rajoute une sous section gestion des instruction IA. Le but de cette section est de pouvoir créé sauvegarder et ré-utilisé (CRUD) les instructions qui seront lié au IA dans les projets. On doit pouvoir géré les différentes instruction et pouvoir les copié dans un projet. Dans chaque projet on pourra récupéré une instrcution pré enregistré et la modifié spécifiquement pour le projet.",
       "startedAt": "2026-05-31T11:30:00.000Z",
       "completedAt": "2026-05-31T12:05:00.000Z"
+    },
+    {
+      "id": "mod-060",
+      "version": "B-0.237",
+      "date": "2026-05-31T12:20:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-projets",
+      "title": "Admin Projets : surbrillance de la ligne du projet sélectionné",
+      "description": "Mise en surbrillance (fond violet + bordure gauche) de la ligne du tableau correspondant au projet dont un panneau est ouvert (IA, édition, backup). Utilise des styles inline pour contourner le purge Tailwind sur les classes générées dynamiquement.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsqu'on selectionne un projet (IA, modification autre) il faudrait mettre en surbrillance la ligne du projet pour bien voir le projet selectionné",
+      "startedAt": "2026-05-31T12:10:00.000Z",
+      "completedAt": "2026-05-31T12:20:00.000Z"
+    },
+    {
+      "id": "mod-061",
+      "version": "B-0.239",
+      "date": "2026-05-31T12:35:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-projets",
+      "title": "Admin Projets : fermeture auto des panels lors du changement de projet",
+      "description": "Ouverture d'un panel (IA, édition, backup) ferme automatiquement les deux autres. Empêche d'avoir plusieurs panels ouverts simultanément sur des projets différents.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu admin/projets lorsqu'on selectionne une option d'un projet (IA, modification, sauvegarde) et qu'on selectionne une option d'un autre projet cela doit fermé toutes les options des autres projet",
+      "startedAt": "2026-05-31T12:25:00.000Z",
+      "completedAt": "2026-05-31T12:35:00.000Z"
     }
   ]
 }
