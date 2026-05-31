@@ -5375,6 +5375,54 @@
       "prompt": "Toutes les actions doivent pouvoir être annulé, mais actuellement j'ai annulé une annulation et je ne peux plus l'annulé",
       "startedAt": "2026-05-31T19:32:06.419Z",
       "completedAt": "2026-05-31T19:32:06.419Z"
+    },
+    {
+      "id": "mod-274",
+      "version": "B-0.249",
+      "date": "2026-05-31T19:49:26.224Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:historique-diff",
+      "title": "Historique : vue diff 3 panneaux avec sélection de lignes",
+      "description": "Le composant ProjetDiffComponent est étendu en vue 3 panneaux : Actuel (gauche), Avant (milieu), Après (droite). Chaque ligne Avant/Après a un bouton chevron visible au hover pour copier cette ligne dans le panneau Actuel. Un indicateur bleu signale les lignes modifiées. Boutons Réinitialiser et Appliquer dans l éditeur. L apply persiste le fichier, refreshe la zone éditeur via restoreToken et crée une entrée Fusion manuelle dans l historique (annulable). Les entrées ai-update sont maintenant cliquables dans l historique.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-diff/projet-diff.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-diff/projet-diff.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-history/projet-history.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone5-historique/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais pouvoir voir le texte avant et après modification. On doit pouvoir cliqué sur un encart de modification sur l historique et celui ci doit affiché dans la zone central la version actuel à gauche, l ancienne version au milieu et la nouvelle version après modification. Ainsi l utilisateur doit pouvoir modifié chaque ligne de code actuel avec une ancienne version",
+      "startedAt": "2026-05-31T19:49:26.225Z",
+      "completedAt": "2026-05-31T19:49:26.225Z"
+    },
+    {
+      "id": "mod-275",
+      "version": "B-0.249",
+      "date": "2026-05-31T19:56:08.963Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:historique-diff",
+      "title": "Historique : bouton diff explicite + toutes entrées cliquables",
+      "description": "isClickable étendu à toutes les entrées projets/contenu (pas seulement update/ai-update). Bouton icône difference visible au hover sur chaque entrée cliquable. Labels tronqués avec tooltip. Les entrées Annulation ouvrent aussi la vue 3 panneaux.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-history/projet-history.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-history/projet-history.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois pas comment on peux accéder à l historique d une action que tu viens de mettre en place, cela devrait apparaitre quand on cliqué sur le titre d une action",
+      "startedAt": "2026-05-31T19:56:08.965Z",
+      "completedAt": "2026-05-31T19:56:08.965Z"
     }
   ]
 }

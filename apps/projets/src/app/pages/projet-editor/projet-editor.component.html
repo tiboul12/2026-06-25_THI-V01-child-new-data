@@ -79,7 +79,9 @@
       } @else if (diffEntry()) {
         <app-projet-diff
           [entry]="diffEntry()"
-          (close)="closeDiff()" />
+          [currentContent]="diffCurrentContent()"
+          (close)="closeDiff()"
+          (applyContent)="onTriDiffApply($event)" />
       } @else if (aiEditService.pendingEdit(); as edit) {
         <!-- Barre flottante Accepter/Annuler -->
         <div class="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative">

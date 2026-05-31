@@ -79,6 +79,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   hasPendingEdit = computed(() => !!this.aiEditService.pendingEdit());
   hasFtpBackup = computed(() => this.project()?.backupType === 'ftp');
 
+  // Contenu actuel du fichier concerné par l'entrée d'historique ouverte dans le diff
+  readonly diffCurrentContent = computed<string | null>(() => {
+    const entry = this.diffEntry();
+    if (!entry?.entityId) return null;
+    const node = this.findFileById(entry.entityId, this.files());
+    return node?.content ?? null;
+  });
+
   // Nom + icône du noeud actuellement sélectionné, affichés sous les onglets de la zone 5b
   readonly activeNodeInfo = computed<{ name: string; icon: string } | null>(() => {
     const id = this.activeNodeId();
@@ -1348,6 +1356,42 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
   closeDiff() {
     this.diffEntry.set(null);
+  }
+
+  async onTriDiffApply(content: string) {
+    const entry = this.diffEntry();
+    if (!entry?.entityId) return;
+    const projectName = this.project()?.id;
+    if (!projectName) return;
+    const prevContent = this.diffCurrentContent();
+    // 1. Patch local + refresh éditeur
+    this.files.update(nodes => this.patchNodeContent(nodes, entry.entityId, content));
+    this.restoreToken.update(n => n + 1);
+    this.diffEntry.set(null);
+    // 2. Persister sur le serveur
+    try {
+      await this.projectFilesService.updateFile(projectName, entry.entityId, content);
+      // 3. Tracking historique (annulable)
+      this.history.track({
+        section: 'projets/contenu',
+        actionType: 'update',
+        label: `Fusion manuelle — «${entry.entityLabel || entry.entityId}»`,
+        entityType: 'content',
+        entityId: entry.entityId,
+        entityLabel: entry.entityLabel,
+        beforeState: prevContent != null ? { content: prevContent } : undefined,
+        afterState: { content },
+        context: { projectId: projectName },
+        undoable: prevContent != null,
+        undoAction: prevContent != null ? {
+          endpoint: `/api/file-projects/${projectName}/files/${entry.entityId}`,
+          method: 'PUT',
+          payload: { content: prevContent }
+        } : undefined
+      }).catch(() => {});
+    } catch (e) {
+      console.error('[TriDiff] apply failed:', e);
+    }
   }
 
   async onAcceptAiEdit() {

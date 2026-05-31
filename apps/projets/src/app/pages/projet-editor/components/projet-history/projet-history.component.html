@@ -59,8 +59,7 @@
 
           <!-- Contenu -->
           <div class="flex-1 min-w-0">
-            <p class="text-[11px] leading-snug"
-               [ngClass]="isClickable(entry) ? 'text-light-text dark:text-white/80' : 'text-light-text dark:text-white/60'">
+            <p class="text-[11px] leading-snug text-light-text dark:text-white/80 truncate" [title]="entry.label">
               {{ entry.label }}
             </p>
             <div class="flex items-center gap-1.5 mt-0.5">
@@ -80,11 +79,19 @@
                 <span class="text-[8px] px-1 rounded bg-white/8 text-white/40 ml-auto">en cours</span>
               } @else if (entry.pendingState === 'saving') {
                 <span class="text-[8px] px-1 rounded bg-yellow-400/15 text-yellow-300 ml-auto">sauvegarde…</span>
-              } @else if (isClickable(entry)) {
-                <span class="text-[8px] px-1 rounded bg-yellow-400/10 text-yellow-400/70 ml-auto">diff</span>
               }
             </div>
           </div>
+
+          <!-- Bouton "Voir le diff" visible au hover si l'entrée est cliquable -->
+          @if (isClickable(entry) && !entry.pendingState) {
+            <button type="button"
+                    class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded opacity-0 group-hover/entry:opacity-100 hover:bg-yellow-400/15 text-yellow-400/60 hover:text-yellow-400 transition-all"
+                    title="Voir le diff — comparer avant / après / actuel"
+                    (click)="onEntryClick(entry); $event.stopPropagation()">
+              <span class="material-symbols-outlined text-[14px]">difference</span>
+            </button>
+          }
 
           <!-- Actions undo (visibles au hover si undoable) -->
           @if (isUndoable(entry)) {

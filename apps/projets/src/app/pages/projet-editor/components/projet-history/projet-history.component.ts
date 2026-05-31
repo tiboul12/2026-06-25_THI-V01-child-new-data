@@ -140,7 +140,8 @@ export class ProjetHistoryComponent implements OnChanges {
 
   isClickable(entry: DisplayHistoryEntry): boolean {
     if (entry.pendingState) return false;
-    return entry.section === 'projets/contenu' && entry.actionType === 'update';
+    // Toute entrée avec contenu (before ou after) dans projets/contenu est ouvrable en diff
+    return entry.section === 'projets/contenu';
   }
 
   openClear() {

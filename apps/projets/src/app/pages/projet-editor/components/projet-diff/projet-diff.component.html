@@ -33,56 +33,152 @@
     </div>
   </div>
 } @else {
-  <!-- Split diff view -->
+  <!-- Légende -->
+  <div class="flex-shrink-0 flex items-center gap-4 px-4 py-1.5 bg-black/20 border-b border-white/5 text-[9px] text-white/40">
+    <span class="flex items-center gap-1">
+      <span class="material-symbols-outlined text-[11px] text-blue-400">edit_note</span>
+      Actuel : cliquer ← ou → pour remplacer une ligne
+    </span>
+    <span class="flex items-center gap-1 ml-auto">
+      <kbd class="px-1 py-0 rounded border border-white/15 font-mono">←</kbd> copier la ligne depuis "Avant"
+    </span>
+    <span class="flex items-center gap-1">
+      <kbd class="px-1 py-0 rounded border border-white/15 font-mono">→</kbd> copier la ligne depuis "Après"
+    </span>
+  </div>
+
+  <!-- Vue 3 panneaux -->
   <div class="flex flex-1 min-h-0 overflow-hidden font-mono text-[11px]">
 
-    <!-- Panneau gauche : Avant -->
+    <!-- Panneau gauche : Actuel (working copy) -->
     <div class="flex-1 flex flex-col min-w-0 border-r border-light-border dark:border-white/10 overflow-hidden">
-      <div class="flex-shrink-0 px-4 py-1.5 bg-red-500/8 dark:bg-red-900/20 border-b border-red-500/20 flex items-center gap-2">
+      <div class="flex-shrink-0 px-3 py-1.5 bg-blue-500/8 border-b border-blue-500/20 flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm text-blue-400">edit_note</span>
+        <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Actuel</span>
+        @if (changedLineNums.size > 0) {
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 ml-auto">
+            {{ changedLineNums.size }} ligne{{ changedLineNums.size > 1 ? 's' : '' }} modifiée{{ changedLineNums.size > 1 ? 's' : '' }}
+          </span>
+        }
+      </div>
+      <div class="flex-1 overflow-auto">
+        @for (line of workingLines; track $index; let i = $index) {
+          <div class="flex items-start min-h-[20px] leading-5"
+               [class.bg-blue-500/15]="isLineChanged(i + 1)">
+            <span class="w-9 flex-shrink-0 text-right pr-2 text-[9px] text-white/20 select-none border-r border-white/8 self-stretch flex items-center justify-end">
+              {{ i + 1 }}
+            </span>
+            @if (isLineChanged(i + 1)) {
+              <span class="w-3 flex-shrink-0 flex items-center justify-center self-stretch text-blue-400">
+                <span class="material-symbols-outlined text-[10px]">fiber_manual_record</span>
+              </span>
+            } @else {
+              <span class="w-3 flex-shrink-0"></span>
+            }
+            <span class="pl-2 pr-2 py-0 whitespace-pre-wrap break-all flex-1"
+                  [class.text-blue-300]="isLineChanged(i + 1)"
+                  [class.text-white/70]="!isLineChanged(i + 1)">{{ line || '&nbsp;' }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Panneau milieu : Avant -->
+    <div class="flex-1 flex flex-col min-w-0 border-r border-light-border dark:border-white/10 overflow-hidden">
+      <div class="flex-shrink-0 px-3 py-1.5 bg-red-500/8 border-b border-red-500/20 flex items-center gap-2">
         <span class="material-symbols-outlined text-sm text-red-400">remove_circle</span>
         <span class="text-[10px] font-bold text-red-400 uppercase tracking-wider">Avant</span>
         <span class="text-[9px] text-red-400/60 ml-auto">{{ leftLineCount }} lignes</span>
       </div>
       <div class="flex-1 overflow-auto">
         @for (pair of diffPairs; track $index) {
-          <div class="flex items-start min-h-[20px] leading-5"
+          <div class="flex items-start min-h-[20px] leading-5 group/before"
                [ngClass]="{
-                 'bg-red-500/15 dark:bg-red-900/25': pair.type === 'removed',
+                 'bg-red-500/15': pair.type === 'removed',
                  'opacity-0 select-none pointer-events-none': pair.type === 'added'
                }">
-            <span class="w-9 flex-shrink-0 text-right pr-2 text-[9px] text-light-text-muted dark:text-white/20 select-none border-r border-light-border dark:border-white/8 self-stretch flex items-center justify-end">
+            <span class="w-9 flex-shrink-0 text-right pr-2 text-[9px] text-white/20 select-none border-r border-white/8 self-stretch flex items-center justify-end">
               {{ pair.leftNum ?? '' }}
             </span>
-            <span class="pl-3 pr-2 py-0 whitespace-pre-wrap break-all flex-1 text-light-text dark:text-white/75"
-                  [class.text-red-400]="pair.type === 'removed'">{{ pair.type !== 'added' ? pair.left : '&nbsp;' }}</span>
+            <span class="pl-2 pr-1 py-0 whitespace-pre-wrap break-all flex-1"
+                  [class.text-red-400]="pair.type === 'removed'"
+                  [class.text-white/70]="pair.type !== 'removed'">{{ pair.type !== 'added' ? (pair.left || '&nbsp;') : '&nbsp;' }}</span>
+            @if (pair.type !== 'added' && pair.leftNum != null) {
+              <button type="button"
+                      class="flex-shrink-0 w-6 self-stretch flex items-center justify-center opacity-0 group-hover/before:opacity-100 hover:bg-blue-500/20 text-blue-400 transition-all"
+                      title="Utiliser cette ligne dans l'Actuel"
+                      (click)="applyBeforeLine(pair)">
+                <span class="material-symbols-outlined text-[13px]">chevron_left</span>
+              </button>
+            } @else {
+              <span class="w-6 flex-shrink-0"></span>
+            }
           </div>
         }
       </div>
     </div>
 
-    <!-- Panneau droit : Après -->
+    <!-- Panneau droite : Après -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <div class="flex-shrink-0 px-4 py-1.5 bg-green-500/8 dark:bg-green-900/20 border-b border-green-500/20 flex items-center gap-2">
+      <div class="flex-shrink-0 px-3 py-1.5 bg-green-500/8 border-b border-green-500/20 flex items-center gap-2">
         <span class="material-symbols-outlined text-sm text-green-400">add_circle</span>
         <span class="text-[10px] font-bold text-green-400 uppercase tracking-wider">Après</span>
         <span class="text-[9px] text-green-400/60 ml-auto">{{ rightLineCount }} lignes</span>
       </div>
       <div class="flex-1 overflow-auto">
         @for (pair of diffPairs; track $index) {
-          <div class="flex items-start min-h-[20px] leading-5"
+          <div class="flex items-start min-h-[20px] leading-5 group/after"
                [ngClass]="{
-                 'bg-green-500/15 dark:bg-green-900/25': pair.type === 'added',
+                 'bg-green-500/15': pair.type === 'added',
                  'opacity-0 select-none pointer-events-none': pair.type === 'removed'
                }">
-            <span class="w-9 flex-shrink-0 text-right pr-2 text-[9px] text-light-text-muted dark:text-white/20 select-none border-r border-light-border dark:border-white/8 self-stretch flex items-center justify-end">
+            @if (pair.type !== 'removed' && pair.rightNum != null) {
+              <button type="button"
+                      class="flex-shrink-0 w-6 self-stretch flex items-center justify-center opacity-0 group-hover/after:opacity-100 hover:bg-blue-500/20 text-blue-400 transition-all"
+                      title="Utiliser cette ligne dans l'Actuel"
+                      (click)="applyAfterLine(pair)">
+                <span class="material-symbols-outlined text-[13px]">chevron_right</span>
+              </button>
+            } @else {
+              <span class="w-6 flex-shrink-0"></span>
+            }
+            <span class="px-2 py-0 whitespace-pre-wrap break-all flex-1"
+                  [class.text-green-400]="pair.type === 'added'"
+                  [class.text-white/70]="pair.type !== 'added'">{{ pair.type !== 'removed' ? (pair.right || '&nbsp;') : '&nbsp;' }}</span>
+            <span class="w-9 flex-shrink-0 text-right pr-2 text-[9px] text-white/20 select-none border-l border-white/8 self-stretch flex items-center justify-end">
               {{ pair.rightNum ?? '' }}
             </span>
-            <span class="pl-3 pr-2 py-0 whitespace-pre-wrap break-all flex-1 text-light-text dark:text-white/75"
-                  [class.text-green-400]="pair.type === 'added'">{{ pair.type !== 'removed' ? pair.right : '&nbsp;' }}</span>
           </div>
         }
       </div>
     </div>
 
+  </div>
+
+  <!-- Barre d'action -->
+  <div class="flex-shrink-0 flex items-center gap-3 px-4 py-2 border-t border-light-border dark:border-white/10 bg-light-surface dark:bg-black/20">
+    <button type="button"
+            (click)="resetChanges()"
+            [disabled]="changedLineNums.size === 0"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white/80 hover:bg-white/8 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+      <span class="material-symbols-outlined text-sm">restart_alt</span>
+      Réinitialiser
+    </button>
+
+    <span class="text-[10px] text-white/30 flex-1">
+      @if (changedLineNums.size > 0) {
+        {{ changedLineNums.size }} ligne{{ changedLineNums.size > 1 ? 's' : '' }} modifiée{{ changedLineNums.size > 1 ? 's' : '' }} — cliquer "Appliquer" pour écrire dans l'éditeur
+      } @else {
+        Survolez une ligne dans "Avant" ou "Après" pour voir les boutons de copie
+      }
+    </span>
+
+    <button type="button"
+            (click)="applyChanges()"
+            [disabled]="changedLineNums.size === 0"
+            class="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+      <span class="material-symbols-outlined text-sm">check</span>
+      Appliquer dans l'éditeur
+    </button>
   </div>
 }

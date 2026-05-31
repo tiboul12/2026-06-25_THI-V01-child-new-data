@@ -87,6 +87,18 @@ Données : via `ProjetCollabService`, temps réel WebSocket
 
 ---
 
+## `2-5-2-8-12` — Vue diff 3 panneaux avec sélection de lignes
+
+- **Déclenchement** : clic sur une entrée `update` ou `ai-update` dans l'historique → `ProjetDiffComponent` s'affiche en remplacement de la zone éditeur
+- **Panneau Actuel (gauche)** : contenu en cours du fichier (`diffCurrentContent` computed depuis `files`), lignes modifiées surlignées en bleu
+- **Panneau Avant (milieu)** : `beforeState.content` de l'entrée d'historique, diff LCS vs afterState, bouton `←` au hover sur chaque ligne
+- **Panneau Après (droite)** : `afterState.content`, bouton `→` au hover sur chaque ligne
+- **Cherry-pick** : clic `←` ou `→` copie la ligne dans la copie de travail (`workingLines[]`), badge bleu sur la ligne modifiée
+- **Réinitialiser** : restaure `workingLines` depuis `currentContent`
+- **Appliquer dans l'éditeur** : `emit(workingLines.join('\n'))` → parent patch `files` + `restoreToken` + `updateFile` serveur + entrée "Fusion manuelle" dans l'historique (`undoable: true`)
+
+---
+
 ## `2-5-2-8-6` — Suppression de l'historique
 
 - **Ouverture** : `openClear()` → modal de confirmation avec `clearOpen.set(true)`

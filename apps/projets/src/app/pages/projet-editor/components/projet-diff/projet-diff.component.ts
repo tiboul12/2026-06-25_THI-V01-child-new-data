@@ -14,21 +14,25 @@ export type { DiffPair };
 })
 export class ProjetDiffComponent implements OnChanges {
   @Input() entry: CollabHistoryEntry | null = null;
+  @Input() currentContent: string | null = null;
   @Output() close = new EventEmitter<void>();
+  @Output() applyContent = new EventEmitter<string>();
 
   diffPairs: DiffPair[] = [];
   hasContent = false;
   leftLineCount = 0;
   rightLineCount = 0;
 
+  workingLines: string[] = [];
+  changedLineNums = new Set<number>();
+
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['entry']) this.buildDiff();
+    if (changes['entry'] || changes['currentContent']) this.buildDiff();
   }
 
   private buildDiff() {
     let rawBefore = this.entry?.beforeState ?? null;
     let rawAfter  = this.entry?.afterState  ?? null;
-    // MySQL peut renvoyer les colonnes JSON comme strings avant JSON.parse côté serveur
     if (typeof rawBefore === 'string') { try { rawBefore = JSON.parse(rawBefore); } catch { rawBefore = null; } }
     if (typeof rawAfter  === 'string') { try { rawAfter  = JSON.parse(rawAfter);  } catch { rawAfter  = null; } }
     const before = (rawBefore as { content?: string } | null)?.content ?? null;
@@ -40,6 +44,45 @@ export class ProjetDiffComponent implements OnChanges {
     this.diffPairs = computeLineDiff(bLines, aLines);
     this.leftLineCount = bLines.length;
     this.rightLineCount = aLines.length;
+    this.workingLines = (this.currentContent ?? '').split('\n');
+    this.changedLineNums = new Set();
+  }
+
+  applyBeforeLine(pair: DiffPair) {
+    if (pair.leftNum == null) return;
+    const idx = pair.leftNum - 1;
+    if (idx < 0) return;
+    if (this.workingLines.length <= idx) {
+      while (this.workingLines.length <= idx) this.workingLines.push('');
+    }
+    this.workingLines = [...this.workingLines];
+    this.workingLines[idx] = pair.left;
+    this.changedLineNums = new Set([...this.changedLineNums, pair.leftNum]);
+  }
+
+  applyAfterLine(pair: DiffPair) {
+    if (pair.rightNum == null) return;
+    const targetIdx = pair.leftNum != null ? pair.leftNum - 1 : pair.rightNum - 1;
+    if (targetIdx < 0) return;
+    if (this.workingLines.length <= targetIdx) {
+      while (this.workingLines.length <= targetIdx) this.workingLines.push('');
+    }
+    this.workingLines = [...this.workingLines];
+    this.workingLines[targetIdx] = pair.right;
+    this.changedLineNums = new Set([...this.changedLineNums, targetIdx + 1]);
+  }
+
+  applyChanges() {
+    this.applyContent.emit(this.workingLines.join('\n'));
+  }
+
+  resetChanges() {
+    this.workingLines = (this.currentContent ?? '').split('\n');
+    this.changedLineNums = new Set();
+  }
+
+  isLineChanged(lineNum: number): boolean {
+    return this.changedLineNums.has(lineNum);
   }
 
   formatTime(ts: string): string {
@@ -54,4 +97,3 @@ export class ProjetDiffComponent implements OnChanges {
   get removedCount(): number { return this.diffPairs.filter(p => p.type === 'removed').length; }
   get addedCount(): number { return this.diffPairs.filter(p => p.type === 'added').length; }
 }
-
