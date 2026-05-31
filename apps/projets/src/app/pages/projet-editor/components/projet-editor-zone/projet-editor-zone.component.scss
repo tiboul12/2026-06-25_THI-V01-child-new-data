@@ -1,5 +1,8 @@
 :host {
   display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 // ── Zone d'édition (textarea + miroir) ─────────────────────────
@@ -18,7 +21,9 @@
   font-family: 'Fira Code', 'Consolas', 'Menlo', monospace;
   font-size: 13px;
   line-height: 1.6;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
   word-spacing: normal;
   letter-spacing: normal;
   tab-size: 2;
@@ -27,7 +32,8 @@
 .ed-mirror {
   pointer-events: none;
   user-select: none;
-  overflow: scroll;
+  overflow-y: scroll;
+  overflow-x: hidden;
   scrollbar-width: none;
   color: inherit;
   z-index: 2;
@@ -41,7 +47,8 @@
   border: 0;
   outline: none;
   resize: none;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   z-index: 1;
   caret-color: rgb(59, 130, 246);
 

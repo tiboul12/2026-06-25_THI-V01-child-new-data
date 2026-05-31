@@ -12,6 +12,8 @@ Vue : textarea Markdown à gauche, rendu HTML miroir à droite
 - **Sauvegarde forcée** : clic badge "Non sauvegardé" → `forceSave()`
 - **Dirty state** : `localDirty = true` dès la première frappe → emit `dirtyChange(true)`
 - **Contenu unifié** : toutes les sections (`## Nom dossier`) concaténées en un seul document
+- **Retour à la ligne automatique** : `white-space: pre-wrap` + `overflow-wrap: break-word` — le texte long passe à la ligne sans ascenseur horizontal; `overflow-x: hidden` sur mirror et textarea
+- **Redimensionnement** : la zone s'étend dynamiquement selon la fenêtre via `:host { flex: 1; min-width: 0 }`
 
 ---
 

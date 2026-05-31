@@ -5277,6 +5277,29 @@
       "prompt": "deplace le bouton à droite du titre",
       "startedAt": "2026-05-31T00:00:00.000Z",
       "completedAt": "2026-05-31T00:00:00.000Z"
+    },
+    {
+      "id": "mod-270",
+      "version": "B-0.245",
+      "date": "2026-05-31T16:08:54.580Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor-zone-code",
+      "title": "Zone code : texte passe à la ligne, plus d'ascenseur horizontal",
+      "description": "La zone d'édition mode Code débordait horizontalement avec un ascenseur. Suppression de wrap=\"off\" sur le textarea, passage de white-space:pre à pre-wrap sur le mirror et le textarea, overflow-x:hidden sur les deux. Ajout de flex:1 + min-width:0 sur :host pour que la zone se contraigne à la largeur disponible et s'adapte à la fenêtre.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans projet/editor/zone editon/mode Code la zone horizontal ne doit pas dépassé la taille de la zone, il ne doit pas y avoir d'ascenseur horizontal, si le texte dépasse, il doit passé à la ligne. La zone doit être s'agrandir suivant la taille de la fenètre",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T16:08:54.581Z"
     }
   ]
 }
