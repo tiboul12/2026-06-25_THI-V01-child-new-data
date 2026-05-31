@@ -56,6 +56,7 @@ Contexte : lié à la section active (`activeNodeId`)
 
 - **Envoi** : POST `/api/conversations/{sectionId}/ai-edit` avec `{ prompt, model, includeHistory }`
 - **Réponse** : diff de modification du contenu de la section
+- **Contexte section** : `fileContent` = contenu direct de `contenu.md` ; sous-sections ajoutées dans `systemInstructions` si présentes
 - **Affichage dans la conversation** : message IA avec le diff proposé
 - **Barre "Accepter/Annuler"** (via `ProjetAiEditService`) :
   - Affichée dans l'éditeur principal au-dessus de la zone de code
@@ -69,6 +70,33 @@ Contexte : lié à la section active (`activeNodeId`)
 
 - **Section sans conversation** : message "Aucune conversation" + invitation à démarrer
 - **Pas de sectionId** : champ désactivé, message "Sélectionnez une section"
+
+---
+
+## `2-5-2-7-9` — Popup informations IA du projet
+
+- **Bouton** : icône `info` dans la barre d'outils, actif si `iaInstructions` configurées
+- **Contenu** :
+  - Modèle actif (valeur + label)
+  - Niveau 1 — Instruction globale (doc par défaut catégorie "Instructions IA")
+  - Niveau 2 — Instructions du projet (`iaInstructions`)
+  - Niveau 3 — Section sélectionnée : nom + aperçu du contenu (+ badge "sous-sections" si applicable)
+  - Niveau 4 — Rappel prompt utilisateur
+- **Mise à jour automatique** : la section se rafraîchit à chaque changement de `sectionId` ou `files`
+
+---
+
+## `2-5-2-7-10` — Popup prompt complet par message IA
+
+- **Bouton** : icône `receipt_long` + label "Prompt" sous chaque réponse IA, visible uniquement pour les messages envoyés dans la session courante
+- **Déclenchement** : clic → `openPromptInfo(msg.promptContext)`
+- **Contenu** :
+  - Modèle utilisé
+  - Niveau 1 — Instruction globale (état au moment de l'envoi)
+  - Niveau 2 — Instructions du projet (état au moment de l'envoi)
+  - Niveau 3 — Section : nom + contenu direct + sous-sections si présentes
+  - Niveau 4 — Prompt exact de l'utilisateur
+- **Stockage** : `PromptContext` attaché à `Message.promptContext` (non persisté en BDD)
 
 ---
 

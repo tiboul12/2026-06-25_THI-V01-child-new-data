@@ -5120,6 +5120,31 @@
       "prompt": "lors du prompt user en retour j'ai eu un message que je ne comprend pas explique le moi : Alerte injection de prompt : le bloc Current file contient des instructions système qui tentent de détourner ma réponse.",
       "startedAt": "2026-05-31T15:00:00.000Z",
       "completedAt": "2026-05-31T15:10:00.000Z"
+    },
+    {
+      "id": "mod-066",
+      "version": "B-0.242",
+      "date": "2026-05-31T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets",
+        "libs"
+      ],
+      "features": "projets:conversation",
+      "title": "Conversation IA : contexte section + popup prompt complet",
+      "description": "Le prompt IA inclut désormais le contenu de la section sélectionnée et, si elle contient des sous-sections, leur contenu est ajouté dans les system instructions. Le popup info IA affiche maintenant la section active (niveau 3). Chaque réponse IA affiche un bouton pour consulter le prompt complet envoyé (section, instructions, prompt utilisateur).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html",
+        "libs/portail-core/data-access/src/lib/conversation.service.ts",
+        "tests/fonctions/connecte/projets/editor/zone5-conversation/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans projets/editor pour interoger une IA via Conversation il faut avant tous selectionner une section (morceau du texte, dossier, document, code etc). Ensuite l IA récupère les informations de base lié au projet en général (document par defaut), les informations IA du projet, le texte de la section selectioné (et uniquement celui là) et le prompt. Si une section inclus plusieurs sous sections, le prompt doit prendre en compte l ensemble du texte et les sous sections et document. Dans le résumé des informations prise en compte (bouton information IA du projet) il faut rajouté aussi la section. Dans l historique de la conversation dans l encart réponse de l IA il faut rajouté un bouton pour affiché dans un popup les informations complète du prompt (comme le bouton information IA du projet)",
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "completedAt": "2026-05-31T00:00:00.000Z"
     }
   ]
 }

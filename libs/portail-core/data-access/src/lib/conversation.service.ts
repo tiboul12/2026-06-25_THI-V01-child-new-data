@@ -3,6 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_DATA_URL } from './tokens';
 
+export interface PromptContext {
+  sectionName: string;
+  sectionContent: string;
+  subSectionsContent: string | null;
+  globalInstruction: string | null;
+  projectInstruction: string | null;
+  userPrompt: string;
+  model: string;
+}
+
 export interface Message {
   user: string;
   userId: string;
@@ -10,6 +20,7 @@ export interface Message {
   timestamp: string;
   role?: 'user' | 'ai';
   tokenInfo?: { used: number; total: number; remaining: number };
+  promptContext?: PromptContext;
 }
 
 export interface Conversation {

@@ -1,5 +1,119 @@
 <div class="h-full flex flex-col bg-white dark:bg-[#0f0f17]">
 
+  <!-- Popup prompt complet (par message IA) -->
+  @if (showPromptInfo() && selectedPromptContext()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+         (click)="showPromptInfo.set(false)">
+      <div class="bg-white dark:bg-[#1a1a2e] rounded-2xl border border-light-border dark:border-white/10 shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
+           (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-3 bg-violet-500/5 border-b border-violet-500/20">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm text-violet-400">receipt_long</span>
+            <span class="text-sm font-semibold text-light-text dark:text-white">Prompt complet envoyé à l'IA</span>
+          </div>
+          <button (click)="showPromptInfo.set(false)"
+                  class="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-white/5 text-light-text-muted dark:text-white/40 transition-all">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+
+        <!-- Contenu scrollable -->
+        <div class="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+
+          <!-- Modèle -->
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
+            <span class="material-symbols-outlined text-sm text-violet-400">psychology</span>
+            <span class="text-xs font-semibold text-light-text dark:text-white">{{ selectedPromptContext()!.model }}</span>
+          </div>
+
+          <!-- Instruction globale -->
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20">1</span>
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/30">Instruction globale</div>
+              @if (selectedPromptContext()!.globalInstruction) {
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{{ selectedPromptContext()!.globalInstruction!.length }} car.</span>
+              }
+            </div>
+            @if (selectedPromptContext()!.globalInstruction) {
+              <div class="px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-amber-500/20 max-h-28 overflow-y-auto">
+                <pre class="text-[11px] text-light-text dark:text-white/80 whitespace-pre-wrap leading-relaxed font-mono">{{ selectedPromptContext()!.globalInstruction }}</pre>
+              </div>
+            } @else {
+              <div class="px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
+                <span class="text-xs text-light-text-muted dark:text-white/30 italic">Aucune</span>
+              </div>
+            }
+          </div>
+
+          <!-- Instructions projet -->
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">2</span>
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/30">Instructions du projet</div>
+              @if (selectedPromptContext()!.projectInstruction) {
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">{{ selectedPromptContext()!.projectInstruction!.length }} car.</span>
+              }
+            </div>
+            @if (selectedPromptContext()!.projectInstruction) {
+              <div class="px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-violet-500/20 max-h-28 overflow-y-auto">
+                <pre class="text-[11px] text-light-text dark:text-white/80 whitespace-pre-wrap leading-relaxed font-mono">{{ selectedPromptContext()!.projectInstruction }}</pre>
+              </div>
+            } @else {
+              <div class="px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
+                <span class="text-xs text-light-text-muted dark:text-white/30 italic">Aucune</span>
+              </div>
+            }
+          </div>
+
+          <!-- Section -->
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">3</span>
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/30">Section</div>
+              <span class="text-[9px] font-semibold text-emerald-400">{{ selectedPromptContext()!.sectionName }}</span>
+              @if (selectedPromptContext()!.subSectionsContent) {
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">+ sous-sections</span>
+              }
+            </div>
+            <div class="px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-emerald-500/20 max-h-36 overflow-y-auto">
+              <pre class="text-[11px] text-light-text dark:text-white/80 whitespace-pre-wrap leading-relaxed font-mono">{{ selectedPromptContext()!.sectionContent || '(vide)' }}</pre>
+            </div>
+            @if (selectedPromptContext()!.subSectionsContent) {
+              <div class="mt-2 px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-emerald-500/10 max-h-28 overflow-y-auto">
+                <div class="text-[9px] font-semibold text-emerald-400/60 mb-1 uppercase tracking-wider">Sous-sections</div>
+                <pre class="text-[11px] text-light-text dark:text-white/70 whitespace-pre-wrap leading-relaxed font-mono">{{ selectedPromptContext()!.subSectionsContent }}</pre>
+              </div>
+            }
+          </div>
+
+          <!-- Prompt utilisateur -->
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-light-primary/15 dark:bg-primary/15 text-light-primary dark:text-primary border border-light-primary/20 dark:border-primary/20">4</span>
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/30">Prompt</div>
+            </div>
+            <div class="px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-light-primary/20 dark:border-primary/20 max-h-28 overflow-y-auto">
+              <pre class="text-[11px] text-light-text dark:text-white/80 whitespace-pre-wrap leading-relaxed font-mono">{{ selectedPromptContext()!.userPrompt }}</pre>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 py-3 border-t border-light-border dark:border-white/10 flex justify-end">
+          <button (click)="showPromptInfo.set(false)"
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+            Fermer
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
   <!-- Popup infos IA du projet -->
   @if (showIaInfo()) {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
@@ -77,9 +191,36 @@
             }
           </div>
 
-          <!-- Niveau 3 : rappel prompt utilisateur -->
+          <!-- Niveau 3 : Section sélectionnée -->
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">3</span>
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/30">Section sélectionnée</div>
+              @if (currentSectionContent()) {
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{{ currentSectionContent()!.length }} car.</span>
+              }
+              @if (currentSectionHasSubSections()) {
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">+ sous-sections</span>
+              }
+            </div>
+            @if (currentSectionName()) {
+              <div class="px-3 py-2.5 rounded-lg bg-light-surface dark:bg-white/5 border border-emerald-500/20 max-h-32 overflow-y-auto">
+                <div class="text-[10px] font-semibold text-emerald-400 mb-1.5">{{ currentSectionName() }}</div>
+                @if (currentSectionContent()) {
+                  <pre class="text-[11px] text-light-text dark:text-white/80 whitespace-pre-wrap leading-relaxed font-mono">{{ currentSectionContent()!.substring(0, 600) }}{{ currentSectionContent()!.length > 600 ? '…' : '' }}</pre>
+                }
+              </div>
+            } @else {
+              <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
+                <span class="material-symbols-outlined text-sm text-light-text-muted dark:text-white/20">info</span>
+                <span class="text-xs text-light-text-muted dark:text-white/30 italic">Aucune section sélectionnée</span>
+              </div>
+            }
+          </div>
+
+          <!-- Niveau 4 : rappel prompt utilisateur -->
           <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
-            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-light-primary/15 dark:bg-primary/15 text-light-primary dark:text-primary border border-light-primary/20 dark:border-primary/20">3</span>
+            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-light-primary/15 dark:bg-primary/15 text-light-primary dark:text-primary border border-light-primary/20 dark:border-primary/20">4</span>
             <span class="text-xs text-light-text-muted dark:text-white/40">Prompt de la conversation (saisi par l'utilisateur)</span>
           </div>
 
@@ -136,6 +277,14 @@
                     <span class="inline-block w-1.5 h-3.5 bg-violet-400 ml-0.5 animate-pulse align-text-bottom"></span>
                   }
                 </p>
+                @if (msg.promptContext) {
+                  <button (click)="openPromptInfo(msg.promptContext!)"
+                          title="Voir le prompt complet envoyé à l'IA"
+                          class="mt-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400/60 hover:text-violet-400 hover:border-violet-500/40 hover:bg-violet-500/10 transition-all">
+                    <span class="material-symbols-outlined text-[10px]">receipt_long</span>
+                    <span class="text-[9px]">Prompt</span>
+                  </button>
+                }
               </div>
             </div>
           </div>

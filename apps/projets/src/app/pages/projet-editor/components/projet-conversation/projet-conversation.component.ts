@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleCha
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { ConversationService, Message } from '@worganic/portail-core/data-access';
+import { ConversationService, Message, PromptContext } from '@worganic/portail-core/data-access';
 import { ConfigService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { DocumentService } from '@worganic/portail-core/data-access';
@@ -48,8 +48,15 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   showModelSelect = signal(false);
   // Popup infos IA du projet
   showIaInfo = signal(false);
+  // Popup prompt complet (par message IA)
+  showPromptInfo = signal(false);
+  selectedPromptContext = signal<PromptContext | null>(null);
   // Instruction globale : doc par défaut de la catégorie "Instructions IA"
   globalIaInstruction = signal<string | null>(null);
+  // Infos de la section courante
+  currentSectionName = signal<string | null>(null);
+  currentSectionContent = signal<string | null>(null);
+  currentSectionHasSubSections = signal(false);
 
   // Liste consolidée de tous les modèles disponibles
   readonly allModels = computed(() => {
@@ -88,6 +95,9 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   }
 
   ngOnChanges(changes: SimpleChanges) {
+    if (changes['sectionId'] || changes['files']) {
+      this.updateCurrentSection();
+    }
     if (changes['sectionId']) {
       if (this.sectionId) {
         this.loadHistory();
@@ -109,6 +119,28 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     }
   }
 
+  private updateCurrentSection() {
+    if (!this.sectionId) {
+      this.currentSectionName.set(null);
+      this.currentSectionContent.set(null);
+      this.currentSectionHasSubSections.set(false);
+      return;
+    }
+    const info = this.findContenFile(this.sectionId, this.files);
+    if (!info) {
+      this.currentSectionName.set(null);
+      this.currentSectionContent.set(null);
+      this.currentSectionHasSubSections.set(false);
+      return;
+    }
+    const subContent = this.collectSubSectionsContent(this.sectionId, this.files);
+    this.currentSectionName.set(info.fileName);
+    this.currentSectionHasSubSections.set(subContent !== null);
+    this.currentSectionContent.set(subContent
+      ? `${info.content}\n\n${subContent}`
+      : info.content);
+  }
+
   private async loadGlobalIaInstruction() {
     try {
       const [cats, docs] = await Promise.all([
@@ -124,13 +156,21 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     }
   }
 
-  private buildSystemInstructions(): string | null {
+  private buildSystemInstructions(subSectionsContent?: string | null): string | null {
     const global = this.globalIaInstruction();
     const project = this.iaInstructions;
-    if (global && project) return `${global}\n\n---\n\n${project}`;
-    if (global) return global;
-    if (project) return project;
-    return null;
+    const parts: string[] = [];
+    if (global) parts.push(global);
+    if (project) parts.push(project);
+    if (subSectionsContent) {
+      parts.push(`[Sous-sections de la section courante — contexte supplémentaire]\n${subSectionsContent}`);
+    }
+    return parts.length > 0 ? parts.join('\n\n---\n\n') : null;
+  }
+
+  openPromptInfo(ctx: PromptContext) {
+    this.selectedPromptContext.set(ctx);
+    this.showPromptInfo.set(true);
   }
 
   ngAfterViewChecked() {
@@ -232,6 +272,9 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     }
     const model = this.activeModel();
 
+    // Collecter le contenu des sous-sections pour enrichir le contexte
+    const subSectionsContent = this.collectSubSectionsContent(this.sectionId!, this.files);
+
     // Construire le prompt final (avec historique si option activée)
     let finalPrompt = prompt;
     if (this.includeHistory() && this.messages.length > 0) {
@@ -255,13 +298,25 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     // Persiste le message utilisateur (même route que sendChat)
     this.convService.sendMessage(this.sectionId!, userMsg.text).subscribe();
 
+    // Contexte du prompt pour le popup d'informations
+    const promptCtx: PromptContext = {
+      sectionName: fileInfo.fileName,
+      sectionContent: fileInfo.content,
+      subSectionsContent,
+      globalInstruction: this.globalIaInstruction(),
+      projectInstruction: this.iaInstructions,
+      userPrompt: prompt,
+      model
+    };
+
     // Placeholder IA
     const aiMsg: Message = {
       user: 'IA',
       userId: 'ai',
       text: '',
       timestamp: new Date().toISOString(),
-      role: 'ai'
+      role: 'ai',
+      promptContext: promptCtx
     };
     this.messages = [...this.messages, aiMsg];
     this.shouldScroll = true;
@@ -278,7 +333,7 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
     const doneSub = this.aiEditService.done$.subscribe(finalText => {
       sub.unsubscribe();
       doneSub.unsubscribe();
-      // Attacher les infos tokens au dernier message IA
+      // Attacher les infos tokens au dernier message IA (en conservant promptContext)
       const tokens = this.aiEditService.tokenInfo();
       if (tokens) {
         const updated = [...this.messages];
@@ -311,13 +366,48 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
       fileInfo.fileName,
       provider,
       model,
-      this.buildSystemInstructions()
+      this.buildSystemInstructions(subSectionsContent)
     );
   }
 
   private addSystemMessage(text: string) {
     const msg: Message = { user: 'Système', userId: 'system', text, timestamp: new Date().toISOString(), role: 'ai' };
     this.messages = [...this.messages, msg];
+  }
+
+  private findFolder(folderId: string, nodes: FileNode[]): FileNode | null {
+    for (const node of nodes) {
+      if (node.type === 'folder' && node.id === folderId) return node;
+      if (node.children) {
+        const found = this.findFolder(folderId, node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  private collectSubSectionsContent(sectionId: string, nodes: FileNode[]): string | null {
+    const folder = this.findFolder(sectionId, nodes);
+    if (!folder) return null;
+    const subFolders = (folder.children || []).filter(c => c.type === 'folder');
+    if (subFolders.length === 0) return null;
+    const parts: string[] = [];
+    for (const sub of subFolders) {
+      const content = this.collectFolderContent(sub);
+      if (content) parts.push(`## ${sub.name}\n\n${content}`);
+    }
+    return parts.length > 0 ? parts.join('\n\n') : null;
+  }
+
+  private collectFolderContent(node: FileNode): string {
+    const parts: string[] = [];
+    const contenu = (node.children || []).find(c => c.type === 'file' && c.name === 'contenu.md');
+    if (contenu?.content) parts.push(contenu.content);
+    for (const sub of (node.children || []).filter(c => c.type === 'folder')) {
+      const subContent = this.collectFolderContent(sub);
+      if (subContent) parts.push(`### ${sub.name}\n\n${subContent}`);
+    }
+    return parts.join('\n\n');
   }
 
   private findContenFile(sectionId: string, nodes: FileNode[]): { fileId: string; content: string; fileName: string } | null {
