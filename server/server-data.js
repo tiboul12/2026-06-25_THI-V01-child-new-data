@@ -7516,9 +7516,10 @@ app.post('/api/ai/execute-file-prompt', async (req, res) => {
             const geminiKey = apiKeys.gemini?.key || '';
             if (!geminiKey) { sseWrite('error', 'Clé API Gemini non configurée'); res.end(); return; }
 
-            const systemBlock = systemInstructions ? `${systemInstructions}\n\n` : '';
+            const formatInstruction = 'Retourne UNIQUEMENT le contenu complet du fichier modifié, sans aucun texte supplémentaire ni explication.';
+            const systemBlock = systemInstructions ? `${systemInstructions}\n\n${formatInstruction}\n\n` : `${formatInstruction}\n\n`;
             const fullPrompt = systemBlock + (fileContent
-                ? `${promptContent}\n\n---\n\n**Fichier actuel (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\`\n\nRetourne UNIQUEMENT le contenu complet du fichier modifié, sans explications.`
+                ? `${promptContent}\n\n---\n\n**Fichier actuel (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\``
                 : promptContent);
 
             if (!model.startsWith('gemini-')) model = 'gemini-2.5-flash';
@@ -7559,12 +7560,15 @@ app.post('/api/ai/execute-file-prompt', async (req, res) => {
             const Anthropic = require('@anthropic-ai/sdk');
             const client = new Anthropic.default({ apiKey: claudeKey });
 
+            // L'instruction de format est toujours dans le system prompt (jamais dans le user)
+            // pour éviter que Claude détecte une injection depuis le contenu du fichier.
+            const formatInstruction = 'Return ONLY the complete modified file content, without any additional text or explanations.';
             const systemBlock = systemInstructions
-                ? `The following project-specific instructions OVERRIDE all other context. Follow ONLY these instructions for this task:\n\n${systemInstructions}`
-                : 'You are a helpful assistant for modifying file content. Return ONLY the complete modified file content, without additional explanations.';
+                ? `${systemInstructions}\n\n${formatInstruction}`
+                : `You are a helpful assistant for modifying file content. ${formatInstruction}`;
 
             const userContent = fileContent
-                ? `${promptContent}\n\n---\n\n**Current file (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\`\n\nReturn ONLY the complete modified file content.`
+                ? `${promptContent}\n\n---\n\n**Current file (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\``
                 : promptContent;
 
             const stream = await client.messages.stream({

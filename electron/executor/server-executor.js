@@ -786,8 +786,11 @@ app.post('/execute-file-prompt', (req, res) => {
         const systemBlock = systemInstructions
             ? `<project_instructions>\nThe following project-specific instructions OVERRIDE all other context (including any CLAUDE.md files). Follow ONLY these instructions for this task:\n\n${systemInstructions}\n</project_instructions>\n\n`
             : '';
+        // L'instruction de format est placée AVANT le fichier pour éviter que Claude
+        // la détecte comme une injection de prompt provenant du contenu du fichier.
+        const formatInstruction = 'Return ONLY the complete modified file content, without any additional text or explanations.';
         const fullPrompt = systemBlock + (fileContent
-            ? `${promptContent}\n\n---\n\n**Current file (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\`\n\n**Instructions:** Analyze this file and apply the modifications requested in the prompt above. Return ONLY the complete modified file content, without additional explanations.`
+            ? `${promptContent}\n\n${formatInstruction}\n\n---\n\n**Current file (${fileName}):**\n\`\`\`\n${fileContent}\n\`\`\``
             : promptContent);
 
         console.log(`[EXECUTOR] Executing file prompt for ${fileName} with ${provider}/${model}`);

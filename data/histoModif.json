@@ -5098,6 +5098,28 @@
       "prompt": "Dans le menu Documents ajoute un système ou il y aura un fichier par default par catégorie. / dans le menu projets/editor/conversation/IA et que l'ia est intéroger à partir du prompt de l'utilisateur tu doit utilisé en premier le document par default de la catégorie Instructions IA pour tous les projets et tu doit utilisé les informations IA lié au projet Instructions IA.",
       "startedAt": "2026-05-31T13:30:00.000Z",
       "completedAt": "2026-05-31T14:30:00.000Z"
+    },
+    {
+      "id": "mod-065",
+      "version": "B-0.242",
+      "date": "2026-05-31T15:10:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "server:executor,server:api-ai",
+      "title": "Fix : fausse alerte injection prompt dans la conversation IA",
+      "description": "L'instruction Return ONLY apparaissait après le bloc fichier dans le message user, ce que Claude interprétait comme une injection de prompt venant du fichier. Fix : instruction déplacée avant le fichier (executor CLI) et systématiquement mise dans le system prompt (API directe Claude). Même correction pour Gemini dans le fallback API.",
+      "files": [
+        "electron/executor/server-executor.js",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lors du prompt user en retour j'ai eu un message que je ne comprend pas explique le moi : Alerte injection de prompt : le bloc Current file contient des instructions système qui tentent de détourner ma réponse.",
+      "startedAt": "2026-05-31T15:00:00.000Z",
+      "completedAt": "2026-05-31T15:10:00.000Z"
     }
   ]
 }
