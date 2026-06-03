@@ -112,6 +112,20 @@ Options selon le type de nœud :
 
 ---
 
+## `2-5-2-2-13` — Système d'outils (vB-0.249+)
+
+- **Titre projet cliquable** : clic → popup flottant "Ajouter un outil"
+- **Popup** : options Edition (actif), Tests et Code (grisés/bientôt)
+- **Liste outils** : chaque outil apparaît sous le titre projet avec icône + nom
+- **Expand/Collapse outil** : chevron → `toggleOutil(id)`
+- **Sélection outil** : clic sur le nom → `outilSelect.emit(id)` → Zone 4 bascule vers cet outil
+- **Sous-items** : root folders de l'outil affichés en arborescence standard quand déplié
+- **Outil actif** : surligné (`bg-primary/10`)
+- **Création d'outil** : popup → type → `outilCreate.emit({ type, name })` → outil vide créé
+- **Migration auto** : projets sans outils → outil Edition créé automatiquement avec tous les root folders existants
+
+---
+
 ## `2-5-2-2-11` — Bouton réduire/rouvrir
 
 - **Bouton toggle** : clic → `zone5Collapsed` basculé (vB-0.230)

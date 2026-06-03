@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
-import { ProjectFilesService, FileNode, FtpNodeSyncStatus } from '@worganic/portail-core/data-access';
+import { ProjectFilesService, FileNode, FtpNodeSyncStatus, Outil } from '@worganic/portail-core/data-access';
 import { ConfigService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { LayoutService } from '@worganic/portail-core/data-access';
@@ -15,6 +15,7 @@ import { WorgMiniHeaderComponent } from '@worganic/shared/ui';
 import { ProjetToolbarComponent } from './components/projet-toolbar/projet-toolbar.component';
 import { ProjetSidebarComponent, DragDropEvent } from './components/projet-sidebar/projet-sidebar.component';
 import { ProjetEditorZoneComponent, FileSaveEvent, SectionInfo } from './components/projet-editor-zone/projet-editor-zone.component';
+import { EditionOutilComponent } from './outils/edition/edition-outil.component';
 import { ProjetConversationComponent } from './components/projet-conversation/projet-conversation.component';
 import { ProjetStatusbarComponent } from './components/projet-statusbar/projet-statusbar.component';
 import { ProjetHistoryComponent } from './components/projet-history/projet-history.component';
@@ -33,7 +34,7 @@ import { ProjetAiEditService } from './services/projet-ai-edit.service';
     WorgMiniHeaderComponent,
     ProjetToolbarComponent,
     ProjetSidebarComponent,
-    ProjetEditorZoneComponent,
+    EditionOutilComponent,
     ProjetConversationComponent,
     ProjetStatusbarComponent,
     ProjetHistoryComponent,
@@ -46,7 +47,7 @@ import { ProjetAiEditService } from './services/projet-ai-edit.service';
   styleUrl: './projet-editor.component.scss'
 })
 export class ProjetEditorComponent implements OnInit, OnDestroy {
-  @ViewChild(ProjetEditorZoneComponent) editorZone?: ProjetEditorZoneComponent;
+  @ViewChild(EditionOutilComponent) editionOutil?: EditionOutilComponent;
 
   readonly portailUrl = environment.portailUrl;
 
@@ -73,6 +74,21 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   // Map fileId -> imageIds[] pour les images imbriquées dans un bloc document
   nestedImagesMap = signal<Record<string, string[]>>({});
   diffEntry = signal<CollabHistoryEntry | null>(null);
+
+  outils = signal<Outil[]>([]);
+  activeOutilId = signal<string | null>(null);
+
+  readonly activeOutil = computed(() =>
+    this.outils().find(o => o.id === this.activeOutilId()) ?? this.outils()[0] ?? null
+  );
+
+  readonly activeOutilFiles = computed<FileNode[]>(() => {
+    const outil = this.activeOutil();
+    if (!outil) return this.files();
+    if (!outil.rootFolderIds.length) return this.files();
+    const filtered = this.files().filter(f => outil.rootFolderIds.includes(f.id));
+    return filtered.length > 0 ? filtered : this.files();
+  });
 
   restoreToken = signal(0);
   aiEditService = inject(ProjetAiEditService);
@@ -435,6 +451,16 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       console.warn('loadFiles error:', e);
       this.files.set([]);
     }
+    // Charger les outils (migration auto côté serveur si absent)
+    try {
+      const outilsRes = await this.projectFilesService.getOutils(this.projectFolderName);
+      this.outils.set(outilsRes.outils || []);
+      if (!this.activeOutilId() && outilsRes.outils.length > 0) {
+        this.activeOutilId.set(outilsRes.outils[0].id);
+      }
+    } catch (e) {
+      console.warn('loadOutils error:', e);
+    }
   }
 
   private computeNestedImagesMap(nodes: FileNode[]): Record<string, string[]> {
@@ -523,12 +549,12 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     }
     await this.loadFiles();
     if (!info.parentId) {
-      this.editorZone?.appendSection(info.name, 1);
+      this.editionOutil?.appendSection(info.name, 1);
     } else {
       const parent = this.findFolderById(info.parentId, this.files());
       if (parent) {
         const depth = this.getFolderDepth(info.parentId, this.files());
-        this.editorZone?.insertSectionInParent(parent.name, depth, info.name);
+        this.editionOutil?.insertSectionInParent(parent.name, depth, info.name);
       }
     }
     // On retient la protection assez longtemps pour couvrir tout save différé (timer 2 s)
@@ -536,6 +562,28 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     // Tant que la protection est active, processSectionsChange ne supprimera pas ce dossier
     // même si le texte parsé ne le contient pas encore.
     setTimeout(() => this.pendingFolderNames.delete(info.name), 5000);
+  }
+
+  onOutilSelect(outilId: string): void {
+    this.activeOutilId.set(outilId);
+    this.activeNodeId.set(null);
+    this.highlightNodeId.set(null);
+  }
+
+  async onOutilCreate(data: { type: string; name: string }): Promise<void> {
+    const projectName = this.project()?.id;
+    if (!projectName) return;
+    try {
+      const newOutil = await this.projectFilesService.createOutil(projectName, {
+        type: data.type,
+        name: data.name,
+        rootFolderIds: []
+      });
+      this.outils.update(list => [...list, newOutil]);
+      this.activeOutilId.set(newOutil.id);
+    } catch (e) {
+      console.error('[ProjetEditor] createOutil failed:', e);
+    }
   }
 
   async onSectionsChange(sections: SectionInfo[]) {
@@ -938,6 +986,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
             newFolderIds.set(fullPath, folder.id);
             section.folderId = folder.id;
             this.trackFolderCreate(folder);
+            // Si root folder (pas de parent) → l'associer à l'outil actif
+            if (!parentId && this.activeOutil()) {
+              const outilId = this.activeOutilId()!;
+              const updatedRootIds = [...(this.activeOutil()!.rootFolderIds), folder.id];
+              this.projectFilesService.updateOutil(this.projectFolderName, outilId, { rootFolderIds: updatedRootIds })
+                .then(() => this.outils.update(list => list.map(o => o.id === outilId ? { ...o, rootFolderIds: updatedRootIds } : o)))
+                .catch(e => console.warn('[ProjetEditor] updateOutil rootFolderIds failed:', e));
+            }
             const file = (folder.children || []).find(c => c.type === 'file') || await this.projectFilesService.createFile(this.projectFolderName, { name: 'contenu', parentId: folder.id, content: section.content });
             section.fileId = file.id;
           } catch (e) {
@@ -1224,8 +1280,8 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         const folderChanged = !!targetFolderId && targetFolderId !== draggedParentId;
         if (folderChanged) {
           // Sauvegarde d'abord le texte avec la bonne position (avant que le loadFiles n'écrase tout)
-          if (this.editorZone) {
-            this.editorZone.flushContentModifications();
+          if (this.editionOutil) {
+            this.editionOutil.flushContentModifications();
           }
           await this.projectFilesService.moveFile(this.projectFolderName, draggedNode.id, targetFolderId!);
         }

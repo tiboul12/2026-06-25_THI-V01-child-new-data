@@ -1,6 +1,32 @@
 {
   "modifications": [
     {
+      "id": "mod-270",
+      "version": "B-0.249",
+      "date": "2026-06-03T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "server", "libs"],
+      "features": "projets:editor|sidebar|outils,server:file-projects,libs:data-access",
+      "title": "Système d'outils extensible dans l'éditeur projets",
+      "description": "Création d'un système d'outils pour l'éditeur projets. La sidebar est restructurée pour afficher les outils par projet (titre → popup ajout → liste outils → sous-items). L'outil Edition encapsule l'éditeur markdown existant dans EditionOutilComponent. Zone 4 devient un router dynamique basé sur le type d'outil actif. Migration automatique des projets existants vers un outil Edition par défaut. Architecture extensible pour futurs types (Tests, Code).",
+      "files": [
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/project-files.service.ts",
+        "apps/projets/src/app/pages/projet-editor/outils/edition/edition-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "la menu projet possède une page d'accueil et une page edition : http://localhost:4203/projets/. Dans cette page tu as plusieurs zone la barre de navigation [Image #1] zone 1, la barre vertiacal non utilisé pour le moment [Image #2] zone 2, le menu [Image #3] zone 3, la zone actuellement d'edition de texte [Image #4] zone 4 et la zone de conversation/historique [Image #5] zone 5. J'aimerais que tu me fasse un plan pour pouvoir ajouté des outils de création au système, actuellement seul le mode édition texte existe. Je voudrais que mette l'outils de création de texte actuellement en place dans un component spécifique outils/edition. On pourra accéder à cette outils composé de toutes la zone d'edition [Image #6] à partir du menu. Ainsi dans le menu après le titre du projet [Image #7] on trouvera l'outils - Edition. Dans un menu accessible via le titre (popup menu flotant) on pourra créé une nouvelle version de l'outils Edition, mais aussi d'autre futur outils comme - Tests, - Code, etc. Le but est de pouvoir créé et rajouté de nouvelle version des outils vierges et réutilisable comme l'outils édition. Dans l'outils Edition on retrouvera toutes les fonctions actuellement disponible. Les autres zone reste inchangé et pourront interragir avec les différents outils. Le menu fera appraitre le titre tu projet, les différents outils et les sous menu des outils comme celui d'édition actuellement disponible. Crait moi un plan",
+      "startedAt": "2026-06-03T00:00:00.000Z",
+      "completedAt": "2026-06-03T01:00:00.000Z"
+    },
+    {
       "id": "mod-269",
       "version": "B-0.236",
       "date": "2026-05-30T23:00:00.000Z",

@@ -42,6 +42,8 @@
         [projectName]="project()?.id || ''"
         [projectTitle]="projectTitle"
         [files]="files()"
+        [outils]="outils()"
+        [activeOutilId]="activeOutilId()"
         [activeFileId]="activeNodeId()"
         [projetId]="project()?.id || ''"
         [nestedImagesMap]="nestedImagesMap()"
@@ -51,11 +53,13 @@
         (projectSelect)="onProjectRootSelect()"
         (folderCreated)="onFolderCreated($event)"
         (dragDrop)="onDragDrop($event)"
-        (refresh)="onRefresh()" />
+        (refresh)="onRefresh()"
+        (outilSelect)="onOutilSelect($event)"
+        (outilCreate)="onOutilCreate($event)" />
 
       @if (!diffEntry() && !hasPendingEdit()) {
-        <app-projet-editor-zone
-          [files]="files()"
+        <app-edition-outil
+          [files]="activeOutilFiles()"
           [restoreToken]="restoreToken()"
           [scrollToNodeId]="scrollToNodeId()"
           [saveStatus]="saveStatus()"
