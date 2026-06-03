@@ -15,12 +15,21 @@ export interface FileNode {
   children?: FileNode[];
 }
 
+export interface Outil {
+  id: string;
+  type: 'edition';
+  name: string;
+  rootFolderIds: string[];
+  createdAt: string;
+}
+
 export interface ProjectFilesConfig {
   projectName: string;
   createdAt: string;
   updatedAt: string;
   gitRemoteUrl?: string | null;
   structure: FileNode[];
+  outils?: Outil[];
 }
 
 export type EnsureLocalStatus = 'ready' | 'cloned' | 're-cloned' | 'no-remote' | 'ftp-pulled' | 'ftp-no-config' | 'ftp-error';
@@ -175,5 +184,21 @@ export class ProjectFilesService {
 
   openFolder(name: string): Promise<{ success: boolean }> {
     return firstValueFrom(this.http.post<any>(`${this.apiUrl}/api/file-projects/${name}/open-folder`, {}, { headers: this.h() }));
+  }
+
+  getOutils(name: string): Promise<{ outils: Outil[] }> {
+    return firstValueFrom(this.http.get<any>(`${this.apiUrl}/api/file-projects/${name}/outils`, { headers: this.h() }));
+  }
+
+  createOutil(name: string, data: { type: string; name: string; rootFolderIds: string[] }): Promise<Outil> {
+    return firstValueFrom(this.http.post<Outil>(`${this.apiUrl}/api/file-projects/${name}/outils`, data, { headers: this.h() }));
+  }
+
+  updateOutil(projectName: string, outilId: string, data: Partial<Pick<Outil, 'name' | 'rootFolderIds'>>): Promise<Outil> {
+    return firstValueFrom(this.http.patch<Outil>(`${this.apiUrl}/api/file-projects/${projectName}/outils/${outilId}`, data, { headers: this.h() }));
+  }
+
+  deleteOutil(projectName: string, outilId: string): Promise<any> {
+    return firstValueFrom(this.http.delete(`${this.apiUrl}/api/file-projects/${projectName}/outils/${outilId}`, { headers: this.h() }));
   }
 }

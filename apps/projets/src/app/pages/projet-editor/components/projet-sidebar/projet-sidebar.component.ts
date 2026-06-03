@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, signal, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { FileNode, ProjectFilesService, FtpNodeSyncStatus } from '@worganic/portail-core/data-access';
+import { FileNode, ProjectFilesService, FtpNodeSyncStatus, Outil } from '@worganic/portail-core/data-access';
 import { ConversationService } from '@worganic/portail-core/data-access';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { ProjetCollabService, LockInfo } from '@worganic/portail-core/data-access';
@@ -35,12 +35,18 @@ export class ProjetSidebarComponent implements OnChanges {
   @Input() nestedImagesMap: Record<string, string[]> = {};
   @Input() nodeSyncStatus: Map<string, FtpNodeSyncStatus> = new Map();
   @Input() hasFtpBackup = false;
+  @Input() outils: Outil[] = [];
+  @Input() activeOutilId: string | null = null;
   @Output() fileSelect = new EventEmitter<FileNode>();
   @Output() folderCreated = new EventEmitter<{ name: string; parentId: string | null }>();
   @Output() refresh = new EventEmitter<void>();
   @Output() projectSelect = new EventEmitter<void>();
+  @Output() outilSelect = new EventEmitter<string>();
+  @Output() outilCreate = new EventEmitter<{ type: string; name: string }>();
 
   expanded = signal<Set<string>>(new Set(['root']));
+  outilExpanded = signal<Set<string>>(new Set());
+  showAddOutilPopup = signal(false);
   contextMenu = signal<ContextMenu | null>(null);
   inlineInput = signal<InlineInput | null>(null);
   inlineValue = '';
@@ -99,12 +105,12 @@ export class ProjetSidebarComponent implements OnChanges {
     if (changes['files']) {
       this.loadConversations();
     }
-    
+
     if (changes['files'] && this.files.length > 0) {
       const s = new Set(this.expanded());
       s.add('root');
       this.expanded.set(s);
-      
+
       // Forcer l'expansion vers le node actif si les fichiers viennent d'être chargés
       if (this.activeFileId) {
         setTimeout(() => this.expandToNode(this.activeFileId!), 50);
@@ -112,6 +118,17 @@ export class ProjetSidebarComponent implements OnChanges {
     }
     if (changes['activeFileId'] && this.activeFileId) {
       this.expandToNode(this.activeFileId);
+    }
+    // Auto-expand le premier outil quand la liste change
+    if (changes['outils'] && this.outils.length > 0) {
+      const s = new Set(this.outilExpanded());
+      s.add(this.outils[0].id);
+      this.outilExpanded.set(s);
+    }
+    if (changes['activeOutilId'] && this.activeOutilId) {
+      const s = new Set(this.outilExpanded());
+      s.add(this.activeOutilId);
+      this.outilExpanded.set(s);
     }
   }
 
@@ -441,8 +458,44 @@ export class ProjetSidebarComponent implements OnChanges {
     return ids.map(id => this.findNode(id)).filter((n): n is FileNode => n !== null);
   }
 
+  // ── Outils ────────────────────────────────────────────────────
+
+  isOutilExpanded(id: string): boolean { return this.outilExpanded().has(id); }
+
+  toggleOutil(id: string): void {
+    const s = new Set(this.outilExpanded());
+    s.has(id) ? s.delete(id) : s.add(id);
+    this.outilExpanded.set(s);
+  }
+
+  onOutilClick(outil: Outil): void {
+    this.outilSelect.emit(outil.id);
+    const s = new Set(this.outilExpanded());
+    s.add(outil.id);
+    this.outilExpanded.set(s);
+  }
+
+  onAddOutil(type: string): void {
+    this.showAddOutilPopup.set(false);
+    const name = type === 'edition' ? 'Edition' : type;
+    this.outilCreate.emit({ type, name });
+  }
+
+  getFolderById(id: string): FileNode | null {
+    return this.files.find(f => f.id === id) ?? null;
+  }
+
+  getOutilIconClass(outil: Outil): string {
+    return this.activeOutilId === outil.id
+      ? 'text-light-primary dark:text-primary'
+      : 'text-light-text-muted dark:text-white/40';
+  }
+
   @HostListener('document:click', ['$event'])
   onDocClick(e: MouseEvent) {
-    if (!this.elRef.nativeElement.contains(e.target)) this.closeContextMenu();
+    if (!this.elRef.nativeElement.contains(e.target)) {
+      this.closeContextMenu();
+      this.showAddOutilPopup.set(false);
+    }
   }
 }

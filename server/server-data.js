@@ -4731,6 +4731,21 @@ function cleanStructure(items) {
     return cleaned;
 }
 
+function migrateOutils(config) {
+    if (config.outils && config.outils.length > 0) return config;
+    const rootFolderIds = (config.structure || [])
+        .filter(n => n.type === 'folder')
+        .map(n => n.id);
+    config.outils = [{
+        id: require('crypto').randomUUID(),
+        type: 'edition',
+        name: 'Edition',
+        rootFolderIds,
+        createdAt: config.createdAt || new Date().toISOString()
+    }];
+    return config;
+}
+
 async function getProjectConfig(projectName) {
     // Lire le config.json local en parallèle (peut être plus riche que MySQL si migration partielle)
     const cfgPath = path.join(PROJECTS_DIR, projectName, 'config.json');
@@ -4745,7 +4760,7 @@ async function getProjectConfig(projectName) {
     let mysqlRow = null;
     try {
         const [rows] = await pool.query(
-            'SELECT display_name, git_remote_url, structure, created_at, updated_at FROM file_project_meta WHERE id = ?',
+            'SELECT display_name, git_remote_url, structure, outils, created_at, updated_at FROM file_project_meta WHERE id = ?',
             [projectName]
         );
         if (rows.length > 0) mysqlRow = rows[0];
@@ -4757,6 +4772,9 @@ async function getProjectConfig(projectName) {
         const mysqlStructure = cleanStructure(
             typeof mysqlRow.structure === 'string' ? JSON.parse(mysqlRow.structure) : (mysqlRow.structure || [])
         );
+        const mysqlOutils = mysqlRow.outils
+            ? (typeof mysqlRow.outils === 'string' ? JSON.parse(mysqlRow.outils) : mysqlRow.outils)
+            : null;
         // Si MySQL a une structure vide mais que le filesystem local en a une non-vide → mettre à jour MySQL
         const localStructure = localConfig?.structure || [];
         if (mysqlStructure.length === 0 && localStructure.length > 0) {
@@ -4766,9 +4784,9 @@ async function getProjectConfig(projectName) {
                     [JSON.stringify(localStructure), localConfig.projectName || mysqlRow.display_name, new Date(), projectName]
                 );
             } catch (e2) { console.warn('[getProjectConfig] MySQL structure update failed:', e2.message); }
-            return { projectName: localConfig.projectName || mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: mysqlRow.updated_at, structure: localStructure };
+            return migrateOutils({ projectName: localConfig.projectName || mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: mysqlRow.updated_at, structure: localStructure, outils: mysqlOutils || localConfig?.outils || null });
         }
-        return { projectName: mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: mysqlRow.updated_at, structure: mysqlStructure };
+        return migrateOutils({ projectName: mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: mysqlRow.updated_at, structure: mysqlStructure, outils: mysqlOutils });
     }
 
     // Pas d'entrée MySQL → migration depuis le filesystem
@@ -4779,15 +4797,15 @@ async function getProjectConfig(projectName) {
             [projectName, localConfig.projectName || projectName, JSON.stringify(localConfig.structure || []), localConfig.createdAt || new Date(), localConfig.updatedAt || new Date()]
         );
     } catch (e2) { console.warn('[getProjectConfig] auto-migration failed:', e2.message); }
-    return localConfig;
+    return migrateOutils(localConfig);
 }
 
 async function saveProjectConfig(projectName, config) {
     config.updatedAt = new Date().toISOString();
     try {
         await pool.query(
-            'UPDATE file_project_meta SET structure = ?, updated_at = ? WHERE id = ?',
-            [JSON.stringify(config.structure || []), config.updatedAt, projectName]
+            'UPDATE file_project_meta SET structure = ?, outils = ?, updated_at = ? WHERE id = ?',
+            [JSON.stringify(config.structure || []), JSON.stringify(config.outils || null), config.updatedAt, projectName]
         );
     } catch (e) { console.warn('[saveProjectConfig] MySQL write error:', e.message); }
     // Backup filesystem
@@ -5755,6 +5773,67 @@ app.post('/api/file-projects/:name/move-folder', async (req, res) => {
         } catch (gitErr) { console.warn('[ProjetGit] commit move_folder:', gitErr.message); }
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
+// Outils par projet (Edition, Tests, Code…)
+// ============================================================
+
+// GET /api/file-projects/:name/outils
+app.get('/api/file-projects/:name/outils', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const config = await getProjectConfig(req.params.name);
+    if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
+    // Persister la migration si outils vient d'être créé (pas encore en BDD/fichier)
+    if (config.outils && config.outils.length > 0) {
+        await saveProjectConfig(req.params.name, config).catch(() => {});
+    }
+    res.json({ outils: config.outils || [] });
+});
+
+// POST /api/file-projects/:name/outils
+app.post('/api/file-projects/:name/outils', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const config = await getProjectConfig(req.params.name);
+    if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
+    const { type = 'edition', name, rootFolderIds = [] } = req.body;
+    const newOutil = {
+        id: require('crypto').randomUUID(),
+        type,
+        name: name || 'Edition',
+        rootFolderIds,
+        createdAt: new Date().toISOString()
+    };
+    config.outils = [...(config.outils || []), newOutil];
+    await saveProjectConfig(req.params.name, config);
+    res.status(201).json(newOutil);
+});
+
+// PATCH /api/file-projects/:name/outils/:outilId
+app.patch('/api/file-projects/:name/outils/:outilId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const config = await getProjectConfig(req.params.name);
+    if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
+    const outil = (config.outils || []).find(o => o.id === req.params.outilId);
+    if (!outil) return res.status(404).json({ error: 'Outil non trouvé' });
+    if (req.body.name !== undefined) outil.name = req.body.name;
+    if (req.body.rootFolderIds !== undefined) outil.rootFolderIds = req.body.rootFolderIds;
+    await saveProjectConfig(req.params.name, config);
+    res.json(outil);
+});
+
+// DELETE /api/file-projects/:name/outils/:outilId
+app.delete('/api/file-projects/:name/outils/:outilId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const config = await getProjectConfig(req.params.name);
+    if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
+    config.outils = (config.outils || []).filter(o => o.id !== req.params.outilId);
+    await saveProjectConfig(req.params.name, config);
+    res.json({ success: true });
 });
 
 // ============================================================
@@ -7891,6 +7970,7 @@ app.listen(PORT, async () => {
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS backup_port INT DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration backup_port:', e.message));
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS ia_instructions TEXT DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration ia_instructions:', e.message));
     await pool.query(`ALTER TABLE doc_categories ADD COLUMN IF NOT EXISTS default_document_id VARCHAR(64) DEFAULT NULL`).catch(e => console.error('[DB] doc_categories migration default_document_id:', e.message));
+    await pool.query(`ALTER TABLE file_project_meta ADD COLUMN IF NOT EXISTS outils JSON DEFAULT NULL`).catch(e => console.warn('[DB] file_project_meta migration outils:', e.message));
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS frank_project_steps (

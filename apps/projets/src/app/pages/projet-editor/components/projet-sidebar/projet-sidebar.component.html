@@ -15,35 +15,111 @@
   <div class="w-56 h-full overflow-y-auto py-2 bg-white dark:bg-[#0f0f17]"
        (contextmenu)="onContextMenu($event, null)">
 
-    <!-- Racine projet -->
-    <div class="flex items-center gap-1 px-2 py-0.5 rounded mx-1 cursor-pointer group transition-colors hover:bg-light-surface dark:hover:bg-white/5"
-         (contextmenu)="onContextMenu($event, null); $event.stopPropagation()"
-         (click)="onProjectSelect()">
-      <button class="w-3 h-3 flex-shrink-0 text-light-text-muted dark:text-white/30 transition-transform"
-              [class.rotate-90]="isExpanded('root')"
-              (click)="toggle('root'); $event.stopPropagation()">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
-      </button>
-      <span class="material-symbols-outlined text-xs text-light-primary dark:text-primary">{{ isExpanded('root') ? 'folder_open' : 'folder' }}</span>
-      <span class="text-[11px] font-semibold truncate text-light-text dark:text-white/80">{{ projectTitle || 'Projet' }}</span>
+    <!-- Titre projet + bouton ajout outil -->
+    <div class="relative mx-1 mb-1">
+      <div class="flex items-center gap-1 px-2 py-1 rounded cursor-pointer group transition-colors hover:bg-light-surface dark:hover:bg-white/5"
+           (click)="showAddOutilPopup.set(!showAddOutilPopup()); $event.stopPropagation()">
+        <span class="material-symbols-outlined text-xs text-light-primary dark:text-primary flex-shrink-0">folder_special</span>
+        <span class="text-[11px] font-semibold truncate text-light-text dark:text-white/80 flex-1">{{ projectTitle || 'Projet' }}</span>
+        <span class="material-symbols-outlined text-[13px] text-light-text-muted dark:text-white/30 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">add</span>
+      </div>
+
+      <!-- Popup ajout outil -->
+      @if (showAddOutilPopup()) {
+        <div class="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-lg shadow-xl z-50 py-1"
+             (click)="$event.stopPropagation()">
+          <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-light-text-muted dark:text-white/30">Ajouter un outil</div>
+          <button class="w-full text-left px-3 py-1.5 text-[11px] text-light-text dark:text-white/70 hover:bg-light-surface dark:hover:bg-white/5 flex items-center gap-2 transition-colors"
+                  (click)="onAddOutil('edition')">
+            <span class="material-symbols-outlined text-xs text-light-primary dark:text-primary">edit_note</span>
+            Edition
+          </button>
+          <button class="w-full text-left px-3 py-1.5 text-[11px] text-light-text-muted dark:text-white/20 flex items-center gap-2 cursor-not-allowed" disabled>
+            <span class="material-symbols-outlined text-xs">science</span>
+            Tests
+            <span class="ml-auto text-[9px] opacity-60">bientôt</span>
+          </button>
+          <button class="w-full text-left px-3 py-1.5 text-[11px] text-light-text-muted dark:text-white/20 flex items-center gap-2 cursor-not-allowed" disabled>
+            <span class="material-symbols-outlined text-xs">code</span>
+            Code
+            <span class="ml-auto text-[9px] opacity-60">bientôt</span>
+          </button>
+        </div>
+      }
     </div>
 
-    <!-- Arbre récursif -->
-    @if (isExpanded('root')) {
-      <ng-container *ngTemplateOutlet="treeNodes; context: { nodes: files, depth: 1, parentId: null }"></ng-container>
-
-      @if (inlineInputIsFor('new-folder', null) || inlineInputIsFor('new-file', null)) {
-        <div class="flex items-center gap-1 mx-1 px-2 py-0.5 rounded bg-light-primary/5 dark:bg-primary/5" [style.padding-left.px]="8 + 10">
-          <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/40">
-            {{ inlineInput()?.type === 'new-folder' ? 'folder' : 'description' }}
+    <!-- Liste des outils (si chargés) -->
+    @if (outils.length > 0) {
+      @for (outil of outils; track outil.id) {
+        <!-- En-tête outil -->
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded mx-1 cursor-pointer group transition-colors"
+             [ngClass]="activeOutilId === outil.id
+               ? 'bg-light-primary/10 dark:bg-primary/10'
+               : 'hover:bg-light-surface dark:hover:bg-white/5'"
+             (click)="onOutilClick(outil)">
+          <button class="w-3 h-3 flex-shrink-0 text-light-text-muted dark:text-white/30 transition-transform"
+                  [class.rotate-90]="isOutilExpanded(outil.id)"
+                  (click)="toggleOutil(outil.id); $event.stopPropagation()">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
+          </button>
+          <span class="material-symbols-outlined text-xs flex-shrink-0"
+                [ngClass]="getOutilIconClass(outil)">edit_note</span>
+          <span class="text-[11px] font-medium truncate flex-1"
+                [ngClass]="activeOutilId === outil.id
+                  ? 'text-light-primary dark:text-primary font-semibold'
+                  : 'text-light-text dark:text-white/70'">
+            {{ outil.name }}
           </span>
-          <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
-                 [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom du dossier' : 'Nom du fichier'"
-                 [(ngModel)]="inlineValue"
-                 (keydown.enter)="confirmInput()"
-                 (keydown.escape)="cancelInput()"
-                 autofocus />
         </div>
+
+        <!-- Sous-items : root folders de l'outil -->
+        @if (isOutilExpanded(outil.id)) {
+          @for (folderId of outil.rootFolderIds; track folderId) {
+            @if (getFolderById(folderId); as folder) {
+              <ng-container *ngTemplateOutlet="treeNodes; context: { nodes: [folder], depth: 1, parentId: null }"></ng-container>
+            }
+          }
+          @if (inlineInputIsFor('new-folder', null) || inlineInputIsFor('new-file', null)) {
+            <div class="flex items-center gap-1 mx-1 px-2 py-0.5 rounded bg-light-primary/5 dark:bg-primary/5" [style.padding-left.px]="18">
+              <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/40">
+                {{ inlineInput()?.type === 'new-folder' ? 'folder' : 'description' }}
+              </span>
+              <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
+                     [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom du dossier' : 'Nom du fichier'"
+                     [(ngModel)]="inlineValue"
+                     (keydown.enter)="confirmInput()"
+                     (keydown.escape)="cancelInput()"
+                     autofocus />
+            </div>
+          }
+        }
+      }
+    } @else {
+      <!-- Fallback : outils pas encore chargés → afficher directement l'arbre de fichiers -->
+      <div class="flex items-center gap-1 px-2 py-0.5 rounded mx-1 cursor-pointer group transition-colors hover:bg-light-surface dark:hover:bg-white/5"
+           (click)="toggle('root')">
+        <button class="w-3 h-3 flex-shrink-0 text-light-text-muted dark:text-white/30 transition-transform"
+                [class.rotate-90]="isExpanded('root')">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
+        </button>
+        <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/40 flex-shrink-0">edit_note</span>
+        <span class="text-[11px] font-medium truncate text-light-text dark:text-white/50">Edition</span>
+      </div>
+      @if (isExpanded('root')) {
+        <ng-container *ngTemplateOutlet="treeNodes; context: { nodes: files, depth: 1, parentId: null }"></ng-container>
+        @if (inlineInputIsFor('new-folder', null) || inlineInputIsFor('new-file', null)) {
+          <div class="flex items-center gap-1 mx-1 px-2 py-0.5 rounded bg-light-primary/5 dark:bg-primary/5" [style.padding-left.px]="18">
+            <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/40">
+              {{ inlineInput()?.type === 'new-folder' ? 'folder' : 'description' }}
+            </span>
+            <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
+                   [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom du dossier' : 'Nom du fichier'"
+                   [(ngModel)]="inlineValue"
+                   (keydown.enter)="confirmInput()"
+                   (keydown.escape)="cancelInput()"
+                   autofocus />
+          </div>
+        }
       }
     }
 
