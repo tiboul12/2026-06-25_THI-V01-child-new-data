@@ -5449,6 +5449,33 @@
       "prompt": "je ne vois pas comment on peux accéder à l historique d une action que tu viens de mettre en place, cela devrait apparaitre quand on cliqué sur le titre d une action",
       "startedAt": "2026-05-31T19:56:08.965Z",
       "completedAt": "2026-05-31T19:56:08.965Z"
+    },
+    {
+      "id": "mod-276",
+      "version": "B-0.250",
+      "date": "2026-06-04T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "server", "libs", "data"],
+      "features": "projets:editor|sidebar,server:file-projects,libs:data-access,data:projets",
+      "title": "Stockage des dossiers par sous-dossier d'outil",
+      "description": "Les dossiers racines de chaque outil sont désormais stockés dans un sous-dossier portant le type de l'outil (ex: edition/mon-dossier/). Modification du serveur (POST folders et files), du service Angular et de la sidebar pour passer outilSlug. Script de migration migrate-project-tool-paths.js pour les projets existants. Tous les projets en cours migrés.",
+      "files": [
+        "server/server-data.js",
+        "server/migrate-project-tool-paths.js",
+        "libs/portail-core/data-access/src/lib/project-files.service.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "data/projets/0475514d-ed29-407d-8cbf-f837232cac46/config.json",
+        "data/projets/2044ffc7-d4ba-486a-9365-1e288d4efabb/config.json",
+        "data/projets/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52/config.json",
+        "data/projets/5027d846-ea9f-44e4-a4f7-17b28d55fd97/config.json",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Suite à la mise en place d'outils dans le menu projet (outils editor, tests, code) je voudrais que tu déplace l'enregistrement des dossiers du projet outil editor dans un sous dossier avec le nom de l'outils, exemple pour l'outils editor /projets/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52/editor/aethelgard-anse-givre/ etc. Modifi le système pour enregistré les dossiers contenu et fichier dans le sous dossier de l'outils et met à jour tous les projet en cours.",
+      "startedAt": "2026-06-04T00:00:00.000Z",
+      "completedAt": "2026-06-04T00:00:00.000Z"
     }
   ]
 }

@@ -39,9 +39,11 @@ Zone rétractable via bouton dédié (vB-0.230+)
 - **Via menu contextuel** : clic droit → "Nouveau dossier"
 - **Via bouton** : bouton "+" dans la sidebar
 - **Affichage input** : input inline dans l'arborescence, sous le parent cible
-- **Validation** : Enter → `createFolder(name, parentId)` → emit `folderCreated`
-  - Création physique du dossier dans `data/projets/{id}/{slug}/`
+- **Validation** : Enter → `createFolder(name, parentId, outilSlug)` → emit `folderCreated`
+  - Dossier racine (pas de parent) : chemin `data/projets/{id}/{outilSlug}/{slug}/`
+  - Dossier enfant : chemin `data/projets/{id}/{parent.path}/{slug}/`
   - Création du fichier `contenu.md` dans le dossier
+- **outilSlug** : type de l'outil actif (`edition`, `tests`, `code`) passé automatiquement pour les dossiers racine
 - **Annulation** : Escape → `cancelInput()`
 - **Règle** : nom unique dans le dossier parent
 
@@ -51,8 +53,8 @@ Zone rétractable via bouton dédié (vB-0.230+)
 
 - **Via menu contextuel** : clic droit → "Nouveau fichier"
 - **Affichage input** : input inline avec extension `.md` automatique
-- **Validation** : Enter → POST `/api/file-projects/{name}/files`
-- **Résultat** : fichier Markdown créé physiquement, affiché dans l'arborescence
+- **Validation** : Enter → POST `/api/file-projects/{name}/files` avec `outilSlug` pour les fichiers racine
+- **Résultat** : fichier Markdown créé physiquement dans `{outilSlug}/{fileName}`, affiché dans l'arborescence
 
 ---
 
@@ -123,6 +125,7 @@ Options selon le type de nœud :
 - **Outil actif** : surligné (`bg-primary/10`)
 - **Création d'outil** : popup → type → `outilCreate.emit({ type, name })` → outil vide créé
 - **Migration auto** : projets sans outils → outil Edition créé automatiquement avec tous les root folders existants
+- **Stockage par sous-dossier** (vB-0.251+) : les dossiers racines de chaque outil sont physiquement stockés dans `data/projets/{id}/{outilType}/` (ex: `edition/mon-dossier/`). Les chemins dans `config.json` reflètent ce préfixe.
 
 ---
 

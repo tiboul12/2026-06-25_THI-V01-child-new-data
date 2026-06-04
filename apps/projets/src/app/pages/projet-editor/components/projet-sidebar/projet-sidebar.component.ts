@@ -224,7 +224,8 @@ export class ProjetSidebarComponent implements OnChanges {
     const val = this.inlineValue.trim();
     try {
       if (inp.type === 'new-folder') {
-        const folder = await this.svc.createFolder(this.projectName, { name: val, parentId: inp.parentId || undefined });
+        const activeOutil = !inp.parentId ? this.outils.find(o => o.id === this.activeOutilId) : undefined;
+        const folder = await this.svc.createFolder(this.projectName, { name: val, parentId: inp.parentId || undefined, outilSlug: activeOutil?.type });
         this.woHistory.track({
           section: 'projets/sections',
           actionType: 'create',
@@ -243,7 +244,8 @@ export class ProjetSidebarComponent implements OnChanges {
         if (inp.parentId) this.expandNode(inp.parentId);
         this.folderCreated.emit({ name: val, parentId: inp.parentId || null });
       } else if (inp.type === 'new-file') {
-        const created = await this.svc.createFile(this.projectName, { name: val, parentId: inp.parentId || undefined });
+        const activeOutil = !inp.parentId ? this.outils.find(o => o.id === this.activeOutilId) : undefined;
+        const created = await this.svc.createFile(this.projectName, { name: val, parentId: inp.parentId || undefined, outilSlug: activeOutil?.type });
         this.woHistory.track({
           section: 'projets/fichiers',
           actionType: 'create',

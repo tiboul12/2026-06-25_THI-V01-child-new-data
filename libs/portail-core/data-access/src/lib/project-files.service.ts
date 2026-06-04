@@ -91,7 +91,7 @@ export class ProjectFilesService {
     return firstValueFrom(this.http.delete(`${this.apiUrl}/api/file-projects/${name}`, { headers: this.h() }));
   }
 
-  createFile(projectName: string, data: { name: string; parentId?: string; content?: string }): Promise<FileNode> {
+  createFile(projectName: string, data: { name: string; parentId?: string; content?: string; outilSlug?: string }): Promise<FileNode> {
     return firstValueFrom(this.http.post<FileNode>(`${this.apiUrl}/api/file-projects/${projectName}/files`, data, { headers: this.h() }));
   }
 
@@ -107,7 +107,7 @@ export class ProjectFilesService {
     return firstValueFrom(this.http.delete(`${this.apiUrl}/api/file-projects/${projectName}/files/${fileId}`, { headers: this.h() }));
   }
 
-  createFolder(projectName: string, data: { name: string; parentId?: string }): Promise<FileNode> {
+  createFolder(projectName: string, data: { name: string; parentId?: string; outilSlug?: string }): Promise<FileNode> {
     return firstValueFrom(this.http.post<FileNode>(`${this.apiUrl}/api/file-projects/${projectName}/folders`, data, { headers: this.h() }));
   }
 

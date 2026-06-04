@@ -5209,7 +5209,7 @@ app.post('/api/file-projects/:name/files', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
-    const { name, parentId, content } = req.body;
+    const { name, parentId, content, outilSlug } = req.body;
     if (!name) return res.status(400).json({ error: 'Nom requis' });
     try {
         const fileName = name.endsWith('.md') ? name : `${name}.md`;
@@ -5221,6 +5221,10 @@ app.post('/api/file-projects/:name/files', async (req, res) => {
             filePath = `${parent.path}/${fileName}`;
             parent.children = parent.children || [];
             parentItems = parent.children;
+        } else if (outilSlug && /^[a-z0-9-]+$/.test(outilSlug)) {
+            const outilDir = safeProjectPath(req.params.name, outilSlug);
+            if (outilDir) fs.mkdirSync(outilDir, { recursive: true });
+            filePath = `${outilSlug}/${fileName}`;
         } else {
             filePath = fileName;
         }
@@ -5476,7 +5480,7 @@ app.post('/api/file-projects/:name/folders', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const config = await getProjectConfig(req.params.name);
     if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
-    const { name, parentId } = req.body;
+    const { name, parentId, outilSlug } = req.body;
     if (!name) return res.status(400).json({ error: 'Nom requis' });
     try {
         const slug = slugify(name) || name.replace(/\s+/g, '-').toLowerCase();
@@ -5488,6 +5492,10 @@ app.post('/api/file-projects/:name/folders', async (req, res) => {
             folderPath = `${parent.path}/${slug}`;
             parent.children = parent.children || [];
             parentItems = parent.children;
+        } else if (outilSlug && /^[a-z0-9-]+$/.test(outilSlug)) {
+            const outilDir = safeProjectPath(req.params.name, outilSlug);
+            if (outilDir) fs.mkdirSync(outilDir, { recursive: true });
+            folderPath = `${outilSlug}/${slug}`;
         } else {
             folderPath = slug;
         }
