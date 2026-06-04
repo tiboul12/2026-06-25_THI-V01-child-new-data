@@ -45,20 +45,16 @@ function updatePathsRecursively(node, oldPrefix, newPrefix) {
     if (node.children) node.children.forEach(c => updatePathsRecursively(c, oldPrefix, newPrefix));
 }
 
+const pool = require('./db');
+
 function tryMysqlUpdate(projectName, config) {
-    try {
-        const mysql2 = require('mysql2/promise');
-        const pool = mysql2.createPool({
-            host:     process.env.DB_HOST     || 'localhost',
-            user:     process.env.DB_USER     || 'root',
-            password: process.env.DB_PASSWORD || '',
-            database: process.env.DB_NAME     || 'worganic',
-        });
-        return pool.query(
-            'UPDATE file_project_meta SET structure = ?, outils = ?, updated_at = ? WHERE id = ?',
-            [JSON.stringify(config.structure || []), JSON.stringify(config.outils || null), new Date(), projectName]
-        ).then(() => pool.end()).catch(e => { console.warn(`  [mysql] ${e.message}`); return pool.end(); });
-    } catch (_) { return Promise.resolve(); }
+    return pool.query(
+        'UPDATE file_project_meta SET structure = ?, outils = ?, updated_at = ? WHERE id = ?',
+        [JSON.stringify(config.structure || []), JSON.stringify(config.outils || null), new Date(), projectName]
+    ).then(([result]) => {
+        if (result.affectedRows > 0) console.log(`  [mysql] OK — ${result.affectedRows} ligne(s) mise(s) à jour`);
+        else console.warn(`  [mysql] WARN — aucune ligne trouvée pour id=${projectName}`);
+    }).catch(e => console.warn(`  [mysql] ${e.message}`));
 }
 
 // ── Parcours des projets ──────────────────────────────────────────────────────
@@ -101,7 +97,20 @@ async function migrateProject(projectName) {
             if (!DRY_RUN) {
                 fs.mkdirSync(outilDir, { recursive: true });
                 if (fs.existsSync(oldFull)) {
-                    fs.renameSync(oldFull, newFull);
+                    if (fs.existsSync(newFull)) {
+                        // Destination déjà présente (re-migration) : déplacer les nouveaux items vers la destination
+                        for (const entry of fs.readdirSync(oldFull)) {
+                            const src = path.join(oldFull, entry);
+                            const dst = path.join(newFull, entry);
+                            if (!fs.existsSync(dst)) {
+                                fs.renameSync(src, dst);
+                                console.log(`    → déplacé (merge) : ${entry}`);
+                            }
+                        }
+                        fs.rmSync(oldFull, { recursive: true, force: true });
+                    } else {
+                        fs.renameSync(oldFull, newFull);
+                    }
                 } else {
                     // dossier absent du FS : juste mettre à jour les paths en config
                     fs.mkdirSync(newFull, { recursive: true });
@@ -138,6 +147,7 @@ async function main() {
     }
 
     console.log('\nMigration terminée.');
+    if (!DRY_RUN) await pool.end().catch(() => {});
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

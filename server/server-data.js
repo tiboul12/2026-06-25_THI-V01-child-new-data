@@ -4775,16 +4775,19 @@ async function getProjectConfig(projectName) {
         const mysqlOutils = mysqlRow.outils
             ? (typeof mysqlRow.outils === 'string' ? JSON.parse(mysqlRow.outils) : mysqlRow.outils)
             : null;
-        // Si MySQL a une structure vide mais que le filesystem local en a une non-vide → mettre à jour MySQL
         const localStructure = localConfig?.structure || [];
-        if (mysqlStructure.length === 0 && localStructure.length > 0) {
+        // Préférer le filesystem si : MySQL vide, ou config.json plus récent (ex: après migration de chemins)
+        const localUpdatedAt = localConfig?.updatedAt ? new Date(localConfig.updatedAt).getTime() : 0;
+        const mysqlUpdatedAt = mysqlRow.updated_at ? new Date(mysqlRow.updated_at).getTime() : 0;
+        const preferLocal = (mysqlStructure.length === 0 && localStructure.length > 0) || (localUpdatedAt > mysqlUpdatedAt && localStructure.length > 0);
+        if (preferLocal) {
             try {
                 await pool.query(
-                    'UPDATE file_project_meta SET structure = ?, display_name = ?, updated_at = ? WHERE id = ?',
-                    [JSON.stringify(localStructure), localConfig.projectName || mysqlRow.display_name, new Date(), projectName]
+                    'UPDATE file_project_meta SET structure = ?, outils = ?, display_name = ?, updated_at = ? WHERE id = ?',
+                    [JSON.stringify(localStructure), JSON.stringify(localConfig?.outils || null), localConfig.projectName || mysqlRow.display_name, new Date(), projectName]
                 );
             } catch (e2) { console.warn('[getProjectConfig] MySQL structure update failed:', e2.message); }
-            return migrateOutils({ projectName: localConfig.projectName || mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: mysqlRow.updated_at, structure: localStructure, outils: mysqlOutils || localConfig?.outils || null });
+            return migrateOutils({ projectName: localConfig.projectName || mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: localConfig.updatedAt || mysqlRow.updated_at, structure: localStructure, outils: mysqlOutils || localConfig?.outils || null });
         }
         return migrateOutils({ projectName: mysqlRow.display_name, gitRemoteUrl: mysqlRow.git_remote_url || null, createdAt: mysqlRow.created_at, updatedAt: mysqlRow.updated_at, structure: mysqlStructure, outils: mysqlOutils });
     }

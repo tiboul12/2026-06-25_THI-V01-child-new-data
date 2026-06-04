@@ -5495,6 +5495,46 @@
       "prompt": "Dans l'outils edition change le nom \"Dossier\" en \"Section\", phisiquement dans le dossier projets/XXXXX/edition/ il s'agit toujours de dossier : Section (affichage) = Dossier (Explorateur)",
       "startedAt": "2026-06-04T00:00:00.000Z",
       "completedAt": "2026-06-04T00:00:00.000Z"
+    },
+    {
+      "id": "mod-278",
+      "version": "B-0.252",
+      "date": "2026-06-04T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "server"],
+      "features": "projets:editor|sidebar,server:file-projects",
+      "title": "Fix : nouvelles sections créées à la racine au lieu du sous-dossier outil",
+      "description": "Deux causes : (1) getProjectConfig préférait MySQL (ancienne structure sans préfixe edition/) sur le config.json migré → ajout d'une comparaison de timestamps pour préférer le filesystem quand il est plus récent. (2) processSectionsChange ne passait pas outilSlug → ajout du paramètre. Script de migration mis à jour pour gérer la fusion quand la destination existe déjà (re-migration).",
+      "files": [
+        "server/server-data.js",
+        "server/migrate-project-tool-paths.js",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Il y a une erreur, lorsque je rajoute une section à un outil edition il faut le mettre dans le sous dossier edition du projet",
+      "startedAt": "2026-06-04T00:00:00.000Z",
+      "completedAt": "2026-06-04T00:00:00.000Z"
+    },
+    {
+      "id": "mod-279",
+      "version": "B-0.252",
+      "date": "2026-06-04T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server"],
+      "features": "server:file-projects",
+      "title": "Fix migration MySQL : connexion correcte via db.js",
+      "description": "Le script de migration utilisait une connexion MySQL locale inexistante. Remplacé par require('./db') (connexion Hostinger). MySQL est maintenant correctement mis à jour. Gestion de la fusion (merge) quand le dossier destination existe déjà lors d'une re-migration.",
+      "files": [
+        "server/migrate-project-tool-paths.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai re créé une section et elle c'est encore enregistré au mauvaise endroit à la racine d'edition au lieu de l'intérieur du dossier edition",
+      "startedAt": "2026-06-04T00:00:00.000Z",
+      "completedAt": "2026-06-04T00:00:00.000Z"
     }
   ]
 }

@@ -982,7 +982,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
           const parentId = section.parentFolderId || (parentKey ? newFolderIds.get(parentKey) : undefined) || undefined;
           
           try {
-            const folder = await this.projectFilesService.createFolder(this.projectFolderName, { name: section.folderName, parentId });
+            const folder = await this.projectFilesService.createFolder(this.projectFolderName, { name: section.folderName, parentId, outilSlug: !parentId ? this.activeOutil()?.type : undefined });
             newFolderIds.set(fullPath, folder.id);
             section.folderId = folder.id;
             this.trackFolderCreate(folder);
