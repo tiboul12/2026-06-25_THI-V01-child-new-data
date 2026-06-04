@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
 import { ProjectFilesService, FileNode, FtpNodeSyncStatus, Outil } from '@worganic/portail-core/data-access';
+import { MegaOutilsService, MegaOutilInstance } from '@worganic/portail-core/data-access';
 import { ConfigService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { LayoutService } from '@worganic/portail-core/data-access';
@@ -78,6 +79,9 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   outils = signal<Outil[]>([]);
   activeOutilId = signal<string | null>(null);
 
+  megaOutilInstances = signal<MegaOutilInstance[]>([]);
+  activeMegaOutil    = signal<MegaOutilInstance | null>(null);
+
   readonly activeOutil = computed(() =>
     this.outils().find(o => o.id === this.activeOutilId()) ?? this.outils()[0] ?? null
   );
@@ -92,6 +96,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
   restoreToken = signal(0);
   aiEditService = inject(ProjetAiEditService);
+  private megaOutilsService = inject(MegaOutilsService);
   hasPendingEdit = computed(() => !!this.aiEditService.pendingEdit());
   hasFtpBackup = computed(() => this.project()?.backupType === 'ftp');
 
@@ -461,6 +466,8 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.warn('loadOutils error:', e);
     }
+    // Charger les mega-outils instances
+    await this.loadMegaOutilInstances();
   }
 
   private computeNestedImagesMap(nodes: FileNode[]): Record<string, string[]> {
@@ -584,6 +591,34 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('[ProjetEditor] createOutil failed:', e);
     }
+  }
+
+  // ── Mega-outils ────────────────────────────────────────────────
+
+  async loadMegaOutilInstances(): Promise<void> {
+    const projectId = this.project()?.id;
+    if (!projectId) return;
+    try {
+      const instances = await this.megaOutilsService.getInstances(projectId);
+      this.megaOutilInstances.set(instances);
+    } catch (e) { console.warn('[ProjetEditor] loadMegaOutilInstances failed:', e); }
+  }
+
+  onMegaOutilSelect(inst: MegaOutilInstance): void {
+    this.activeMegaOutil.set(inst);
+    this.activeNodeId.set(null);
+    this.highlightNodeId.set(null);
+  }
+
+  onMegaOutilCreated(inst: MegaOutilInstance): void {
+    // L'instance est créée par la zone éditeur. On met à jour la liste locale et on l'active.
+    this.megaOutilInstances.update(list => [...list, inst]);
+    this.activeMegaOutil.set(inst);
+  }
+
+  onMegaOutilDeleted(id: string): void {
+    this.megaOutilInstances.update(list => list.filter(i => i.id !== id));
+    if (this.activeMegaOutil()?.id === id) this.activeMegaOutil.set(null);
   }
 
   async onSectionsChange(sections: SectionInfo[]) {

@@ -55,4 +55,9 @@ export const BASE_ROUTES: Routes = [
     path: 'cahier-recette-doc',
     loadComponent: () => import('./tools/cahier-recette/cahier-recette-doc.component').then(m => m.CahierRecetteDocComponent)
   },
+  {
+    path: 'trello',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/trello/trello-page.component').then(m => m.TrelloPageComponent)
+  },
 ];

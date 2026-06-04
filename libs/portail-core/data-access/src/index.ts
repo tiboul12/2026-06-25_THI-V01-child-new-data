@@ -17,3 +17,5 @@ export * from './lib/project.service';
 export * from './lib/projet-collab.service';
 export * from './lib/theme.service';
 export * from './lib/wo-action-history.service';
+export * from './lib/mega-outils.models';
+export * from './lib/mega-outils.service';

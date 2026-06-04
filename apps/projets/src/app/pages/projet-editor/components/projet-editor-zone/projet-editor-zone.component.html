@@ -146,6 +146,62 @@
 
   </div>
 
+  <!-- Barre Mega-outils (sous la toolbar de style) -->
+  <div class="flex items-center gap-1.5 px-3 py-1.5 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-surface flex-shrink-0 flex-wrap">
+    <span class="material-symbols-outlined text-[13px] text-blue-400 flex-shrink-0">view_kanban</span>
+    <span class="text-[10px] font-bold uppercase tracking-wider text-light-text-muted dark:text-white/30 flex-shrink-0 mr-1">Mega-outils</span>
+    @for (inst of megaOutilInstances; track inst.id) {
+      <button type="button"
+              class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors"
+              [ngClass]="activeMegaOutilId === inst.id
+                ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
+              (click)="megaOutilSelect.emit(inst)">
+        <span class="material-symbols-outlined text-[12px]">view_kanban</span>
+        {{ inst.name }}
+      </button>
+    }
+    <button type="button"
+            class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-light-text-muted dark:text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-colors border border-transparent hover:border-blue-500/30"
+            title="Ajouter un Trello à l'endroit du curseur"
+            (click)="openTrelloPopup()">
+      <span class="material-symbols-outlined text-[13px]">add</span>
+      Trello
+    </button>
+  </div>
+
+  <!-- Popup configuration nouveau Trello -->
+  @if (showTrelloPopup()) {
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]"
+         (click)="cancelTrelloPopup()">
+      <div class="w-80 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5"
+           (click)="$event.stopPropagation()">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-blue-400 text-base">view_kanban</span>
+          </div>
+          <h3 class="text-sm font-semibold text-light-text dark:text-white">Nouveau Trello</h3>
+        </div>
+        <label class="block text-[11px] font-medium text-light-text-muted dark:text-white/50 mb-1">Nom du tableau</label>
+        <input class="w-full text-sm bg-light-background dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-3 py-2 mb-4 text-light-text dark:text-white outline-none focus:border-blue-500 dark:focus:border-blue-400"
+               [(ngModel)]="trelloName"
+               (keydown.enter)="confirmTrelloPopup()"
+               (keydown.escape)="cancelTrelloPopup()"
+               placeholder="Mon Trello"
+               autofocus />
+        <div class="flex gap-2">
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                  [disabled]="trelloCreating()"
+                  (click)="confirmTrelloPopup()">
+            {{ trelloCreating() ? 'Création…' : 'Créer et insérer' }}
+          </button>
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors"
+                  (click)="cancelTrelloPopup()">Annuler</button>
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- Erreur upload image -->
   @if (imageUploadError) {
     <div class="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800/40 flex-shrink-0">
@@ -318,6 +374,15 @@
                         </button>
                       }
                     }
+                  </span>
+                </span>
+              } @else if (line.isTrello) {
+                <span class="ed-img-card-wrap">
+                  <span class="ed-img-card" title="Ouvrir le Trello (mode Preview)"
+                        (click)="setMode('visu')">
+                    <span class="ed-img-icon material-symbols-outlined" style="color:#60a5fa">view_kanban</span>
+                    <span class="ed-img-name">{{ trelloInstanceName(line.trelloId) }}</span>
+                    <span class="text-[10px] opacity-50 ml-1">— cliquer pour ouvrir</span>
                   </span>
                 </span>
               } @else {
@@ -688,6 +753,18 @@
                    (blur)="onVisuSectionBlur(sec.sectionId)"
                    (input)="onVisuSectionInput(sec.sectionId)">
               </div>
+
+              <!-- Boards Trello de la section (shortcodes {{TRELLO:id}}) -->
+              @for (tid of trelloIdsForSection(sec); track tid) {
+                <div class="my-3 rounded-xl border border-blue-500/25 overflow-hidden bg-light-surface dark:bg-surface"
+                     style="height:380px" contenteditable="false">
+                  <app-trello-board
+                    [instanceId]="tid"
+                    [boardName]="trelloInstanceName(tid)"
+                    [deletable]="true"
+                    (deleteBoard)="deleteTrelloInstance($event)" />
+                </div>
+              }
 
 
               <!-- Ligne d'insertion (visible au hover) -->
