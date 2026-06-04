@@ -5476,6 +5476,25 @@
       "prompt": "Suite à la mise en place d'outils dans le menu projet (outils editor, tests, code) je voudrais que tu déplace l'enregistrement des dossiers du projet outil editor dans un sous dossier avec le nom de l'outils, exemple pour l'outils editor /projets/4aa105c7-3e9f-4689-8ce9-f9cf8af08f52/editor/aethelgard-anse-givre/ etc. Modifi le système pour enregistré les dossiers contenu et fichier dans le sous dossier de l'outils et met à jour tous les projet en cours.",
       "startedAt": "2026-06-04T00:00:00.000Z",
       "completedAt": "2026-06-04T00:00:00.000Z"
+    },
+    {
+      "id": "mod-277",
+      "version": "B-0.251",
+      "date": "2026-06-04T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|sidebar",
+      "title": "Renommage \"Dossier\" → \"Section\" dans l'outil Edition",
+      "description": "Dans la sidebar de l'éditeur, le libellé \"Nouveau dossier\" devient \"Nouvelle section\" et le placeholder \"Nom du dossier\" devient \"Nom de la section\". Physiquement, les dossiers restent des dossiers sur le disque.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans l'outils edition change le nom \"Dossier\" en \"Section\", phisiquement dans le dossier projets/XXXXX/edition/ il s'agit toujours de dossier : Section (affichage) = Dossier (Explorateur)",
+      "startedAt": "2026-06-04T00:00:00.000Z",
+      "completedAt": "2026-06-04T00:00:00.000Z"
     }
   ]
 }

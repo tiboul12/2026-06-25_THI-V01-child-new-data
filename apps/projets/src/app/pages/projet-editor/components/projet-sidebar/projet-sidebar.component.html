@@ -85,7 +85,7 @@
                 {{ inlineInput()?.type === 'new-folder' ? 'folder' : 'description' }}
               </span>
               <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
-                     [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom du dossier' : 'Nom du fichier'"
+                     [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom de la section' : 'Nom du fichier'"
                      [(ngModel)]="inlineValue"
                      (keydown.enter)="confirmInput()"
                      (keydown.escape)="cancelInput()"
@@ -113,7 +113,7 @@
               {{ inlineInput()?.type === 'new-folder' ? 'folder' : 'description' }}
             </span>
             <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
-                   [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom du dossier' : 'Nom du fichier'"
+                   [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom de la section' : 'Nom du fichier'"
                    [(ngModel)]="inlineValue"
                    (keydown.enter)="confirmInput()"
                    (keydown.escape)="cancelInput()"
@@ -257,7 +257,7 @@
             {{ inlineInput()?.type === 'new-folder' ? 'folder' : 'description' }}
           </span>
           <input class="flex-1 text-[11px] bg-transparent border-b border-light-primary dark:border-primary outline-none text-light-text dark:text-white py-0.5"
-                 [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom du dossier' : 'Nom du fichier'"
+                 [placeholder]="inlineInput()?.type === 'new-folder' ? 'Nom de la section' : 'Nom du fichier'"
                  [(ngModel)]="inlineValue"
                  (keydown.enter)="confirmInput()"
                  (keydown.escape)="cancelInput()"
@@ -280,7 +280,7 @@
     @if (!contextMenu()!.node || contextMenu()!.node!.type === 'folder') {
       <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left"
               (click)="startNewFolder(contextMenu()!.node?.id || null)">
-        <span class="material-symbols-outlined text-sm">create_new_folder</span> Nouveau dossier
+        <span class="material-symbols-outlined text-sm">create_new_folder</span> Nouvelle section
       </button>
       <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left"
               (click)="startNewFile(contextMenu()!.node?.id || null)">
