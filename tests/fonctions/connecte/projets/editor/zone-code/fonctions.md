@@ -33,6 +33,7 @@ Vue : textarea Markdown à gauche, rendu HTML miroir à droite
 - **Highlights** : sections surlignées selon `highlightNodeId`
 - **Scroll auto** : `scrollToNodeId` → défile vers la section demandée
 - **Rendu Markdown** : via `marked`
+- **Marqueur Trello** : `{{TRELLO:id}}` est masqué (ligne rendue vide, plus de texte brut ni de chip) ; le board apparaît uniquement dans la zone basse (voir `2-5-2-5-16`)
 
 ---
 

@@ -160,3 +160,16 @@ Vue : rendu HTML des sections, éditables directement par clic (contenteditable)
 | Panel image ouvert | Panel props visible sous l'image |
 | Preview standalone | Section lecture seule |
 | Overlay publication | Spinner plein écran pendant `isPublishing` |
+
+---
+
+## `2-5-2-5-16` — Zone basse Trello (méga-outils, tous modes)
+
+- Les méga-outils Trello incrustés dans le contenu (marqueur `{{TRELLO:id}}`) ne s'affichent plus inline dans le code ni dans la section Preview
+- Un **panneau bas partagé** affiche les board(s) Trello présents dans le contenu courant — comportement **identique en Code, Structure et Preview**
+- `contentTrelloIds` : liste calculée depuis `unifiedContent` (focus = section active ; sinon tout le contenu visible), filtrée sur les instances existantes
+- Panneau à **hauteur fixe (~400px)**, **repliable** via le bouton chevron (`trelloPanelCollapsed`) ; en-tête affiche le nom du board (ou le nombre si plusieurs)
+- Plusieurs boards empilés dans un corps scrollable
+- Colonnes du board (À faire / En cours / Terminé / Bloqué) en pleine largeur (`flex-1`), sans ascenseur horizontal
+- Suppression d'un board (corbeille) retire l'instance + le marqueur du contenu
+- Masqué si aucun marqueur Trello dans le contenu courant

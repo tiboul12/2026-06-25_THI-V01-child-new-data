@@ -376,15 +376,6 @@
                     }
                   </span>
                 </span>
-              } @else if (line.isTrello) {
-                <span class="ed-img-card-wrap">
-                  <span class="ed-img-card" title="Ouvrir le Trello (mode Preview)"
-                        (click)="setMode('visu')">
-                    <span class="ed-img-icon material-symbols-outlined" style="color:#60a5fa">view_kanban</span>
-                    <span class="ed-img-name">{{ trelloInstanceName(line.trelloId) }}</span>
-                    <span class="text-[10px] opacity-50 ml-1">— cliquer pour ouvrir</span>
-                  </span>
-                </span>
               } @else {
                 <span class="ed-text" [innerHTML]="line.safeHtml"></span>
               }
@@ -754,19 +745,6 @@
                    (input)="onVisuSectionInput(sec.sectionId)">
               </div>
 
-              <!-- Boards Trello de la section (shortcodes {{TRELLO:id}}) -->
-              @for (tid of trelloIdsForSection(sec); track tid) {
-                <div class="my-3 rounded-xl border border-blue-500/25 overflow-hidden bg-light-surface dark:bg-surface"
-                     style="height:380px" contenteditable="false">
-                  <app-trello-board
-                    [instanceId]="tid"
-                    [boardName]="trelloInstanceName(tid)"
-                    [deletable]="true"
-                    (deleteBoard)="deleteTrelloInstance($event)" />
-                </div>
-              }
-
-
               <!-- Ligne d'insertion (visible au hover) -->
               <div class="visu-insert-row">
                 <button class="visu-insert-btn"
@@ -804,6 +782,34 @@
           (delete)="onImagePropsDelete($event)"
           (close)="closeImagePropsPanel()">
         </app-image-props-panel>
+      </div>
+    }
+
+    <!-- Zone basse : boards Trello incrustés dans le contenu (affichée dans tous les modes) -->
+    @if (contentTrelloIds.length > 0) {
+      <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="trelloPanelCollapsed()">
+        <div class="ed-trello-panel__head">
+          <span class="material-symbols-outlined">view_kanban</span>
+          <span class="ed-trello-panel__title">
+            {{ contentTrelloIds.length > 1 ? contentTrelloIds.length + ' tableaux' : trelloInstanceName(contentTrelloIds[0]) }}
+          </span>
+          <button type="button" class="ed-trello-panel__toggle"
+                  [title]="trelloPanelCollapsed() ? 'Afficher' : 'Réduire'"
+                  (click)="trelloPanelCollapsed.set(!trelloPanelCollapsed())">
+            <span class="material-symbols-outlined">{{ trelloPanelCollapsed() ? 'expand_less' : 'expand_more' }}</span>
+          </button>
+        </div>
+        @if (!trelloPanelCollapsed()) {
+          <div class="ed-trello-panel__body">
+            @for (tid of contentTrelloIds; track tid) {
+              <app-trello-board
+                [instanceId]="tid"
+                [boardName]="trelloInstanceName(tid)"
+                [deletable]="true"
+                (deleteBoard)="deleteTrelloInstance($event)" />
+            }
+          </div>
+        }
       </div>
     }
 

@@ -79,8 +79,6 @@ interface MirrorLine {
   foldLineCount: number;
   inlineBlockId: string | null;
   inlineBlockKind: 'block-table' | 'block-quote' | 'block-fence' | 'block-list' | null;
-  isTrello: boolean;
-  trelloId: string;
 }
 
 interface HoverPreview {
@@ -137,6 +135,8 @@ interface StructureNode {
   title: string;
   textContent: string;
   additionalBlocks: StructureAdditionalBlock[];
+  // Marqueurs Trello {{TRELLO:id}} extraits du contenu (masqués en Structure, ré-injectés à la sauvegarde)
+  trelloMarkers: string[];
   lineStart: number;
   lineEnd: number;
   folderId: string | null;
@@ -208,6 +208,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   showTrelloPopup = signal(false);
   trelloName = '';
   trelloCreating = signal(false);
+  // Zone basse : boards Trello incrustés dans le contenu courant (affichés dans tous les modes)
+  contentTrelloIds: string[] = [];
+  trelloPanelCollapsed = signal(false);
   private localDirty = false;
 
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
@@ -501,6 +504,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     if (changes['scrollToNodeId'] && this.scrollToNodeId) {
       setTimeout(() => this.scrollToNodeById(this.scrollToNodeId!), 100);
+    }
+
+    // Les instances mega-outils peuvent arriver après le contenu → recalculer la zone basse
+    if (changes['megaOutilInstances']) {
+      this.recomputeContentTrelloIds();
     }
   }
 
@@ -943,18 +951,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           highlightKind: kind, lineIndex: i,
           isFold: false, foldSectionId: '', foldLineCount: 0,
           inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
-          isTrello: false, trelloId: '',
-        };
-      }
-      const tm = /^\{\{TRELLO:([a-zA-Z0-9-]+)\}\}\s*$/.exec(line.trim());
-      if (tm) {
-        return {
-          text: line, safeHtml: '', isImage: false,
-          imageId: '', imageName: '', imagePath: '',
-          highlightKind: kind, lineIndex: i,
-          isFold: false, foldSectionId: '', foldLineCount: 0,
-          inlineBlockId: null, inlineBlockKind: null,
-          isTrello: true, trelloId: tm[1],
         };
       }
       const fm = /^\{\{FOLD:([a-zA-Z0-9-]+):(\d+)\}\}$/.exec(line.trim());
@@ -965,18 +961,33 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           highlightKind: kind, lineIndex: i,
           isFold: true, foldSectionId: fm[1], foldLineCount: parseInt(fm[2], 10),
           inlineBlockId: null, inlineBlockKind: null,
-          isTrello: false, trelloId: '',
         };
       }
+      // Marqueur Trello : masqué dans le code (board affiché en zone basse).
+      // Ligne rendue vide (espace) pour préserver l'alignement avec la textarea.
+      const isTrelloMarker = /^\{\{TRELLO:[a-zA-Z0-9-]+\}\}\s*$/.test(line.trim());
       return {
-        text: line, safeHtml: this.syntaxHighlight(line), isImage: false,
+        text: line, safeHtml: isTrelloMarker ? ' ' : this.syntaxHighlight(line), isImage: false,
         imageId: '', imageName: '', imagePath: '',
         highlightKind: kind, lineIndex: i,
         isFold: false, foldSectionId: '', foldLineCount: 0,
         inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
-        isTrello: false, trelloId: '',
       };
     });
+
+    this.recomputeContentTrelloIds();
+  }
+
+  /** Ids Trello dont le marqueur {{TRELLO:id}} est présent dans le contenu courant (tous modes). */
+  private recomputeContentTrelloIds() {
+    const ids: string[] = [];
+    const re = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(this.unifiedContent)) !== null) {
+      const id = m[1];
+      if (!ids.includes(id) && this.megaOutilInstances.some(i => i.id === id)) ids.push(id);
+    }
+    this.contentTrelloIds = ids;
   }
 
   private recomputeRenderedHtml() {
@@ -2304,15 +2315,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // Shortcode Trello dans le contenu : {{TRELLO:<id>}}
   private static readonly TRELLO_MARKER_SRC = '\\{\\{TRELLO:([a-zA-Z0-9-]+)\\}\\}';
-
-  /** Ids Trello présents dans le markdown d'une section. */
-  trelloIdsForSection(sec: VisuSectionState): string[] {
-    const ids: string[] = [];
-    const re = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(sec.markdownBefore || '')) !== null) ids.push(m[1]);
-    return ids;
-  }
 
   /** Nom d'une instance à partir de son id. */
   trelloInstanceName(id: string): string {
@@ -4217,7 +4219,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const pushNode = (lineEnd: number) => {
       if (currentLineStart < 0) return;
       const raw = contentLines.join('\n').replace(/^\n+|\n+$/g, '');
-      const { textContent, blocks } = this.parseAdditionalBlocks(raw);
+      const { textContent: tc0, blocks } = this.parseAdditionalBlocks(raw);
+      // Extraire les marqueurs Trello pour les masquer dans la textarea Structure
+      const trelloMarkers: string[] = [];
+      const trelloRe = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
+      let tm: RegExpExecArray | null;
+      while ((tm = trelloRe.exec(tc0)) !== null) trelloMarkers.push(tm[0]);
+      const textContent = tc0
+        .replace(new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g'), '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
       const folderId = this.sectionRanges.find(r => r.lineStart === currentLineStart)?.folderId ?? null;
       nodes.push({
         id: `struct-${currentLineStart}`,
@@ -4225,6 +4236,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         title: currentTitle,
         textContent,
         additionalBlocks: blocks,
+        trelloMarkers,
         lineStart: currentLineStart,
         lineEnd: lineEnd,
         folderId,
@@ -4254,6 +4266,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (const b of node.additionalBlocks) {
       parts.push(`${b.delimiter}${b.title}\n${b.content}\n${b.delimiter}`);
     }
+    // Ré-injecter les marqueurs Trello extraits (masqués en Structure)
+    for (const m of node.trelloMarkers || []) parts.push(m);
     return parts.join('\n\n');
   }
 

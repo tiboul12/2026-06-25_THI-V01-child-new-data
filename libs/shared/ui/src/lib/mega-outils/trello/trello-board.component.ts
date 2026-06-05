@@ -54,9 +54,9 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
       </div>
 
       <!-- Colonnes -->
-      <div class="flex gap-3 flex-1 overflow-x-auto overflow-y-hidden p-4">
+      <div class="flex gap-3 flex-1 overflow-x-hidden overflow-y-hidden p-4">
         @for (col of columns; track col) {
-          <div class="flex flex-col w-64 flex-shrink-0 rounded-xl border bg-light-surface dark:bg-surface"
+          <div class="flex flex-col flex-1 min-w-0 rounded-xl border bg-light-surface dark:bg-surface"
                [class]="columnBorder(col)"
                (dragover)="onDragOver($event, col)"
                (drop)="onDrop($event, col)">

@@ -1,6 +1,86 @@
 {
   "modifications": [
     {
+      "id": "mod-292",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-structure",
+      "title": "Trello : marqueur masqué en mode Structure",
+      "description": "Le marqueur {{TRELLO:id}} n'apparaît plus dans la textarea de contenu du mode Structure. Ajout de StructureNode.trelloMarkers : les marqueurs sont extraits du textContent dans parseStructureNodes (masqués à l'affichage) et ré-injectés en fin de section dans rebuildNodeRawContent à la sauvegarde, sans perte. Le board reste affiché en zone basse.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la même chose dans le mode structure",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
+      "id": "mod-291",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code",
+      "title": "Trello : marqueur masqué en mode Code",
+      "description": "Le marqueur d'insertion {{TRELLO:id}} n'est plus affiché en texte brut dans la zone Code : la ligne du marqueur est rendue vide dans le miroir (texte de la textarea déjà transparent), en préservant la hauteur de ligne pour l'alignement. Le board reste affiché uniquement en zone basse.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "l'info d'insertion du mega outils trello ne doit pas être affiché dans le texte",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
+      "id": "mod-290",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|trello",
+      "title": "Trello : colonnes en pleine largeur (plus d'ascenseur horizontal)",
+      "description": "Les colonnes du board Trello (À faire / En cours / Terminé / Bloqué) passent de w-64 flex-shrink-0 à flex-1 min-w-0 et le conteneur de overflow-x-auto à overflow-x-hidden : les 4 colonnes se répartissent sur toute la largeur disponible, supprimant l'ascenseur horizontal. S'applique partout où le composant trello-board est utilisé.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "les zones interne de trello card A faire En cours terminé et bloqué doivent prendre la taille de la fenètre pour ne pas avoir d'ascenseur horizontal",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
+      "id": "mod-289",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code|zone-preview",
+      "title": "Trello affiché en zone basse partagée (tous modes)",
+      "description": "Les méga-outils Trello incrustés (marqueur {{TRELLO:id}}) ne s'affichent plus inline : suppression du chip en mode Code et du board inline en Preview. Un panneau bas partagé (contentTrelloIds calculé depuis unifiedContent) affiche les board(s) du contenu courant de façon identique en Code, Structure et Preview. Panneau à hauteur fixe ~400px, repliable (trelloPanelCollapsed). Champs isTrello/trelloId et méthode trelloIdsForSection retirés.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le menu projets/editor lorsque qu'un mega outils type trello est inscruté dans une section, il n'y à pas besoin de créer un affichage directement dans le code mais il faut affiché le trello dans la zone basse cela doit fonctionné de la même façon pour tous les modes",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
       "id": "mod-270",
       "version": "B-0.249",
       "date": "2026-06-03T00:00:00.000Z",
