@@ -2,13 +2,14 @@ import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleCha
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { FileNode, ProjectFilesService } from '@worganic/portail-core/data-access';
+import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService } from '@worganic/portail-core/data-access';
 import { marked } from 'marked';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { ProjetCollabService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { ImagePropsPanelComponent, ImageProps } from '../image-props-panel/image-props-panel.component';
 import { SlashCommandMenuComponent, SlashCommand } from '../slash-command-menu/slash-command-menu.component';
+import { TrelloBoardComponent } from '@worganic/shared/ui';
 
 export interface FileSaveEvent {
   fileId: string;
@@ -134,6 +135,8 @@ interface StructureNode {
   title: string;
   textContent: string;
   additionalBlocks: StructureAdditionalBlock[];
+  // Marqueurs Trello {{TRELLO:id}} extraits du contenu (masqués en Structure, ré-injectés à la sauvegarde)
+  trelloMarkers: string[];
   lineStart: number;
   lineEnd: number;
   folderId: string | null;
@@ -149,7 +152,7 @@ interface StructContextMenu {
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
-  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent],
+  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent, TrelloBoardComponent],
   templateUrl: './projet-editor-zone.component.html',
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
@@ -192,6 +195,32 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Output() commentRequest = new EventEmitter<{ folderId: string; folderName: string }>();
   // F6 — Compteurs de commentaires par folderId (alimentés par le parent)
   @Input() commentCounts: Record<string, number> = {};
+
+  // Mega-outils (barre sous la toolbar de style)
+  @Input()  megaOutilInstances: MegaOutilInstance[] = [];
+  @Input()  activeMegaOutilId: string | null = null;
+  @Input()  activeOutilId: string | null = null;
+  @Output() megaOutilSelect = new EventEmitter<MegaOutilInstance>();
+  @Output() megaOutilCreated = new EventEmitter<MegaOutilInstance>();
+  @Output() megaOutilDeleted = new EventEmitter<string>();
+
+  // Vue "Liste des trellos" (zone centrale) déclenchée depuis la sidebar
+  @Input()  showTrelloList = false;
+  @Output() closeTrelloList = new EventEmitter<void>();
+  // Navigation vers la section d'origine d'un trello (sélection réelle, contrairement à nodeActive)
+  @Output() trelloNavigate = new EventEmitter<string>();
+  // Compteurs de cartes par instance/colonne (aperçu) — clé = instanceId
+  trelloListCounts = signal<Record<string, { todo: number; 'in-progress': number; done: number; blocked: number; total: number }>>({});
+  // Section résolue par instance (clé = instanceId) — déduite de la position du marqueur, fallback inst.folderId
+  trelloSections = signal<Record<string, { folderId: string | null; name: string }>>({});
+
+  // Popup de configuration d'un nouveau Trello
+  showTrelloPopup = signal(false);
+  trelloName = '';
+  trelloCreating = signal(false);
+  // Zone basse : boards Trello incrustés dans le contenu courant (affichés dans tous les modes)
+  contentTrelloIds: string[] = [];
+  trelloPanelCollapsed = signal(false);
   private localDirty = false;
 
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
@@ -209,6 +238,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private woHistory = inject(WoActionHistoryService);
   collab = inject(ProjetCollabService);
   private authSvc = inject(AuthService);
+  private megaOutilsSvc = inject(MegaOutilsService);
 
   // Mode (toggle Edition / Structure / Visu)
   mode: 'edit' | 'visu' | 'structure' = 'edit';
@@ -485,6 +515,80 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (changes['scrollToNodeId'] && this.scrollToNodeId) {
       setTimeout(() => this.scrollToNodeById(this.scrollToNodeId!), 100);
     }
+
+    // Les instances mega-outils peuvent arriver après le contenu → recalculer la zone basse
+    if (changes['megaOutilInstances']) {
+      this.recomputeContentTrelloIds();
+      if (this.showTrelloList) { this.loadTrelloListCounts(); this.recomputeTrelloSections(); }
+    }
+
+    // Ouverture de la vue "Liste des trellos" → charger les aperçus (cartes par colonne)
+    if (changes['showTrelloList'] && this.showTrelloList) {
+      this.loadTrelloListCounts();
+      this.recomputeTrelloSections();
+    }
+  }
+
+  // ── Liste des trellos (vue centrale) ───────────────────────────────────────
+
+  private async loadTrelloListCounts() {
+    const result: Record<string, { todo: number; 'in-progress': number; done: number; blocked: number; total: number }> = {};
+    for (const inst of this.megaOutilInstances) {
+      try {
+        const cards = await this.megaOutilsSvc.getTrelloCards(inst.id);
+        result[inst.id] = {
+          'todo':        cards.filter(c => c.status === 'todo').length,
+          'in-progress': cards.filter(c => c.status === 'in-progress').length,
+          'done':        cards.filter(c => c.status === 'done').length,
+          'blocked':     cards.filter(c => c.status === 'blocked').length,
+          'total':       cards.length,
+        };
+      } catch {
+        result[inst.id] = { 'todo': 0, 'in-progress': 0, 'done': 0, 'blocked': 0, 'total': 0 };
+      }
+    }
+    this.trelloListCounts.set(result);
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Résout la section de chaque trello : prioritairement via la position du marqueur
+   * {{TRELLO:id}} dans le contenu (source de vérité), fallback sur inst.folderId.
+   */
+  /**
+   * Résout le folderId de la section d'un trello : prioritairement via la position
+   * du marqueur {{TRELLO:id}} dans docSections (indépendant du mode focus), fallback inst.folderId.
+   */
+  private resolveTrelloFolderId(instId: string): string | null {
+    const marker = `{{TRELLO:${instId}}}`;
+    const sec = this.docSections.find(s => s.textContent.includes(marker));
+    if (sec) return sec.folderId;
+    return this.megaOutilInstances.find(i => i.id === instId)?.folderId ?? null;
+  }
+
+  private recomputeTrelloSections() {
+    const map: Record<string, { folderId: string | null; name: string }> = {};
+    for (const inst of this.megaOutilInstances) {
+      const folderId = this.resolveTrelloFolderId(inst.id);
+      const node = folderId ? this.findNode(folderId, this.files) : null;
+      const name = node?.name ?? (folderId ? 'Section introuvable' : 'Sans section');
+      map[inst.id] = { folderId, name };
+    }
+    this.trelloSections.set(map);
+  }
+
+  /** Clic sur un onglet Mega-outils : sélectionne l'instance et navigue vers sa section. */
+  selectMegaOutil(inst: MegaOutilInstance) {
+    this.megaOutilSelect.emit(inst);
+    const folderId = this.resolveTrelloFolderId(inst.id);
+    if (folderId) this.trelloNavigate.emit(folderId);
+  }
+
+  /** Navigue vers la section d'origine d'un trello et ferme la liste. */
+  goToTrelloSection(inst: MegaOutilInstance) {
+    const folderId = this.trelloSections()[inst.id]?.folderId;
+    if (!folderId) return;
+    this.trelloNavigate.emit(folderId);
   }
 
   // ── Section building ───────────────────────────────────────
@@ -938,14 +1042,31 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           inlineBlockId: null, inlineBlockKind: null,
         };
       }
+      // Marqueur Trello : masqué dans le code (board affiché en zone basse).
+      // Ligne rendue vide (espace) pour préserver l'alignement avec la textarea.
+      const isTrelloMarker = /^\{\{TRELLO:[a-zA-Z0-9-]+\}\}\s*$/.test(line.trim());
       return {
-        text: line, safeHtml: this.syntaxHighlight(line), isImage: false,
+        text: line, safeHtml: isTrelloMarker ? ' ' : this.syntaxHighlight(line), isImage: false,
         imageId: '', imageName: '', imagePath: '',
         highlightKind: kind, lineIndex: i,
         isFold: false, foldSectionId: '', foldLineCount: 0,
         inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
       };
     });
+
+    this.recomputeContentTrelloIds();
+  }
+
+  /** Ids Trello dont le marqueur {{TRELLO:id}} est présent dans le contenu courant (tous modes). */
+  private recomputeContentTrelloIds() {
+    const ids: string[] = [];
+    const re = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(this.unifiedContent)) !== null) {
+      const id = m[1];
+      if (!ids.includes(id) && this.megaOutilInstances.some(i => i.id === id)) ids.push(id);
+    }
+    this.contentTrelloIds = ids;
   }
 
   private recomputeRenderedHtml() {
@@ -2226,6 +2347,86 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // ── Toolbar formatting ──────────────────────────────────────
+  // ── Mega-outils : popup config + insertion d'un Trello au curseur ──────────
+
+  openTrelloPopup() {
+    this.trelloName = 'Mon Trello';
+    this.showTrelloPopup.set(true);
+  }
+
+  cancelTrelloPopup() {
+    this.showTrelloPopup.set(false);
+  }
+
+  async confirmTrelloPopup() {
+    const name = (this.trelloName || '').trim() || 'Mon Trello';
+    if (!this.projectName) return;
+    const folderId = this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
+    this.trelloCreating.set(true);
+    try {
+      const inst = await this.megaOutilsSvc.createInstance({
+        type: 'trello',
+        name,
+        projectId: this.projectName,
+        outilId: this.activeOutilId || undefined,
+        folderId
+      });
+      // Insère le shortcode au curseur → rendu comme board (Preview) ou chip (Code)
+      this.insertAt(`\n\n{{TRELLO:${inst.id}}}\n\n`, '');
+      this.showTrelloPopup.set(false);
+      this.megaOutilCreated.emit(inst);
+    } catch (e) {
+      console.error('[EditorZone] création Trello échouée:', e);
+    } finally {
+      this.trelloCreating.set(false);
+    }
+  }
+
+  async deleteTrelloInstance(id: string) {
+    try {
+      await this.megaOutilsSvc.deleteInstance(id);
+      this.removeTrelloMarkerFromContent(id);
+      this.megaOutilDeleted.emit(id);
+    } catch (e) {
+      console.error('[EditorZone] suppression Trello échouée:', e);
+    }
+  }
+
+  // Shortcode Trello dans le contenu : {{TRELLO:<id>}}
+  private static readonly TRELLO_MARKER_SRC = '\\{\\{TRELLO:([a-zA-Z0-9-]+)\\}\\}';
+
+  /** Nom d'une instance à partir de son id. */
+  trelloInstanceName(id: string): string {
+    return this.megaOutilInstances.find(i => i.id === id)?.name || 'Mon Trello';
+  }
+
+  /** Masque les shortcodes {{TRELLO:id}} du HTML affiché en Preview. */
+  private stripTrelloMarkers(html: string): string {
+    return html.replace(new RegExp('(<p>\\s*)?' + ProjetEditorZoneComponent.TRELLO_MARKER_SRC + '(\\s*</p>)?', 'g'), '');
+  }
+
+  /** Réinjecte les shortcodes Trello perdus lors de l'édition contenteditable. */
+  private preserveTrelloMarkers(newMd: string, mdBefore: string): string {
+    const re = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
+    const markers = (mdBefore || '').match(re) || [];
+    if (!markers.length) return newMd;
+    const cleaned = newMd.replace(re, '').replace(/\n{3,}/g, '\n\n').trimEnd();
+    return cleaned + '\n\n' + markers.join('\n\n');
+  }
+
+  /** Supprime le shortcode d'une instance du contenu et sauvegarde. */
+  private removeTrelloMarkerFromContent(id: string) {
+    const re = new RegExp('\\n*\\{\\{TRELLO:' + id + '\\}\\}\\n*', 'g');
+    if (!re.test(this.unifiedContent)) return;
+    this.unifiedContent = this.unifiedContent.replace(re, '\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeRanges();
+    this.recomputeMirrorLines();
+    if (this.mode === 'visu') this.buildVisuSections();
+    this.scheduleSave();
+  }
+
   insertAt(before: string, after = '') {
     const ta = this.textareaRef?.nativeElement;
     if (!ta) return;
@@ -3082,10 +3283,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         // Section avec modifs en attente : réinjecter uniquement si vide (nouvelle instance DOM)
         // pour ne pas écraser le contenu en cours de frappe
         if (!el.innerHTML.trim()) {
-          el.innerHTML = marked.parse(sec.markdownBefore, { async: false }) as string;
+          el.innerHTML = this.stripTrelloMarkers(marked.parse(sec.markdownBefore, { async: false }) as string);
         }
       } else {
-        el.innerHTML = sec.contentHtml;
+        el.innerHTML = this.stripTrelloMarkers(sec.contentHtml);
       }
     });
   }
@@ -3559,6 +3760,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private saveVisuSection(sectionId: string, newMd: string, mdBefore: string, trackHistory = false) {
     const range = this.sectionRanges.find(r => r.folderId === sectionId);
     if (!range) return;
+
+    // Les shortcodes Trello sont masqués dans le contenteditable → les réinjecter
+    newMd = this.preserveTrelloMarkers(newMd, mdBefore);
 
     const lines = this.unifiedContent.split('\n');
     const headingLine = lines[range.lineStart];
@@ -4094,7 +4298,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const pushNode = (lineEnd: number) => {
       if (currentLineStart < 0) return;
       const raw = contentLines.join('\n').replace(/^\n+|\n+$/g, '');
-      const { textContent, blocks } = this.parseAdditionalBlocks(raw);
+      const { textContent: tc0, blocks } = this.parseAdditionalBlocks(raw);
+      // Extraire les marqueurs Trello pour les masquer dans la textarea Structure
+      const trelloMarkers: string[] = [];
+      const trelloRe = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
+      let tm: RegExpExecArray | null;
+      while ((tm = trelloRe.exec(tc0)) !== null) trelloMarkers.push(tm[0]);
+      const textContent = tc0
+        .replace(new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g'), '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
       const folderId = this.sectionRanges.find(r => r.lineStart === currentLineStart)?.folderId ?? null;
       nodes.push({
         id: `struct-${currentLineStart}`,
@@ -4102,6 +4315,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         title: currentTitle,
         textContent,
         additionalBlocks: blocks,
+        trelloMarkers,
         lineStart: currentLineStart,
         lineEnd: lineEnd,
         folderId,
@@ -4131,6 +4345,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (const b of node.additionalBlocks) {
       parts.push(`${b.delimiter}${b.title}\n${b.content}\n${b.delimiter}`);
     }
+    // Ré-injecter les marqueurs Trello extraits (masqués en Structure)
+    for (const m of node.trelloMarkers || []) parts.push(m);
     return parts.join('\n\n');
   }
 

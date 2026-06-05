@@ -146,6 +146,62 @@
 
   </div>
 
+  <!-- Barre Mega-outils (sous la toolbar de style) -->
+  <div class="flex items-center gap-1.5 px-3 py-1.5 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-surface flex-shrink-0 flex-wrap">
+    <span class="material-symbols-outlined text-[13px] text-blue-400 flex-shrink-0">view_kanban</span>
+    <span class="text-[10px] font-bold uppercase tracking-wider text-light-text-muted dark:text-white/30 flex-shrink-0 mr-1">Mega-outils</span>
+    @for (inst of megaOutilInstances; track inst.id) {
+      <button type="button"
+              class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors"
+              [ngClass]="activeMegaOutilId === inst.id
+                ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
+              (click)="selectMegaOutil(inst)">
+        <span class="material-symbols-outlined text-[12px]">view_kanban</span>
+        {{ inst.name }}
+      </button>
+    }
+    <button type="button"
+            class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-light-text-muted dark:text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-colors border border-transparent hover:border-blue-500/30"
+            title="Ajouter un Trello à l'endroit du curseur"
+            (click)="openTrelloPopup()">
+      <span class="material-symbols-outlined text-[13px]">add</span>
+      Trello
+    </button>
+  </div>
+
+  <!-- Popup configuration nouveau Trello -->
+  @if (showTrelloPopup()) {
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]"
+         (click)="cancelTrelloPopup()">
+      <div class="w-80 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5"
+           (click)="$event.stopPropagation()">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-blue-400 text-base">view_kanban</span>
+          </div>
+          <h3 class="text-sm font-semibold text-light-text dark:text-white">Nouveau Trello</h3>
+        </div>
+        <label class="block text-[11px] font-medium text-light-text-muted dark:text-white/50 mb-1">Nom du tableau</label>
+        <input class="w-full text-sm bg-light-background dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-3 py-2 mb-4 text-light-text dark:text-white outline-none focus:border-blue-500 dark:focus:border-blue-400"
+               [(ngModel)]="trelloName"
+               (keydown.enter)="confirmTrelloPopup()"
+               (keydown.escape)="cancelTrelloPopup()"
+               placeholder="Mon Trello"
+               autofocus />
+        <div class="flex gap-2">
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                  [disabled]="trelloCreating()"
+                  (click)="confirmTrelloPopup()">
+            {{ trelloCreating() ? 'Création…' : 'Créer et insérer' }}
+          </button>
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors"
+                  (click)="cancelTrelloPopup()">Annuler</button>
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- Erreur upload image -->
   @if (imageUploadError) {
     <div class="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800/40 flex-shrink-0">
@@ -237,6 +293,70 @@
       Synchronisation FTP en cours — lecture seule jusqu'à la mise à jour
     </div>
   }
+
+  <!-- Vue "Liste des trellos" (déclenchée depuis la sidebar) -->
+  @if (showTrelloList) {
+    <div class="trello-list-wrap flex-1 min-h-0 overflow-y-auto">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-light-border dark:border-white/8">
+        <span class="material-symbols-outlined text-blue-400">view_kanban</span>
+        <span class="text-sm font-semibold text-light-text dark:text-white/90 flex-1">Liste des trellos ({{ megaOutilInstances.length }})</span>
+        <button type="button"
+                class="w-7 h-7 flex items-center justify-center rounded-md text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface dark:hover:bg-white/10 transition-colors"
+                title="Fermer la liste"
+                (click)="closeTrelloList.emit()">
+          <span class="material-symbols-outlined text-base">close</span>
+        </button>
+      </div>
+
+      @if (megaOutilInstances.length === 0) {
+        <p class="text-sm text-light-text-muted dark:text-white/30 px-5 py-6">Aucun trello créé dans cet outil.</p>
+      } @else {
+        <div class="trello-list-grid">
+          @for (inst of megaOutilInstances; track inst.id) {
+            <div class="trello-list-card">
+              <div class="trello-list-card__head">
+                <span class="material-symbols-outlined text-blue-400 text-base">view_kanban</span>
+                <span class="trello-list-card__name">{{ inst.name }}</span>
+                <span class="trello-list-card__total">{{ trelloListCounts()[inst.id]?.total ?? 0 }} carte{{ (trelloListCounts()[inst.id]?.total ?? 0) > 1 ? 's' : '' }}</span>
+              </div>
+
+              <!-- Aperçu : cartes par colonne -->
+              <div class="trello-list-card__cols">
+                <div class="trello-list-col trello-list-col--todo">
+                  <span class="trello-list-col__label">À faire</span>
+                  <span class="trello-list-col__count">{{ trelloListCounts()[inst.id]?.['todo'] ?? 0 }}</span>
+                </div>
+                <div class="trello-list-col trello-list-col--progress">
+                  <span class="trello-list-col__label">En cours</span>
+                  <span class="trello-list-col__count">{{ trelloListCounts()[inst.id]?.['in-progress'] ?? 0 }}</span>
+                </div>
+                <div class="trello-list-col trello-list-col--done">
+                  <span class="trello-list-col__label">Terminé</span>
+                  <span class="trello-list-col__count">{{ trelloListCounts()[inst.id]?.['done'] ?? 0 }}</span>
+                </div>
+                <div class="trello-list-col trello-list-col--blocked">
+                  <span class="trello-list-col__label">Bloqué</span>
+                  <span class="trello-list-col__count">{{ trelloListCounts()[inst.id]?.['blocked'] ?? 0 }}</span>
+                </div>
+              </div>
+
+              <!-- Section d'origine + lien -->
+              <button type="button" class="trello-list-card__section"
+                      [disabled]="!trelloSections()[inst.id]?.folderId"
+                      [title]="trelloSections()[inst.id]?.folderId ? 'Aller à la section' : 'Aucune section associée'"
+                      (click)="goToTrelloSection(inst)">
+                <span class="material-symbols-outlined text-[13px]">folder</span>
+                <span class="trello-list-card__section-name">{{ trelloSections()[inst.id]?.name ?? 'Sans section' }}</span>
+                @if (trelloSections()[inst.id]?.folderId) {
+                  <span class="material-symbols-outlined text-[14px] ml-auto">arrow_forward</span>
+                }
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
 
   <!-- Vide -->
   @if (docSections.length === 0) {
@@ -689,7 +809,6 @@
                    (input)="onVisuSectionInput(sec.sectionId)">
               </div>
 
-
               <!-- Ligne d'insertion (visible au hover) -->
               <div class="visu-insert-row">
                 <button class="visu-insert-btn"
@@ -730,6 +849,35 @@
       </div>
     }
 
+    <!-- Zone basse : boards Trello incrustés dans le contenu (affichée dans tous les modes) -->
+    @if (contentTrelloIds.length > 0) {
+      <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="trelloPanelCollapsed()">
+        <div class="ed-trello-panel__head">
+          <span class="material-symbols-outlined">view_kanban</span>
+          <span class="ed-trello-panel__title">
+            {{ contentTrelloIds.length > 1 ? contentTrelloIds.length + ' tableaux' : trelloInstanceName(contentTrelloIds[0]) }}
+          </span>
+          <button type="button" class="ed-trello-panel__toggle"
+                  [title]="trelloPanelCollapsed() ? 'Afficher' : 'Réduire'"
+                  (click)="trelloPanelCollapsed.set(!trelloPanelCollapsed())">
+            <span class="material-symbols-outlined">{{ trelloPanelCollapsed() ? 'expand_less' : 'expand_more' }}</span>
+          </button>
+        </div>
+        @if (!trelloPanelCollapsed()) {
+          <div class="ed-trello-panel__body">
+            @for (tid of contentTrelloIds; track tid) {
+              <app-trello-board
+                [instanceId]="tid"
+                [boardName]="trelloInstanceName(tid)"
+                [deletable]="true"
+                (deleteBoard)="deleteTrelloInstance($event)" />
+            }
+          </div>
+        }
+      </div>
+    }
+
+  }
   }
 
 </div>

@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter, ViewChild } from '@angular/core';
-import { FileNode } from '@worganic/portail-core/data-access';
+import { FileNode, MegaOutilInstance } from '@worganic/portail-core/data-access';
 import {
   ProjetEditorZoneComponent,
   FileSaveEvent,
@@ -26,6 +26,15 @@ import {
       [ftpSyncProgress]="ftpSyncProgress"
       [nodeSyncStatus]="nodeSyncStatus"
       [hasFtpBackup]="hasFtpBackup"
+      [megaOutilInstances]="megaOutilInstances"
+      [activeMegaOutilId]="activeMegaOutilId"
+      [activeOutilId]="activeOutilId"
+      [showTrelloList]="showTrelloList"
+      (megaOutilSelect)="megaOutilSelect.emit($event)"
+      (megaOutilCreated)="megaOutilCreated.emit($event)"
+      (megaOutilDeleted)="megaOutilDeleted.emit($event)"
+      (closeTrelloList)="closeTrelloList.emit()"
+      (trelloNavigate)="trelloNavigate.emit($event)"
       (fileSave)="fileSave.emit($event)"
       (sectionsChange)="sectionsChange.emit($event)"
       (nodeActive)="nodeActive.emit($event)"
@@ -53,7 +62,16 @@ export class EditionOutilComponent {
   @Input() nodeSyncStatus: Map<string, any> = new Map();
   @Input() hasFtpBackup = false;
   @Input() commentCounts: Record<string, number> = {};
+  @Input() megaOutilInstances: MegaOutilInstance[] = [];
+  @Input() activeMegaOutilId: string | null = null;
+  @Input() activeOutilId: string | null = null;
+  @Input() showTrelloList = false;
 
+  @Output() megaOutilSelect = new EventEmitter<MegaOutilInstance>();
+  @Output() megaOutilCreated = new EventEmitter<MegaOutilInstance>();
+  @Output() megaOutilDeleted = new EventEmitter<string>();
+  @Output() closeTrelloList = new EventEmitter<void>();
+  @Output() trelloNavigate = new EventEmitter<string>();
   @Output() fileSave = new EventEmitter<FileSaveEvent>();
   @Output() sectionsChange = new EventEmitter<SectionInfo[]>();
   @Output() nodeActive = new EventEmitter<string>();

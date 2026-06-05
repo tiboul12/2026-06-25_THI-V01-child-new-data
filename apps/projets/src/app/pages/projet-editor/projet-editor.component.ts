@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
 import { ProjectFilesService, FileNode, FtpNodeSyncStatus, Outil } from '@worganic/portail-core/data-access';
+import { MegaOutilsService, MegaOutilInstance } from '@worganic/portail-core/data-access';
 import { ConfigService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { LayoutService } from '@worganic/portail-core/data-access';
@@ -78,6 +79,10 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   outils = signal<Outil[]>([]);
   activeOutilId = signal<string | null>(null);
 
+  megaOutilInstances = signal<MegaOutilInstance[]>([]);
+  activeMegaOutil    = signal<MegaOutilInstance | null>(null);
+  showTrelloList     = signal(false);
+
   readonly activeOutil = computed(() =>
     this.outils().find(o => o.id === this.activeOutilId()) ?? this.outils()[0] ?? null
   );
@@ -92,6 +97,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
   restoreToken = signal(0);
   aiEditService = inject(ProjetAiEditService);
+  private megaOutilsService = inject(MegaOutilsService);
   hasPendingEdit = computed(() => !!this.aiEditService.pendingEdit());
   hasFtpBackup = computed(() => this.project()?.backupType === 'ftp');
 
@@ -461,6 +467,8 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.warn('loadOutils error:', e);
     }
+    // Charger les mega-outils instances
+    await this.loadMegaOutilInstances();
   }
 
   private computeNestedImagesMap(nodes: FileNode[]): Record<string, string[]> {
@@ -488,6 +496,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   onNodeSelect(node: FileNode) {
+    this.showTrelloList.set(false);
     this.activeNodeId.set(node.id);
     this.highlightNodeId.set(node.id);
     this.scrollToNodeId.set(null);
@@ -495,6 +504,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   onProjectRootSelect(): void {
+    this.showTrelloList.set(false);
     this.activeNodeId.set(null);
     this.highlightNodeId.set(null);
     this.scrollToNodeId.set(null);
@@ -503,6 +513,15 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   onNodeActive(nodeId: string) {
     // Zone 4 : ne jamais changer activeNodeId — la sélection reste réservée à la zone 3
     this.highlightNodeId.set(nodeId);
+  }
+
+  /** Navigation depuis la "Liste des trellos" : sélectionne la section et ferme la liste. */
+  onTrelloNavigate(folderId: string) {
+    this.showTrelloList.set(false);
+    this.activeNodeId.set(folderId);
+    this.highlightNodeId.set(folderId);
+    this.scrollToNodeId.set(null);
+    setTimeout(() => this.scrollToNodeId.set(folderId), 0);
   }
 
   private isDescendantInTree(nodeId: string, ancestorId: string): boolean {
@@ -584,6 +603,33 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('[ProjetEditor] createOutil failed:', e);
     }
+  }
+
+  // ── Mega-outils ────────────────────────────────────────────────
+
+  async loadMegaOutilInstances(): Promise<void> {
+    const projectId = this.project()?.id;
+    if (!projectId) return;
+    try {
+      const instances = await this.megaOutilsService.getInstances(projectId);
+      this.megaOutilInstances.set(instances);
+    } catch (e) { console.warn('[ProjetEditor] loadMegaOutilInstances failed:', e); }
+  }
+
+  onMegaOutilSelect(inst: MegaOutilInstance): void {
+    // La navigation vers la section du trello est gérée par trelloNavigate (onTrelloNavigate).
+    this.activeMegaOutil.set(inst);
+  }
+
+  onMegaOutilCreated(inst: MegaOutilInstance): void {
+    // L'instance est créée par la zone éditeur. On met à jour la liste locale et on l'active.
+    this.megaOutilInstances.update(list => [...list, inst]);
+    this.activeMegaOutil.set(inst);
+  }
+
+  onMegaOutilDeleted(id: string): void {
+    this.megaOutilInstances.update(list => list.filter(i => i.id !== id));
+    if (this.activeMegaOutil()?.id === id) this.activeMegaOutil.set(null);
   }
 
   async onSectionsChange(sections: SectionInfo[]) {

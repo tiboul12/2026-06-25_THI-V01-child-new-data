@@ -7904,6 +7904,226 @@ app.post('/api/ai/execute-file-prompt', async (req, res) => {
 });
 
 // ============================================================
+// Mega-Outils
+// ============================================================
+
+// GET /api/mega-outils/instances?projectId=&type=
+app.get('/api/mega-outils/instances', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { projectId, type } = req.query;
+    try {
+        let sql = 'SELECT * FROM mega_outil_instances';
+        const params = [];
+        const where = [];
+        if (projectId) { where.push('project_id = ?'); params.push(projectId); }
+        if (type)      { where.push('type = ?');       params.push(type); }
+        if (where.length) sql += ' WHERE ' + where.join(' AND ');
+        sql += ' ORDER BY created_at ASC';
+        const [rows] = await pool.query(sql, params);
+        res.json(rows.map(r => ({
+            id: r.id, type: r.type, name: r.name, projectId: r.project_id,
+            outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
+            createdAt: r.created_at, updatedAt: r.updated_at
+        })));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/mega-outils/instances/all  (admin : toutes instances)
+app.get('/api/mega-outils/instances/all', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        const [rows] = await pool.query(`
+            SELECT i.*, fpm.display_name AS project_name
+            FROM mega_outil_instances i
+            LEFT JOIN file_project_meta fpm ON fpm.id = i.project_id
+            ORDER BY i.created_at DESC
+        `);
+        res.json(rows.map(r => ({
+            instance: { id: r.id, type: r.type, name: r.name, projectId: r.project_id,
+                outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
+                createdAt: r.created_at, updatedAt: r.updated_at },
+            projectName: r.project_name || r.project_id
+        })));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/instances
+app.post('/api/mega-outils/instances', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { type, name, projectId, outilId, folderId } = req.body;
+    if (!type || !name || !projectId) return res.status(400).json({ error: 'type, name et projectId requis' });
+    try {
+        const id = require('crypto').randomUUID();
+        await pool.query(
+            'INSERT INTO mega_outil_instances (id, type, name, project_id, outil_id, folder_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id, type, name, projectId, outilId || null, folderId || null, user.id || null]
+        );
+        const [rows] = await pool.query('SELECT * FROM mega_outil_instances WHERE id = ?', [id]);
+        const r = rows[0];
+        res.status(201).json({ id: r.id, type: r.type, name: r.name, projectId: r.project_id,
+            outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
+            createdAt: r.created_at, updatedAt: r.updated_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/mega-outils/instances/:id
+app.patch('/api/mega-outils/instances/:id', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'name requis' });
+    try {
+        await pool.query('UPDATE mega_outil_instances SET name = ? WHERE id = ?', [name, req.params.id]);
+        const [rows] = await pool.query('SELECT * FROM mega_outil_instances WHERE id = ?', [req.params.id]);
+        if (!rows.length) return res.status(404).json({ error: 'Instance non trouvée' });
+        const r = rows[0];
+        res.json({ id: r.id, type: r.type, name: r.name, projectId: r.project_id,
+            outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
+            createdAt: r.created_at, updatedAt: r.updated_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/mega-outils/instances/:id
+app.delete('/api/mega-outils/instances/:id', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        await pool.query('DELETE FROM mega_outil_trello_cards WHERE instance_id = ?', [req.params.id]);
+        await pool.query('DELETE FROM mega_outil_instances WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/mega-outils/trello/all
+app.get('/api/mega-outils/trello/all', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        const [instances] = await pool.query(`
+            SELECT i.*, fpm.display_name AS project_name
+            FROM mega_outil_instances i
+            LEFT JOIN file_project_meta fpm ON fpm.id = i.project_id
+            WHERE i.type = 'trello' ORDER BY i.created_at ASC
+        `);
+        const result = [];
+        for (const r of instances) {
+            const [cards] = await pool.query(
+                'SELECT * FROM mega_outil_trello_cards WHERE instance_id = ? ORDER BY order_index ASC, created_at ASC',
+                [r.id]
+            );
+            result.push({
+                instance: { id: r.id, type: r.type, name: r.name, projectId: r.project_id,
+                    outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
+                    createdAt: r.created_at, updatedAt: r.updated_at },
+                projectName: r.project_name || r.project_id,
+                cards: cards.map(c => ({ id: c.id, instanceId: c.instance_id, title: c.title,
+                    description: c.description || undefined, status: c.status, priority: c.priority,
+                    orderIndex: c.order_index, creatorId: c.creator_id || undefined,
+                    creatorName: c.creator_name || undefined, createdAt: c.created_at, updatedAt: c.updated_at }))
+            });
+        }
+        res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/mega-outils/trello/:instanceId/cards
+app.get('/api/mega-outils/trello/:instanceId/cards', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM mega_outil_trello_cards WHERE instance_id = ? ORDER BY order_index ASC, created_at ASC',
+            [req.params.instanceId]
+        );
+        res.json(rows.map(c => ({ id: c.id, instanceId: c.instance_id, title: c.title,
+            description: c.description || undefined, status: c.status, priority: c.priority,
+            orderIndex: c.order_index, creatorId: c.creator_id || undefined,
+            creatorName: c.creator_name || undefined, createdAt: c.created_at, updatedAt: c.updated_at })));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/trello/:instanceId/cards/reorder  (avant :cardId pour éviter conflit)
+app.post('/api/mega-outils/trello/:instanceId/cards/reorder', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds)) return res.status(400).json({ error: 'orderedIds requis' });
+    try {
+        for (let i = 0; i < orderedIds.length; i++) {
+            await pool.query('UPDATE mega_outil_trello_cards SET order_index = ? WHERE id = ? AND instance_id = ?',
+                [i, orderedIds[i], req.params.instanceId]);
+        }
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/trello/:instanceId/cards
+app.post('/api/mega-outils/trello/:instanceId/cards', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { title, description, status, priority } = req.body;
+    if (!title) return res.status(400).json({ error: 'title requis' });
+    try {
+        const [countRows] = await pool.query(
+            'SELECT COUNT(*) AS cnt FROM mega_outil_trello_cards WHERE instance_id = ?', [req.params.instanceId]);
+        const orderIndex = countRows[0].cnt;
+        const id = require('crypto').randomUUID();
+        await pool.query(
+            `INSERT INTO mega_outil_trello_cards (id, instance_id, title, description, status, priority, order_index, creator_id, creator_name)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, req.params.instanceId, title, description || null,
+             status || 'todo', priority || 'medium', orderIndex,
+             user.id || null, user.username || user.email || null]
+        );
+        const [rows] = await pool.query('SELECT * FROM mega_outil_trello_cards WHERE id = ?', [id]);
+        const c = rows[0];
+        res.status(201).json({ id: c.id, instanceId: c.instance_id, title: c.title,
+            description: c.description || undefined, status: c.status, priority: c.priority,
+            orderIndex: c.order_index, creatorId: c.creator_id || undefined,
+            creatorName: c.creator_name || undefined, createdAt: c.created_at, updatedAt: c.updated_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/mega-outils/trello/:instanceId/cards/:cardId
+app.patch('/api/mega-outils/trello/:instanceId/cards/:cardId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const fields = [];
+    const vals   = [];
+    const allowed = { title: req.body.title, description: req.body.description,
+        status: req.body.status, priority: req.body.priority, order_index: req.body.orderIndex };
+    for (const [k, v] of Object.entries(allowed)) {
+        if (v !== undefined) { fields.push(`${k} = ?`); vals.push(v); }
+    }
+    if (!fields.length) return res.status(400).json({ error: 'Aucun champ à mettre à jour' });
+    try {
+        vals.push(req.params.cardId, req.params.instanceId);
+        await pool.query(`UPDATE mega_outil_trello_cards SET ${fields.join(', ')} WHERE id = ? AND instance_id = ?`, vals);
+        const [rows] = await pool.query('SELECT * FROM mega_outil_trello_cards WHERE id = ?', [req.params.cardId]);
+        if (!rows.length) return res.status(404).json({ error: 'Carte non trouvée' });
+        const c = rows[0];
+        res.json({ id: c.id, instanceId: c.instance_id, title: c.title,
+            description: c.description || undefined, status: c.status, priority: c.priority,
+            orderIndex: c.order_index, creatorId: c.creator_id || undefined,
+            creatorName: c.creator_name || undefined, createdAt: c.created_at, updatedAt: c.updated_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/mega-outils/trello/:instanceId/cards/:cardId
+app.delete('/api/mega-outils/trello/:instanceId/cards/:cardId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        await pool.query('DELETE FROM mega_outil_trello_cards WHERE id = ? AND instance_id = ?',
+            [req.params.cardId, req.params.instanceId]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
 // Server Startup
 // ============================================================
 
@@ -7982,6 +8202,40 @@ app.listen(PORT, async () => {
     await pool.query(`ALTER TABLE frank_projects ADD COLUMN IF NOT EXISTS ia_instructions TEXT DEFAULT NULL`).catch(e => console.error('[DB] frank_projects migration ia_instructions:', e.message));
     await pool.query(`ALTER TABLE doc_categories ADD COLUMN IF NOT EXISTS default_document_id VARCHAR(64) DEFAULT NULL`).catch(e => console.error('[DB] doc_categories migration default_document_id:', e.message));
     await pool.query(`ALTER TABLE file_project_meta ADD COLUMN IF NOT EXISTS outils JSON DEFAULT NULL`).catch(e => console.warn('[DB] file_project_meta migration outils:', e.message));
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS mega_outil_instances (
+            id          VARCHAR(64)  PRIMARY KEY,
+            type        VARCHAR(64)  NOT NULL,
+            name        VARCHAR(255) NOT NULL,
+            project_id  VARCHAR(255) NOT NULL,
+            outil_id    VARCHAR(64)  DEFAULT NULL,
+            created_by  VARCHAR(64)  DEFAULT NULL,
+            created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_moi_project (project_id),
+            INDEX idx_moi_type    (type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] mega_outil_instances init error:', e.message));
+
+    await pool.query(`ALTER TABLE mega_outil_instances ADD COLUMN IF NOT EXISTS folder_id VARCHAR(64) DEFAULT NULL`).catch(e => console.warn('[DB] mega_outil_instances migration folder_id:', e.message));
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS mega_outil_trello_cards (
+            id           VARCHAR(64)   PRIMARY KEY,
+            instance_id  VARCHAR(64)   NOT NULL,
+            title        VARCHAR(500)  NOT NULL,
+            description  TEXT          DEFAULT NULL,
+            status       VARCHAR(32)   DEFAULT 'todo',
+            priority     VARCHAR(32)   DEFAULT 'medium',
+            order_index  INT           DEFAULT 0,
+            creator_id   VARCHAR(64)   DEFAULT NULL,
+            creator_name VARCHAR(255)  DEFAULT NULL,
+            created_at   DATETIME      DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_motc_instance (instance_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] mega_outil_trello_cards init error:', e.message));
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS frank_project_steps (

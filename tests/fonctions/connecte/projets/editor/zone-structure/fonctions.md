@@ -12,6 +12,7 @@ Vue : arborescence éditable des sections du document
 - **Nom de section** : éditable inline
 - **Contenu** : texte principal de la section (éditable)
 - **Blocs additionnels** : fichiers Markdown secondaires d'une section (éditables)
+- **Marqueur Trello masqué** : `{{TRELLO:id}}` est extrait du contenu (`StructureNode.trelloMarkers`) et n'apparaît pas dans la textarea ; ré-injecté en fin de section à la sauvegarde. Le board s'affiche en zone basse (voir `2-5-2-5-16`)
 - **Filtre par sélection** : si un nœud est actif dans la sidebar → `filteredStructureNodes` n'affiche que la section et ses enfants
 
 ---

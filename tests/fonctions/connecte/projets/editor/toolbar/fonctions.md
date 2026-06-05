@@ -99,3 +99,11 @@ Actions des barres :
 | FTP error | Badge rouge |
 | Barre pending visible | Fond bleu/violet avec Annuler/Partager |
 | Publication en cours | Overlay + spinner sur toute la zone |
+
+---
+
+## `2-5-2-3-8` — Barre Mega-outils
+
+- Liste les instances de méga-outils (Trello) du projet + bouton "+ Trello" (création au curseur)
+- Clic sur un onglet (`selectMegaOutil`) : sélectionne l'instance (`megaOutilSelect`) **et** navigue vers la section où le trello est incrusté (`trelloNavigate`, résolu via `resolveTrelloFolderId` : marqueur dans `docSections`, fallback `inst.folderId`)
+- Le board s'affiche en zone basse (voir `2-5-2-5-16`)

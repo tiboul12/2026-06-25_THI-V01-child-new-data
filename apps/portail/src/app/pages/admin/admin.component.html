@@ -47,6 +47,9 @@
   @if (activeTab() === 'theme') {
     <app-admin-theme />
   }
+  @if (activeTab() === 'mega-outils') {
+    <app-admin-mega-outils />
+  }
 
   <!-- Contenu des onglets — child (rendu dynamique via NgComponentOutlet) -->
   @for (tab of tabsRegistry.childTabs(); track tab.id) {

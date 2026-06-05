@@ -7,19 +7,21 @@ import { AdminDeploymentsComponent } from './tabs/admin-deployments/admin-deploy
 import { AdminHelpComponent } from './tabs/admin-help/admin-help.component';
 import { AdminThemeComponent } from './tabs/admin-theme/admin-theme.component';
 import { ConfigComponent } from '../user/config/config.component';
+import { AdminMegaOutilsComponent } from './tabs/admin-mega-outils/admin-mega-outils.component';
 import { AdminTabsRegistryService, AdminTabDef } from '@worganic/portail-core/data-access';
 
 const BASE_ADMIN_TABS: AdminTabDef[] = [
-  { id: 'users',       label: 'Utilisateurs', icon: 'group',         component: AdminUsersComponent,       order: 1 },
-  { id: 'deploiement', label: 'Déploiement',  icon: 'rocket_launch', component: AdminDeploymentsComponent, order: 2 },
-  { id: 'help',        label: 'Help',         icon: 'help',          component: AdminHelpComponent,        order: 3 },
-  { id: 'config',      label: 'Config',       icon: 'settings',      component: ConfigComponent,           order: 4 },
-  { id: 'theme',       label: 'Thème',        icon: 'palette',       component: AdminThemeComponent,       order: 5 },
+  { id: 'users',        label: 'Utilisateurs', icon: 'group',         component: AdminUsersComponent,       order: 1 },
+  { id: 'deploiement',  label: 'Déploiement',  icon: 'rocket_launch', component: AdminDeploymentsComponent, order: 2 },
+  { id: 'help',         label: 'Help',         icon: 'help',          component: AdminHelpComponent,        order: 3 },
+  { id: 'config',       label: 'Config',       icon: 'settings',      component: ConfigComponent,           order: 4 },
+  { id: 'theme',        label: 'Thème',        icon: 'palette',       component: AdminThemeComponent,       order: 5 },
+  { id: 'mega-outils',  label: 'Méga-outils',  icon: 'extension',     component: AdminMegaOutilsComponent,  order: 6 },
 ];
 
 @Component({
     selector: 'app-admin',
-    imports: [CommonModule, NgComponentOutlet, AdminUsersComponent, AdminDeploymentsComponent, AdminHelpComponent, AdminThemeComponent, ConfigComponent],
+    imports: [CommonModule, NgComponentOutlet, AdminUsersComponent, AdminDeploymentsComponent, AdminHelpComponent, AdminThemeComponent, ConfigComponent, AdminMegaOutilsComponent],
     templateUrl: './admin.component.html',
     styleUrl: './admin.component.scss'
 })

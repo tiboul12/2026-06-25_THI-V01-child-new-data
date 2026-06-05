@@ -12,8 +12,9 @@
   </div>
 
   <!-- Arbre du projet -->
-  <div class="w-56 h-full overflow-y-auto py-2 bg-white dark:bg-[#0f0f17]"
-       (contextmenu)="onContextMenu($event, null)">
+  <div class="w-56 h-full flex flex-col bg-white dark:bg-[#0f0f17]">
+    <div class="flex-1 min-h-0 overflow-y-auto py-2"
+         (contextmenu)="onContextMenu($event, null)">
 
     <!-- Titre projet + bouton ajout outil -->
     <div class="relative mx-1 mb-1">
@@ -123,6 +124,19 @@
       }
     }
 
+    </div>
+
+    <!-- Bouton "Liste des trellos" (visible dès qu'un trello existe dans l'outil) -->
+    @if (trelloCount > 0) {
+      <button type="button"
+              class="flex-shrink-0 flex items-center gap-2 m-2 px-3 py-2 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors text-[11px] font-semibold"
+              title="Voir tous les trellos de cet outil"
+              (click)="trelloListClick.emit()">
+        <span class="material-symbols-outlined text-[15px]">view_kanban</span>
+        Liste des trellos
+        <span class="ml-auto text-[10px] bg-blue-500/20 rounded-full px-1.5 py-0.5">{{ trelloCount }}</span>
+      </button>
+    }
   </div>
 
 </div>
