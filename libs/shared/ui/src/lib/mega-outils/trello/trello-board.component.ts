@@ -71,8 +71,8 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
               </span>
             </div>
 
-            <!-- Cards -->
-            <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-[80px]">
+            <!-- Cards (zone scrollable) -->
+            <div class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2">
               @for (card of cardsForColumn(col); track card.id) {
                 <div class="rounded-lg border border-light-border dark:border-white/10 bg-white dark:bg-white/5 p-2.5 cursor-pointer select-none transition-all hover:border-light-primary/30 dark:hover:border-primary/30"
                      [class.ring-1]="expandedCardId() === card.id"
@@ -120,7 +120,7 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
                           </select>
                         </div>
                         <div class="flex gap-1.5">
-                          <button class="flex-1 text-[10px] px-2 py-1 rounded bg-light-primary dark:bg-primary text-white font-semibold hover:opacity-80 transition-opacity"
+                          <button class="flex-1 text-[10px] px-2 py-1 rounded bg-light-primary dark:bg-primary text-white dark:text-btn-text font-semibold hover:opacity-80 transition-opacity"
                                   (click)="saveEdit(card)">Enregistrer</button>
                           <button class="flex-1 text-[10px] px-2 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors"
                                   (click)="cancelEdit()">Annuler</button>
@@ -158,7 +158,7 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
 
             <!-- Formulaire ajout carte -->
             @if (addingInColumn() === col) {
-              <div class="p-2 border-t border-light-border dark:border-white/8" (click)="$event.stopPropagation()">
+              <div class="flex-shrink-0 p-2 border-t border-light-border dark:border-white/8 bg-light-surface dark:bg-surface" (click)="$event.stopPropagation()">
                 <input class="w-full text-[11px] bg-light-background dark:bg-background border border-light-border dark:border-white/20 rounded px-2 py-1 mb-1.5 text-light-text dark:text-white outline-none focus:border-light-primary dark:focus:border-primary"
                        placeholder="Titre de la carte *" [(ngModel)]="addForm.title"
                        (keydown.enter)="submitAdd(col)" (keydown.escape)="cancelAdd()" autofocus />
@@ -172,14 +172,14 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
                   </select>
                 </div>
                 <div class="flex gap-1.5">
-                  <button class="flex-1 text-[10px] px-2 py-1 rounded bg-light-primary dark:bg-primary text-white font-semibold hover:opacity-80 transition-opacity disabled:opacity-40"
+                  <button class="flex-1 text-[10px] px-2 py-1 rounded bg-light-primary dark:bg-primary text-white dark:text-btn-text font-semibold hover:opacity-80 transition-opacity disabled:opacity-40"
                           [disabled]="!addForm.title.trim()" (click)="submitAdd(col)">Ajouter</button>
                   <button class="flex-1 text-[10px] px-2 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors"
                           (click)="cancelAdd()">Annuler</button>
                 </div>
               </div>
             } @else {
-              <button class="w-full flex items-center gap-1.5 px-3 py-2 text-[11px] text-light-text-muted dark:text-white/30 hover:text-light-primary dark:hover:text-primary transition-colors border-t border-light-border dark:border-white/8"
+              <button class="flex-shrink-0 w-full flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium text-light-text dark:text-white/70 hover:text-light-primary dark:hover:text-primary transition-colors border-t border-light-border dark:border-white/8 bg-light-surface dark:bg-surface"
                       (click)="startAdd(col)">
                 <span class="material-symbols-outlined text-sm">add</span> Carte
               </button>

@@ -1,6 +1,45 @@
 {
   "modifications": [
     {
+      "id": "mod-297",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "libs"],
+      "features": "libs:mega-outils|trello,projets:editor|zone-trello",
+      "title": "Trello : zone agrandie, bouton + Carte épinglé et lisible, couleur boutons",
+      "description": "Zone basse Trello agrandie (panneau 560px, board 500px) pour afficher le formulaire d'ajout en entier. Le bouton '+ Carte' et le formulaire sont épinglés en bas (flex-shrink-0) : l'ascenseur reste sur la liste des cartes, plus sur le bouton. Fond solide (dark:bg-surface) sous '+ Carte' + texte rendu lisible (au lieu du fond transparent/texte effacé). Boutons Ajouter/Enregistrer : ajout de dark:text-btn-text pour un texte lisible sur la couleur primaire claire.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "augemnte la taille de la zone trello en hauteur pour avoir toutes le form de carte en entier. corrige la couleur du bouton. retire le fond transparent en dessous de + carte pour bien voir le test + carte et bloque le dans la zone basse de la card trello pour ne pas que le bouton remonte avec l'ascenseur. Met l'ascenseur sur la carte mais pas sur le bouton + carte",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
+      "id": "mod-296",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|trello",
+      "title": "Trello : boutons Ajouter/Annuler du formulaire de carte toujours visibles",
+      "description": "Le formulaire d'ajout de carte dépassait la hauteur fixe de la colonne et ses boutons Ajouter/Annuler étaient coupés. Le corps de chaque colonne (cartes + formulaire d'ajout) est désormais dans un conteneur scrollable (flex-1 min-h-0 overflow-y-auto), rendant le bouton de validation toujours atteignable quelle que soit la hauteur du board.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je veux créé une nouvelle carte trello je n'ai pas le bouton de validation",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
       "id": "mod-295",
       "version": "B-0.253",
       "date": "2026-06-05T00:00:00.000Z",

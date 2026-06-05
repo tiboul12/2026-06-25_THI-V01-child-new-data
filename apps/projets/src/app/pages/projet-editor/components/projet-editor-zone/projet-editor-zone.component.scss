@@ -2097,7 +2097,7 @@ $struct-colors: (
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  height: 400px;
+  height: 560px;
   border-top: 1px solid rgba(59, 130, 246, 0.25);
   background: #f8fafc;
 
@@ -2157,7 +2157,7 @@ $struct-colors: (
 
     app-trello-board {
       flex: none;
-      height: 340px;
+      height: 500px;
       border: 1px solid rgba(59, 130, 246, 0.25);
       border-radius: 12px;
       overflow: hidden;
