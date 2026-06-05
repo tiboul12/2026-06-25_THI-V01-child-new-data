@@ -390,6 +390,10 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       this.collab.structureUpdate$.subscribe(() => {
         this.autoPullAndRefresh();
       }),
+      // Trello temps réel : recharge la liste d'instances quand un trello est créé/renommé/supprimé ailleurs
+      this.collab.trelloUpdate$.subscribe(evt => {
+        if (evt.action?.startsWith('instance_')) this.loadMegaOutilInstances();
+      }),
       this.collab.sectionPublished$.subscribe(() => {
         this.autoPullAndRefresh();
       }),

@@ -1,8 +1,9 @@
-import { Component, Input, Output, EventEmitter, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import {
-  MegaOutilsService,
+  MegaOutilsService, ProjetCollabService,
   TrelloCard, TrelloStatus, TrelloPriority,
   TRELLO_STATUS_LABELS, TRELLO_PRIORITY_LABELS, TRELLO_PRIORITY_COLORS
 } from '@worganic/portail-core/data-access';
@@ -193,7 +194,7 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
   `,
   host: { class: 'flex flex-col flex-1 min-h-0 overflow-hidden' }
 })
-export class TrelloBoardComponent implements OnInit {
+export class TrelloBoardComponent implements OnInit, OnDestroy {
   @Input() instanceId = '';
   @Input() boardName  = 'Trello';
   @Input() deletable  = false;
@@ -207,6 +208,8 @@ export class TrelloBoardComponent implements OnInit {
   }
 
   private svc = inject(MegaOutilsService);
+  private collab = inject(ProjetCollabService);
+  private trelloSub?: Subscription;
 
   cards = signal<TrelloCard[]>([]);
   loading = signal(true);
@@ -243,6 +246,14 @@ export class TrelloBoardComponent implements OnInit {
 
   async ngOnInit() {
     await this.loadCards();
+    // Synchro temps réel : recharge les cartes quand un autre user modifie ce board
+    this.trelloSub = this.collab.trelloUpdate$.subscribe(evt => {
+      if (evt.instanceId === this.instanceId) this.loadCards();
+    });
+  }
+
+  ngOnDestroy() {
+    this.trelloSub?.unsubscribe();
   }
 
   async loadCards() {

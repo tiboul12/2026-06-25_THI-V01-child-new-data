@@ -7907,6 +7907,19 @@ app.post('/api/ai/execute-file-prompt', async (req, res) => {
 // Mega-Outils
 // ============================================================
 
+// Diffuse un événement SSE 'trello_update' aux collaborateurs du projet.
+// projectId optionnel : si absent, résolu depuis l'instance.
+async function broadcastTrelloUpdate(instanceId, action, projectId) {
+    try {
+        let pid = projectId;
+        if (!pid && instanceId) {
+            const [r] = await pool.query('SELECT project_id FROM mega_outil_instances WHERE id = ?', [instanceId]);
+            pid = r[0]?.project_id;
+        }
+        if (pid) broadcastToProject(pid, 'trello_update', { instanceId: instanceId || null, projectId: pid, action });
+    } catch (e) { console.warn('[mega-outils] broadcastTrelloUpdate failed:', e.message); }
+}
+
 // GET /api/mega-outils/instances?projectId=&type=
 app.get('/api/mega-outils/instances', async (req, res) => {
     const user = getSessionUser(req);
@@ -7963,6 +7976,7 @@ app.post('/api/mega-outils/instances', async (req, res) => {
         );
         const [rows] = await pool.query('SELECT * FROM mega_outil_instances WHERE id = ?', [id]);
         const r = rows[0];
+        broadcastTrelloUpdate(r.id, 'instance_create', r.project_id);
         res.status(201).json({ id: r.id, type: r.type, name: r.name, projectId: r.project_id,
             outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
             createdAt: r.created_at, updatedAt: r.updated_at });
@@ -7980,6 +7994,7 @@ app.patch('/api/mega-outils/instances/:id', async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM mega_outil_instances WHERE id = ?', [req.params.id]);
         if (!rows.length) return res.status(404).json({ error: 'Instance non trouvée' });
         const r = rows[0];
+        broadcastTrelloUpdate(r.id, 'instance_update', r.project_id);
         res.json({ id: r.id, type: r.type, name: r.name, projectId: r.project_id,
             outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
             createdAt: r.created_at, updatedAt: r.updated_at });
@@ -7991,8 +8006,12 @@ app.delete('/api/mega-outils/instances/:id', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     try {
+        // Résoudre le projet avant suppression pour le broadcast
+        const [pr] = await pool.query('SELECT project_id FROM mega_outil_instances WHERE id = ?', [req.params.id]);
+        const projectId = pr[0]?.project_id;
         await pool.query('DELETE FROM mega_outil_trello_cards WHERE instance_id = ?', [req.params.id]);
         await pool.query('DELETE FROM mega_outil_instances WHERE id = ?', [req.params.id]);
+        broadcastTrelloUpdate(req.params.id, 'instance_delete', projectId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -8056,6 +8075,7 @@ app.post('/api/mega-outils/trello/:instanceId/cards/reorder', async (req, res) =
             await pool.query('UPDATE mega_outil_trello_cards SET order_index = ? WHERE id = ? AND instance_id = ?',
                 [i, orderedIds[i], req.params.instanceId]);
         }
+        broadcastTrelloUpdate(req.params.instanceId, 'card_reorder');
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -8080,6 +8100,7 @@ app.post('/api/mega-outils/trello/:instanceId/cards', async (req, res) => {
         );
         const [rows] = await pool.query('SELECT * FROM mega_outil_trello_cards WHERE id = ?', [id]);
         const c = rows[0];
+        broadcastTrelloUpdate(req.params.instanceId, 'card_create');
         res.status(201).json({ id: c.id, instanceId: c.instance_id, title: c.title,
             description: c.description || undefined, status: c.status, priority: c.priority,
             orderIndex: c.order_index, creatorId: c.creator_id || undefined,
@@ -8105,6 +8126,7 @@ app.patch('/api/mega-outils/trello/:instanceId/cards/:cardId', async (req, res) 
         const [rows] = await pool.query('SELECT * FROM mega_outil_trello_cards WHERE id = ?', [req.params.cardId]);
         if (!rows.length) return res.status(404).json({ error: 'Carte non trouvée' });
         const c = rows[0];
+        broadcastTrelloUpdate(req.params.instanceId, 'card_update');
         res.json({ id: c.id, instanceId: c.instance_id, title: c.title,
             description: c.description || undefined, status: c.status, priority: c.priority,
             orderIndex: c.order_index, creatorId: c.creator_id || undefined,
@@ -8119,6 +8141,7 @@ app.delete('/api/mega-outils/trello/:instanceId/cards/:cardId', async (req, res)
     try {
         await pool.query('DELETE FROM mega_outil_trello_cards WHERE id = ? AND instance_id = ?',
             [req.params.cardId, req.params.instanceId]);
+        broadcastTrelloUpdate(req.params.instanceId, 'card_delete');
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
