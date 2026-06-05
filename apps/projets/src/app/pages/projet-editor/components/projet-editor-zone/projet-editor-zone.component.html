@@ -156,7 +156,7 @@
               [ngClass]="activeMegaOutilId === inst.id
                 ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                 : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
-              (click)="megaOutilSelect.emit(inst)">
+              (click)="selectMegaOutil(inst)">
         <span class="material-symbols-outlined text-[12px]">view_kanban</span>
         {{ inst.name }}
       </button>
@@ -293,6 +293,70 @@
       Synchronisation FTP en cours — lecture seule jusqu'à la mise à jour
     </div>
   }
+
+  <!-- Vue "Liste des trellos" (déclenchée depuis la sidebar) -->
+  @if (showTrelloList) {
+    <div class="trello-list-wrap flex-1 min-h-0 overflow-y-auto">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-light-border dark:border-white/8">
+        <span class="material-symbols-outlined text-blue-400">view_kanban</span>
+        <span class="text-sm font-semibold text-light-text dark:text-white/90 flex-1">Liste des trellos ({{ megaOutilInstances.length }})</span>
+        <button type="button"
+                class="w-7 h-7 flex items-center justify-center rounded-md text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface dark:hover:bg-white/10 transition-colors"
+                title="Fermer la liste"
+                (click)="closeTrelloList.emit()">
+          <span class="material-symbols-outlined text-base">close</span>
+        </button>
+      </div>
+
+      @if (megaOutilInstances.length === 0) {
+        <p class="text-sm text-light-text-muted dark:text-white/30 px-5 py-6">Aucun trello créé dans cet outil.</p>
+      } @else {
+        <div class="trello-list-grid">
+          @for (inst of megaOutilInstances; track inst.id) {
+            <div class="trello-list-card">
+              <div class="trello-list-card__head">
+                <span class="material-symbols-outlined text-blue-400 text-base">view_kanban</span>
+                <span class="trello-list-card__name">{{ inst.name }}</span>
+                <span class="trello-list-card__total">{{ trelloListCounts()[inst.id]?.total ?? 0 }} carte{{ (trelloListCounts()[inst.id]?.total ?? 0) > 1 ? 's' : '' }}</span>
+              </div>
+
+              <!-- Aperçu : cartes par colonne -->
+              <div class="trello-list-card__cols">
+                <div class="trello-list-col trello-list-col--todo">
+                  <span class="trello-list-col__label">À faire</span>
+                  <span class="trello-list-col__count">{{ trelloListCounts()[inst.id]?.['todo'] ?? 0 }}</span>
+                </div>
+                <div class="trello-list-col trello-list-col--progress">
+                  <span class="trello-list-col__label">En cours</span>
+                  <span class="trello-list-col__count">{{ trelloListCounts()[inst.id]?.['in-progress'] ?? 0 }}</span>
+                </div>
+                <div class="trello-list-col trello-list-col--done">
+                  <span class="trello-list-col__label">Terminé</span>
+                  <span class="trello-list-col__count">{{ trelloListCounts()[inst.id]?.['done'] ?? 0 }}</span>
+                </div>
+                <div class="trello-list-col trello-list-col--blocked">
+                  <span class="trello-list-col__label">Bloqué</span>
+                  <span class="trello-list-col__count">{{ trelloListCounts()[inst.id]?.['blocked'] ?? 0 }}</span>
+                </div>
+              </div>
+
+              <!-- Section d'origine + lien -->
+              <button type="button" class="trello-list-card__section"
+                      [disabled]="!trelloSections()[inst.id]?.folderId"
+                      [title]="trelloSections()[inst.id]?.folderId ? 'Aller à la section' : 'Aucune section associée'"
+                      (click)="goToTrelloSection(inst)">
+                <span class="material-symbols-outlined text-[13px]">folder</span>
+                <span class="trello-list-card__section-name">{{ trelloSections()[inst.id]?.name ?? 'Sans section' }}</span>
+                @if (trelloSections()[inst.id]?.folderId) {
+                  <span class="material-symbols-outlined text-[14px] ml-auto">arrow_forward</span>
+                }
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
 
   <!-- Vide -->
   @if (docSections.length === 0) {
@@ -813,6 +877,7 @@
       </div>
     }
 
+  }
   }
 
 </div>

@@ -151,3 +151,11 @@ Options selon le type de nœud :
 | Confirmation suppression | Boutons confirmer/annuler inline |
 | Sidebar réduite | Icônes seules |
 | FTP sync unknown | Fond ambré sur le dossier |
+
+---
+
+## `2-5-2-2-14` — Bouton "Liste des trellos"
+
+- Affiché au pied de la sidebar dès qu'au moins un trello existe dans l'outil (`trelloCount > 0`)
+- Badge avec le nombre de trellos
+- Clic → émet `trelloListClick` → ouvre la vue "Liste des trellos" dans la zone centrale (voir `2-5-2-5-17`)

@@ -173,3 +173,14 @@ Vue : rendu HTML des sections, éditables directement par clic (contenteditable)
 - Colonnes du board (À faire / En cours / Terminé / Bloqué) en pleine largeur (`flex-1`), sans ascenseur horizontal
 - Suppression d'un board (corbeille) retire l'instance + le marqueur du contenu
 - Masqué si aucun marqueur Trello dans le contenu courant
+
+---
+
+## `2-5-2-5-17` — Vue "Liste des trellos" (zone centrale)
+
+- Déclenchée par le bouton sidebar (voir `2-5-2-2-14`) via l'input `showTrelloList` ; remplace le contenu de la zone centrale (tous modes)
+- Grille de cartes, une par instance Trello de l'outil
+- Chaque carte : nom du trello, total de cartes, aperçu du nombre de cartes par colonne (À faire / En cours / Terminé / Bloqué) chargé via `loadTrelloListCounts()` (`getTrelloCards`)
+- Bouton "Aller à la section" : navigue vers la section d'origine (`inst.folderId`) via l'output `trelloNavigate` (sélection réelle + fermeture) ; désactivé si aucune section associée
+- Section résolue par `recomputeTrelloSections()` via la position du marqueur `{{TRELLO:id}}` dans `docSections` (source de vérité, indépendante du mode focus), fallback sur `inst.folderId` ; stockée dans le signal `trelloSections`
+- Bouton de fermeture (`closeTrelloList`) ; la liste se ferme aussi à toute sélection dans la sidebar

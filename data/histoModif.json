@@ -1,6 +1,73 @@
 {
   "modifications": [
     {
+      "id": "mod-295",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|toolbar|zone-trello-list",
+      "title": "Onglet Mega-outils : navigue vers la section du trello (au lieu du document entier)",
+      "description": "Le clic sur un onglet de la barre Mega-outils (ex: 'Mon Trello') navigue désormais vers la section où le trello est incrusté au lieu d'afficher tout le document. Extraction du helper resolveTrelloFolderId (marqueur dans docSections, fallback inst.folderId) réutilisé par la liste et l'onglet ; nouvelle méthode selectMegaOutil émet megaOutilSelect + trelloNavigate. onMegaOutilSelect ne force plus activeNodeId à null.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "quand je clique sur le bouton Mon trello je ne vais pas directement dans la section du trello mais dans tous le document, corrige ça.",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
+      "id": "mod-294",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-trello-list",
+      "title": "Liste des trellos : section résolue via le marqueur (fix 'Sans section')",
+      "description": "La section affichée dans la liste des trellos est désormais déduite de la position du marqueur {{TRELLO:id}} dans docSections (source de vérité, indépendante du mode focus), avec fallback sur inst.folderId. Corrige l'affichage 'Sans section' alors que le trello est bien incrusté dans une section, et fiabilise le bouton 'Aller à la section'. Ajout du signal trelloSections + recomputeTrelloSections().",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "les trello son bien affiché mais il est indiqué sans section alors que le trello Mon trello est lié à la section testr et lorsque je clique sur le bouton Mon trello je devrait directement arrivé dans sa section",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
+      "id": "mod-293",
+      "version": "B-0.253",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|sidebar|zone-trello-list",
+      "title": "Liste des trellos : bouton sidebar + vue centrale avec aperçu et lien section",
+      "description": "Ajout d'un bouton 'Liste des trellos' au pied de la sidebar, visible dès qu'au moins un trello existe dans l'outil (input trelloCount). Au clic, la zone centrale affiche une grille de cartes : nom du trello, aperçu du nombre de cartes par colonne (À faire/En cours/Terminé/Bloqué, chargé via getTrelloCards), section d'origine et bouton 'Aller à la section'. Navigation via le nouvel output trelloNavigate (sélection réelle de la section + fermeture de la liste), threadé sidebar→parent→edition-outil→zone. La liste se ferme aussi à toute sélection dans la sidebar.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/outils/edition/edition-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque un trello minimum est créé dans un outils (exemple editor), rajoute un bouton liste des trellos. lorqqu'on clique dessus dans la zone central 4 il doit s'affiché la liste des section de trellos avec leur nom et la section dans laquelle ils ont été créé. tu doit avoir un lien pour retourné direct à la section ou à été créé le trello",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
       "id": "mod-292",
       "version": "B-0.253",
       "date": "2026-06-05T00:00:00.000Z",

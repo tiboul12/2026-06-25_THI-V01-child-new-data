@@ -204,6 +204,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Output() megaOutilCreated = new EventEmitter<MegaOutilInstance>();
   @Output() megaOutilDeleted = new EventEmitter<string>();
 
+  // Vue "Liste des trellos" (zone centrale) déclenchée depuis la sidebar
+  @Input()  showTrelloList = false;
+  @Output() closeTrelloList = new EventEmitter<void>();
+  // Navigation vers la section d'origine d'un trello (sélection réelle, contrairement à nodeActive)
+  @Output() trelloNavigate = new EventEmitter<string>();
+  // Compteurs de cartes par instance/colonne (aperçu) — clé = instanceId
+  trelloListCounts = signal<Record<string, { todo: number; 'in-progress': number; done: number; blocked: number; total: number }>>({});
+  // Section résolue par instance (clé = instanceId) — déduite de la position du marqueur, fallback inst.folderId
+  trelloSections = signal<Record<string, { folderId: string | null; name: string }>>({});
+
   // Popup de configuration d'un nouveau Trello
   showTrelloPopup = signal(false);
   trelloName = '';
@@ -509,7 +519,76 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Les instances mega-outils peuvent arriver après le contenu → recalculer la zone basse
     if (changes['megaOutilInstances']) {
       this.recomputeContentTrelloIds();
+      if (this.showTrelloList) { this.loadTrelloListCounts(); this.recomputeTrelloSections(); }
     }
+
+    // Ouverture de la vue "Liste des trellos" → charger les aperçus (cartes par colonne)
+    if (changes['showTrelloList'] && this.showTrelloList) {
+      this.loadTrelloListCounts();
+      this.recomputeTrelloSections();
+    }
+  }
+
+  // ── Liste des trellos (vue centrale) ───────────────────────────────────────
+
+  private async loadTrelloListCounts() {
+    const result: Record<string, { todo: number; 'in-progress': number; done: number; blocked: number; total: number }> = {};
+    for (const inst of this.megaOutilInstances) {
+      try {
+        const cards = await this.megaOutilsSvc.getTrelloCards(inst.id);
+        result[inst.id] = {
+          'todo':        cards.filter(c => c.status === 'todo').length,
+          'in-progress': cards.filter(c => c.status === 'in-progress').length,
+          'done':        cards.filter(c => c.status === 'done').length,
+          'blocked':     cards.filter(c => c.status === 'blocked').length,
+          'total':       cards.length,
+        };
+      } catch {
+        result[inst.id] = { 'todo': 0, 'in-progress': 0, 'done': 0, 'blocked': 0, 'total': 0 };
+      }
+    }
+    this.trelloListCounts.set(result);
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Résout la section de chaque trello : prioritairement via la position du marqueur
+   * {{TRELLO:id}} dans le contenu (source de vérité), fallback sur inst.folderId.
+   */
+  /**
+   * Résout le folderId de la section d'un trello : prioritairement via la position
+   * du marqueur {{TRELLO:id}} dans docSections (indépendant du mode focus), fallback inst.folderId.
+   */
+  private resolveTrelloFolderId(instId: string): string | null {
+    const marker = `{{TRELLO:${instId}}}`;
+    const sec = this.docSections.find(s => s.textContent.includes(marker));
+    if (sec) return sec.folderId;
+    return this.megaOutilInstances.find(i => i.id === instId)?.folderId ?? null;
+  }
+
+  private recomputeTrelloSections() {
+    const map: Record<string, { folderId: string | null; name: string }> = {};
+    for (const inst of this.megaOutilInstances) {
+      const folderId = this.resolveTrelloFolderId(inst.id);
+      const node = folderId ? this.findNode(folderId, this.files) : null;
+      const name = node?.name ?? (folderId ? 'Section introuvable' : 'Sans section');
+      map[inst.id] = { folderId, name };
+    }
+    this.trelloSections.set(map);
+  }
+
+  /** Clic sur un onglet Mega-outils : sélectionne l'instance et navigue vers sa section. */
+  selectMegaOutil(inst: MegaOutilInstance) {
+    this.megaOutilSelect.emit(inst);
+    const folderId = this.resolveTrelloFolderId(inst.id);
+    if (folderId) this.trelloNavigate.emit(folderId);
+  }
+
+  /** Navigue vers la section d'origine d'un trello et ferme la liste. */
+  goToTrelloSection(inst: MegaOutilInstance) {
+    const folderId = this.trelloSections()[inst.id]?.folderId;
+    if (!folderId) return;
+    this.trelloNavigate.emit(folderId);
   }
 
   // ── Section building ───────────────────────────────────────

@@ -2164,3 +2164,109 @@ $struct-colors: (
     }
   }
 }
+
+/* ── Vue "Liste des trellos" (zone centrale) ─────────────────────── */
+.trello-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  padding: 18px;
+}
+
+.trello-list-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  background: #f8fafc;
+
+  :host-context(.dark) & { background: rgba(255, 255, 255, 0.03); }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &__name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2937;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    :host-context(.dark) & { color: rgba(255, 255, 255, 0.9); }
+  }
+  &__total {
+    font-size: 10px;
+    color: #6b7280;
+    :host-context(.dark) & { color: rgba(255, 255, 255, 0.35); }
+  }
+
+  &__cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  &__section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: transparent;
+    cursor: pointer;
+    font-size: 11px;
+    color: #2563eb;
+    transition: background 0.1s, border-color 0.1s;
+
+    :host-context(.dark) & { border-color: rgba(255, 255, 255, 0.1); color: #60a5fa; }
+    &:hover:not(:disabled) {
+      background: rgba(37, 99, 235, 0.08);
+      border-color: rgba(37, 99, 235, 0.3);
+    }
+    &:disabled { opacity: 0.5; cursor: default; color: #9ca3af; }
+  }
+  &__section-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+}
+
+.trello-list-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(0, 0, 0, 0.03);
+
+  :host-context(.dark) & { background: rgba(255, 255, 255, 0.04); }
+
+  &__label {
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  &__count {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1f2937;
+    :host-context(.dark) & { color: rgba(255, 255, 255, 0.85); }
+  }
+
+  &--todo     { .trello-list-col__label { color: #3b82f6; } border-color: rgba(59, 130, 246, 0.25); }
+  &--progress { .trello-list-col__label { color: #eab308; } border-color: rgba(234, 179, 8, 0.25); }
+  &--done     { .trello-list-col__label { color: #22c55e; } border-color: rgba(34, 197, 94, 0.25); }
+  &--blocked  { .trello-list-col__label { color: #ef4444; } border-color: rgba(239, 68, 68, 0.25); }
+}
