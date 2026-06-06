@@ -302,8 +302,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     // F4 — Scroll vers une section si fournie en queryParam (depuis la recherche)
     const sectionFromSearch = this.route.snapshot.queryParamMap.get('section');
     if (sectionFromSearch) {
+      // Sélectionne + déplie l'arbre jusqu'à la section (la sidebar étend via activeNodeId)
+      this.activeNodeId.set(sectionFromSearch);
+      this.highlightNodeId.set(sectionFromSearch);
       setTimeout(() => this.scrollToNodeId.set(sectionFromSearch), 200);
     }
+    // Sélection du menu (outil) si fourni en queryParam (depuis admin méga-outils)
+    const outilFromQuery = this.route.snapshot.queryParamMap.get('outil');
+    if (outilFromQuery) this.activeOutilId.set(outilFromQuery);
     // F6 — Charger les compteurs de commentaires par section
     this.loadCommentCounts();
   }

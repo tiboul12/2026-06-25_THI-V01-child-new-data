@@ -7987,10 +7987,14 @@ app.post('/api/mega-outils/instances', async (req, res) => {
 app.patch('/api/mega-outils/instances/:id', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const { name } = req.body;
-    if (!name) return res.status(400).json({ error: 'name requis' });
+    const { name, folderId } = req.body;
+    if (name === undefined && folderId === undefined) return res.status(400).json({ error: 'name ou folderId requis' });
     try {
-        await pool.query('UPDATE mega_outil_instances SET name = ? WHERE id = ?', [name, req.params.id]);
+        const sets = [], vals = [];
+        if (name !== undefined)     { sets.push('name = ?');      vals.push(name); }
+        if (folderId !== undefined) { sets.push('folder_id = ?'); vals.push(folderId || null); }
+        vals.push(req.params.id);
+        await pool.query(`UPDATE mega_outil_instances SET ${sets.join(', ')} WHERE id = ?`, vals);
         const [rows] = await pool.query('SELECT * FROM mega_outil_instances WHERE id = ?', [req.params.id]);
         if (!rows.length) return res.status(404).json({ error: 'Instance non trouvée' });
         const r = rows[0];
@@ -8022,22 +8026,35 @@ app.get('/api/mega-outils/trello/all', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     try {
         const [instances] = await pool.query(`
-            SELECT i.*, fpm.display_name AS project_name
+            SELECT i.*, COALESCE(fp.title, fpm.display_name) AS project_name
             FROM mega_outil_instances i
             LEFT JOIN file_project_meta fpm ON fpm.id = i.project_id
+            LEFT JOIN frank_projects fp ON fp.id = i.project_id COLLATE utf8mb4_unicode_ci
             WHERE i.type = 'trello' ORDER BY i.created_at ASC
         `);
         const result = [];
+        const configCache = new Map(); // project_id → config (évite de recharger)
         for (const r of instances) {
             const [cards] = await pool.query(
                 'SELECT * FROM mega_outil_trello_cards WHERE instance_id = ? ORDER BY order_index ASC, created_at ASC',
                 [r.id]
             );
+            // Résoudre le nom de la section (folder) et de l'outil dans la structure du projet
+            let folderName = null, outilName = null;
+            try {
+                if (!configCache.has(r.project_id)) configCache.set(r.project_id, await getProjectConfig(r.project_id));
+                const cfg = configCache.get(r.project_id);
+                if (cfg) {
+                    if (r.folder_id && cfg.structure) folderName = findNodeById(cfg.structure, r.folder_id)?.name || null;
+                    if (r.outil_id && Array.isArray(cfg.outils)) outilName = cfg.outils.find(o => o.id === r.outil_id)?.name || null;
+                }
+            } catch (_) {}
             result.push({
                 instance: { id: r.id, type: r.type, name: r.name, projectId: r.project_id,
                     outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
                     createdAt: r.created_at, updatedAt: r.updated_at },
                 projectName: r.project_name || r.project_id,
+                folderName, outilName,
                 cards: cards.map(c => ({ id: c.id, instanceId: c.instance_id, title: c.title,
                     description: c.description || undefined, status: c.status, priority: c.priority,
                     orderIndex: c.order_index, creatorId: c.creator_id || undefined,

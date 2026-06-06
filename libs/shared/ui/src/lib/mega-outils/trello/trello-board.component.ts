@@ -36,7 +36,13 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
       <!-- Header board -->
       <div class="flex items-center gap-3 px-4 py-3 border-b border-light-border dark:border-white/8 flex-shrink-0">
         <span class="material-symbols-outlined text-light-primary dark:text-primary text-lg">view_kanban</span>
-        <span class="text-sm font-semibold text-light-text dark:text-white/90 flex-1">{{ boardName }}</span>
+        <span class="text-sm font-semibold text-light-text dark:text-white/90">{{ boardName }}</span>
+        @if (sectionName) {
+          <span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400" title="Section où ce Trello est implanté">
+            <span class="material-symbols-outlined text-[12px]">tag</span>{{ sectionName }}
+          </span>
+        }
+        <span class="flex-1"></span>
         <span class="text-xs text-light-text-muted dark:text-white/30">{{ totalCards() }} carte{{ totalCards() > 1 ? 's' : '' }}</span>
         @if (deletable) {
           @if (confirmDeleteBoard()) {
@@ -197,6 +203,7 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
 export class TrelloBoardComponent implements OnInit, OnDestroy {
   @Input() instanceId = '';
   @Input() boardName  = 'Trello';
+  @Input() sectionName = '';
   @Input() deletable  = false;
   @Output() deleteBoard = new EventEmitter<string>();
 
