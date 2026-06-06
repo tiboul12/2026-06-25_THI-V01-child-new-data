@@ -6042,6 +6042,65 @@
       "prompt": "lorsque je clique sur le nom de la section cela doit m'ouvrir le menu sur la section indiqué et pas avec le menu fermé",
       "startedAt": "2026-06-07T00:00:00.000Z",
       "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-292",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|trello",
+      "title": "Cartes Trello : césure des mots (zéro scroll horizontal) + popup détail au clic",
+      "description": "Les cartes du board Trello cassent désormais les mots trop longs (break-words + overflow-wrap:anywhere, min-w-0 sur le titre flex) : plus d'ascenseur horizontal. Le dépliage inline est remplacé par une popup (modale) ouverte au clic sur la carte/titre, affichant l'intégralité du contenu (titre, statut, priorité, description longue scrollable en whitespace-pre-wrap, créateur/date) avec édition et suppression intégrées. Signaux modalCardId + computed modalCard, méthodes openCard/closeModal.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "tests/fonctions/connecte/admin/mega-outils/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans l'affichage des cartes trello, il faut coupé les mots si ils sont trop long, il ne doit pas y avoir d'ascenseur horizontal pour les cartes. Lorsqu'on clique sur un titre d'une carte, affiche une popup avec la carte, cela permettra d'afficher tout le texte d'une carte même si la description est longue",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-293",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|trello",
+      "title": "Cartes Trello : double interaction (expand inline carte + popup au titre)",
+      "description": "Rétablit l'agrandissement inline de la carte au clic sur le corps (description tronquée line-clamp-4 + boutons Détail/Modifier/Supprimer), tout en conservant la popup détail ouverte au clic sur le titre (stopPropagation). Nouveau openCardEdit pour ouvrir directement la popup en édition depuis l'expand. expandedCardId réintroduit en parallèle de modalCardId.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "tests/fonctions/connecte/admin/mega-outils/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le popup est ok mais je veux garder l'option pour agrandir la carte (sans popup) lorsqu'on clique sur la carte hors titre et si on clique sur le titre, on ouvre un popup d'infos",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-294",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|trello",
+      "title": "Cartes Trello : layout responsive (priorité à droite/dessous, boutons wrap)",
+      "description": "Rendu responsive via flex-wrap (sans media query) : le badge priorité reste à droite du titre s'il y a la place et passe sous le titre quand la carte est étroite ; les 3 boutons de l'expand (Détail/Modifier/Supprimer) restent sur une même ligne si possible et passent les uns sous les autres quand la largeur est réduite. Créateur + date sur leur propre ligne wrap.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "si il y a de la place le tag doit rester à droite du titre et passer en dessous si la taille est réduite ; si la taille le permet les 3 boutons doivent être sur la même ligne et passer les uns en dessous des autres si la taille est réduite",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
     }
   ]
 }

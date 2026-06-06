@@ -36,6 +36,10 @@ Vue : gestion globale des méga-outils Trello, toutes instances tous projets con
 ## `2-1-7-4` — Gestion des cartes
 
 - Bouton "Gérer les cartes" déplie un `<app-trello-board>` embarqué (CRUD complet : ajout, édition, déplacement, suppression de carte)
+- Cartes compactes : titre avec césure des mots (`break-words` + `overflow-wrap:anywhere`, `min-w-0`) → aucun ascenseur horizontal
+- Clic sur le **corps** de la carte → agrandissement inline (`expandedCardId`) : description tronquée (`line-clamp-4`) + boutons Détail / Modifier / Supprimer
+- Clic sur le **titre** → popup modale (`modalCardId`) affichant tout le contenu : titre, statut, priorité, description longue (`whitespace-pre-wrap`, scrollable), créateur/date, avec Modifier (édition dans la popup) et Supprimer
+- `openCardEdit` ouvre la popup directement en mode édition depuis l'expand inline
 - Synchro temps réel héritée du board (voir `2-5-2-5-16`)
 - `deletable=false` sur le board embarqué : la suppression de l'instance se fait via le bouton dédié de la ligne
 
