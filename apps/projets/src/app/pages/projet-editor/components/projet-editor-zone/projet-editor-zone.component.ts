@@ -4909,6 +4909,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (inst) this.selectMegaOutil(inst);
   }
 
+  /** Supprime le marqueur {{MOCKUP:id}} du contenu et efface le folderId de l'instance. */
+  async removeMockupMarker(instId: string) {
+    const marker = `{{MOCKUP:${instId}}}`;
+    const lines = this.unifiedContent.split('\n');
+    const idx = lines.findIndex(l => l.trim() === marker);
+    if (idx !== -1) {
+      lines.splice(idx, 1);
+      this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = this.unifiedContent;
+      this.recomputeRanges();
+      this.recomputeMirrorLines();
+      this.scheduleSave();
+    }
+    // Effacer le folderId de l'instance pour éviter que repairMissingMockupMarkers le réinjecte
+    await this.megaOutilsSvc.updateInstance(instId, { folderId: '' });
+  }
+
   /** Supprime les marqueurs {{MOCKUP:id}} dupliqués (garde la première occurrence). */
   private deduplicateMockupMarkers(): boolean {
     const seen = new Set<string>();

@@ -816,6 +816,9 @@
                   <span class="ed-mockup-card" (click)="selectMockupFromMarker(line.mockupInstId)">
                     <span class="material-symbols-outlined ed-img-icon">design_services</span>
                     <span class="ed-img-name">{{ mockupInstanceName(line.mockupInstId) }}</span>
+                    <span class="ed-mockup-card__remove material-symbols-outlined"
+                          title="Supprimer la liaison (ne supprime pas le mockup)"
+                          (click)="removeMockupMarker(line.mockupInstId); $event.stopPropagation()">close</span>
                   </span>
                 </span>
               } @else {

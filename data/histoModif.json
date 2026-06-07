@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-310",
+      "version": "B-0.255",
+      "date": "2026-06-07T20:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils|mockup",
+      "title": "Mockup : bouton suppression liaison sur les cards",
+      "description": "Ajout d'un bouton X (visible au hover) sur les cards {{MOCKUP:id}} dans le miroir. Cliquer dessus supprime le marqueur du contenu ET efface le folderId de l'instance en DB (via updateInstance), empêchant repairMissingMockupMarkers de le réinsérer. Le mockup lui-même n'est pas supprimé.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "on doit pouvoir supprimé une liaison d'un mockup dans une section, sans pour autant supprimé le mockup en lui même",
+      "startedAt": "2026-06-07T19:30:00.000Z",
+      "completedAt": "2026-06-07T20:00:00.000Z"
+    },
+    {
       "id": "mod-309",
       "version": "B-0.255",
       "date": "2026-06-07T19:00:00.000Z",
