@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-322",
+      "version": "B-0.255",
+      "date": "2026-06-07T23:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|mockup|diagram",
+      "title": "Mockup diagramme : points d'ancrage intelligents",
+      "description": "Les connexions entre nodes du diagramme mockup calculaient toujours le point de départ à droite de la source et le point d'arrivée à gauche de la cible. Remplacé par mockupConnPath() qui choisit les ancres selon la direction dominante : horizontal (droite/gauche) ou vertical (bas/haut). La courbe de Bézier s'adapte automatiquement quand les cards changent de position.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans le diagram si la liaison est vers la droite la ligne doit partir de la card gauche à droite vers la card droite à gauche avec la flèche. Les points de liaison doivent changer si la liaison se fait en bas et ainsi de suite, les liaisons doivent changer automatiquement si les cards changent d'emplacement.",
+      "startedAt": "2026-06-07T22:55:00.000Z",
+      "completedAt": "2026-06-07T23:00:00.000Z"
+    },
+    {
       "id": "mod-321",
       "version": "B-0.255",
       "date": "2026-06-07T22:30:00.000Z",

@@ -660,17 +660,13 @@
                 @let fromNode = mockupNodeForInstance(conn.fromInstanceId);
                 @let toNode = mockupNodeForInstance(conn.toInstanceId);
                 @if (fromNode && toNode) {
-                  @let cx1 = fromNode.x + MOCK_NODE_W;
-                  @let cy1 = fromNode.y + MOCK_NODE_H / 2;
-                  @let cx2 = toNode.x;
-                  @let cy2 = toNode.y + MOCK_NODE_H / 2;
-                  @let cmx = (cx1 + cx2) / 2;
-                  <path [attr.d]="'M ' + cx1 + ' ' + cy1 + ' C ' + cmx + ' ' + cy1 + ' ' + cmx + ' ' + cy2 + ' ' + cx2 + ' ' + cy2"
+                  <path [attr.d]="mockupConnPath(fromNode, toNode)"
                         fill="none" stroke="#8b5cf6" stroke-width="2" marker-end="url(#mo-arrow)"
                         class="cursor-pointer hover:stroke-violet-300"
                         (click)="promptDeleteMockupConnection(conn)" />
                   @if (conn.label) {
-                    <text [attr.x]="cmx" [attr.y]="(cy1 + cy2) / 2 - 6"
+                    <text [attr.x]="mockupConnLabelPos(fromNode, toNode).x"
+                          [attr.y]="mockupConnLabelPos(fromNode, toNode).y"
                           text-anchor="middle" fill="#a78bfa" font-size="11" font-family="sans-serif">{{ conn.label }}</text>
                   }
                 }

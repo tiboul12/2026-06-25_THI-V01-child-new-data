@@ -5201,6 +5201,37 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return this.mockupDiagramNodes().find(n => n.instanceId === instanceId);
   }
 
+  mockupConnPath(from: MockupDiagramNode, to: MockupDiagramNode): string {
+    const W = this.MOCK_NODE_W;
+    const H = this.MOCK_NODE_H;
+    const fromCx = from.x + W / 2;
+    const fromCy = from.y + H / 2;
+    const toCx   = to.x   + W / 2;
+    const toCy   = to.y   + H / 2;
+    const dx = toCx - fromCx;
+    const dy = toCy - fromCy;
+    let x1: number, y1: number, x2: number, y2: number;
+    let cp1x: number, cp1y: number, cp2x: number, cp2y: number;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      if (dx >= 0) { x1 = from.x + W; y1 = fromCy; x2 = to.x;     y2 = toCy; }
+      else          { x1 = from.x;     y1 = fromCy; x2 = to.x + W; y2 = toCy; }
+      const mx = (x1 + x2) / 2;
+      cp1x = mx; cp1y = y1; cp2x = mx; cp2y = y2;
+    } else {
+      if (dy >= 0) { x1 = fromCx; y1 = from.y + H; x2 = toCx; y2 = to.y; }
+      else          { x1 = fromCx; y1 = from.y;     x2 = toCx; y2 = to.y + H; }
+      const my = (y1 + y2) / 2;
+      cp1x = x1; cp1y = my; cp2x = x2; cp2y = my;
+    }
+    return `M ${x1} ${y1} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${x2} ${y2}`;
+  }
+
+  mockupConnLabelPos(from: MockupDiagramNode, to: MockupDiagramNode): { x: number; y: number } {
+    const W = this.MOCK_NODE_W;
+    const H = this.MOCK_NODE_H;
+    return { x: (from.x + W / 2 + to.x + W / 2) / 2, y: (from.y + H / 2 + to.y + H / 2) / 2 - 8 };
+  }
+
   onMockupNodeMouseDown(event: MouseEvent, node: MockupDiagramNode) {
     if (this.mockupConnectMode()) {
       this.onMockupNodeConnectClick(node.instanceId);
