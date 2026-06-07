@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-302",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin|memo|help",
+      "title": "Admin : fusion onglet Help dans Mémo",
+      "description": "Suppression de l'onglet Help séparé. Le CRUD aide contextuelle est maintenant une section collapsible 'Aide contextuelle' (teal) dans AdminMemoComponent. Le badge count est conservé sur l'onglet Mémo. Nettoyage de admin.component.ts (suppression helpEditId, import AdminHelpComponent).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.html",
+        "apps/portail/src/app/pages/admin/admin.component.ts",
+        "apps/portail/src/app/pages/admin/admin.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "pourrais tu scinder la rubrique admin/help dans la rubrique admin/mémo",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
       "id": "mod-301",
       "version": "B-0.254",
       "date": "2026-06-07T00:00:00.000Z",
