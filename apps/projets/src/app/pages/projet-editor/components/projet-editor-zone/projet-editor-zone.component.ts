@@ -511,12 +511,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         // Si focusedHandle && !hasStructuralChange : on garde le contenu focusé intact
       }
       this.hasLoaded = true;
+      // Nettoyer les marqueurs {{TRELLO:...}} du contenu (approche DB-only)
+      const trelloStripped = !this.focusedHandle && this.stripTrelloMarkersFromUnifiedContent();
       this.recomputeAll();
       this.updateSnapshotFromFiles();
 
-      // Si on a corrigé des marqueurs déplacés, persister immédiatement au serveur
-      // pour que les contenu.md sources soient mis à jour (sinon le bug réapparaît au reload).
-      if (markersFixed && !this.focusedHandle) {
+      if ((markersFixed || trelloStripped) && !this.focusedHandle) {
         setTimeout(() => this.saveAll(), 0);
       }
     }
@@ -1143,17 +1143,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.recomputeContentMockupIds();
   }
 
-  /** Ids Trello dont le marqueur {{TRELLO:id}} est présent dans le contenu courant (tous modes). */
+  /** Ids Trello dont le folderId correspond à la section active (mode DB-only, sans marqueur dans le contenu). */
   private recomputeContentTrelloIds() {
-    const ids: string[] = [];
-    const re = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(this.unifiedContent)) !== null) {
-      const id = m[1];
-      if (!ids.includes(id) && this.megaOutilInstances.some(i => i.id === id)) ids.push(id);
-    }
-    this.contentTrelloIds = ids;
-    // Recalcule les sections (alimente l'en-tête de chaque board + synchronise folder_id)
+    const activeFolderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
+    this.contentTrelloIds = this.trelloInstances
+      .filter(i => i.folderId === activeFolderId)
+      .map(i => i.id);
     this.recomputeTrelloSections();
   }
 
@@ -2471,8 +2466,6 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         outilId: this.activeOutilId || undefined,
         folderId
       });
-      // Insère le shortcode au curseur → rendu comme board (Preview) ou chip (Code)
-      this.insertAt(`\n\n{{TRELLO:${inst.id}}}\n\n`, '');
       this.showTrelloPopup.set(false);
       this.megaOutilCreated.emit(inst);
     } catch (e) {
@@ -2640,6 +2633,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.recomputeMirrorLines();
     if (this.mode === 'visu') this.buildVisuSections();
     this.scheduleSave();
+  }
+
+  /** Supprime tous les marqueurs {{TRELLO:...}} du contenu (y compris corrompus sur plusieurs lignes). */
+  private stripTrelloMarkersFromUnifiedContent(): boolean {
+    if (!/\{\{TRELLO:[^}]*\}\}/g.test(this.unifiedContent)) return false;
+    this.unifiedContent = this.unifiedContent
+      .replace(/\n*\{\{TRELLO:[^}]*\}\}\n*/g, '\n')
+      .replace(/\n{3,}/g, '\n\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    return true;
   }
 
   insertAt(before: string, after = '') {

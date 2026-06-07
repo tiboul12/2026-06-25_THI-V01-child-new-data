@@ -1,6 +1,25 @@
 {
   "modifications": [
     {
+      "id": "mod-307",
+      "version": "B-0.255",
+      "date": "2026-06-07T15:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils|trello",
+      "title": "Trello : DB-only, plus de marqueur dans le contenu",
+      "description": "Passage du méga-outil Trello en mode DB-only. Avant : le board s'affichait en cherchant {{TRELLO:id}} dans unifiedContent — un marqueur corrompu (coupé sur 2 lignes) causait la disparition du board. Après : recomputeContentTrelloIds utilise inst.folderId === activeFolderId (focusedHandle.id ou activeNodeId) au lieu du scan de contenu. Plus d'insertion de marqueur dans confirmTrelloPopup. stripTrelloMarkersFromUnifiedContent() nettoie les marqueurs existants (y compris corrompus, via regex [^}]*) au chargement des fichiers et déclenche une sauvegarde.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le MO trello n'est plus affiché lorsque la section est selectionné et il ne faut pas affiché de code dans le texte de la section seul l'info dans la bdd doit indiqué si un trello est disponible dans cette section",
+      "startedAt": "2026-06-07T14:30:00.000Z",
+      "completedAt": "2026-06-07T15:00:00.000Z"
+    },
+    {
       "id": "mod-306",
       "version": "B-0.255",
       "date": "2026-06-07T14:00:00.000Z",
