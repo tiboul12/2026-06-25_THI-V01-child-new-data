@@ -177,6 +177,7 @@
 .ed-mockup-card-wrap {
   display: inline-block;
   vertical-align: middle;
+  pointer-events: auto;
 }
 
 .ed-mockup-card {
@@ -194,13 +195,25 @@
   line-height: 1.5em;
   vertical-align: middle;
   user-select: none;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+
+  &:hover {
+    background: rgba(139, 92, 246, 0.28);
+    border-color: rgba(139, 92, 246, 0.7);
+  }
 }
 
 :host-context(.dark) .ed-mockup-card {
   color: rgb(196, 181, 253);
   background: rgba(139, 92, 246, 0.12);
   border-color: rgba(139, 92, 246, 0.3);
+
+  &:hover {
+    background: rgba(139, 92, 246, 0.22);
+    border-color: rgba(139, 92, 246, 0.6);
+  }
 }
 
 // ── Overlay (gouttière de drag à gauche, style Notion) ─────────

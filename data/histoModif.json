@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-309",
+      "version": "B-0.255",
+      "date": "2026-06-07T19:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils|mockup",
+      "title": "Mockup : barre MO redessinée + liaison popup + cards cliquables",
+      "description": "Refonte de la barre Mega-outils : onglets Trello/Mockup avec badge count, barre secondaire scrollable (VS Code style) avec chevrons + bouton ^ pour replier. Liaison ouvre un popup de sélection du mockup à insérer (au lieu d'insertion directe). Cards {{MOCKUP:id}} dans le miroir deviennent cliquables et activent le panneau mockup. Guard anti-doublon dans insertMockupMarkerInSection + deduplicateMockupMarkers() au chargement. Bouton + Nouveau dans le diagramme, rechargement du diagramme après création.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais pouvoir créé des nouvelles carte mockup directement à partir de la page diagram et je doit pouvoir rajouté une carte mockup déjà créé n'importe ou dans l'edition, ajouté un bouton liaison à la bar menu des MO - La barre MO ne me conviens pas...",
+      "startedAt": "2026-06-07T17:45:00.000Z",
+      "completedAt": "2026-06-07T19:00:00.000Z"
+    },
+    {
       "id": "mod-308",
       "version": "B-0.255",
       "date": "2026-06-07T17:30:00.000Z",

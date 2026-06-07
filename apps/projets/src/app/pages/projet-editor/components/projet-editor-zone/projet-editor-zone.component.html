@@ -146,35 +146,137 @@
 
   </div>
 
-  <!-- Barre Mega-outils (sous la toolbar de style) -->
-  <div class="flex items-center gap-1.5 px-3 py-1.5 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-surface flex-shrink-0 flex-wrap">
-    <span class="material-symbols-outlined text-[13px] text-blue-400 flex-shrink-0">view_kanban</span>
-    <span class="text-[10px] font-bold uppercase tracking-wider text-light-text-muted dark:text-white/30 flex-shrink-0 mr-1">Mega-outils</span>
-    @for (inst of megaOutilInstances; track inst.id) {
+  <!-- Barre Mega-outils -->
+  <div class="flex-shrink-0 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-surface">
+
+    <!-- Ligne principale : label + boutons de type -->
+    <div class="flex items-center gap-1 px-3 py-1">
+      <span class="material-symbols-outlined text-[13px] text-blue-400 flex-shrink-0">view_kanban</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider text-light-text-muted dark:text-white/30 flex-shrink-0 mr-1.5">Mega-outils</span>
+
+      <!-- Bouton type Trello -->
       <button type="button"
-              class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors"
-              [ngClass]="activeMegaOutilId === inst.id
-                ? (inst.type === 'mockup' ? 'bg-violet-500/15 text-violet-400 border border-violet-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30')
+              class="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+              [ngClass]="moActiveType() === 'trello'
+                ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                 : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
-              (click)="selectMegaOutil(inst)">
-        <span class="material-symbols-outlined text-[12px]">{{ inst.type === 'mockup' ? 'design_services' : 'view_kanban' }}</span>
-        {{ inst.name }}
+              (click)="toggleMoType('trello')">
+        <span class="material-symbols-outlined text-[12px]">view_kanban</span>
+        Trello
+        @if (trelloInstances.length > 0) {
+          <span class="ml-0.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full text-[9px] font-bold"
+                [ngClass]="moActiveType() === 'trello' ? 'bg-blue-500/30 text-blue-300' : 'bg-light-border dark:bg-white/10 text-light-text-muted dark:text-white/40'">
+            {{ trelloInstances.length }}
+          </span>
+        }
       </button>
+
+      <!-- Bouton type Mockup -->
+      <button type="button"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+              [ngClass]="moActiveType() === 'mockup'
+                ? 'bg-violet-500/15 text-violet-400 border border-violet-500/30'
+                : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
+              (click)="toggleMoType('mockup')">
+        <span class="material-symbols-outlined text-[12px]">design_services</span>
+        Mockup
+        @if (mockupInstances.length > 0) {
+          <span class="ml-0.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full text-[9px] font-bold"
+                [ngClass]="moActiveType() === 'mockup' ? 'bg-violet-500/30 text-violet-300' : 'bg-light-border dark:bg-white/10 text-light-text-muted dark:text-white/40'">
+            {{ mockupInstances.length }}
+          </span>
+        }
+      </button>
+
+      <!-- Bouton replier la barre secondaire -->
+      @if (moActiveType() !== null) {
+        <button type="button"
+                class="ml-auto flex-shrink-0 w-7 h-7 flex items-center justify-center rounded text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/10 transition-colors"
+                title="Masquer la barre des méga-outils"
+                (click)="moActiveType.set(null)">
+          <span class="material-symbols-outlined text-[16px]">expand_less</span>
+        </button>
+      }
+    </div>
+
+    <!-- Ligne secondaire : instances scrollables + actions (visible si un type est sélectionné) -->
+    @if (moActiveType() !== null) {
+      <div class="flex items-center border-t border-light-border/40 dark:border-white/5">
+
+        <!-- Scroll gauche -->
+        <button type="button"
+                class="flex-shrink-0 w-6 h-7 flex items-center justify-center text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/10 transition-colors"
+                (click)="scrollMoLeft()">
+          <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+        </button>
+
+        <!-- Liste instances scrollable -->
+        <div #moInstanceList
+             class="flex-1 flex items-center gap-0.5 overflow-x-hidden py-0.5">
+          @for (inst of (moActiveType() === 'trello' ? trelloInstances : mockupInstances); track inst.id) {
+            <button type="button"
+                    class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors whitespace-nowrap"
+                    [ngClass]="activeMegaOutilId === inst.id
+                      ? (moActiveType() === 'mockup' ? 'bg-violet-500/15 text-violet-400 border border-violet-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30')
+                      : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
+                    (click)="selectMegaOutil(inst)">
+              <span class="material-symbols-outlined text-[11px]">{{ inst.type === 'mockup' ? 'design_services' : 'view_kanban' }}</span>
+              {{ inst.name }}
+            </button>
+          }
+          @if ((moActiveType() === 'trello' ? trelloInstances : mockupInstances).length === 0) {
+            <span class="text-[11px] text-light-text-muted dark:text-white/25 italic px-2">Aucun</span>
+          }
+        </div>
+
+        <!-- Scroll droit -->
+        <button type="button"
+                class="flex-shrink-0 w-6 h-7 flex items-center justify-center text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/10 transition-colors"
+                (click)="scrollMoRight()">
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+        </button>
+
+        <!-- Séparateur -->
+        <div class="w-px h-5 bg-light-border dark:bg-white/10 flex-shrink-0 mx-1"></div>
+
+        <!-- Actions Trello -->
+        @if (moActiveType() === 'trello') {
+          <button type="button"
+                  class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 mr-1 rounded text-[11px] text-blue-500 dark:text-blue-400 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 transition-colors"
+                  title="Créer un nouveau Trello"
+                  (click)="openTrelloPopup()">
+            <span class="material-symbols-outlined text-[12px]">add</span> Nouveau
+          </button>
+        }
+
+        <!-- Actions Mockup -->
+        @if (moActiveType() === 'mockup') {
+          <button type="button"
+                  class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-violet-500 dark:text-violet-400 hover:bg-violet-500/10 border border-transparent hover:border-violet-500/30 transition-colors"
+                  title="Créer un nouveau Mockup"
+                  (click)="openMockupPopup()">
+            <span class="material-symbols-outlined text-[12px]">add</span> Nouveau
+          </button>
+          <button type="button"
+                  class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 mr-1 rounded text-[11px] transition-colors"
+                  [class.text-violet-500]="!!activeMegaOutilId"
+                  [class.dark:text-violet-400]="!!activeMegaOutilId"
+                  [class.hover:bg-violet-500/10]="!!activeMegaOutilId"
+                  [class.border-transparent]="!activeMegaOutilId"
+                  [class.hover:border-violet-500/30]="!!activeMegaOutilId"
+                  [class.text-light-text-muted]="!activeMegaOutilId"
+                  [class.dark:text-white/25]="!activeMegaOutilId"
+                  [class.cursor-not-allowed]="!activeMegaOutilId"
+                  [disabled]="!activeMegaOutilId"
+                  title="Insérer le mockup sélectionné dans la section courante"
+                  (click)="insertMockupLiaison()">
+            <span class="material-symbols-outlined text-[12px]">link</span> Liaison
+          </button>
+        }
+
+      </div>
     }
-    <button type="button"
-            class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-light-text-muted dark:text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-colors border border-transparent hover:border-blue-500/30"
-            title="Ajouter un Trello à l'endroit du curseur"
-            (click)="openTrelloPopup()">
-      <span class="material-symbols-outlined text-[13px]">add</span>
-      Trello
-    </button>
-    <button type="button"
-            class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-light-text-muted dark:text-white/40 hover:text-violet-400 hover:bg-violet-500/10 transition-colors border border-transparent hover:border-violet-500/30"
-            title="Ajouter un Mockup à l'endroit du curseur"
-            (click)="openMockupPopup()">
-      <span class="material-symbols-outlined text-[13px]">add</span>
-      Mockup
-    </button>
+
   </div>
 
   <!-- Popup configuration nouveau Mockup -->
@@ -212,6 +314,33 @@
           <button class="flex-1 text-xs px-3 py-2 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors"
                   (click)="cancelMockupPopup()">Annuler</button>
         </div>
+      </div>
+    </div>
+  }
+
+  <!-- Popup Liaison mockup : choisir quel mockup insérer dans la section courante -->
+  @if (showMockupLiaisonPopup()) {
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+         (click)="showMockupLiaisonPopup.set(false)">
+      <div class="bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-xl p-5 w-80 shadow-2xl"
+           (click)="$event.stopPropagation()">
+        <p class="text-sm font-semibold text-light-text dark:text-white/90 mb-1">Insérer un mockup</p>
+        <p class="text-[11px] text-light-text-muted dark:text-white/40 mb-3">dans la section courante</p>
+        @if (mockupInstances.length === 0) {
+          <p class="text-sm text-light-text-muted dark:text-white/40 py-2">Aucun mockup disponible.</p>
+        }
+        @for (inst of mockupInstances; track inst.id) {
+          <button type="button"
+                  class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-violet-500/10 text-left text-sm text-light-text dark:text-white/80 transition-colors"
+                  (click)="confirmMockupLiaison(inst)">
+            <span class="material-symbols-outlined text-violet-400 text-base flex-shrink-0">design_services</span>
+            <span class="flex-1 truncate">{{ inst.name }}</span>
+            <span class="text-[10px] text-light-text-muted dark:text-white/30 truncate max-w-[90px]">{{ mockupSections()[inst.id]?.name ?? 'Sans section' }}</span>
+          </button>
+        }
+        <button type="button"
+                class="mt-3 w-full text-sm py-1.5 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70 transition-colors"
+                (click)="showMockupLiaisonPopup.set(false)">Annuler</button>
       </div>
     </div>
   }
@@ -481,6 +610,13 @@
               {{ mockupInstances.length }} mockup{{ mockupInstances.length > 1 ? 's' : '' }}
               · {{ mockupConnections().length }} connexion{{ mockupConnections().length > 1 ? 's' : '' }}
             </span>
+            <!-- Nouveau mockup depuis le diagramme -->
+            <button type="button"
+                    class="text-[11px] px-2.5 py-1.5 rounded-lg border border-violet-500/30 text-violet-500 dark:text-violet-400 hover:bg-violet-500/10 transition-colors flex items-center gap-1"
+                    title="Créer un nouveau mockup"
+                    (click)="openMockupPopup()">
+              <span class="material-symbols-outlined text-[13px]">add</span> Nouveau
+            </button>
             <span class="flex-1"></span>
             @if (mockupConnectMode()) {
               <span class="text-[11px] text-amber-500 dark:text-amber-400 flex items-center gap-1">
@@ -677,7 +813,7 @@
                 </span>
               } @else if (line.isMockupMarker) {
                 <span class="ed-mockup-card-wrap">
-                  <span class="ed-mockup-card">
+                  <span class="ed-mockup-card" (click)="selectMockupFromMarker(line.mockupInstId)">
                     <span class="material-symbols-outlined ed-img-icon">design_services</span>
                     <span class="ed-img-name">{{ mockupInstanceName(line.mockupInstId) }}</span>
                   </span>
