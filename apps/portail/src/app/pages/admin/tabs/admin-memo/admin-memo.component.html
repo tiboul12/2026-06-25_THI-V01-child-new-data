@@ -47,6 +47,55 @@
             </div>
           }
 
+          <!-- Outils projet -->
+          @if (section.id === 'outils') {
+            <div class="space-y-4">
+              <div class="overflow-hidden rounded-lg border border-light-border dark:border-white/10">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="bg-light-surface dark:bg-white/[0.05] border-b border-light-border dark:border-white/10">
+                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Nom</th>
+                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Type</th>
+                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Icône</th>
+                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Statut</th>
+                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-light-text-muted dark:text-white/40 uppercase tracking-wider">Depuis</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (o of outils; track o.type) {
+                      <tr class="border-b border-light-border dark:border-white/[0.05] last:border-0">
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm text-rose-400">{{ o.icon }}</span>
+                            <span class="font-semibold text-light-text dark:text-white">{{ o.name }}</span>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3"><code class="text-xs font-mono text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">{{ o.type }}</code></td>
+                        <td class="px-4 py-3"><code class="text-xs font-mono text-light-text-muted dark:text-white/50">{{ o.icon }}</code></td>
+                        <td class="px-4 py-3">
+                          @if (o.statut === 'Actif') {
+                            <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">Actif</span>
+                          } @else {
+                            <span class="text-xs bg-white/[0.05] text-light-text-muted dark:text-white/30 border border-light-border dark:border-white/10 px-2 py-0.5 rounded-full">Bientôt</span>
+                          }
+                        </td>
+                        <td class="px-4 py-3 text-xs text-light-text-muted dark:text-white/40">{{ o.since }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <div class="flex items-start gap-2 p-3 rounded-lg bg-rose-500/5 border border-rose-500/20">
+                <span class="material-symbols-outlined text-sm text-rose-400 mt-0.5">lightbulb</span>
+                <div class="text-xs text-light-text-muted dark:text-white/50 leading-relaxed">
+                  Pour créer un nouvel outil, utilise <code class="font-mono text-rose-400 bg-rose-500/10 px-1 rounded">/nouvel-outil</code>
+                  — le cahier des charges complet est dans <code class="font-mono bg-white/[0.05] px-1 rounded">docs/outils.md</code>.
+                  Les outils s'ajoutent dans <code class="font-mono bg-white/[0.05] px-1 rounded">apps/projets/.../outils/</code>
+                </div>
+              </div>
+            </div>
+          }
+
           <!-- Méga-outils -->
           @if (section.id === 'mega-outils') {
             <div class="space-y-4">

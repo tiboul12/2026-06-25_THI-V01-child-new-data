@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-301",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "system"],
+      "features": "portail:admin|memo,system:docs",
+      "title": "Outils projet : docs + commande slash + mémo admin",
+      "description": "Création de docs/outils.md (cahier des charges outils projet : Edition, Tests, Code) et .claude/commands/nouvel-outil.md (commande slash). Mise à jour AdminMemoComponent : ajout section 'Outils projet' (rose) avec tableau statuts + tip, ajout /nouvel-outil dans la liste des commandes.",
+      "files": [
+        "docs/outils.md",
+        ".claude/commands/nouvel-outil.md",
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu me fasse la même chose que pour les megas outils avec les outils comme Edition, et dans le futur tests et Code. construit moi toutes les explications, inclus les dans une commande et met à jour l'admin.",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
       "id": "mod-300",
       "version": "B-0.254",
       "date": "2026-06-07T00:00:00.000Z",
