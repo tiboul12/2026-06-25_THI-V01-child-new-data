@@ -1,6 +1,46 @@
 {
   "modifications": [
     {
+      "id": "mod-306",
+      "version": "B-0.255",
+      "date": "2026-06-07T14:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils|mockup",
+      "title": "Mockup : marqueur visible + injection section garantie",
+      "description": "Fix 1 : insertion du marqueur {{MOCKUP:id}} directement dans la section cible (via insertMockupMarkerInSection + sectionRanges) au lieu de insertAt (qui insérait à la position du curseur=0 quand le focus était hors de la textarea). Fix 2 : repairMissingMockupMarkers() appelé dans ngOnChanges quand megaOutilInstances arrive — auto-injecte les marqueurs absents pour les mockups existants avec folderId. Fix 3 : carte visuelle violette dans le miroir de code pour le marqueur {{MOCKUP:id}} (interface MirrorLine + isMockupMarker/mockupInstId + template @else if + classes CSS ed-mockup-card), similaire aux cartes images vertes.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois toujours pas le MO mockup dans la sous section wxccsdscsd [...] le code qui indique l'endroit ou est placé l'image mockup est invisible, il faut mettre un tag comme pour une image",
+      "startedAt": "2026-06-07T13:30:00.000Z",
+      "completedAt": "2026-06-07T14:00:00.000Z"
+    },
+    {
+      "id": "mod-305",
+      "version": "B-0.255",
+      "date": "2026-06-07T13:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils|mockup",
+      "title": "Mockup : panneau bas absent après navigation vers section",
+      "description": "Correction du bug où le canvas mockup n'apparaissait pas dans le panneau bas après navigation via 'Liste des mockups'. Cause : enterFocusMode() changeait unifiedContent (contenu de la section ciblée uniquement) puis appelait recomputeAll(), mais recomputeAll() ne recalculait pas contentTrelloIds ni contentMockupIds. Le panneau bas conditionnée par contentMockupIds.length > 0 restait donc vide. Fix : ajout des appels recomputeContentTrelloIds() et recomputeContentMockupIds() à la fin de recomputeAll(), afin que chaque fois que unifiedContent change (focus mode, édition, rechargement), les IDs des panneaux bas soient immédiatement mis à jour.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans la liste des mockup j'en ai un : 'Mon Mockup', que je retrouve dans la barre des taches MO, mais si je vais dans la section qui doit possédé le mockup, je ne vois rien...",
+      "startedAt": "2026-06-07T13:00:00.000Z",
+      "completedAt": "2026-06-07T13:05:00.000Z"
+    },
+    {
       "id": "mod-304",
       "version": "B-0.255",
       "date": "2026-06-07T12:00:00.000Z",

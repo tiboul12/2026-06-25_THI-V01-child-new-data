@@ -79,6 +79,8 @@ interface MirrorLine {
   foldLineCount: number;
   inlineBlockId: string | null;
   inlineBlockKind: 'block-table' | 'block-quote' | 'block-fence' | 'block-list' | null;
+  isMockupMarker: boolean;
+  mockupInstId: string;
 }
 
 interface HoverPreview {
@@ -541,6 +543,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (changes['megaOutilInstances']) {
       this.recomputeContentTrelloIds();
       this.recomputeContentMockupIds();
+      if (this.hasLoaded) this.repairMissingMockupMarkers();
       if (this.showTrelloList) { this.loadTrelloListCounts(); this.recomputeTrelloSections(); }
       if (this.showMockupList) { this.recomputeMockupSections(); }
     }
@@ -760,6 +763,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.recomputeHandles();
     this.recomputeRenderedHtml();
     if (this.mode === 'visu') this.buildVisuSections();
+    this.recomputeContentTrelloIds();
+    this.recomputeContentMockupIds();
   }
 
   private recomputeHandles() {
@@ -1105,6 +1110,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           highlightKind: kind, lineIndex: i,
           isFold: false, foldSectionId: '', foldLineCount: 0,
           inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
+          isMockupMarker: false, mockupInstId: '',
         };
       }
       const fm = /^\{\{FOLD:([a-zA-Z0-9-]+):(\d+)\}\}$/.exec(line.trim());
@@ -1115,18 +1121,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           highlightKind: kind, lineIndex: i,
           isFold: true, foldSectionId: fm[1], foldLineCount: parseInt(fm[2], 10),
           inlineBlockId: null, inlineBlockKind: null,
+          isMockupMarker: false, mockupInstId: '',
         };
       }
-      // Marqueur Trello : masqué dans le code (board affiché en zone basse).
-      // Ligne rendue vide (espace) pour préserver l'alignement avec la textarea.
+      // Marqueur Trello : masqué (board affiché en zone basse)
       const isTrelloMarker = /^\{\{TRELLO:[a-zA-Z0-9-]+\}\}\s*$/.test(line.trim());
-      const isMockupMarker = /^\{\{MOCKUP:[a-zA-Z0-9-]+\}\}\s*$/.test(line.trim());
+      const mockupM = /^\{\{MOCKUP:([a-zA-Z0-9-]+)\}\}\s*$/.exec(line.trim());
+      const isMockupMarker = !!mockupM;
+      const mockupInstId = mockupM ? mockupM[1] : '';
       return {
         text: line, safeHtml: (isTrelloMarker || isMockupMarker) ? ' ' : this.syntaxHighlight(line), isImage: false,
         imageId: '', imageName: '', imagePath: '',
         highlightKind: kind, lineIndex: i,
         isFold: false, foldSectionId: '', foldLineCount: 0,
         inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
+        isMockupMarker, mockupInstId,
       };
     });
 
@@ -2523,7 +2532,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         outilId: this.activeOutilId || undefined,
         folderId
       });
-      this.insertAt(`\n\n{{MOCKUP:${inst.id}}}\n\n`, '');
+      if (folderId) {
+        this.insertMockupMarkerInSection(folderId, inst.id);
+      } else {
+        this.insertAt(`\n\n{{MOCKUP:${inst.id}}}\n\n`, '');
+      }
       this.showMockupPopup.set(false);
       this.megaOutilCreated.emit(inst);
     } catch (e) {
@@ -2540,6 +2553,56 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.megaOutilDeleted.emit(id);
     } catch (e) {
       console.error('[EditorZone] suppression Mockup échouée:', e);
+    }
+  }
+
+  private insertMockupMarkerInSection(folderId: string, instId: string) {
+    const marker = `{{MOCKUP:${instId}}}`;
+    const range = this.sectionRanges.find(r => r.folderId === folderId);
+    if (!range) {
+      this.insertAt(`\n\n${marker}\n\n`, '');
+      return;
+    }
+    const lines = this.unifiedContent.split('\n');
+    lines.splice(range.lineStart + 1, 0, '', marker);
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeRanges();
+    this.recomputeMirrorLines();
+    this.scheduleSave();
+  }
+
+  private repairMissingMockupMarkers() {
+    let needsSave = false;
+    for (const inst of this.mockupInstances) {
+      if (!inst.folderId) continue;
+      const marker = `{{MOCKUP:${inst.id}}}`;
+      const fullContent = this.focusedHandle ? this.fullContentBackup : this.unifiedContent;
+      if (fullContent.includes(marker)) continue;
+      // Marqueur absent — injection dans la section cible
+      if (this.focusedHandle) {
+        if (this.focusedHandle.id !== inst.folderId) continue;
+        const lines = this.unifiedContent.split('\n');
+        lines.splice(1, 0, '', marker);
+        this.unifiedContent = lines.join('\n');
+        const ta = this.textareaRef?.nativeElement;
+        if (ta) ta.value = this.unifiedContent;
+      } else {
+        const range = this.sectionRanges.find(r => r.folderId === inst.folderId);
+        if (!range) continue;
+        const lines = this.unifiedContent.split('\n');
+        lines.splice(range.lineStart + 1, 0, '', marker);
+        this.unifiedContent = lines.join('\n');
+        const ta = this.textareaRef?.nativeElement;
+        if (ta) ta.value = this.unifiedContent;
+        this.recomputeRanges();
+      }
+      needsSave = true;
+    }
+    if (needsSave) {
+      this.recomputeMirrorLines();
+      this.scheduleSave();
     }
   }
 

@@ -536,6 +536,13 @@
                     }
                   </span>
                 </span>
+              } @else if (line.isMockupMarker) {
+                <span class="ed-mockup-card-wrap">
+                  <span class="ed-mockup-card">
+                    <span class="material-symbols-outlined ed-img-icon">design_services</span>
+                    <span class="ed-img-name">{{ mockupInstanceName(line.mockupInstId) }}</span>
+                  </span>
+                </span>
               } @else {
                 <span class="ed-text" [innerHTML]="line.safeHtml"></span>
               }
