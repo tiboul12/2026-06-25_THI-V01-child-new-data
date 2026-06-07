@@ -30,11 +30,15 @@ import {
       [activeMegaOutilId]="activeMegaOutilId"
       [activeOutilId]="activeOutilId"
       [showTrelloList]="showTrelloList"
+      [showMockupList]="showMockupList"
       (megaOutilSelect)="megaOutilSelect.emit($event)"
       (megaOutilCreated)="megaOutilCreated.emit($event)"
       (megaOutilDeleted)="megaOutilDeleted.emit($event)"
       (closeTrelloList)="closeTrelloList.emit()"
       (trelloNavigate)="trelloNavigate.emit($event)"
+      (closeMockupList)="closeMockupList.emit()"
+      (mockupNavigate)="mockupNavigate.emit($event)"
+      (openMockupDiagram)="openMockupDiagram.emit()"
       (fileSave)="fileSave.emit($event)"
       (sectionsChange)="sectionsChange.emit($event)"
       (nodeActive)="nodeActive.emit($event)"
@@ -66,12 +70,16 @@ export class EditionOutilComponent {
   @Input() activeMegaOutilId: string | null = null;
   @Input() activeOutilId: string | null = null;
   @Input() showTrelloList = false;
+  @Input() showMockupList = false;
 
   @Output() megaOutilSelect = new EventEmitter<MegaOutilInstance>();
   @Output() megaOutilCreated = new EventEmitter<MegaOutilInstance>();
   @Output() megaOutilDeleted = new EventEmitter<string>();
   @Output() closeTrelloList = new EventEmitter<void>();
   @Output() trelloNavigate = new EventEmitter<string>();
+  @Output() closeMockupList = new EventEmitter<void>();
+  @Output() mockupNavigate = new EventEmitter<string>();
+  @Output() openMockupDiagram = new EventEmitter<void>();
   @Output() fileSave = new EventEmitter<FileSaveEvent>();
   @Output() sectionsChange = new EventEmitter<SectionInfo[]>();
   @Output() nodeActive = new EventEmitter<string>();

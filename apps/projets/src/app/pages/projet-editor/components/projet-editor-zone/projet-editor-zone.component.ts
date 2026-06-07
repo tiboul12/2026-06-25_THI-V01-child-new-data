@@ -9,7 +9,7 @@ import { ProjetCollabService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { ImagePropsPanelComponent, ImageProps } from '../image-props-panel/image-props-panel.component';
 import { SlashCommandMenuComponent, SlashCommand } from '../slash-command-menu/slash-command-menu.component';
-import { TrelloBoardComponent } from '@worganic/shared/ui';
+import { TrelloBoardComponent, MockupBoardComponent } from '@worganic/shared/ui';
 
 export interface FileSaveEvent {
   fileId: string;
@@ -137,6 +137,8 @@ interface StructureNode {
   additionalBlocks: StructureAdditionalBlock[];
   // Marqueurs Trello {{TRELLO:id}} extraits du contenu (masqués en Structure, ré-injectés à la sauvegarde)
   trelloMarkers: string[];
+  // Marqueurs Mockup {{MOCKUP:id}} extraits du contenu (masqués en Structure, ré-injectés à la sauvegarde)
+  mockupMarkers: string[];
   lineStart: number;
   lineEnd: number;
   folderId: string | null;
@@ -152,7 +154,7 @@ interface StructContextMenu {
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
-  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent, TrelloBoardComponent],
+  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent, TrelloBoardComponent, MockupBoardComponent],
   templateUrl: './projet-editor-zone.component.html',
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
@@ -209,6 +211,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @Output() closeTrelloList = new EventEmitter<void>();
   // Navigation vers la section d'origine d'un trello (sélection réelle, contrairement à nodeActive)
   @Output() trelloNavigate = new EventEmitter<string>();
+
+  // Vue "Liste des mockups" (zone centrale) déclenchée depuis la sidebar
+  @Input()  showMockupList = false;
+  @Output() closeMockupList = new EventEmitter<void>();
+  // Navigation vers la section d'origine d'un mockup (depuis la liste)
+  @Output() mockupNavigate = new EventEmitter<string>();
+  // Ouverture de la vue diagramme dans le portail
+  @Output() openMockupDiagram = new EventEmitter<void>();
   // Compteurs de cartes par instance/colonne (aperçu) — clé = instanceId
   trelloListCounts = signal<Record<string, { todo: number; 'in-progress': number; done: number; blocked: number; total: number }>>({});
   // Section résolue par instance (clé = instanceId) — déduite de la position du marqueur, fallback inst.folderId
@@ -221,6 +231,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // Zone basse : boards Trello incrustés dans le contenu courant (affichés dans tous les modes)
   contentTrelloIds: string[] = [];
   trelloPanelCollapsed = signal(false);
+
+  // Popup de configuration d'un nouveau Mockup
+  showMockupPopup = signal(false);
+  mockupName = '';
+  mockupCreating = signal(false);
+  mockupNameError = signal('');
+  // Zone basse : boards Mockup incrustés dans le contenu courant
+  contentMockupIds: string[] = [];
+  mockupPanelCollapsed = signal(false);
+  // Sections résolues par instance mockup (folderId + nom)
+  mockupSections = signal<Record<string, { folderId: string | null; name: string }>>({});
   private localDirty = false;
 
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
@@ -519,7 +540,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Les instances mega-outils peuvent arriver après le contenu → recalculer la zone basse
     if (changes['megaOutilInstances']) {
       this.recomputeContentTrelloIds();
+      this.recomputeContentMockupIds();
       if (this.showTrelloList) { this.loadTrelloListCounts(); this.recomputeTrelloSections(); }
+      if (this.showMockupList) { this.recomputeMockupSections(); }
     }
 
     // Ouverture de la vue "Liste des trellos" → charger les aperçus (cartes par colonne)
@@ -527,13 +550,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.loadTrelloListCounts();
       this.recomputeTrelloSections();
     }
+
+    // Ouverture de la vue "Liste des mockups"
+    if (changes['showMockupList'] && this.showMockupList) {
+      this.recomputeMockupSections();
+    }
   }
 
   // ── Liste des trellos (vue centrale) ───────────────────────────────────────
 
+  get trelloInstances(): MegaOutilInstance[] {
+    return this.megaOutilInstances.filter(i => i.type === 'trello');
+  }
+
   private async loadTrelloListCounts() {
     const result: Record<string, { todo: number; 'in-progress': number; done: number; blocked: number; total: number }> = {};
-    for (const inst of this.megaOutilInstances) {
+    for (const inst of this.trelloInstances) {
       try {
         const cards = await this.megaOutilsSvc.getTrelloCards(inst.id);
         result[inst.id] = {
@@ -568,7 +600,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   private recomputeTrelloSections() {
     const map: Record<string, { folderId: string | null; name: string }> = {};
-    for (const inst of this.megaOutilInstances) {
+    for (const inst of this.trelloInstances) {
       const folderId = this.resolveTrelloFolderId(inst.id);
       const node = folderId ? this.findNode(folderId, this.files) : null;
       const name = node?.name ?? (folderId ? 'Section introuvable' : 'Sans section');
@@ -591,8 +623,40 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   /** Clic sur un onglet Mega-outils : sélectionne l'instance et navigue vers sa section. */
   selectMegaOutil(inst: MegaOutilInstance) {
     this.megaOutilSelect.emit(inst);
-    const folderId = this.resolveTrelloFolderId(inst.id);
+    const folderId = inst.type === 'mockup'
+      ? this.resolveMockupFolderId(inst.id)
+      : this.resolveTrelloFolderId(inst.id);
     if (folderId) this.trelloNavigate.emit(folderId);
+  }
+
+  private resolveMockupFolderId(instId: string): string | null {
+    const marker = `{{MOCKUP:${instId}}}`;
+    const sec = this.docSections.find(s => s.textContent.includes(marker));
+    if (sec) return sec.folderId;
+    return this.megaOutilInstances.find(i => i.id === instId)?.folderId ?? null;
+  }
+
+  // ── Liste des mockups (vue centrale) ──────────────────────────────────────
+
+  get mockupInstances(): MegaOutilInstance[] {
+    return this.megaOutilInstances.filter(i => i.type === 'mockup');
+  }
+
+  private recomputeMockupSections() {
+    const map: Record<string, { folderId: string | null; name: string }> = {};
+    for (const inst of this.mockupInstances) {
+      const folderId = this.resolveMockupFolderId(inst.id);
+      const node = folderId ? this.findNode(folderId, this.files) : null;
+      const name = node?.name ?? (folderId ? 'Section introuvable' : 'Sans section');
+      map[inst.id] = { folderId, name };
+    }
+    this.mockupSections.set(map);
+  }
+
+  goToMockupSection(inst: MegaOutilInstance) {
+    const folderId = this.mockupSections()[inst.id]?.folderId;
+    if (!folderId) return;
+    this.mockupNavigate.emit(folderId);
   }
 
   /** Navigue vers la section d'origine d'un trello et ferme la liste. */
@@ -1056,8 +1120,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Marqueur Trello : masqué dans le code (board affiché en zone basse).
       // Ligne rendue vide (espace) pour préserver l'alignement avec la textarea.
       const isTrelloMarker = /^\{\{TRELLO:[a-zA-Z0-9-]+\}\}\s*$/.test(line.trim());
+      const isMockupMarker = /^\{\{MOCKUP:[a-zA-Z0-9-]+\}\}\s*$/.test(line.trim());
       return {
-        text: line, safeHtml: isTrelloMarker ? ' ' : this.syntaxHighlight(line), isImage: false,
+        text: line, safeHtml: (isTrelloMarker || isMockupMarker) ? ' ' : this.syntaxHighlight(line), isImage: false,
         imageId: '', imageName: '', imagePath: '',
         highlightKind: kind, lineIndex: i,
         isFold: false, foldSectionId: '', foldLineCount: 0,
@@ -1066,6 +1131,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     });
 
     this.recomputeContentTrelloIds();
+    this.recomputeContentMockupIds();
   }
 
   /** Ids Trello dont le marqueur {{TRELLO:id}} est présent dans le contenu courant (tous modes). */
@@ -1080,6 +1146,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.contentTrelloIds = ids;
     // Recalcule les sections (alimente l'en-tête de chaque board + synchronise folder_id)
     this.recomputeTrelloSections();
+  }
+
+  /** Ids Mockup dont le marqueur {{MOCKUP:id}} est présent dans le contenu courant (tous modes). */
+  private recomputeContentMockupIds() {
+    const ids: string[] = [];
+    const re = new RegExp(ProjetEditorZoneComponent.MOCKUP_MARKER_SRC, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(this.unifiedContent)) !== null) {
+      const id = m[1];
+      if (!ids.includes(id) && this.megaOutilInstances.some(i => i.id === id)) ids.push(id);
+    }
+    this.contentMockupIds = ids;
   }
 
   private recomputeRenderedHtml() {
@@ -2406,11 +2484,72 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // Shortcode Trello dans le contenu : {{TRELLO:<id>}}
-  private static readonly TRELLO_MARKER_SRC = '\\{\\{TRELLO:([a-zA-Z0-9-]+)\\}\\}';
+  private static readonly TRELLO_MARKER_SRC  = '\\{\\{TRELLO:([a-zA-Z0-9-]+)\\}\\}';
+  private static readonly MOCKUP_MARKER_SRC  = '\\{\\{MOCKUP:([a-zA-Z0-9-]+)\\}\\}';
 
   /** Nom d'une instance à partir de son id. */
   trelloInstanceName(id: string): string {
     return this.megaOutilInstances.find(i => i.id === id)?.name || 'Mon Trello';
+  }
+
+  mockupInstanceName(id: string): string {
+    return this.megaOutilInstances.find(i => i.id === id)?.name || 'Mon Mockup';
+  }
+
+  openMockupPopup() {
+    this.mockupName = 'Mon Mockup';
+    this.mockupNameError.set('');
+    this.showMockupPopup.set(true);
+  }
+
+  cancelMockupPopup() { this.showMockupPopup.set(false); this.mockupNameError.set(''); }
+
+  async confirmMockupPopup() {
+    const name = (this.mockupName || '').trim() || 'Mon Mockup';
+    if (!this.projectName) return;
+    const exists = this.megaOutilInstances.some(i => i.type === 'mockup' && i.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+      this.mockupNameError.set(`Un mockup "${name}" existe déjà.`);
+      return;
+    }
+    this.mockupNameError.set('');
+    const folderId = this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
+    this.mockupCreating.set(true);
+    try {
+      const inst = await this.megaOutilsSvc.createInstance({
+        type: 'mockup',
+        name,
+        projectId: this.projectName,
+        outilId: this.activeOutilId || undefined,
+        folderId
+      });
+      this.insertAt(`\n\n{{MOCKUP:${inst.id}}}\n\n`, '');
+      this.showMockupPopup.set(false);
+      this.megaOutilCreated.emit(inst);
+    } catch (e) {
+      console.error('[EditorZone] création Mockup échouée:', e);
+    } finally {
+      this.mockupCreating.set(false);
+    }
+  }
+
+  async deleteMockupInstance(id: string) {
+    try {
+      await this.megaOutilsSvc.deleteInstance(id);
+      this.removeMockupMarkerFromContent(id);
+      this.megaOutilDeleted.emit(id);
+    } catch (e) {
+      console.error('[EditorZone] suppression Mockup échouée:', e);
+    }
+  }
+
+  private removeMockupMarkerFromContent(id: string) {
+    const re = new RegExp('\n*\{\{MOCKUP:' + id + '\\}\\}\\n*', 'g');
+    if (!re.test(this.unifiedContent)) return;
+    this.unifiedContent = this.unifiedContent.replace(re, '\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeRanges();
   }
 
   /** Masque les shortcodes {{TRELLO:id}} du HTML affiché en Preview. */
@@ -4317,8 +4456,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const trelloRe = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
       let tm: RegExpExecArray | null;
       while ((tm = trelloRe.exec(tc0)) !== null) trelloMarkers.push(tm[0]);
+      // Extraire les marqueurs Mockup pour les masquer dans la textarea Structure
+      const mockupMarkers: string[] = [];
+      const mockupRe = new RegExp(ProjetEditorZoneComponent.MOCKUP_MARKER_SRC, 'g');
+      let mm: RegExpExecArray | null;
+      while ((mm = mockupRe.exec(tc0)) !== null) mockupMarkers.push(mm[0]);
       const textContent = tc0
         .replace(new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g'), '')
+        .replace(new RegExp(ProjetEditorZoneComponent.MOCKUP_MARKER_SRC, 'g'), '')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
       const folderId = this.sectionRanges.find(r => r.lineStart === currentLineStart)?.folderId ?? null;
@@ -4329,6 +4474,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         textContent,
         additionalBlocks: blocks,
         trelloMarkers,
+        mockupMarkers,
         lineStart: currentLineStart,
         lineEnd: lineEnd,
         folderId,
@@ -4360,6 +4506,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     // Ré-injecter les marqueurs Trello extraits (masqués en Structure)
     for (const m of node.trelloMarkers || []) parts.push(m);
+    // Ré-injecter les marqueurs Mockup extraits (masqués en Structure)
+    for (const m of node.mockupMarkers || []) parts.push(m);
     return parts.join('\n\n');
   }
 

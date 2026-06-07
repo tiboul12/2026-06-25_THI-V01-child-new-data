@@ -137,6 +137,17 @@
         <span class="ml-auto text-[10px] bg-blue-500/20 rounded-full px-1.5 py-0.5">{{ trelloCount }}</span>
       </button>
     }
+    <!-- Bouton "Liste des mockups" (visible dès qu'un mockup existe dans l'outil) -->
+    @if (mockupCount > 0) {
+      <button type="button"
+              class="flex-shrink-0 flex items-center gap-2 m-2 mt-0 px-3 py-2 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors text-[11px] font-semibold"
+              title="Voir tous les mockups de cet outil"
+              (click)="mockupListClick.emit()">
+        <span class="material-symbols-outlined text-[15px]">design_services</span>
+        Liste des mockups
+        <span class="ml-auto text-[10px] bg-violet-500/20 rounded-full px-1.5 py-0.5">{{ mockupCount }}</span>
+      </button>
+    }
   </div>
 
 </div>

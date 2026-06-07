@@ -1,6 +1,63 @@
 {
   "modifications": [
     {
+      "id": "mod-304",
+      "version": "B-0.255",
+      "date": "2026-06-07T12:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils|mockup",
+      "title": "Mockup : 4 bugs résolus (badge nav, noms uniques, liste, icônes)",
+      "description": "Correction de 4 bugs post-implémentation du méga-outil Mockup : (1) Badge click dans la barre rapide navigue désormais vers la section contenant {{MOCKUP:id}} via resolveMockupFolderId — séparé de la logique Trello. (2) Icônes et couleurs différenciés dans la barre rapide : design_services/violet pour mockup, view_kanban/bleu pour trello. (3) Validation unicité du nom avant création (mockupNameError signal + check dans confirmMockupPopup). (4) Bouton 'Liste des mockups' dans la sidebar + vue liste en zone centrale (même pattern que liste des trellos, avec bouton Diagramme vers portail /mockup). CSS app-mockup-board ajouté dans ed-trello-panel__body. Fix filtrage : 'Liste des trellos' filtrée sur type=trello uniquement. Fix mutual exclusion : onTrelloListClick/onMockupListClick ferment l'autre liste avant d'ouvrir la leur — évite le cas où showMockupList reste true quand on clique Liste des trellos puis re-clique Liste des mockups (pas de changement détecté par ngOnChanges).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/outils/edition/edition-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "impossible de rajouté des éléments au mockup vierge. Il y a un bouton avec le nom du mockup créé mais le clique sur le bouton ne fait pas appraitre le mockup. On ne doit pas pouvoir créé 2 mockup avec le même nom. Il manque le bouton Liste des mockup et la vue avec tous les mockups. Je ne vois pas la vue diagram.",
+      "startedAt": "2026-06-07T12:00:00.000Z",
+      "completedAt": "2026-06-07T12:10:00.000Z"
+    },
+    {
+      "id": "mod-303",
+      "version": "B-0.255",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "projets", "libs", "server"],
+      "features": "system:mega-outils|mockup,portail:admin,projets:editor",
+      "title": "Méga-outil Mockup : canvas SVG + commentaires + diagramme + intégration éditeur",
+      "description": "Création complète du méga-outil Mockup : éditeur SVG avec 16 types d'éléments UI (drag/resize), panel commentaires par élément, page /mockup avec onglet liste et onglet diagramme (nœuds reliés par flèches). Intégration dans l'éditeur projet via marqueur {{MOCKUP:id}}, barre rapide, popup création et panneau bas collapsible. Backend : 4 tables MySQL, routes REST complètes, SSE broadcastMockupUpdate. Section Mockup dans l'admin mega-outils.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/mega-outils.models.ts",
+        "libs/portail-core/data-access/src/lib/mega-outils.service.ts",
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-board.component.ts",
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-admin.component.ts",
+        "libs/shared/ui/src/index.ts",
+        "apps/portail/src/app/pages/mockup/mockup-page.component.ts",
+        "apps/portail/src/app/base-routes.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-mega-outils/admin-mega-outils.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je voudrais que tu me fasse un plan complet pour la création et l'utilisation d'un mega-outils. L'utilisation est un peu différente du MO (mega outils) Trello, on doit pouvoir créé un mockup dans l'outils projets/edition [...] Le système mockup doit pouvoir créé une image simple, cela doit être un editeur de dessin avec des incrustation d'element qu'on pourrais retrouvé dans un site, bouton, form, onglet, textes, etc...",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
       "id": "mod-302",
       "version": "B-0.254",
       "date": "2026-06-07T00:00:00.000Z",

@@ -2162,6 +2162,14 @@ $struct-colors: (
       border-radius: 12px;
       overflow: hidden;
     }
+
+    app-mockup-board {
+      flex: none;
+      height: 500px;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      border-radius: 12px;
+      overflow: hidden;
+    }
   }
 }
 

@@ -39,6 +39,8 @@ export class ProjetSidebarComponent implements OnChanges {
   @Input() activeOutilId: string | null = null;
   @Input() trelloCount = 0;
   @Output() trelloListClick = new EventEmitter<void>();
+  @Input() mockupCount = 0;
+  @Output() mockupListClick = new EventEmitter<void>();
   @Output() fileSelect = new EventEmitter<FileNode>();
   @Output() folderCreated = new EventEmitter<{ name: string; parentId: string | null }>();
   @Output() refresh = new EventEmitter<void>();
