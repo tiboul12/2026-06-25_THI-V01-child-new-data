@@ -11,7 +11,7 @@ import {
   MOCKUP_ELEMENT_LABELS, MOCKUP_ELEMENT_DEFAULTS
 } from '@worganic/portail-core/data-access';
 
-type ActiveTool = MockupElementType | 'select';
+type ActiveTool = MockupElementType | 'cursor';
 type ResizeHandle = 'se' | 'e' | 's';
 
 interface DragState {
@@ -167,16 +167,16 @@ const CANVAS_H = 900;
         <!-- Toolbox -->
         <div class="w-28 flex flex-col gap-0.5 p-2 border-r border-light-border dark:border-white/8 overflow-y-auto flex-shrink-0 bg-light-surface dark:bg-surface">
           <button class="text-[11px] px-2 py-1.5 rounded text-left transition-colors"
-                  [class.bg-violet-500]="activeTool() === 'select'"
-                  [class.text-white]="activeTool() === 'select'"
-                  [class.bg-white]="activeTool() !== 'select'"
-                  [class.bg-opacity-5]="activeTool() !== 'select'"
-                  [class.text-light-text-muted]="activeTool() !== 'select'"
-                  [class.dark:bg-white]="activeTool() !== 'select'"
-                  [class.dark:bg-opacity-5]="activeTool() !== 'select'"
-                  [class.dark:text-white]="activeTool() !== 'select'"
-                  [class.dark:text-opacity-40]="activeTool() !== 'select'"
-                  (click)="activeTool.set('select')">
+                  [class.bg-violet-500]="activeTool() === 'cursor'"
+                  [class.text-white]="activeTool() === 'cursor'"
+                  [class.bg-white]="activeTool() !== 'cursor'"
+                  [class.bg-opacity-5]="activeTool() !== 'cursor'"
+                  [class.text-light-text-muted]="activeTool() !== 'cursor'"
+                  [class.dark:bg-white]="activeTool() !== 'cursor'"
+                  [class.dark:bg-opacity-5]="activeTool() !== 'cursor'"
+                  [class.dark:text-white]="activeTool() !== 'cursor'"
+                  [class.dark:text-opacity-40]="activeTool() !== 'cursor'"
+                  (click)="activeTool.set('cursor')">
             ↖ Sélect
           </button>
           <hr class="border-light-border dark:border-white/8 my-1" />
@@ -194,8 +194,8 @@ const CANVAS_H = 900;
         <!-- Canvas SVG -->
         <div class="flex-1 overflow-auto relative"
              tabindex="0"
-             [class.cursor-crosshair]="activeTool() !== 'select'"
-             [class.cursor-default]="activeTool() === 'select'"
+             [class.cursor-crosshair]="activeTool() !== 'cursor'"
+             [class.cursor-default]="activeTool() === 'cursor'"
              (keydown)="onCanvasKeyDown($event)">
           <svg [attr.width]="canvasW" [attr.height]="canvasH"
                class="block select-none"
@@ -454,7 +454,7 @@ export class MockupBoardComponent implements OnInit, OnDestroy {
   comments = signal<MockupComment[]>([]);
   selectedElementId = signal<string | null>(null);
   multiSelectedIds = signal<string[]>([]);
-  activeTool = signal<ActiveTool>('select');
+  activeTool = signal<ActiveTool>('cursor');
   confirmDelete = signal(false);
   loading = signal(false);
   savingComment = signal(false);
@@ -517,7 +517,7 @@ export class MockupBoardComponent implements OnInit, OnDestroy {
 
   onSvgMouseDown(event: MouseEvent) {
     const tool = this.activeTool();
-    if (tool === 'select') {
+    if (tool === 'cursor') {
       // Clic sur fond → désélectionner
       if (!event.shiftKey) this.clearSelection();
       return;
@@ -527,7 +527,7 @@ export class MockupBoardComponent implements OnInit, OnDestroy {
     const x = Math.round(event.clientX - rect.left);
     const y = Math.round(event.clientY - rect.top);
     this.createElement(tool as MockupElementType, x, y);
-    this.activeTool.set('select');
+    this.activeTool.set('cursor');
     event.stopPropagation();
   }
 
@@ -545,7 +545,7 @@ export class MockupBoardComponent implements OnInit, OnDestroy {
   // ── Drag déplacer / resize ────────────────────────────────────────────────────
 
   onElementMouseDown(event: MouseEvent, el: MockupElement) {
-    if (this.activeTool() !== 'select') return;
+    if (this.activeTool() !== 'cursor') return;
     event.stopPropagation();
 
     if (event.shiftKey) {
@@ -672,7 +672,7 @@ export class MockupBoardComponent implements OnInit, OnDestroy {
   }
 
   openLabelEditFor(el: MockupElement) {
-    if (this.activeTool() !== 'select') return;
+    if (this.activeTool() !== 'cursor') return;
     this.editingLabel = el.label;
     this.editingElementType = this.labels[el.type] ?? el.type;
     this.editingElementId.set(el.id);

@@ -1,6 +1,29 @@
 {
   "modifications": [
     {
+      "id": "mod-323",
+      "version": "B-0.256",
+      "date": "2026-06-07T21:35:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs", "server"],
+      "features": "libs:mega-outils,server:mockup-api",
+      "title": "Mockup : types TS + routes API serveur",
+      "description": "Correction compilation TS (MegaOutilType 'mockup', thumbnailData, MockupConnection, MockupElement/Comment/ElementType, constantes MOCKUP_ELEMENT_LABELS/DEFAULTS) et ajout méthodes service. Ajout routes API serveur pour elements/comments/diagram/connections. Création tables DB mega_outil_mockup_elements, _comments, _connections, _diagram_positions + migration thumbnail_data. Ajout mockupUpdate$ + SSE listener mockup_update dans ProjetCollabService. Export MockupBoardComponent.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/mega-outils.models.ts",
+        "libs/portail-core/data-access/src/lib/mega-outils.service.ts",
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "libs/shared/ui/src/index.ts",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois plus le contenue des 2 mockups créé et je n'arrive pas à ajouté d'elements",
+      "startedAt": "2026-06-07T21:18:00.000Z",
+      "completedAt": "2026-06-07T21:45:00.000Z"
+    },
+    {
       "id": "mod-322",
       "version": "B-0.255",
       "date": "2026-06-07T23:00:00.000Z",

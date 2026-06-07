@@ -128,6 +128,8 @@ export class ProjetCollabService {
   readonly ftpSyncComplete$ = new Subject<{ status: 'done' | 'error'; downloaded: number; errors: any[] }>();
   // Mega-outils Trello : mutation d'une instance ou de ses cartes par un autre user
   readonly trelloUpdate$ = new Subject<{ instanceId: string | null; projectId: string; action: string }>();
+  // Mega-outils Mockup : mutation d'une instance par un autre user
+  readonly mockupUpdate$ = new Subject<{ instanceId: string | null; projectId: string; action: string }>();
 
   private eventSource: EventSource | null = null;
   private currentProjetId: string | null = null;
@@ -277,6 +279,15 @@ export class ProjetCollabService {
           this.zone.run(() => this.trelloUpdate$.next(update));
         } catch (err) {
           console.warn('[Collab] SSE trello_update parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('mockup_update', (e: MessageEvent) => {
+        try {
+          const update = JSON.parse(e.data) as { instanceId: string | null; projectId: string; action: string };
+          this.zone.run(() => this.mockupUpdate$.next(update));
+        } catch (err) {
+          console.warn('[Collab] SSE mockup_update parse error:', err);
         }
       });
 

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_DATA_URL } from './tokens';
 import { AuthService } from './auth.service';
-import { MegaOutilInstance, MegaOutilType, TrelloCard } from './mega-outils.models';
+import { MegaOutilInstance, MegaOutilType, MockupConnection, MockupElement, MockupElementType, MockupComment, TrelloCard } from './mega-outils.models';
 
 @Injectable({ providedIn: 'root' })
 export class MegaOutilsService {
@@ -62,5 +62,77 @@ export class MegaOutilsService {
 
   getAllInstances(): Promise<{ instance: MegaOutilInstance; projectName: string }[]> {
     return firstValueFrom(this.http.get<any[]>(`${this.apiUrl}/api/mega-outils/instances/all`, { headers: this.h() }));
+  }
+
+  // ── Mockup diagram ─────────────────────────────────────────────────────────
+
+  getMockupDiagram(projectName: string): Promise<{ connections: MockupConnection[]; positions: { instanceId: string; x: number; y: number }[] }> {
+    return firstValueFrom(this.http.get<{ connections: MockupConnection[]; positions: { instanceId: string; x: number; y: number }[] }>(
+      `${this.apiUrl}/api/mega-outils/mockup/${encodeURIComponent(projectName)}/diagram`, { headers: this.h() }
+    ));
+  }
+
+  updateMockupDiagramPositions(projectName: string, positions: { instanceId: string; x: number; y: number }[]): Promise<void> {
+    return firstValueFrom(this.http.post<void>(
+      `${this.apiUrl}/api/mega-outils/mockup/${encodeURIComponent(projectName)}/diagram/positions`, { positions }, { headers: this.h() }
+    ));
+  }
+
+  createMockupConnection(projectName: string, data: { fromInstanceId: string; toInstanceId: string; label?: string }): Promise<MockupConnection> {
+    return firstValueFrom(this.http.post<MockupConnection>(
+      `${this.apiUrl}/api/mega-outils/mockup/${encodeURIComponent(projectName)}/connections`, data, { headers: this.h() }
+    ));
+  }
+
+  deleteMockupConnection(projectName: string, connId: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(
+      `${this.apiUrl}/api/mega-outils/mockup/${encodeURIComponent(projectName)}/connections/${connId}`, { headers: this.h() }
+    ));
+  }
+
+  // ── Mockup elements ────────────────────────────────────────────────────────
+
+  getMockupElements(instanceId: string): Promise<MockupElement[]> {
+    return firstValueFrom(this.http.get<MockupElement[]>(
+      `${this.apiUrl}/api/mega-outils/mockup/${instanceId}/elements`, { headers: this.h() }
+    ));
+  }
+
+  createMockupElement(instanceId: string, data: { type: MockupElementType; x: number; y: number; width: number; height: number; label: string }): Promise<MockupElement> {
+    return firstValueFrom(this.http.post<MockupElement>(
+      `${this.apiUrl}/api/mega-outils/mockup/${instanceId}/elements`, data, { headers: this.h() }
+    ));
+  }
+
+  updateMockupElement(instanceId: string, elementId: string, data: Partial<Pick<MockupElement, 'x' | 'y' | 'width' | 'height' | 'label'>>): Promise<MockupElement> {
+    return firstValueFrom(this.http.patch<MockupElement>(
+      `${this.apiUrl}/api/mega-outils/mockup/${instanceId}/elements/${elementId}`, data, { headers: this.h() }
+    ));
+  }
+
+  deleteMockupElement(instanceId: string, elementId: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(
+      `${this.apiUrl}/api/mega-outils/mockup/${instanceId}/elements/${elementId}`, { headers: this.h() }
+    ));
+  }
+
+  // ── Mockup comments ────────────────────────────────────────────────────────
+
+  getMockupComments(instanceId: string): Promise<MockupComment[]> {
+    return firstValueFrom(this.http.get<MockupComment[]>(
+      `${this.apiUrl}/api/mega-outils/mockup/${instanceId}/comments`, { headers: this.h() }
+    ));
+  }
+
+  createMockupComment(instanceId: string, elementId: string, text: string): Promise<MockupComment> {
+    return firstValueFrom(this.http.post<MockupComment>(
+      `${this.apiUrl}/api/mega-outils/mockup/${instanceId}/comments`, { elementId, text }, { headers: this.h() }
+    ));
+  }
+
+  deleteMockupComment(instanceId: string, commentId: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(
+      `${this.apiUrl}/api/mega-outils/mockup/${instanceId}/comments/${commentId}`, { headers: this.h() }
+    ));
   }
 }

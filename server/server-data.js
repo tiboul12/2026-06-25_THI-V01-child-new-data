@@ -7937,7 +7937,8 @@ app.get('/api/mega-outils/instances', async (req, res) => {
         res.json(rows.map(r => ({
             id: r.id, type: r.type, name: r.name, projectId: r.project_id,
             outilId: r.outil_id || undefined, folderId: r.folder_id || undefined, createdBy: r.created_by || undefined,
-            createdAt: r.created_at, updatedAt: r.updated_at
+            createdAt: r.created_at, updatedAt: r.updated_at,
+            thumbnailData: r.thumbnail_data || undefined
         })));
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -8164,6 +8165,186 @@ app.delete('/api/mega-outils/trello/:instanceId/cards/:cardId', async (req, res)
 });
 
 // ============================================================
+// Mega-Outils — Mockup
+// ============================================================
+
+async function broadcastMockupUpdate(instanceId, action, projectId) {
+    try {
+        let pid = projectId;
+        if (!pid && instanceId) {
+            const [r] = await pool.query('SELECT project_id FROM mega_outil_instances WHERE id = ?', [instanceId]);
+            pid = r[0]?.project_id;
+        }
+        if (pid) broadcastToProject(pid, 'mockup_update', { instanceId: instanceId || null, projectId: pid, action });
+    } catch (e) { console.warn('[mega-outils] broadcastMockupUpdate failed:', e.message); }
+}
+
+function mapMockupElement(r) {
+    return { id: r.id, instanceId: r.instance_id, type: r.type, x: r.x, y: r.y, width: r.width, height: r.height, label: r.label || '', createdAt: r.created_at, updatedAt: r.updated_at };
+}
+
+function mapMockupComment(r) {
+    return { id: r.id, instanceId: r.instance_id, elementId: r.element_id, text: r.text, authorId: r.author_id || undefined, authorName: r.author_name || undefined, createdAt: r.created_at };
+}
+
+// GET /api/mega-outils/mockup/:instanceId/elements
+app.get('/api/mega-outils/mockup/:instanceId/elements', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        const [rows] = await pool.query('SELECT * FROM mega_outil_mockup_elements WHERE instance_id = ? ORDER BY created_at ASC', [req.params.instanceId]);
+        res.json(rows.map(mapMockupElement));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/mockup/:instanceId/elements
+app.post('/api/mega-outils/mockup/:instanceId/elements', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { type, x, y, width, height, label } = req.body;
+    try {
+        const id = require('crypto').randomUUID();
+        await pool.query(
+            'INSERT INTO mega_outil_mockup_elements (id, instance_id, type, x, y, width, height, label) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, req.params.instanceId, type, x, y, width, height, label || '']
+        );
+        const [rows] = await pool.query('SELECT * FROM mega_outil_mockup_elements WHERE id = ?', [id]);
+        broadcastMockupUpdate(req.params.instanceId, 'element_create');
+        res.status(201).json(mapMockupElement(rows[0]));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/mega-outils/mockup/:instanceId/elements/:elementId
+app.patch('/api/mega-outils/mockup/:instanceId/elements/:elementId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const allowed = ['x', 'y', 'width', 'height', 'label'];
+    const sets = []; const vals = [];
+    for (const k of allowed) {
+        if (req.body[k] !== undefined) { sets.push(`${k} = ?`); vals.push(req.body[k]); }
+    }
+    if (!sets.length) return res.status(400).json({ error: 'Rien à mettre à jour' });
+    vals.push(req.params.elementId, req.params.instanceId);
+    try {
+        await pool.query(`UPDATE mega_outil_mockup_elements SET ${sets.join(', ')} WHERE id = ? AND instance_id = ?`, vals);
+        const [rows] = await pool.query('SELECT * FROM mega_outil_mockup_elements WHERE id = ?', [req.params.elementId]);
+        if (!rows.length) return res.status(404).json({ error: 'Élément non trouvé' });
+        res.json(mapMockupElement(rows[0]));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/mega-outils/mockup/:instanceId/elements/:elementId
+app.delete('/api/mega-outils/mockup/:instanceId/elements/:elementId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        await pool.query('DELETE FROM mega_outil_mockup_elements WHERE id = ? AND instance_id = ?', [req.params.elementId, req.params.instanceId]);
+        broadcastMockupUpdate(req.params.instanceId, 'element_delete');
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/mega-outils/mockup/:instanceId/comments
+app.get('/api/mega-outils/mockup/:instanceId/comments', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        const [rows] = await pool.query('SELECT * FROM mega_outil_mockup_comments WHERE instance_id = ? ORDER BY created_at ASC', [req.params.instanceId]);
+        res.json(rows.map(mapMockupComment));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/mockup/:instanceId/comments
+app.post('/api/mega-outils/mockup/:instanceId/comments', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { elementId, text } = req.body;
+    if (!elementId || !text?.trim()) return res.status(400).json({ error: 'elementId et text requis' });
+    try {
+        const id = require('crypto').randomUUID();
+        await pool.query(
+            'INSERT INTO mega_outil_mockup_comments (id, instance_id, element_id, text, author_id, author_name) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, req.params.instanceId, elementId, text.trim(), user.id || null, user.username || user.email || null]
+        );
+        const [rows] = await pool.query('SELECT * FROM mega_outil_mockup_comments WHERE id = ?', [id]);
+        res.status(201).json(mapMockupComment(rows[0]));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/mega-outils/mockup/:instanceId/comments/:commentId
+app.delete('/api/mega-outils/mockup/:instanceId/comments/:commentId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        await pool.query('DELETE FROM mega_outil_mockup_comments WHERE id = ? AND instance_id = ?', [req.params.commentId, req.params.instanceId]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/mega-outils/mockup/:projectName/diagram
+app.get('/api/mega-outils/mockup/:projectName/diagram', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const pn = decodeURIComponent(req.params.projectName);
+    try {
+        const [conns] = await pool.query('SELECT * FROM mega_outil_mockup_connections WHERE project_name = ? ORDER BY created_at ASC', [pn]);
+        const [pos] = await pool.query('SELECT * FROM mega_outil_mockup_diagram_positions WHERE project_name = ?', [pn]);
+        res.json({
+            connections: conns.map(r => ({ id: r.id, projectName: r.project_name, fromInstanceId: r.from_instance_id, toInstanceId: r.to_instance_id, label: r.label || undefined, createdAt: r.created_at })),
+            positions: pos.map(r => ({ instanceId: r.instance_id, x: r.x, y: r.y }))
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/mockup/:projectName/diagram/positions
+app.post('/api/mega-outils/mockup/:projectName/diagram/positions', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const pn = decodeURIComponent(req.params.projectName);
+    const { positions } = req.body;
+    if (!Array.isArray(positions)) return res.status(400).json({ error: 'positions doit être un tableau' });
+    try {
+        for (const p of positions) {
+            await pool.query(
+                'INSERT INTO mega_outil_mockup_diagram_positions (instance_id, project_name, x, y) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE x = VALUES(x), y = VALUES(y)',
+                [p.instanceId, pn, p.x, p.y]
+            );
+        }
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/mockup/:projectName/connections
+app.post('/api/mega-outils/mockup/:projectName/connections', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const pn = decodeURIComponent(req.params.projectName);
+    const { fromInstanceId, toInstanceId, label } = req.body;
+    if (!fromInstanceId || !toInstanceId) return res.status(400).json({ error: 'fromInstanceId et toInstanceId requis' });
+    try {
+        const id = require('crypto').randomUUID();
+        await pool.query(
+            'INSERT INTO mega_outil_mockup_connections (id, project_name, from_instance_id, to_instance_id, label) VALUES (?, ?, ?, ?, ?)',
+            [id, pn, fromInstanceId, toInstanceId, label || null]
+        );
+        const [rows] = await pool.query('SELECT * FROM mega_outil_mockup_connections WHERE id = ?', [id]);
+        const r = rows[0];
+        res.status(201).json({ id: r.id, projectName: r.project_name, fromInstanceId: r.from_instance_id, toInstanceId: r.to_instance_id, label: r.label || undefined, createdAt: r.created_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/mega-outils/mockup/:projectName/connections/:connId
+app.delete('/api/mega-outils/mockup/:projectName/connections/:connId', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const pn = decodeURIComponent(req.params.projectName);
+    try {
+        await pool.query('DELETE FROM mega_outil_mockup_connections WHERE id = ? AND project_name = ?', [req.params.connId, pn]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================================================
 // Server Startup
 // ============================================================
 
@@ -8259,6 +8440,7 @@ app.listen(PORT, async () => {
     `).catch(e => console.error('[DB] mega_outil_instances init error:', e.message));
 
     await pool.query(`ALTER TABLE mega_outil_instances ADD COLUMN IF NOT EXISTS folder_id VARCHAR(64) DEFAULT NULL`).catch(e => console.warn('[DB] mega_outil_instances migration folder_id:', e.message));
+    await pool.query(`ALTER TABLE mega_outil_instances ADD COLUMN IF NOT EXISTS thumbnail_data MEDIUMTEXT DEFAULT NULL`).catch(e => console.warn('[DB] mega_outil_instances migration thumbnail_data:', e.message));
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS mega_outil_trello_cards (
@@ -8276,6 +8458,58 @@ app.listen(PORT, async () => {
             INDEX idx_motc_instance (instance_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `).catch(e => console.error('[DB] mega_outil_trello_cards init error:', e.message));
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS mega_outil_mockup_elements (
+            id          VARCHAR(64)   PRIMARY KEY,
+            instance_id VARCHAR(64)   NOT NULL,
+            type        VARCHAR(32)   NOT NULL,
+            x           INT           NOT NULL DEFAULT 0,
+            y           INT           NOT NULL DEFAULT 0,
+            width       INT           NOT NULL DEFAULT 100,
+            height      INT           NOT NULL DEFAULT 40,
+            label       VARCHAR(500)  NOT NULL DEFAULT '',
+            created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_mome_instance (instance_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] mega_outil_mockup_elements init error:', e.message));
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS mega_outil_mockup_comments (
+            id          VARCHAR(64)   PRIMARY KEY,
+            instance_id VARCHAR(64)   NOT NULL,
+            element_id  VARCHAR(64)   NOT NULL,
+            text        TEXT          NOT NULL,
+            author_id   VARCHAR(64)   DEFAULT NULL,
+            author_name VARCHAR(255)  DEFAULT NULL,
+            created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_momc_instance (instance_id),
+            INDEX idx_momc_element  (element_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] mega_outil_mockup_comments init error:', e.message));
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS mega_outil_mockup_connections (
+            id                VARCHAR(64)   PRIMARY KEY,
+            project_name      VARCHAR(255)  NOT NULL,
+            from_instance_id  VARCHAR(64)   NOT NULL,
+            to_instance_id    VARCHAR(64)   NOT NULL,
+            label             VARCHAR(255)  DEFAULT NULL,
+            created_at        DATETIME      DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_momconn_project (project_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] mega_outil_mockup_connections init error:', e.message));
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS mega_outil_mockup_diagram_positions (
+            instance_id   VARCHAR(64)   NOT NULL,
+            project_name  VARCHAR(255)  NOT NULL,
+            x             INT           NOT NULL DEFAULT 0,
+            y             INT           NOT NULL DEFAULT 0,
+            PRIMARY KEY (instance_id, project_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] mega_outil_mockup_diagram_positions init error:', e.message));
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS frank_project_steps (
