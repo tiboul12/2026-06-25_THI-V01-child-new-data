@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleCha
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService } from '@worganic/portail-core/data-access';
+import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService, MockupConnection } from '@worganic/portail-core/data-access';
 import { marked } from 'marked';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { ProjetCollabService } from '@worganic/portail-core/data-access';
@@ -153,6 +153,20 @@ interface StructContextMenu {
   y: number;
 }
 
+interface MockupDiagramNode {
+  instanceId: string;
+  name: string;
+  sectionName: string;
+  x: number;
+  y: number;
+}
+
+interface MockupDiagDragState {
+  nodeId: string;
+  startMX: number; startMY: number;
+  startX: number; startY: number;
+}
+
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
@@ -244,6 +258,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   mockupPanelCollapsed = signal(false);
   // Sections résolues par instance mockup (folderId + nom)
   mockupSections = signal<Record<string, { folderId: string | null; name: string }>>({});
+
+  // Liste des mockups — onglets Liste / Diagramme
+  mockupListTab = signal<'list' | 'diagram'>('list');
+  mockupDiagramNodes = signal<MockupDiagramNode[]>([]);
+  mockupConnections = signal<MockupConnection[]>([]);
+  mockupConnectMode = signal(false);
+  mockupConnectSource = signal<string | null>(null);
+  mockupConnLabelDialog = signal(false);
+  mockupPendingConnLabel = '';
+  private mockupDiagDrag: MockupDiagDragState | null = null;
+  private mockupPendingConnTarget: string | null = null;
+  private mockupDiagLoaded = false;
+  readonly MOCK_NODE_W = 180;
+  readonly MOCK_NODE_H = 90;
+  readonly MOCK_DIAG_W = 1600;
+  readonly MOCK_DIAG_H = 1000;
+  readonly Math = Math;
+
   private localDirty = false;
 
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
@@ -554,9 +586,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.recomputeTrelloSections();
     }
 
-    // Ouverture de la vue "Liste des mockups"
-    if (changes['showMockupList'] && this.showMockupList) {
-      this.recomputeMockupSections();
+    // Ouverture/fermeture de la vue "Liste des mockups"
+    if (changes['showMockupList']) {
+      if (this.showMockupList) {
+        this.recomputeMockupSections();
+      } else {
+        this.mockupListTab.set('list');
+        this.mockupDiagLoaded = false;
+      }
     }
   }
 
@@ -4820,5 +4857,101 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const remaining = [...this.structEntityLocks];
       this.structFocusedEntityId.set(remaining[remaining.length - 1]);
     }
+  }
+
+  // ── Diagramme Mockup ────────────────────────────────────────────────────────
+
+  async setMockupListTab(tab: 'list' | 'diagram') {
+    this.mockupListTab.set(tab);
+    if (tab === 'diagram' && !this.mockupDiagLoaded) {
+      await this.loadMockupDiagram();
+    }
+  }
+
+  private async loadMockupDiagram() {
+    if (!this.projectName) return;
+    const { connections, positions } = await this.megaOutilsSvc.getMockupDiagram(this.projectName);
+    this.mockupConnections.set(connections);
+    const sections = this.mockupSections();
+    const nodes: MockupDiagramNode[] = this.mockupInstances.map((inst, idx) => {
+      const saved = positions.find(p => p.instanceId === inst.id);
+      return {
+        instanceId: inst.id,
+        name: inst.name,
+        sectionName: sections[inst.id]?.name ?? '',
+        x: saved ? saved.x : 40 + (idx % 4) * (this.MOCK_NODE_W + 60),
+        y: saved ? saved.y : 40 + Math.floor(idx / 4) * (this.MOCK_NODE_H + 60),
+      };
+    });
+    this.mockupDiagramNodes.set(nodes);
+    this.mockupDiagLoaded = true;
+  }
+
+  mockupNodeForInstance(instanceId: string): MockupDiagramNode | undefined {
+    return this.mockupDiagramNodes().find(n => n.instanceId === instanceId);
+  }
+
+  onMockupNodeMouseDown(event: MouseEvent, node: MockupDiagramNode) {
+    if (this.mockupConnectMode()) {
+      this.onMockupNodeConnectClick(node.instanceId);
+      return;
+    }
+    event.stopPropagation();
+    this.mockupDiagDrag = {
+      nodeId: node.instanceId,
+      startMX: event.clientX, startMY: event.clientY,
+      startX: node.x, startY: node.y,
+    };
+  }
+
+  onMockupDiagMouseMove(event: MouseEvent) {
+    if (!this.mockupDiagDrag) return;
+    const dx = event.clientX - this.mockupDiagDrag.startMX;
+    const dy = event.clientY - this.mockupDiagDrag.startMY;
+    this.mockupDiagramNodes.update(nodes => nodes.map(n => {
+      if (n.instanceId !== this.mockupDiagDrag!.nodeId) return n;
+      return { ...n, x: Math.max(0, this.mockupDiagDrag!.startX + dx), y: Math.max(0, this.mockupDiagDrag!.startY + dy) };
+    }));
+  }
+
+  onMockupDiagMouseUp() { this.mockupDiagDrag = null; }
+
+  async saveMockupDiagramPositions() {
+    if (!this.projectName) return;
+    const positions = this.mockupDiagramNodes().map(n => ({ instanceId: n.instanceId, x: n.x, y: n.y }));
+    await this.megaOutilsSvc.updateMockupDiagramPositions(this.projectName, positions);
+  }
+
+  startMockupConnect() { this.mockupConnectMode.set(true); this.mockupConnectSource.set(null); }
+  cancelMockupConnect() { this.mockupConnectMode.set(false); this.mockupConnectSource.set(null); }
+
+  onMockupNodeConnectClick(instanceId: string) {
+    if (!this.mockupConnectSource()) {
+      this.mockupConnectSource.set(instanceId);
+    } else {
+      this.mockupPendingConnTarget = instanceId;
+      this.mockupPendingConnLabel = '';
+      this.mockupConnLabelDialog.set(true);
+    }
+  }
+
+  async confirmMockupConnLabel() {
+    const from = this.mockupConnectSource();
+    const to = this.mockupPendingConnTarget;
+    if (!from || !to || !this.projectName) { this.mockupConnLabelDialog.set(false); return; }
+    const conn = await this.megaOutilsSvc.createMockupConnection(this.projectName, {
+      fromInstanceId: from, toInstanceId: to, label: this.mockupPendingConnLabel,
+    });
+    this.mockupConnections.update(list => [...list, conn]);
+    this.mockupConnectMode.set(false);
+    this.mockupConnectSource.set(null);
+    this.mockupConnLabelDialog.set(false);
+  }
+
+  async promptDeleteMockupConnection(conn: MockupConnection) {
+    if (!this.projectName) return;
+    if (!confirm(`Supprimer la connexion${conn.label ? ' "' + conn.label + '"' : ''} ?`)) return;
+    await this.megaOutilsSvc.deleteMockupConnection(this.projectName, conn.id);
+    this.mockupConnections.update(list => list.filter(c => c.id !== conn.id));
   }
 }

@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-308",
+      "version": "B-0.255",
+      "date": "2026-06-07T17:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils|mockup|diagram",
+      "title": "Mockup : diagramme intégré en onglet dans le panneau Liste",
+      "description": "Le bouton 'Diagramme' (qui renvoyait vers la page portail) est remplacé par deux onglets 'Liste' / 'Diagramme' dans le panneau 'Liste des mockups'. L'onglet Diagramme affiche un canvas SVG interactif avec les nœuds du projet courant, les connexions, le drag & drop de nœuds, la création/suppression de connexions avec label et la sauvegarde des positions. Les méthodes diagram sont portées depuis MockupPageComponent dans ProjetEditorZoneComponent. L'onglet se réinitialise à 'list' à chaque fermeture du panneau.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "la zone diagram doit être intégré dans un onglet dans les options liste des mockups",
+      "startedAt": "2026-06-07T16:45:00.000Z",
+      "completedAt": "2026-06-07T17:30:00.000Z"
+    },
+    {
       "id": "mod-307",
       "version": "B-0.255",
       "date": "2026-06-07T15:00:00.000Z",
