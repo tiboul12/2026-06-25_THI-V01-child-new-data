@@ -216,6 +216,12 @@
   }
 }
 
+.ed-mockup-card__label {
+  white-space: nowrap;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
 .ed-mockup-card__remove {
   font-size: 12px;
   line-height: 1;
@@ -231,6 +237,44 @@
 
 .ed-mockup-card:hover .ed-mockup-card__remove {
   opacity: 0.7;
+}
+
+// Card avec thumbnail
+.ed-mockup-card--has-thumb {
+  padding: 4px 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  border-radius: 8px;
+
+  .ed-mockup-card__label {
+    opacity: 0.6;
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+
+  .ed-mockup-card__remove {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+  }
+}
+
+.ed-mockup-card-wrap:has(.ed-mockup-card--has-thumb) {
+  position: relative;
+  display: inline-block;
+}
+
+.ed-mockup-thumb {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  min-width: 120px;
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #111827;
 }
 
 // ── Overlay (gouttière de drag à gauche, style Notion) ─────────
@@ -935,6 +979,68 @@
     h2 { font-size: 1.25em; }
     h3 { font-size: 1.1em; }
     h4 { font-size: 1em; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .visu-mockup {
+      margin: 1em 0;
+      padding: 0;
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      transition: outline 0.12s;
+      outline: 2px solid transparent;
+      border-radius: 8px;
+
+      &:hover { outline-color: rgba(139, 92, 246, 0.4); }
+      img { max-width: 100%; border-radius: 8px; display: block; background: #111827; }
+      figcaption { font-size: 11px; opacity: 0.5; margin-top: 4px; }
+
+      &.visu-mockup--left   { margin-right: auto; }
+      &.visu-mockup--center { margin-left: auto; margin-right: auto; }
+      &.visu-mockup--right  { margin-left: auto; }
+    }
+
+    .visu-mockup-placeholder {
+      margin: 0.8em 0;
+      position: relative;
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.75rem 1rem;
+      background: rgba(139, 92, 246, 0.08);
+      border: 1px dashed rgba(139, 92, 246, 0.35);
+      border-radius: 6px;
+      color: rgba(139, 92, 246, 0.8);
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.12s;
+
+      &:hover { border-color: rgba(139, 92, 246, 0.6); }
+      &.visu-mockup-placeholder--left   { margin-right: auto; }
+      &.visu-mockup-placeholder--center { margin-left: auto; margin-right: auto; }
+      &.visu-mockup-placeholder--right  { margin-left: auto; }
+    }
+
+    .visu-mockup-open-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+
+      .material-symbols-outlined { font-size: 16px; }
+      &:hover { background: rgba(139, 92, 246, 0.7); border-color: rgba(139, 92, 246, 0.6); color: #fff; }
+    }
+
+    .visu-mockup:hover .visu-mockup-open-btn,
+    .visu-mockup-placeholder:hover .visu-mockup-open-btn { opacity: 1; }
 
     .visu-file {
       margin: 0.8em 0;
@@ -2103,6 +2209,12 @@ $struct-colors: (
 
   :host-context(.dark) & { color: rgba(255,255,255,0.6); }
   &::placeholder { color: rgba(0,0,0,0.2); font-style: italic; :host-context(.dark) & { color: rgba(255,255,255,0.15); } }
+}
+
+.struct-body-mockup-line {
+  padding: 3px 10px;
+  display: flex;
+  align-items: center;
 }
 
 // Menu contextuel

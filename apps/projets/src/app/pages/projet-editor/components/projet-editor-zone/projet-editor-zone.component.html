@@ -219,7 +219,7 @@
                     [ngClass]="activeMegaOutilId === inst.id
                       ? (moActiveType() === 'mockup' ? 'bg-violet-500/15 text-violet-400 border border-violet-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30')
                       : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
-                    (click)="selectMegaOutil(inst)">
+                    (click)="inst.type === 'mockup' ? selectMockupFromMarker(inst.id) : selectMegaOutil(inst)">
               <span class="material-symbols-outlined text-[11px]">{{ inst.type === 'mockup' ? 'design_services' : 'view_kanban' }}</span>
               {{ inst.name }}
             </button>
@@ -813,9 +813,10 @@
                 </span>
               } @else if (line.isMockupMarker) {
                 <span class="ed-mockup-card-wrap">
-                  <span class="ed-mockup-card" (click)="selectMockupFromMarker(line.mockupInstId)">
+                  <span class="ed-mockup-card"
+                        (click)="selectMockupFromMarker(line.mockupInstId)">
                     <span class="material-symbols-outlined ed-img-icon">design_services</span>
-                    <span class="ed-img-name">{{ mockupInstanceName(line.mockupInstId) }}</span>
+                    <span class="ed-mockup-card__label">{{ mockupInstanceName(line.mockupInstId) }}</span>
                     <span class="ed-mockup-card__remove material-symbols-outlined"
                           title="Supprimer la liaison (ne supprime pas le mockup)"
                           (click)="removeMockupMarker(line.mockupInstId); $event.stopPropagation()">close</span>
@@ -953,15 +954,30 @@
                 </button>
               </div>
 
-              <!-- Corps : contenu texte (masqué si un fichier additionnel est sélectionné) -->
+              <!-- Corps : contenu texte avec chips Mockup inline -->
               @if (structNodeShowText(node)) {
                 <div class="struct-card__body">
-                  <textarea class="struct-card__content"
-                            [value]="node.textContent"
-                            [rows]="getStructContentRows(node)"
-                            (input)="onStructContentInput(node, $event)"
-                            placeholder="Contenu de la section…"
-                            spellcheck="false"></textarea>
+                  @for (seg of getStructBodySegments(node.textContent); track $index) {
+                    @if (seg.type === 'mockup') {
+                      <div class="struct-body-mockup-line">
+                        <span class="ed-mockup-card"
+                              (click)="selectMockupFromMarker(seg.mockupId)">
+                          <span class="material-symbols-outlined ed-img-icon">design_services</span>
+                          <span class="ed-mockup-card__label">{{ mockupInstanceName(seg.mockupId) }}</span>
+                          <span class="ed-mockup-card__remove material-symbols-outlined"
+                                title="Supprimer la liaison"
+                                (click)="removeMockupMarker(seg.mockupId); $event.stopPropagation()">close</span>
+                        </span>
+                      </div>
+                    } @else {
+                      <textarea class="struct-card__content"
+                                [value]="seg.value"
+                                [rows]="getStructSegmentRows(seg.value)"
+                                (input)="onStructSegmentInput(node, $index, $event)"
+                                placeholder="Contenu de la section…"
+                                spellcheck="false"></textarea>
+                    }
+                  }
                 </div>
               }
 
@@ -987,6 +1003,7 @@
                   </div>
                 }
               }
+
 
             </div>
           }
@@ -1214,7 +1231,7 @@
                class="hidden"
                (change)="onVisuImageSelected($event)">
 
-        <!-- F5 — Panneau de propriétés d'image (caption / align / width) -->
+        <!-- F5 — Panneau de propriétés d'image / mockup (caption / align / width) -->
         <app-image-props-panel
           [visible]="imagePropsPanel.visible"
           [top]="imagePropsPanel.top"
@@ -1224,7 +1241,7 @@
           [alignment]="imagePropsPanel.alignment"
           [width]="imagePropsPanel.width"
           (propsChange)="onImagePropsChange($event)"
-          (delete)="onImagePropsDelete($event)"
+          (delete)="onImagePropsDelete(imagePropsPanel.imageId)"
           (close)="closeImagePropsPanel()">
         </app-image-props-panel>
       </div>
@@ -1274,13 +1291,15 @@
           </button>
         </div>
         @if (!mockupPanelCollapsed()) {
-          <div class="ed-trello-panel__body">
+          <div class="ed-trello-panel__body" #mockupPanelBody>
             @for (mid of contentMockupIds; track mid) {
-              <app-mockup-board
-                [instanceId]="mid"
-                [boardName]="mockupInstanceName(mid)"
-                [deletable]="true"
-                (deleteBoard)="deleteMockupInstance($event)" />
+              <div [id]="'mockup-board-' + mid">
+                <app-mockup-board
+                  [instanceId]="mid"
+                  [boardName]="mockupInstanceName(mid)"
+                  [deletable]="true"
+                  (deleteBoard)="deleteMockupInstance($event)" />
+              </div>
             }
           </div>
         }

@@ -280,6 +280,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   moActiveType = signal<'trello' | 'mockup' | null>(null);
   // Popup de liaison : choisir quel mockup insérer dans la section courante
   showMockupLiaisonPopup = signal(false);
+  private liaisonCursorPos = -1;
 
   private localDirty = false;
 
@@ -365,8 +366,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private visuSelectionListener: (() => void) | null = null;
   visuImageSectionId: string | null = null;
   // F5 — panneau de propriétés d'image (mode Visu)
-  imagePropsPanel: { visible: boolean; imageId: string; caption: string; alignment: '' | 'left' | 'center' | 'right'; width: string; top: number; left: number } = {
-    visible: false, imageId: '', caption: '', alignment: '', width: '', top: 0, left: 0
+  imagePropsPanel: { visible: boolean; imageId: string; kind: 'image' | 'mockup'; caption: string; alignment: '' | 'left' | 'center' | 'right'; width: string; top: number; left: number } = {
+    visible: false, imageId: '', kind: 'image', caption: '', alignment: '', width: '', top: 0, left: 0
   };
   // F1 — Slash command menu (mode Code)
   slashMenuState: { visible: boolean; top: number; left: number; query: string; anchorPos: number } = {
@@ -586,6 +587,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (this.hasLoaded) this.repairMissingMockupMarkers();
       if (this.showTrelloList) { this.loadTrelloListCounts(); this.recomputeTrelloSections(); }
       if (this.showMockupList) { this.recomputeMockupSections(); }
+      // Invalider le cache preview (les thumbnails peuvent avoir changé)
+      this.fileVisuPreviewCache = null;
+      // Reconstruire les sections visu pour mettre à jour les thumbnails mockup
+      if (this.mode === 'visu') this.buildVisuSections();
     }
 
     // Ouverture de la vue "Liste des trellos" → charger les aperçus (cartes par colonne)
@@ -1171,7 +1176,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }
       // Marqueur Trello : masqué (board affiché en zone basse)
       const isTrelloMarker = /^\{\{TRELLO:[a-zA-Z0-9-]+\}\}\s*$/.test(line.trim());
-      const mockupM = /^\{\{MOCKUP:([a-zA-Z0-9-]+)\}\}\s*$/.exec(line.trim());
+      const mockupM = /^\{\{MOCKUP:([a-zA-Z0-9-]+)(?:\|[^}]*)?\}\}\s*$/.exec(line.trim());
       const isMockupMarker = !!mockupM;
       const mockupInstId = mockupM ? mockupM[1] : '';
       return {
@@ -1305,6 +1310,50 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (al || w) parts.push(al);
     if (w) parts.push(w);
     return `{{IMG:${parts.join('|')}}}`;
+  }
+
+  buildMockupMarker(props: { id: string; caption?: string; alignment?: string; width?: string }): string {
+    const parts = [props.id];
+    const cap = (props.caption || '').trim();
+    const al = props.alignment || '';
+    const w = (props.width || '').trim();
+    if (cap || al || w) parts.push(cap);
+    if (al || w) parts.push(al);
+    if (w) parts.push(w);
+    return `{{MOCKUP:${parts.join('|')}}}`;
+  }
+
+  private renderMockupMarkerHtml(id: string, caption: string, align: string, width: string): string {
+    const inst = this.megaOutilInstances.find(i => i.id === id);
+    const name = this.escapeHtml(inst?.name ?? 'Mockup');
+    const thumb = inst?.thumbnailData;
+    const validAlignments = ['left', 'center', 'right'];
+    const safeAlign = validAlignments.includes(align) ? align : '';
+    const alignClass = safeAlign ? ` visu-mockup--${safeAlign}` : '';
+    const widthStyle = width ? ` style="width:${width}"` : '';
+    const capText = caption || name;
+    const captionHtml = `<figcaption>${this.escapeHtml(capText)}</figcaption>`;
+    const dataAttrs = ` data-mockup-id="${id}" data-mockup-caption="${this.escapeHtml(caption)}" data-mockup-align="${align}" data-mockup-width="${width}"`;
+    const openBtn = `<button class="visu-mockup-open-btn" data-mockup-open="${id}" type="button" title="Modifier le mockup" contenteditable="false"><span class="material-symbols-outlined">open_in_new</span></button>`;
+    if (thumb) {
+      return `<figure class="visu-mockup${alignClass}"${widthStyle} contenteditable="false"${dataAttrs}><img src="${thumb}" alt="${name}" />${captionHtml}${openBtn}</figure>`;
+    }
+    return `<div class="visu-mockup-placeholder${alignClass}"${widthStyle} contenteditable="false"${dataAttrs}><span class="material-symbols-outlined">design_services</span>${this.escapeHtml(capText)}${openBtn}</div>`;
+  }
+
+  /** Parseur markdown avec traitement MOCKUP — utilisé dans le dirty path de initVisuSectionHtml */
+  private parseVisuMd(md: string): string {
+    const mockupTokens: { token: string; html: string }[] = [];
+    let processed = md.replace(/\{\{MOCKUP:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?\}\}/gi, (_m, id, cap, align, width) => {
+      const token = `@@VM${mockupTokens.length}@@`;
+      mockupTokens.push({ token, html: this.renderMockupMarkerHtml(id, (cap || '').trim(), align || '', width || '') });
+      return `\n\n${token}\n\n`;
+    });
+    let html = marked.parse(processed, { async: false }) as string;
+    for (const mk of mockupTokens) {
+      html = html.replace(new RegExp(`<p>\\s*${mk.token}\\s*</p>`, 'g'), mk.html).replace(mk.token, mk.html);
+    }
+    return html;
   }
 
   // F2 — Callouts : pré-traitement des blocs > [!TYPE] avant marked.parse()
@@ -1796,7 +1845,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // Cache du rendu HTML d'un document affiché en standalone
-  private fileVisuPreviewCache: { fileId: string; rawContent: string; html: string; name: string } | null = null;
+  private fileVisuPreviewCache: { fileId: string; rawContent: string; thumbKey: string; html: string; name: string } | null = null;
 
   // Preview standalone d'un document texte (lecture seule)
   get singleFileVisuPreview(): { name: string; html: string } | null {
@@ -1807,9 +1856,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (node.name === 'contenu.md') return null;
 
     const content = node.content || '';
+    const thumbKey = this.megaOutilInstances.filter(i => i.thumbnailData).map(i => `${i.id}:${i.thumbnailData!.length}`).join(',');
     if (this.fileVisuPreviewCache
         && this.fileVisuPreviewCache.fileId === node.id
-        && this.fileVisuPreviewCache.rawContent === content) {
+        && this.fileVisuPreviewCache.rawContent === content
+        && this.fileVisuPreviewCache.thumbKey === thumbKey) {
       return { name: this.fileVisuPreviewCache.name, html: this.fileVisuPreviewCache.html };
     }
 
@@ -1824,13 +1875,26 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return `\n\n${token}\n\n`;
     });
 
-    let html = marked.parse(processed, { async: false }) as string;
+    // Remplacer les marqueurs {{MOCKUP:id|caption|align|width}} par le thumbnail ou un placeholder
+    const previewMockupTokens: { token: string; html: string }[] = [];
+    const processedWithMockups = processed.replace(/\{\{MOCKUP:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?\}\}/gi, (_m: string, id: string, cap: string, align: string, width: string) => {
+      const token = `@@PM${previewMockupTokens.length}@@`;
+      const html = this.renderMockupMarkerHtml(id, (cap || '').trim(), align || '', width || '');
+      previewMockupTokens.push({ token, html });
+      return `\n\n${token}\n\n`;
+    });
+
+    let html = marked.parse(processedWithMockups, { async: false }) as string;
     for (const ph of previewImgTokens) {
       const wrapped = new RegExp(`<p>\\s*${ph.token}\\s*</p>`, 'g');
       html = html.replace(wrapped, ph.html).replace(ph.token, ph.html);
     }
+    for (const ph of previewMockupTokens) {
+      const wrapped = new RegExp(`<p>\\s*${ph.token}\\s*</p>`, 'g');
+      html = html.replace(wrapped, ph.html).replace(ph.token, ph.html);
+    }
     const name = node.name.replace(/\.md$/, '');
-    this.fileVisuPreviewCache = { fileId: node.id, rawContent: content, html, name };
+    this.fileVisuPreviewCache = { fileId: node.id, rawContent: content, thumbKey, html, name };
     return { name, html };
   }
 
@@ -2532,7 +2596,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // Shortcode Trello dans le contenu : {{TRELLO:<id>}}
   private static readonly TRELLO_MARKER_SRC  = '\\{\\{TRELLO:([a-zA-Z0-9-]+)\\}\\}';
-  private static readonly MOCKUP_MARKER_SRC  = '\\{\\{MOCKUP:([a-zA-Z0-9-]+)\\}\\}';
+  private static readonly MOCKUP_MARKER_SRC  = '\\{\\{MOCKUP:([a-zA-Z0-9-]+)(?:\\|[^}]*)?\\}\\}';
 
   /** Nom d'une instance à partir de son id. */
   trelloInstanceName(id: string): string {
@@ -2541,6 +2605,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   mockupInstanceName(id: string): string {
     return this.megaOutilInstances.find(i => i.id === id)?.name || 'Mon Mockup';
+  }
+
+  mockupInstanceThumbnail(id: string): string | undefined {
+    return this.megaOutilInstances.find(i => i.id === id)?.thumbnailData;
+  }
+
+  mockupIdFromMarker(marker: string): string {
+    const m = /\{\{MOCKUP:([a-zA-Z0-9-]+)(?:\|[^}]*)?\}\}/.exec(marker);
+    return m ? m[1] : '';
   }
 
   openMockupPopup() {
@@ -3519,6 +3592,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return `\n\n${token}\n\n`;
     });
 
+    // Pré-traitement marqueurs {{MOCKUP:id|caption|align|width}} → thumbnail SVG ou placeholder
+    const mockupTokens: { token: string; html: string }[] = [];
+    contentMd = contentMd.replace(/\{\{MOCKUP:([a-z0-9-]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?\}\}/gi, (_m: string, id: string, cap: string, align: string, width: string) => {
+      const token = `@@MK${mockupTokens.length}@@`;
+      const html = this.renderMockupMarkerHtml(id, (cap || '').trim(), align || '', width || '');
+      mockupTokens.push({ token, html });
+      return `\n\n${token}\n\n`;
+    });
+
     // F2 — Pré-traitement callouts
     const calloutRes = this.processCallouts(contentMd);
     contentMd = calloutRes.md;
@@ -3538,6 +3620,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (const co of calloutRes.tokens) {
       html = html.replace(new RegExp(`<p>\\s*${co.token}\\s*</p>`, 'g'), co.html).replace(co.token, co.html);
     }
+    for (const mk of mockupTokens) {
+      html = html.replace(new RegExp(`<p>\\s*${mk.token}\\s*</p>`, 'g'), mk.html).replace(mk.token, mk.html);
+    }
     return html;
   }
 
@@ -3555,7 +3640,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         // Section avec modifs en attente : réinjecter uniquement si vide (nouvelle instance DOM)
         // pour ne pas écraser le contenu en cours de frappe
         if (!el.innerHTML.trim()) {
-          el.innerHTML = this.stripTrelloMarkers(marked.parse(sec.markdownBefore, { async: false }) as string);
+          el.innerHTML = this.stripTrelloMarkers(this.parseVisuMd(sec.markdownBefore));
         }
       } else {
         el.innerHTML = this.stripTrelloMarkers(sec.contentHtml);
@@ -4137,6 +4222,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const width = el.getAttribute('data-img-width') || '';
       return `\n${this.buildImageMarker({ id, caption, alignment: align, width })}\n`;
     }
+    if (el.hasAttribute('data-mockup-id')) {
+      const id = el.getAttribute('data-mockup-id') || '';
+      const caption = el.getAttribute('data-mockup-caption') || '';
+      const align = el.getAttribute('data-mockup-align') || '';
+      const width = el.getAttribute('data-mockup-width') || '';
+      return `\n${this.buildMockupMarker({ id, caption, alignment: align, width })}\n`;
+    }
     // Table : via wrapper .visu-table-wrap OU balise <table> directe
     if (el.classList.contains('visu-table-wrap')) {
       return this.tableToMarkdown(el.querySelector('table'));
@@ -4322,11 +4414,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (imgId) this.deleteVisuImage(imgId);
       return;
     }
-    // F5 — clic sur une figure : ouvrir le panneau de propriétés
+    // F5 — clic sur une figure image : ouvrir le panneau de propriétés
     const fig = target.closest('.visu-figure') as HTMLElement | null;
     if (fig && fig.hasAttribute('data-img-id')) {
       ev.stopPropagation();
       this.openImagePropsPanel(fig);
+      return;
+    }
+    // Bouton "Modifier le mockup" (lien vers l'édition du mockup)
+    const openBtn = target.closest('[data-mockup-open]') as HTMLElement | null;
+    if (openBtn) {
+      ev.stopPropagation();
+      this.selectMockupFromMarker(openBtn.getAttribute('data-mockup-open') || '');
+      return;
+    }
+    // Clic sur un mockup : ouvrir le panneau de propriétés
+    const mkFig = target.closest('[data-mockup-id]') as HTMLElement | null;
+    if (mkFig) {
+      ev.stopPropagation();
+      this.openMockupPropsPanel(mkFig);
       return;
     }
     // Fermer le panneau si clic ailleurs
@@ -4346,7 +4452,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const containerRect = container?.getBoundingClientRect();
     const top = (containerRect ? rect.bottom - containerRect.top : rect.bottom) + (container?.scrollTop || 0) + 8;
     const left = (containerRect ? rect.left - containerRect.left : rect.left) + 12;
-    this.imagePropsPanel = { visible: true, imageId: id, caption, alignment, width, top, left };
+    this.imagePropsPanel = { visible: true, imageId: id, kind: 'image', caption, alignment, width, top, left };
+  }
+
+  openMockupPropsPanel(el: HTMLElement) {
+    const id = el.getAttribute('data-mockup-id') || '';
+    const caption = el.getAttribute('data-mockup-caption') || '';
+    const alignment = (el.getAttribute('data-mockup-align') || '') as '' | 'left' | 'center' | 'right';
+    const width = el.getAttribute('data-mockup-width') || '';
+    const rect = el.getBoundingClientRect();
+    const container = this.visuRef?.nativeElement;
+    const containerRect = container?.getBoundingClientRect();
+    const top = (containerRect ? rect.bottom - containerRect.top : rect.bottom) + (container?.scrollTop || 0) + 8;
+    const left = (containerRect ? rect.left - containerRect.left : rect.left) + 12;
+    this.imagePropsPanel = { visible: true, imageId: id, kind: 'mockup', caption, alignment, width, top, left };
   }
 
   closeImagePropsPanel() {
@@ -4354,12 +4473,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   onImagePropsChange(evt: { imageId: string; props: ImageProps }) {
-    this.applyImagePropsToMarker(evt.imageId, evt.props);
+    if (this.imagePropsPanel.kind === 'mockup') {
+      this.applyMockupPropsToMarker(evt.imageId, evt.props);
+    } else {
+      this.applyImagePropsToMarker(evt.imageId, evt.props);
+    }
   }
 
   onImagePropsDelete(imageId: string) {
+    const id = imageId || this.imagePropsPanel.imageId;
+    const kind = this.imagePropsPanel.kind;
     this.closeImagePropsPanel();
-    this.deleteVisuImage(imageId);
+    if (kind === 'mockup') {
+      this.removeVisuMockupMarker(id);
+    } else {
+      this.deleteVisuImage(id);
+    }
   }
 
   private applyImagePropsToMarker(imageId: string, props: ImageProps) {
@@ -4375,6 +4504,36 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (ta) ta.value = after;
     // Mettre à jour les data-attr sur le panneau (state local)
     this.imagePropsPanel = { ...this.imagePropsPanel, caption: props.caption, alignment: props.alignment, width: props.width };
+    this.recomputeAll();
+    this.saveAll();
+  }
+
+  private applyMockupPropsToMarker(mockupId: string, props: ImageProps) {
+    if (!mockupId) return;
+    const escaped = mockupId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`\\{\\{MOCKUP:${escaped}(?:\\|[^}]*)?\\}\\}`, 'gi');
+    const newMarker = this.buildMockupMarker({ id: mockupId, caption: props.caption, alignment: props.alignment, width: props.width });
+    const before = this.unifiedContent;
+    const after = before.replace(re, newMarker);
+    if (after === before) return;
+    this.unifiedContent = after;
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = after;
+    this.imagePropsPanel = { ...this.imagePropsPanel, caption: props.caption, alignment: props.alignment, width: props.width };
+    this.recomputeAll();
+    this.saveAll();
+  }
+
+  private removeVisuMockupMarker(mockupId: string) {
+    if (!mockupId) return;
+    const escaped = mockupId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`\n*\\{\\{MOCKUP:${escaped}(?:\\|[^}]*)?\\}\\}\n*`, 'gi');
+    const before = this.unifiedContent;
+    const after = before.replace(re, '\n').replace(/\n{3,}/g, '\n\n');
+    if (after === before) return;
+    this.unifiedContent = after;
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = after;
     this.recomputeAll();
     this.saveAll();
   }
@@ -4576,16 +4735,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const trelloRe = new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g');
       let tm: RegExpExecArray | null;
       while ((tm = trelloRe.exec(tc0)) !== null) trelloMarkers.push(tm[0]);
-      // Extraire les marqueurs Mockup pour les masquer dans la textarea Structure
+      // textContent conserve les marqueurs Mockup pour affichage inline en mode Structure
+      const textContent = tc0
+        .replace(new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g'), '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      // Extraire les IDs mockup (pour référence ; marqueurs déjà dans textContent)
       const mockupMarkers: string[] = [];
       const mockupRe = new RegExp(ProjetEditorZoneComponent.MOCKUP_MARKER_SRC, 'g');
       let mm: RegExpExecArray | null;
-      while ((mm = mockupRe.exec(tc0)) !== null) mockupMarkers.push(mm[0]);
-      const textContent = tc0
-        .replace(new RegExp(ProjetEditorZoneComponent.TRELLO_MARKER_SRC, 'g'), '')
-        .replace(new RegExp(ProjetEditorZoneComponent.MOCKUP_MARKER_SRC, 'g'), '')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
+      while ((mm = mockupRe.exec(textContent)) !== null) mockupMarkers.push(mm[0]);
       const folderId = this.sectionRanges.find(r => r.lineStart === currentLineStart)?.folderId ?? null;
       nodes.push({
         id: `struct-${currentLineStart}`,
@@ -4626,8 +4785,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     // Ré-injecter les marqueurs Trello extraits (masqués en Structure)
     for (const m of node.trelloMarkers || []) parts.push(m);
-    // Ré-injecter les marqueurs Mockup extraits (masqués en Structure)
-    for (const m of node.mockupMarkers || []) parts.push(m);
+    // Marqueurs Mockup sont dans textContent → ne pas ré-injecter
     return parts.join('\n\n');
   }
 
@@ -4702,6 +4860,39 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   getStructContentRows(node: StructureNode): number {
     return Math.max(2, Math.min(node.textContent.split('\n').length + 1, 25));
+  }
+
+  getStructBodySegments(textContent: string): Array<{ type: 'text' | 'mockup'; value: string; mockupId: string }> {
+    const lines = textContent.split('\n');
+    const result: Array<{ type: 'text' | 'mockup'; value: string; mockupId: string }> = [];
+    const textBuf: string[] = [];
+    for (const line of lines) {
+      const m = /^\{\{MOCKUP:([a-zA-Z0-9-]+)(?:\|[^}]*)?\}\}\s*$/.exec(line.trim());
+      if (m) {
+        result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '' });
+        textBuf.length = 0;
+        result.push({ type: 'mockup', value: line.trim(), mockupId: m[1] });
+      } else {
+        textBuf.push(line);
+      }
+    }
+    result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '' });
+    return result;
+  }
+
+  getStructSegmentRows(value: string): number {
+    return Math.max(1, Math.min(value.split('\n').length + 1, 25));
+  }
+
+  onStructSegmentInput(node: StructureNode, segIdx: number, event: Event): void {
+    this.applyStructLock(node.folderId ?? '');
+    const ta = event.target as HTMLTextAreaElement;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+    const segs = this.getStructBodySegments(node.textContent);
+    if (segIdx < segs.length) segs[segIdx].value = ta.value;
+    node.textContent = segs.map(s => s.value).join('\n').replace(/^\n+|\n+$/g, '').replace(/\n{3,}/g, '\n\n');
+    this.scheduleStructFlush();
   }
 
   getStructBlockRows(block: StructureAdditionalBlock): number {
@@ -4891,22 +5082,51 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   /** Ouvre le popup de sélection de mockup à lier dans la section courante. */
   insertMockupLiaison() {
+    this.liaisonCursorPos = this.textareaRef?.nativeElement?.selectionStart ?? -1;
     this.showMockupLiaisonPopup.set(true);
   }
 
-  /** Insère le marqueur du mockup sélectionné dans la section courante. */
+  /** Insère le marqueur du mockup sélectionné à la position du curseur (ou en début de section). */
   confirmMockupLiaison(inst: MegaOutilInstance) {
-    const folderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
-    if (folderId) {
-      this.insertMockupMarkerInSection(folderId, inst.id);
-    }
     this.showMockupLiaisonPopup.set(false);
+    const marker = `{{MOCKUP:${inst.id}}}`;
+    const ta = this.textareaRef?.nativeElement;
+    const content = this.unifiedContent;
+    if (content.includes(`{{MOCKUP:${inst.id}`)) return;
+    if (ta && this.liaisonCursorPos >= 0) {
+      // Insertion à la position du curseur, sur sa propre ligne
+      const pos = this.liaisonCursorPos;
+      const lineEnd = content.indexOf('\n', pos);
+      const insertAfter = lineEnd === -1 ? content.length : lineEnd;
+      const before = content.substring(0, insertAfter);
+      const after = content.substring(insertAfter);
+      const sep = after.startsWith('\n') ? '' : '\n';
+      this.unifiedContent = before + '\n' + marker + sep + after;
+      ta.value = this.unifiedContent;
+    } else {
+      const folderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
+      if (folderId) this.insertMockupMarkerInSection(folderId, inst.id);
+      else return;
+    }
+    this.recomputeRanges();
+    this.recomputeMirrorLines();
+    this.scheduleSave();
+    this.liaisonCursorPos = -1;
   }
 
-  /** Active un mockup depuis un clic sur sa card dans le miroir. */
+  /** Active un mockup depuis un clic sur sa card dans le miroir / preview, et scrolle vers son board. */
   selectMockupFromMarker(instId: string) {
+    if (!instId) return;
     const inst = this.megaOutilInstances.find(i => i.id === instId);
     if (inst) this.selectMegaOutil(inst);
+    // Expand le panel mockup et scrolle vers le board correspondant
+    if (this.contentMockupIds.includes(instId)) {
+      this.mockupPanelCollapsed.set(false);
+      setTimeout(() => {
+        const el = document.getElementById(`mockup-board-${instId}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    }
   }
 
   /** Supprime le marqueur {{MOCKUP:id}} du contenu et efface le folderId de l'instance. */
@@ -4934,7 +5154,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const lines = this.unifiedContent.split('\n');
     const result: string[] = [];
     for (const line of lines) {
-      const m = /^\{\{MOCKUP:([a-zA-Z0-9-]+)\}\}\s*$/.exec(line.trim());
+      const m = /^\{\{MOCKUP:([a-zA-Z0-9-]+)(?:\|[^}]*)?\}\}\s*$/.exec(line.trim());
       if (m) {
         if (seen.has(m[1])) { changed = true; continue; }
         seen.add(m[1]);

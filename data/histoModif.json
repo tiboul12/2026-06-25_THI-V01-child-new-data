@@ -1,6 +1,152 @@
 {
   "modifications": [
     {
+      "id": "mod-321",
+      "version": "B-0.255",
+      "date": "2026-06-07T22:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|preview|mockup",
+      "title": "Mockup : clic chip/tab scrolle vers le board",
+      "description": "Cliquer sur un chip mockup en mode Preview/Code/Structure ou sur un onglet mockup dans la barre MO déroule le panel du bas et scrolle vers le app-mockup-board correspondant. Chaque board est wrappé dans un div avec id='mockup-board-{id}'. Le clic sur l'onglet tab appelle selectMockupFromMarker au lieu de selectMegaOutil.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsqu'on clique sur un mockup, cela doit afficher l'edition du mockup selectionné",
+      "startedAt": "2026-06-07T22:20:00.000Z",
+      "completedAt": "2026-06-07T22:30:00.000Z"
+    },
+    {
+      "id": "mod-320",
+      "version": "B-0.255",
+      "date": "2026-06-07T22:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|code|mockup|liaison",
+      "title": "Mockup : insertion Liaison à la position du curseur",
+      "description": "Le bouton Liaison sauvegarde la position du curseur dans la textarea avant d'ouvrir le popup. Après sélection d'un mockup, {{MOCKUP:id}} est inséré à la fin de la ligne courante (position curseur) au lieu d'être systématiquement placé après l'en-tête de section. Fallback sur l'ancienne logique si le curseur n'est pas positionné.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Lorsqu'on clique sur liaison, on doit pouvoir ajouté un nouveau mockup dans la section edition. On peut créer autant de mockup que l'on veut.",
+      "startedAt": "2026-06-07T21:55:00.000Z",
+      "completedAt": "2026-06-07T22:00:00.000Z"
+    },
+    {
+      "id": "mod-319",
+      "version": "B-0.255",
+      "date": "2026-06-07T21:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|code|structure|mockup",
+      "title": "Mockup : chips inline en mode Code et Structure",
+      "description": "En mode Code, les lignes {{MOCKUP:...}} apparaissent comme chips via le mirror overlay (ed-mockup-card). En mode Structure, les marqueurs étaient extraits de textContent et affichés en bas de la card — correctif : les marqueurs MOCKUP restent dans textContent (position préservée), parseStructureNodes ne les strip plus. Le corps de la struct card utilise getStructBodySegments() pour alterner textareas et chips inline à la bonne position. rebuildNodeRawContent ne ré-injecte plus les markers (déjà dans textContent).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Pour les insertions de mockup dans l'edition en mode Code on doit avoir dans l'editeur des tags [Image] idem pour le mode Structure et pour le mode preview on doit avoir une capture du mockup. Ils doivent être placé directement au bon endroit dans le texte.",
+      "startedAt": "2026-06-07T21:00:00.000Z",
+      "completedAt": "2026-06-07T21:30:00.000Z"
+    },
+    {
+      "id": "mod-318",
+      "version": "B-0.255",
+      "date": "2026-06-07T20:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|code|structure|visu|mockup",
+      "title": "Mockup : fix card Code/Structure + lien vers édition en Preview",
+      "description": "Fix : les regexes de détection des marqueurs MOCKUP (MOCKUP_MARKER_SRC, mirror lines, deduplication) ne supportaient pas les paramètres optionnels |caption|align|width, donc {{MOCKUP:id|||400px}} n'était pas reconnu comme marqueur → texte brut affiché en mode Code et Structure. Correction : regexes étendues avec (?:\\|[^}]*)?. Ajout d'un bouton 'Modifier le mockup' (icône open_in_new) qui apparaît au survol du thumbnail/placeholder en mode Preview et navigue vers l'instance mockup.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "ajoute un lien vers la modification du mockup sur l'image dans le mode preview. - Il manque la card dans le mode Code et preview",
+      "startedAt": "2026-06-07T20:15:00.000Z",
+      "completedAt": "2026-06-07T20:30:00.000Z"
+    },
+    {
+      "id": "mod-317",
+      "version": "B-0.255",
+      "date": "2026-06-07T20:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|visu|mockup",
+      "title": "Mockup visu : fix rendu raw code + options image (légende/alignement/largeur)",
+      "description": "Fix bug : les marqueurs {{MOCKUP:id}} apparaissaient en texte brut en mode Visu à cause de (1) nodeToMd() ignorant les éléments contenteditable=false sans data-img-id, les marqueurs MOCKUP étaient perdus lors du flush dirty, (2) le dirty path de initVisuSectionHtml() ne traitait pas les tokens MOCKUP avant marked.parse(). Corrections : ajout data-mockup-id sur les éléments générés, détection dans nodeToMd(), helper parseVisuMd() pour le dirty path. Nouvelle fonctionnalité : support des paramètres {{MOCKUP:id|caption|align|width}}, clic sur un mockup ouvre le panneau ImagePropsPanel pour éditer légende/alignement/largeur, applyMockupPropsToMarker() met à jour le marqueur dans le contenu, 'Supprimer' retire le marqueur de la section.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Rajoute les options d'image sur les miniature des mockup",
+      "startedAt": "2026-06-07T19:30:00.000Z",
+      "completedAt": "2026-06-07T20:00:00.000Z"
+    },
+    {
+      "id": "mod-316",
+      "version": "B-0.255",
+      "date": "2026-06-07T23:45:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "libs"],
+      "features": "projets:editor|preview|mockup-card,libs:mega-outils|mockup-board",
+      "title": "Mockup : affichage thumbnail en mode Preview + bouton régénérer",
+      "description": "Fix Preview : les marqueurs {{MOCKUP:id}} sont transformés en <figure> avec thumbnail SVG avant le passage dans marked.parse() (pattern identique à {{IMG:...}}). Si le thumbnail est absent, un placeholder 📐 est affiché. Cache de preview étendu avec clé 'thumbKey' (hash des thumbnailData des instances) et invalidé via ngOnChanges quand les instances changent. Bouton 📸 ajouté dans le header du MockupBoardComponent pour régénérer manuellement le thumbnail (utile pour les mockups créés avant la feature).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne vois pas la capture du mockup dans la version preview",
+      "startedAt": "2026-06-07T23:30:00.000Z",
+      "completedAt": "2026-06-07T23:45:00.000Z"
+    },
+    {
+      "id": "mod-315",
+      "version": "B-0.255",
+      "date": "2026-06-07T23:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs", "projets", "server", "data"],
+      "features": "libs:mega-outils|mockup-board,projets:editor|mockup-card",
+      "title": "Mockup : génération et affichage du thumbnail SVG dans l'éditeur",
+      "description": "Lorsqu'un mockup est édité (ajout/suppression/déplacement/renommage d'élément), un thumbnail SVG est généré en base64 et sauvegardé sur l'instance en DB (champ thumbnail_data MEDIUMTEXT). Dans le mode Édition/Préview, la card {{MOCKUP:id}} affiche le thumbnail SVG réel à la place du code. Colonne DB : ALTER TABLE mega_outil_instances ADD COLUMN thumbnail_data MEDIUMTEXT.",
+      "files": [
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/mega-outils.models.ts",
+        "libs/portail-core/data-access/src/lib/mega-outils.service.ts",
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-board.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsqu'un mockup est créé, on doit pouvoir avoir une image du mockup et c'est lui ci qui sera affiché dans le mode Edition/Preview et pas sont code",
+      "startedAt": "2026-06-07T23:00:00.000Z",
+      "completedAt": "2026-06-07T23:30:00.000Z"
+    },
+    {
       "id": "mod-314",
       "version": "B-0.255",
       "date": "2026-06-07T23:00:00.000Z",
