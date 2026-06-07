@@ -1,6 +1,82 @@
 {
   "modifications": [
     {
+      "id": "mod-314",
+      "version": "B-0.255",
+      "date": "2026-06-07T23:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|mockup-board",
+      "title": "Mockup Board : correctifs toolbar + multi-select + resize groupe",
+      "description": "3 correctifs : (1) Icônes distribute_horizontal/vertical corrigées (noms inversés causaient affichage texte brut). (2) Toolbar compacte icônes-only avec overflow-x-auto pour éviter le débordement. (3) Multi-select : Shift+clic transfère maintenant le selectedElementId dans multiSelectedIds avant d'ajouter le nouvel élément — le premier élément reste sélectionné. (4) isInsideContainer utilise le centre de l'élément au lieu de ses 4 coins : le groupe reste solidaire après un redimensionnement du conteneur.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je veux selectionné plusieurs element, je selectionne un element je clique sur groupe et ensuite le second element, mais le premier element n'est plus selectionné",
+      "startedAt": "2026-06-07T22:30:00.000Z",
+      "completedAt": "2026-06-07T23:00:00.000Z"
+    },
+    {
+      "id": "mod-313",
+      "version": "B-0.255",
+      "date": "2026-06-07T22:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|mockup-board",
+      "title": "Mockup Board : dégrouper + distribution uniforme H/V",
+      "description": "Dégrouper : bouton visible quand un conteneur est sélectionné seul — supprime le container en laissant les enfants à leur position. Distribution : boutons 'distribuer H' et 'distribuer V' visibles à partir de 3 éléments multi-sélectionnés (icônes distribute_horizontal/vertical). Répartit les éléments avec un espacement uniforme entre eux.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "tu doit pouvoir degroupé les éléments groupé. il faut aussi pouvoir placer plusieurs éléments à la même distance en hauteur ou en largeur",
+      "startedAt": "2026-06-07T22:30:00.000Z",
+      "completedAt": "2026-06-07T22:45:00.000Z"
+    },
+    {
+      "id": "mod-312",
+      "version": "B-0.255",
+      "date": "2026-06-07T22:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|mockup-board",
+      "title": "Mockup Board : déplacement du groupe solidaire avec ses enfants",
+      "description": "Correction : déplacer un élément de type 'container' (groupe) embarque maintenant tous les éléments contenus dans ses limites. DragState étendu avec 'children[]' (startX/startY). onMouseMove déplace aussi les enfants avec le même delta. onMouseUp sauvegarde tous les éléments déplacés (conteneur + enfants) en une seule passe.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai fait un groupe avec 3 element case à coché le groupe ce crait et un encart encadre le groupe d'element mais si je déplace le groupe, seul l'encadré bouge et les éléments ne reste à attaché au groupe",
+      "startedAt": "2026-06-07T22:00:00.000Z",
+      "completedAt": "2026-06-07T22:10:00.000Z"
+    },
+    {
+      "id": "mod-311",
+      "version": "B-0.255",
+      "date": "2026-06-07T21:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|mockup-board",
+      "title": "Mockup Board : édition texte, suppression, duplication, alignement, groupement",
+      "description": "Ajout d'une barre d'outils d'édition au-dessus du canvas quand un élément est sélectionné. Fonctionnalités : édition du label (bouton + dialog modal), suppression (Delete key ou bouton), duplication (Ctrl+D ou bouton), alignement gauche/centre/droite (canvas ou groupe), regroupement de 2+ éléments dans un conteneur. Multi-sélection via Shift+clic avec badge de comptage. Keyboard shortcuts : Delete, Enter (edit), Escape (deselect), Ctrl+D (duplicate).",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans l'outils mockup edition on doit pouvoir changer les textes on doit pouvoir supprimé un element, on doit pouvoir dupliqué un élément, on doit pouvoir aligné les elements (gauche, centré, droit) on doit pouvoir regroupé les éléments",
+      "startedAt": "2026-06-07T21:00:00.000Z",
+      "completedAt": "2026-06-07T21:30:00.000Z"
+    },
+    {
       "id": "mod-310",
       "version": "B-0.255",
       "date": "2026-06-07T20:00:00.000Z",
