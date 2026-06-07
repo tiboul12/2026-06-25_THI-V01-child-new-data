@@ -82,6 +82,10 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   megaOutilInstances = signal<MegaOutilInstance[]>([]);
   activeMegaOutil    = signal<MegaOutilInstance | null>(null);
   showTrelloList     = signal(false);
+  showMockupList     = signal(false);
+
+  readonly trelloInstanceCount = computed(() => this.megaOutilInstances().filter(i => i.type === 'trello').length);
+  readonly mockupInstanceCount = computed(() => this.megaOutilInstances().filter(i => i.type === 'mockup').length);
 
   readonly activeOutil = computed(() =>
     this.outils().find(o => o.id === this.activeOutilId()) ?? this.outils()[0] ?? null
@@ -400,6 +404,10 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       this.collab.trelloUpdate$.subscribe(evt => {
         if (evt.action?.startsWith('instance_')) this.loadMegaOutilInstances();
       }),
+      // Mockup temps réel : recharge les instances si création/suppression ailleurs
+      this.collab.mockupUpdate$.subscribe(evt => {
+        if (evt.action?.startsWith('instance_')) this.loadMegaOutilInstances();
+      }),
       this.collab.sectionPublished$.subscribe(() => {
         this.autoPullAndRefresh();
       }),
@@ -507,6 +515,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
   onNodeSelect(node: FileNode) {
     this.showTrelloList.set(false);
+    this.showMockupList.set(false);
     this.activeNodeId.set(node.id);
     this.highlightNodeId.set(node.id);
     this.scrollToNodeId.set(null);
@@ -515,6 +524,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
 
   onProjectRootSelect(): void {
     this.showTrelloList.set(false);
+    this.showMockupList.set(false);
     this.activeNodeId.set(null);
     this.highlightNodeId.set(null);
     this.scrollToNodeId.set(null);
@@ -525,6 +535,16 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     this.highlightNodeId.set(nodeId);
   }
 
+  onTrelloListClick() {
+    this.showMockupList.set(false);
+    this.showTrelloList.set(true);
+  }
+
+  onMockupListClick() {
+    this.showTrelloList.set(false);
+    this.showMockupList.set(true);
+  }
+
   /** Navigation depuis la "Liste des trellos" : sélectionne la section et ferme la liste. */
   onTrelloNavigate(folderId: string) {
     this.showTrelloList.set(false);
@@ -532,6 +552,19 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     this.highlightNodeId.set(folderId);
     this.scrollToNodeId.set(null);
     setTimeout(() => this.scrollToNodeId.set(folderId), 0);
+  }
+
+  /** Navigation depuis la "Liste des mockups" : sélectionne la section et ferme la liste. */
+  onMockupNavigate(folderId: string) {
+    this.showMockupList.set(false);
+    this.activeNodeId.set(folderId);
+    this.highlightNodeId.set(folderId);
+    this.scrollToNodeId.set(null);
+    setTimeout(() => this.scrollToNodeId.set(folderId), 0);
+  }
+
+  onOpenMockupDiagram() {
+    window.open(this.portailUrl + '/mockup', '_blank');
   }
 
   private isDescendantInTree(nodeId: string, ancestorId: string): boolean {

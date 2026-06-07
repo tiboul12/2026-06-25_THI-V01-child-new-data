@@ -146,29 +146,204 @@
 
   </div>
 
-  <!-- Barre Mega-outils (sous la toolbar de style) -->
-  <div class="flex items-center gap-1.5 px-3 py-1.5 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-surface flex-shrink-0 flex-wrap">
-    <span class="material-symbols-outlined text-[13px] text-blue-400 flex-shrink-0">view_kanban</span>
-    <span class="text-[10px] font-bold uppercase tracking-wider text-light-text-muted dark:text-white/30 flex-shrink-0 mr-1">Mega-outils</span>
-    @for (inst of megaOutilInstances; track inst.id) {
+  <!-- Barre Mega-outils -->
+  <div class="flex-shrink-0 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-surface">
+
+    <!-- Ligne principale : label + boutons de type -->
+    <div class="flex items-center gap-1 px-3 py-1">
+      <span class="material-symbols-outlined text-[13px] text-blue-400 flex-shrink-0">view_kanban</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider text-light-text-muted dark:text-white/30 flex-shrink-0 mr-1.5">Mega-outils</span>
+
+      <!-- Bouton type Trello -->
       <button type="button"
-              class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors"
-              [ngClass]="activeMegaOutilId === inst.id
+              class="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+              [ngClass]="moActiveType() === 'trello'
                 ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                 : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
-              (click)="selectMegaOutil(inst)">
+              (click)="toggleMoType('trello')">
         <span class="material-symbols-outlined text-[12px]">view_kanban</span>
-        {{ inst.name }}
+        Trello
+        @if (trelloInstances.length > 0) {
+          <span class="ml-0.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full text-[9px] font-bold"
+                [ngClass]="moActiveType() === 'trello' ? 'bg-blue-500/30 text-blue-300' : 'bg-light-border dark:bg-white/10 text-light-text-muted dark:text-white/40'">
+            {{ trelloInstances.length }}
+          </span>
+        }
       </button>
+
+      <!-- Bouton type Mockup -->
+      <button type="button"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+              [ngClass]="moActiveType() === 'mockup'
+                ? 'bg-violet-500/15 text-violet-400 border border-violet-500/30'
+                : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
+              (click)="toggleMoType('mockup')">
+        <span class="material-symbols-outlined text-[12px]">design_services</span>
+        Mockup
+        @if (mockupInstances.length > 0) {
+          <span class="ml-0.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full text-[9px] font-bold"
+                [ngClass]="moActiveType() === 'mockup' ? 'bg-violet-500/30 text-violet-300' : 'bg-light-border dark:bg-white/10 text-light-text-muted dark:text-white/40'">
+            {{ mockupInstances.length }}
+          </span>
+        }
+      </button>
+
+      <!-- Bouton replier la barre secondaire -->
+      @if (moActiveType() !== null) {
+        <button type="button"
+                class="ml-auto flex-shrink-0 w-7 h-7 flex items-center justify-center rounded text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/10 transition-colors"
+                title="Masquer la barre des méga-outils"
+                (click)="moActiveType.set(null)">
+          <span class="material-symbols-outlined text-[16px]">expand_less</span>
+        </button>
+      }
+    </div>
+
+    <!-- Ligne secondaire : instances scrollables + actions (visible si un type est sélectionné) -->
+    @if (moActiveType() !== null) {
+      <div class="flex items-center border-t border-light-border/40 dark:border-white/5">
+
+        <!-- Scroll gauche -->
+        <button type="button"
+                class="flex-shrink-0 w-6 h-7 flex items-center justify-center text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/10 transition-colors"
+                (click)="scrollMoLeft()">
+          <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+        </button>
+
+        <!-- Liste instances scrollable -->
+        <div #moInstanceList
+             class="flex-1 flex items-center gap-0.5 overflow-x-hidden py-0.5">
+          @for (inst of (moActiveType() === 'trello' ? trelloInstances : mockupInstances); track inst.id) {
+            <button type="button"
+                    class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors whitespace-nowrap"
+                    [ngClass]="activeMegaOutilId === inst.id
+                      ? (moActiveType() === 'mockup' ? 'bg-violet-500/15 text-violet-400 border border-violet-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30')
+                      : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
+                    (click)="inst.type === 'mockup' ? selectMockupFromMarker(inst.id) : selectMegaOutil(inst)">
+              <span class="material-symbols-outlined text-[11px]">{{ inst.type === 'mockup' ? 'design_services' : 'view_kanban' }}</span>
+              {{ inst.name }}
+            </button>
+          }
+          @if ((moActiveType() === 'trello' ? trelloInstances : mockupInstances).length === 0) {
+            <span class="text-[11px] text-light-text-muted dark:text-white/25 italic px-2">Aucun</span>
+          }
+        </div>
+
+        <!-- Scroll droit -->
+        <button type="button"
+                class="flex-shrink-0 w-6 h-7 flex items-center justify-center text-light-text-muted dark:text-white/30 hover:text-light-text dark:hover:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/10 transition-colors"
+                (click)="scrollMoRight()">
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+        </button>
+
+        <!-- Séparateur -->
+        <div class="w-px h-5 bg-light-border dark:bg-white/10 flex-shrink-0 mx-1"></div>
+
+        <!-- Actions Trello -->
+        @if (moActiveType() === 'trello') {
+          <button type="button"
+                  class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 mr-1 rounded text-[11px] text-blue-500 dark:text-blue-400 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 transition-colors"
+                  title="Créer un nouveau Trello"
+                  (click)="openTrelloPopup()">
+            <span class="material-symbols-outlined text-[12px]">add</span> Nouveau
+          </button>
+        }
+
+        <!-- Actions Mockup -->
+        @if (moActiveType() === 'mockup') {
+          <button type="button"
+                  class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-violet-500 dark:text-violet-400 hover:bg-violet-500/10 border border-transparent hover:border-violet-500/30 transition-colors"
+                  title="Créer un nouveau Mockup"
+                  (click)="openMockupPopup()">
+            <span class="material-symbols-outlined text-[12px]">add</span> Nouveau
+          </button>
+          <button type="button"
+                  class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 mr-1 rounded text-[11px] transition-colors"
+                  [class.text-violet-500]="!!activeMegaOutilId"
+                  [class.dark:text-violet-400]="!!activeMegaOutilId"
+                  [class.hover:bg-violet-500/10]="!!activeMegaOutilId"
+                  [class.border-transparent]="!activeMegaOutilId"
+                  [class.hover:border-violet-500/30]="!!activeMegaOutilId"
+                  [class.text-light-text-muted]="!activeMegaOutilId"
+                  [class.dark:text-white/25]="!activeMegaOutilId"
+                  [class.cursor-not-allowed]="!activeMegaOutilId"
+                  [disabled]="!activeMegaOutilId"
+                  title="Insérer le mockup sélectionné dans la section courante"
+                  (click)="insertMockupLiaison()">
+            <span class="material-symbols-outlined text-[12px]">link</span> Liaison
+          </button>
+        }
+
+      </div>
     }
-    <button type="button"
-            class="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-light-text-muted dark:text-white/40 hover:text-blue-400 hover:bg-blue-500/10 transition-colors border border-transparent hover:border-blue-500/30"
-            title="Ajouter un Trello à l'endroit du curseur"
-            (click)="openTrelloPopup()">
-      <span class="material-symbols-outlined text-[13px]">add</span>
-      Trello
-    </button>
+
   </div>
+
+  <!-- Popup configuration nouveau Mockup -->
+  @if (showMockupPopup()) {
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]"
+         (click)="cancelMockupPopup()">
+      <div class="w-80 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5"
+           (click)="$event.stopPropagation()">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-violet-400 text-base">design_services</span>
+          </div>
+          <h3 class="text-sm font-semibold text-light-text dark:text-white">Nouveau Mockup</h3>
+        </div>
+        <label class="block text-[11px] font-medium text-light-text-muted dark:text-white/50 mb-1">Nom du mockup</label>
+        <input class="w-full text-sm bg-light-background dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-3 py-2 text-light-text dark:text-white outline-none focus:border-violet-500 dark:focus:border-violet-400"
+               [class.border-red-500]="mockupNameError()"
+               [(ngModel)]="mockupName"
+               (ngModelChange)="mockupNameError.set('')"
+               (keydown.enter)="confirmMockupPopup()"
+               (keydown.escape)="cancelMockupPopup()"
+               placeholder="Mon Mockup"
+               autofocus />
+        @if (mockupNameError()) {
+          <p class="text-[11px] text-red-400 mt-1 mb-3">{{ mockupNameError() }}</p>
+        } @else {
+          <div class="mb-4"></div>
+        }
+        <div class="flex gap-2">
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg bg-violet-500 text-white font-semibold hover:bg-violet-600 transition-colors disabled:opacity-50"
+                  [disabled]="mockupCreating()"
+                  (click)="confirmMockupPopup()">
+            {{ mockupCreating() ? 'Création…' : 'Créer et insérer' }}
+          </button>
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors"
+                  (click)="cancelMockupPopup()">Annuler</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Popup Liaison mockup : choisir quel mockup insérer dans la section courante -->
+  @if (showMockupLiaisonPopup()) {
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+         (click)="showMockupLiaisonPopup.set(false)">
+      <div class="bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-xl p-5 w-80 shadow-2xl"
+           (click)="$event.stopPropagation()">
+        <p class="text-sm font-semibold text-light-text dark:text-white/90 mb-1">Insérer un mockup</p>
+        <p class="text-[11px] text-light-text-muted dark:text-white/40 mb-3">dans la section courante</p>
+        @if (mockupInstances.length === 0) {
+          <p class="text-sm text-light-text-muted dark:text-white/40 py-2">Aucun mockup disponible.</p>
+        }
+        @for (inst of mockupInstances; track inst.id) {
+          <button type="button"
+                  class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-violet-500/10 text-left text-sm text-light-text dark:text-white/80 transition-colors"
+                  (click)="confirmMockupLiaison(inst)">
+            <span class="material-symbols-outlined text-violet-400 text-base flex-shrink-0">design_services</span>
+            <span class="flex-1 truncate">{{ inst.name }}</span>
+            <span class="text-[10px] text-light-text-muted dark:text-white/30 truncate max-w-[90px]">{{ mockupSections()[inst.id]?.name ?? 'Sans section' }}</span>
+          </button>
+        }
+        <button type="button"
+                class="mt-3 w-full text-sm py-1.5 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70 transition-colors"
+                (click)="showMockupLiaisonPopup.set(false)">Annuler</button>
+      </div>
+    </div>
+  }
 
   <!-- Popup configuration nouveau Trello -->
   @if (showTrelloPopup()) {
@@ -299,7 +474,7 @@
     <div class="trello-list-wrap flex-1 min-h-0 overflow-y-auto">
       <div class="flex items-center gap-2 px-5 py-3 border-b border-light-border dark:border-white/8">
         <span class="material-symbols-outlined text-blue-400">view_kanban</span>
-        <span class="text-sm font-semibold text-light-text dark:text-white/90 flex-1">Liste des trellos ({{ megaOutilInstances.length }})</span>
+        <span class="text-sm font-semibold text-light-text dark:text-white/90 flex-1">Liste des trellos ({{ trelloInstances.length }})</span>
         <button type="button"
                 class="w-7 h-7 flex items-center justify-center rounded-md text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface dark:hover:bg-white/10 transition-colors"
                 title="Fermer la liste"
@@ -308,11 +483,11 @@
         </button>
       </div>
 
-      @if (megaOutilInstances.length === 0) {
+      @if (trelloInstances.length === 0) {
         <p class="text-sm text-light-text-muted dark:text-white/30 px-5 py-6">Aucun trello créé dans cet outil.</p>
       } @else {
         <div class="trello-list-grid">
-          @for (inst of megaOutilInstances; track inst.id) {
+          @for (inst of trelloInstances; track inst.id) {
             <div class="trello-list-card">
               <div class="trello-list-card__head">
                 <span class="material-symbols-outlined text-blue-400 text-base">view_kanban</span>
@@ -356,6 +531,198 @@
         </div>
       }
     </div>
+  } @else if (showMockupList) {
+
+    <!-- Vue "Liste des mockups" (déclenchée depuis la sidebar) -->
+    <div class="trello-list-wrap flex-1 min-h-0 flex flex-col overflow-hidden">
+
+      <!-- Header -->
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-light-border dark:border-white/8 flex-shrink-0">
+        <span class="material-symbols-outlined text-violet-400">design_services</span>
+        <span class="text-sm font-semibold text-light-text dark:text-white/90 flex-1">Liste des mockups ({{ mockupInstances.length }})</span>
+        <button type="button"
+                class="w-7 h-7 flex items-center justify-center rounded-md text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface dark:hover:bg-white/10 transition-colors"
+                title="Fermer la liste"
+                (click)="closeMockupList.emit()">
+          <span class="material-symbols-outlined text-base">close</span>
+        </button>
+      </div>
+
+      <!-- Onglets Liste / Diagramme -->
+      <div class="flex items-center gap-0 border-b border-light-border dark:border-white/8 px-4 flex-shrink-0">
+        <button type="button"
+                class="text-xs px-3 py-2 border-b-2 transition-colors -mb-px"
+                [class.border-violet-500]="mockupListTab() === 'list'"
+                [ngClass]="mockupListTab() === 'list' ? 'text-light-text dark:text-white/90' : 'border-transparent text-light-text-muted dark:text-white/40'"
+                (click)="setMockupListTab('list')">
+          <span class="material-symbols-outlined text-[13px] align-text-bottom mr-1">grid_view</span>
+          Liste
+        </button>
+        <button type="button"
+                class="text-xs px-3 py-2 border-b-2 transition-colors -mb-px"
+                [class.border-violet-500]="mockupListTab() === 'diagram'"
+                [ngClass]="mockupListTab() === 'diagram' ? 'text-light-text dark:text-white/90' : 'border-transparent text-light-text-muted dark:text-white/40'"
+                (click)="setMockupListTab('diagram')">
+          <span class="material-symbols-outlined text-[13px] align-text-bottom mr-1">account_tree</span>
+          Diagramme
+        </button>
+      </div>
+
+      <!-- ── Onglet Liste ────────────────────────────────────────────────── -->
+      @if (mockupListTab() === 'list') {
+        <div class="flex-1 overflow-y-auto">
+          @if (mockupInstances.length === 0) {
+            <p class="text-sm text-light-text-muted dark:text-white/30 px-5 py-6">Aucun mockup créé dans cet outil.</p>
+          } @else {
+            <div class="trello-list-grid">
+              @for (inst of mockupInstances; track inst.id) {
+                <div class="trello-list-card" style="border-color: rgba(139,92,246,0.22)">
+                  <div class="trello-list-card__head">
+                    <span class="material-symbols-outlined text-violet-400 text-base">design_services</span>
+                    <span class="trello-list-card__name">{{ inst.name }}</span>
+                  </div>
+
+                  <!-- Section d'origine + lien -->
+                  <button type="button" class="trello-list-card__section"
+                          [disabled]="!mockupSections()[inst.id]?.folderId"
+                          [title]="mockupSections()[inst.id]?.folderId ? 'Aller à la section' : 'Aucune section associée'"
+                          (click)="goToMockupSection(inst)">
+                    <span class="material-symbols-outlined text-[13px]">folder</span>
+                    <span class="trello-list-card__section-name">{{ mockupSections()[inst.id]?.name ?? 'Sans section' }}</span>
+                    @if (mockupSections()[inst.id]?.folderId) {
+                      <span class="material-symbols-outlined text-[14px] ml-auto">arrow_forward</span>
+                    }
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ── Onglet Diagramme ──────────────────────────────────────────── -->
+      @if (mockupListTab() === 'diagram') {
+        <div class="flex-1 flex flex-col overflow-hidden">
+
+          <!-- Barre outils -->
+          <div class="flex items-center gap-2 px-4 py-2 border-b border-light-border dark:border-white/8 flex-shrink-0">
+            <span class="text-[11px] text-light-text-muted dark:text-white/40">
+              {{ mockupInstances.length }} mockup{{ mockupInstances.length > 1 ? 's' : '' }}
+              · {{ mockupConnections().length }} connexion{{ mockupConnections().length > 1 ? 's' : '' }}
+            </span>
+            <!-- Nouveau mockup depuis le diagramme -->
+            <button type="button"
+                    class="text-[11px] px-2.5 py-1.5 rounded-lg border border-violet-500/30 text-violet-500 dark:text-violet-400 hover:bg-violet-500/10 transition-colors flex items-center gap-1"
+                    title="Créer un nouveau mockup"
+                    (click)="openMockupPopup()">
+              <span class="material-symbols-outlined text-[13px]">add</span> Nouveau
+            </button>
+            <span class="flex-1"></span>
+            @if (mockupConnectMode()) {
+              <span class="text-[11px] text-amber-500 dark:text-amber-400 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">arrow_right_alt</span>
+                {{ mockupConnectSource() ? 'Cliquez sur la destination' : 'Cliquez sur la source' }}
+              </span>
+              <button type="button"
+                      class="text-[11px] px-2.5 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70"
+                      (click)="cancelMockupConnect()">Annuler</button>
+            } @else {
+              <button type="button"
+                      class="text-[11px] px-2.5 py-1.5 rounded-lg border border-violet-500/30 text-violet-500 dark:text-violet-400 hover:bg-violet-500/10 transition-colors flex items-center gap-1"
+                      (click)="startMockupConnect()">
+                <span class="material-symbols-outlined text-[13px]">add_link</span> Connexion
+              </button>
+            }
+            <button type="button"
+                    class="text-[11px] px-2.5 py-1.5 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors flex items-center gap-1"
+                    (click)="saveMockupDiagramPositions()">
+              <span class="material-symbols-outlined text-[13px]">save</span> Sauvegarder
+            </button>
+          </div>
+
+          <!-- Canvas SVG -->
+          <div class="flex-1 overflow-y-auto overflow-x-hidden">
+            <svg width="100%" [attr.height]="MOCK_DIAG_H"
+                 class="block select-none"
+                 style="background: repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(128,128,128,.1) 39px,rgba(128,128,128,.1) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(128,128,128,.1) 39px,rgba(128,128,128,.1) 40px)"
+                 (mousemove)="onMockupDiagMouseMove($event)"
+                 (mouseup)="onMockupDiagMouseUp()"
+                 (mouseleave)="onMockupDiagMouseUp()">
+
+              <defs>
+                <marker id="mo-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6" />
+                </marker>
+              </defs>
+
+              <!-- Connexions -->
+              @for (conn of mockupConnections(); track conn.id) {
+                @let fromNode = mockupNodeForInstance(conn.fromInstanceId);
+                @let toNode = mockupNodeForInstance(conn.toInstanceId);
+                @if (fromNode && toNode) {
+                  <path [attr.d]="mockupConnPath(fromNode, toNode)"
+                        fill="none" stroke="#8b5cf6" stroke-width="2" marker-end="url(#mo-arrow)"
+                        class="cursor-pointer hover:stroke-violet-300"
+                        (click)="promptDeleteMockupConnection(conn)" />
+                  @if (conn.label) {
+                    <text [attr.x]="mockupConnLabelPos(fromNode, toNode).x"
+                          [attr.y]="mockupConnLabelPos(fromNode, toNode).y"
+                          text-anchor="middle" fill="#a78bfa" font-size="11" font-family="sans-serif">{{ conn.label }}</text>
+                  }
+                }
+              }
+
+              <!-- Nœuds -->
+              @for (node of mockupDiagramNodes(); track node.instanceId) {
+                <g [attr.transform]="'translate(' + node.x + ',' + node.y + ')'"
+                   [class.cursor-move]="!mockupConnectMode()"
+                   [class.cursor-pointer]="mockupConnectMode()"
+                   (mousedown)="onMockupNodeMouseDown($event, node)">
+                  <rect [attr.width]="MOCK_NODE_W" [attr.height]="MOCK_NODE_H" rx="10"
+                        [attr.fill]="mockupConnectSource() === node.instanceId ? '#4c1d95' : '#1e1b4b'"
+                        [attr.stroke]="mockupConnectSource() === node.instanceId ? '#a78bfa' : '#6d28d9'"
+                        stroke-width="1.5" />
+                  <text x="14" y="24" fill="#a78bfa" font-size="15" font-family="Material Symbols Outlined">design_services</text>
+                  <text x="36" y="22" fill="#e9d5ff" font-size="13" font-weight="600" font-family="sans-serif">{{ node.name.slice(0, 18) }}{{ node.name.length > 18 ? '…' : '' }}</text>
+                  @if (node.sectionName) {
+                    <text x="14" y="42" fill="#7c3aed" font-size="11" font-family="sans-serif">{{ node.sectionName.slice(0, 24) }}</text>
+                  }
+                  <line x1="14" [attr.y1]="MOCK_NODE_H - 28" [attr.x2]="MOCK_NODE_W - 14" [attr.y2]="MOCK_NODE_H - 28" stroke="#4c1d95" stroke-width="1" />
+                  <text x="14" [attr.y]="MOCK_NODE_H - 12" fill="#8b5cf6" font-size="11" font-family="sans-serif">mockup</text>
+                </g>
+              }
+
+            </svg>
+          </div>
+
+        </div>
+      }
+
+      <!-- Dialog label connexion -->
+      @if (mockupConnLabelDialog()) {
+        <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
+             (click)="mockupConnLabelDialog.set(false)">
+          <div class="bg-white dark:bg-background border border-light-border dark:border-white/10 rounded-xl p-6 w-80 shadow-2xl"
+               (click)="$event.stopPropagation()">
+            <p class="text-sm text-light-text dark:text-white/80 mb-3">Label de la connexion (optionnel)</p>
+            <input class="w-full text-sm bg-light-surface dark:bg-white/[0.05] border border-light-border dark:border-white/10 rounded px-3 py-2 text-light-text dark:text-white/80 focus:outline-none focus:border-violet-500/50 mb-3"
+                   placeholder="ex: page connectée, flow inscription..."
+                   [(ngModel)]="mockupPendingConnLabel"
+                   (keydown.enter)="confirmMockupConnLabel()" />
+            <div class="flex gap-2">
+              <button type="button"
+                      class="flex-1 text-sm py-2 rounded-lg bg-violet-500/20 text-violet-600 dark:text-violet-300 hover:bg-violet-500/30 transition-colors"
+                      (click)="confirmMockupConnLabel()">Créer</button>
+              <button type="button"
+                      class="flex-1 text-sm py-2 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white/70 transition-colors"
+                      (click)="mockupConnLabelDialog.set(false)">Annuler</button>
+            </div>
+          </div>
+        </div>
+      }
+
+    </div>
+
   } @else {
 
   <!-- Vide -->
@@ -438,6 +805,17 @@
                         </button>
                       }
                     }
+                  </span>
+                </span>
+              } @else if (line.isMockupMarker) {
+                <span class="ed-mockup-card-wrap">
+                  <span class="ed-mockup-card"
+                        (click)="selectMockupFromMarker(line.mockupInstId)">
+                    <span class="material-symbols-outlined ed-img-icon">design_services</span>
+                    <span class="ed-mockup-card__label">{{ mockupInstanceName(line.mockupInstId) }}</span>
+                    <span class="ed-mockup-card__remove material-symbols-outlined"
+                          title="Supprimer la liaison (ne supprime pas le mockup)"
+                          (click)="removeMockupMarker(line.mockupInstId); $event.stopPropagation()">close</span>
                   </span>
                 </span>
               } @else {
@@ -572,15 +950,30 @@
                 </button>
               </div>
 
-              <!-- Corps : contenu texte (masqué si un fichier additionnel est sélectionné) -->
+              <!-- Corps : contenu texte avec chips Mockup inline -->
               @if (structNodeShowText(node)) {
                 <div class="struct-card__body">
-                  <textarea class="struct-card__content"
-                            [value]="node.textContent"
-                            [rows]="getStructContentRows(node)"
-                            (input)="onStructContentInput(node, $event)"
-                            placeholder="Contenu de la section…"
-                            spellcheck="false"></textarea>
+                  @for (seg of getStructBodySegments(node.textContent); track $index) {
+                    @if (seg.type === 'mockup') {
+                      <div class="struct-body-mockup-line">
+                        <span class="ed-mockup-card"
+                              (click)="selectMockupFromMarker(seg.mockupId)">
+                          <span class="material-symbols-outlined ed-img-icon">design_services</span>
+                          <span class="ed-mockup-card__label">{{ mockupInstanceName(seg.mockupId) }}</span>
+                          <span class="ed-mockup-card__remove material-symbols-outlined"
+                                title="Supprimer la liaison"
+                                (click)="removeMockupMarker(seg.mockupId); $event.stopPropagation()">close</span>
+                        </span>
+                      </div>
+                    } @else {
+                      <textarea class="struct-card__content"
+                                [value]="seg.value"
+                                [rows]="getStructSegmentRows(seg.value)"
+                                (input)="onStructSegmentInput(node, $index, $event)"
+                                placeholder="Contenu de la section…"
+                                spellcheck="false"></textarea>
+                    }
+                  }
                 </div>
               }
 
@@ -606,6 +999,7 @@
                   </div>
                 }
               }
+
 
             </div>
           }
@@ -833,7 +1227,7 @@
                class="hidden"
                (change)="onVisuImageSelected($event)">
 
-        <!-- F5 — Panneau de propriétés d'image (caption / align / width) -->
+        <!-- F5 — Panneau de propriétés d'image / mockup (caption / align / width) -->
         <app-image-props-panel
           [visible]="imagePropsPanel.visible"
           [top]="imagePropsPanel.top"
@@ -843,7 +1237,7 @@
           [alignment]="imagePropsPanel.alignment"
           [width]="imagePropsPanel.width"
           (propsChange)="onImagePropsChange($event)"
-          (delete)="onImagePropsDelete($event)"
+          (delete)="onImagePropsDelete(imagePropsPanel.imageId)"
           (close)="closeImagePropsPanel()">
         </app-image-props-panel>
       </div>
@@ -872,6 +1266,36 @@
                 [sectionName]="trelloSectionName(tid)"
                 [deletable]="true"
                 (deleteBoard)="deleteTrelloInstance($event)" />
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Zone basse : boards Mockup incrustés dans le contenu -->
+    @if (contentMockupIds.length > 0) {
+      <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="mockupPanelCollapsed()">
+        <div class="ed-trello-panel__head">
+          <span class="material-symbols-outlined" style="color:#a78bfa">design_services</span>
+          <span class="ed-trello-panel__title">
+            {{ contentMockupIds.length > 1 ? contentMockupIds.length + ' mockups' : mockupInstanceName(contentMockupIds[0]) }}
+          </span>
+          <button type="button" class="ed-trello-panel__toggle"
+                  [title]="mockupPanelCollapsed() ? 'Afficher' : 'Réduire'"
+                  (click)="mockupPanelCollapsed.set(!mockupPanelCollapsed())">
+            <span class="material-symbols-outlined">{{ mockupPanelCollapsed() ? 'expand_less' : 'expand_more' }}</span>
+          </button>
+        </div>
+        @if (!mockupPanelCollapsed()) {
+          <div class="ed-trello-panel__body" #mockupPanelBody>
+            @for (mid of contentMockupIds; track mid) {
+              <div [id]="'mockup-board-' + mid">
+                <app-mockup-board
+                  [instanceId]="mid"
+                  [boardName]="mockupInstanceName(mid)"
+                  [deletable]="true"
+                  (deleteBoard)="deleteMockupInstance($event)" />
+              </div>
             }
           </div>
         }
