@@ -126,6 +126,8 @@ export class ProjetCollabService {
   readonly ftpSyncStart$ = new Subject<{ totalFolders: number; totalFiles: number }>();
   readonly ftpFolderSynced$ = new Subject<{ folderId: string; status: FtpNodeSyncStatus; downloaded: number; checked: number; totalChecked: number; totalFiles: number; errors: any[] }>();
   readonly ftpSyncComplete$ = new Subject<{ status: 'done' | 'error'; downloaded: number; errors: any[] }>();
+  // Mega-outils Trello : mutation d'une instance ou de ses cartes par un autre user
+  readonly trelloUpdate$ = new Subject<{ instanceId: string | null; projectId: string; action: string }>();
 
   private eventSource: EventSource | null = null;
   private currentProjetId: string | null = null;
@@ -266,6 +268,15 @@ export class ProjetCollabService {
           this.fileRestored$.next(update);
         } catch (err) {
           console.warn('[Collab] SSE file_restored parse error:', err);
+        }
+      });
+
+      this.eventSource.addEventListener('trello_update', (e: MessageEvent) => {
+        try {
+          const update = JSON.parse(e.data) as { instanceId: string | null; projectId: string; action: string };
+          this.zone.run(() => this.trelloUpdate$.next(update));
+        } catch (err) {
+          console.warn('[Collab] SSE trello_update parse error:', err);
         }
       });
 

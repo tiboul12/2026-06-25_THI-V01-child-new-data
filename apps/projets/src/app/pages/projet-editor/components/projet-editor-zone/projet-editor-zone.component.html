@@ -869,6 +869,7 @@
               <app-trello-board
                 [instanceId]="tid"
                 [boardName]="trelloInstanceName(tid)"
+                [sectionName]="trelloSectionName(tid)"
                 [deletable]="true"
                 (deleteBoard)="deleteTrelloInstance($event)" />
             }

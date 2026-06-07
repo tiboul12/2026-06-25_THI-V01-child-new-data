@@ -173,6 +173,7 @@ Vue : rendu HTML des sections, éditables directement par clic (contenteditable)
 - Colonnes du board (À faire / En cours / Terminé / Bloqué) en pleine largeur (`flex-1`), sans ascenseur horizontal
 - Suppression d'un board (corbeille) retire l'instance + le marqueur du contenu
 - Masqué si aucun marqueur Trello dans le contenu courant
+- **Synchro temps réel (SSE)** : toute mutation de carte/instance par un autre user diffuse `trello_update` (canal collab du projet) ; `trello-board` recharge ses cartes (filtre sur `instanceId`) et l'éditeur recharge la liste d'instances sur les actions `instance_*`. Stockage partagé en BDD (`mega_outil_instances`, `mega_outil_trello_cards`)
 
 ---
 

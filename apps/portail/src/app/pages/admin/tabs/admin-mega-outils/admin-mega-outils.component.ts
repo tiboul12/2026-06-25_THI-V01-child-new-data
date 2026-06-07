@@ -1,6 +1,7 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TrelloAdminComponent } from '@worganic/shared/ui';
+import { navigateToProjets } from '../../../../shared/utils/navigate-to-projets';
 
 @Component({
   selector: 'app-admin-mega-outils',
@@ -29,8 +30,16 @@ import { TrelloAdminComponent } from '@worganic/shared/ui';
       </div>
 
       <!-- Instances Trello -->
-      <app-trello-admin />
+      <app-trello-admin (openInEditor)="onOpenInEditor($event)" />
     </div>
   `
 })
-export class AdminMegaOutilsComponent {}
+export class AdminMegaOutilsComponent {
+  onOpenInEditor(evt: { projectId: string; folderId?: string; outilId?: string }) {
+    const params = new URLSearchParams();
+    if (evt.folderId) params.set('section', evt.folderId);
+    if (evt.outilId) params.set('outil', evt.outilId);
+    const qs = params.toString();
+    navigateToProjets(`projets/${evt.projectId}` + (qs ? `?${qs}` : ''));
+  }
+}

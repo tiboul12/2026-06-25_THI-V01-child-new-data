@@ -573,8 +573,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const node = folderId ? this.findNode(folderId, this.files) : null;
       const name = node?.name ?? (folderId ? 'Section introuvable' : 'Sans section');
       map[inst.id] = { folderId, name };
+      // Persiste le folder_id si la section résolue (via marqueur) diffère de celle stockée,
+      // pour que la vue Admin › Méga-outils affiche la bonne section.
+      if (folderId && folderId !== inst.folderId) {
+        inst.folderId = folderId;
+        this.megaOutilsSvc.updateInstance(inst.id, { folderId }).catch(() => {});
+      }
     }
     this.trelloSections.set(map);
+  }
+
+  /** Nom de la section où le trello est implanté (pour l'en-tête du board). */
+  trelloSectionName(id: string): string {
+    return this.trelloSections()[id]?.name ?? '';
   }
 
   /** Clic sur un onglet Mega-outils : sélectionne l'instance et navigue vers sa section. */
@@ -1067,6 +1078,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (!ids.includes(id) && this.megaOutilInstances.some(i => i.id === id)) ids.push(id);
     }
     this.contentTrelloIds = ids;
+    // Recalcule les sections (alimente l'en-tête de chaque board + synchronise folder_id)
+    this.recomputeTrelloSections();
   }
 
   private recomputeRenderedHtml() {

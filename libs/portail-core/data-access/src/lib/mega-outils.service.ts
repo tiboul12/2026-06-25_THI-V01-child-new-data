@@ -24,7 +24,7 @@ export class MegaOutilsService {
     return firstValueFrom(this.http.post<MegaOutilInstance>(`${this.apiUrl}/api/mega-outils/instances`, data, { headers: this.h() }));
   }
 
-  updateInstance(id: string, data: { name: string }): Promise<MegaOutilInstance> {
+  updateInstance(id: string, data: { name?: string; folderId?: string }): Promise<MegaOutilInstance> {
     return firstValueFrom(this.http.patch<MegaOutilInstance>(`${this.apiUrl}/api/mega-outils/instances/${id}`, data, { headers: this.h() }));
   }
 
@@ -56,7 +56,7 @@ export class MegaOutilsService {
 
   // ── Vue globale ────────────────────────────────────────────────────────────
 
-  getAllTrelloBoards(): Promise<{ instance: MegaOutilInstance; cards: TrelloCard[]; projectName: string }[]> {
+  getAllTrelloBoards(): Promise<{ instance: MegaOutilInstance; cards: TrelloCard[]; projectName: string; folderName: string | null; outilName: string | null }[]> {
     return firstValueFrom(this.http.get<any[]>(`${this.apiUrl}/api/mega-outils/trello/all`, { headers: this.h() }));
   }
 

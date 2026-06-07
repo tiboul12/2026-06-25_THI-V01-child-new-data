@@ -1,6 +1,120 @@
 {
   "modifications": [
     {
+      "id": "mod-302",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin|memo|help",
+      "title": "Admin : fusion onglet Help dans Mémo",
+      "description": "Suppression de l'onglet Help séparé. Le CRUD aide contextuelle est maintenant une section collapsible 'Aide contextuelle' (teal) dans AdminMemoComponent. Le badge count est conservé sur l'onglet Mémo. Nettoyage de admin.component.ts (suppression helpEditId, import AdminHelpComponent).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.html",
+        "apps/portail/src/app/pages/admin/admin.component.ts",
+        "apps/portail/src/app/pages/admin/admin.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "pourrais tu scinder la rubrique admin/help dans la rubrique admin/mémo",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-301",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "system"],
+      "features": "portail:admin|memo,system:docs",
+      "title": "Outils projet : docs + commande slash + mémo admin",
+      "description": "Création de docs/outils.md (cahier des charges outils projet : Edition, Tests, Code) et .claude/commands/nouvel-outil.md (commande slash). Mise à jour AdminMemoComponent : ajout section 'Outils projet' (rose) avec tableau statuts + tip, ajout /nouvel-outil dans la liste des commandes.",
+      "files": [
+        "docs/outils.md",
+        ".claude/commands/nouvel-outil.md",
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu me fasse la même chose que pour les megas outils avec les outils comme Edition, et dans le futur tests et Code. construit moi toutes les explications, inclus les dans une commande et met à jour l'admin.",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-300",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "system"],
+      "features": "portail:admin|memo,system:docs",
+      "title": "Admin : onglet Mémo + cahier des charges méga-outils",
+      "description": "Ajout d'un onglet 'Mémo' dans l'admin (order 7) avec 5 sections collapsibles : commandes Claude Code, méga-outils disponibles, raccourcis clavier, architecture/commandes, patterns & conventions. Création de docs/mega-outils.md (cahier des charges méga-outils) et .claude/commands/nouveau-mega-outil.md (commande slash).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.html",
+        "apps/portail/src/app/pages/admin/admin.component.ts",
+        "apps/portail/src/app/pages/admin/admin.component.html",
+        "docs/mega-outils.md",
+        ".claude/commands/nouveau-mega-outil.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu admin ajoute une section qui servirait d'aide et d'information sur toutes les fonctions utils et possible à utilisé comme les commandes/ une sorte d'aide/mémo",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-299",
+      "version": "B-0.254",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "libs", "portail"],
+      "features": "server:mega-outils,libs:mega-outils|trello,portail:admin|mega-outils",
+      "title": "Admin méga-outils Trello : liaison projet/section, lien éditeur et gestion des cartes",
+      "description": "La section Admin › Méga-outils › Trello affiche désormais chaque instance avec ses infos de liaison (projet, outil, section) et un aperçu des cartes par colonne. Serveur : l'endpoint trello/all résout folderName (findNodeById sur la structure) et outilName (config.outils) avec cache de config par projet. Client : trello-admin embarque le composant trello-board (CRUD complet des cartes) en dépliage, expose un Output openInEditor ; le wrapper portail ouvre l'éditeur sur la section via navigateToProjets('projets/{id}?section={folderId}'). Bouton Rafraîchir + suppression d'instance conservés.",
+      "files": [
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/mega-outils.service.ts",
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-admin.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-mega-outils/admin-mega-outils.component.ts",
+        "tests/fonctions/_registry.json",
+        "tests/fonctions/connecte/admin/mega-outils/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Améliore la section admin/mega outils/trello pour affiché les trello et leur card avec des liens direct vers les menu utilisé comme projets/edition. on doit pouvoir géré les cards et avoir des infos sur la liaison entr le trello et ou il à été utilisé",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
+      "id": "mod-298",
+      "version": "B-0.254",
+      "date": "2026-06-05T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "libs", "projets"],
+      "features": "server:mega-outils,libs:mega-outils|trello|collab,projets:editor",
+      "title": "Trello : synchronisation temps réel des cartes et instances (SSE)",
+      "description": "Les modifications de trellos et de cartes sont désormais diffusées en direct aux autres utilisateurs via SSE. Serveur : helper broadcastTrelloUpdate(instanceId, action, projectId) appelé sur create/patch/delete d'instance et create/update/delete/reorder de carte, diffusé sur le canal collab du projet (event 'trello_update'). Client : ProjetCollabService expose trelloUpdate$ et écoute l'événement SSE. Le composant trello-board recharge ses cartes quand l'instance concernée est modifiée ; le ProjetEditor recharge la liste d'instances sur les actions instance_*. Plus besoin de rafraîchir manuellement.",
+      "files": [
+        "server/server-data.js",
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "oui (ajouter la synchro temps réel des trellos/cartes via SSE)",
+      "startedAt": "2026-06-05T00:00:00.000Z",
+      "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
       "id": "mod-297",
       "version": "B-0.253",
       "date": "2026-06-05T00:00:00.000Z",
@@ -5931,6 +6045,130 @@
       "prompt": "je ne vois toujours pas le trello à la place du code dans le mode code et les autres mode",
       "startedAt": "2026-06-05T00:00:00.000Z",
       "completedAt": "2026-06-05T00:00:00.000Z"
+    },
+    {
+      "id": "mod-289",
+      "version": "B-0.254",
+      "date": "2026-06-06T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs", "portail", "projets"],
+      "features": "libs:mega-outils|trello,portail:admin|mega-outils,projets:editor",
+      "title": "Admin Trello : menu, projet et section en liens cliquables",
+      "description": "Dans Admin › Méga-outils › Trello, chaque instance affiche désormais le menu (outil) utilisé, le nom du projet et la section sous forme de badges cliquables qui ouvrent la partie correspondante dans l'éditeur projets. La navigation passe par openInEditor (étendu avec outilId) puis construit l'URL avec les query params section et outil. L'éditeur projets lit le query param 'outil' pour sélectionner le bon menu au chargement.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-admin.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-mega-outils/admin-mega-outils.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le menu admin/mega outils/trello devrait affiché dans chaque trello le menu utilisé (exemple projet), le nom du projet (pour le cas d'un menu projet), et la section, chaque élément doit être un lien vers la partie indiqué",
+      "startedAt": "2026-06-06T00:00:00.000Z",
+      "completedAt": "2026-06-06T00:00:00.000Z"
+    },
+    {
+      "id": "mod-290",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs", "server", "projets"],
+      "features": "libs:mega-outils|trello,server:mega-outils,projets:editor",
+      "title": "Admin Trello : badges corrects (menu/projet/section) + section dans l'en-tête board + boutons",
+      "description": "Corrige les badges de la vue Admin › Méga-outils › Trello : le menu affiche « projets » (module), le nom du projet est résolu via frank_projects.title (COALESCE avec file_project_meta.display_name, JOIN COLLATE utf8mb4_unicode_ci) au lieu du display_name périmé, et la section est résolue via le folder_id. Le folder_id de l'instance est désormais synchronisé en base depuis l'éditeur (recomputeTrelloSections → updateInstance) à partir de la position réelle du marqueur {{TRELLO:id}}, l'endpoint PATCH instances/:id acceptant folderId. L'en-tête du board Trello (composant partagé) affiche le nom de la section où il est implanté via le nouvel @Input sectionName. Réorganisation des boutons admin : Éditeur en haut, Supprimer en dessous, Gérer les cartes à droite.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-admin.component.ts",
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "libs/portail-core/data-access/src/lib/mega-outils.service.ts",
+        "server/server-data.js",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/admin/mega-outils/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le nom du menu (projets), le nom du projet (cours d'anglais) n'est pas bon et le nom de la section n'est pas bien affiché (testr). Change l'affichage des boutons de droite (Editeur / Supprimer à gauche, Gérer les cartes à droite). Dans le menu projets/cours d'anglais/trello indique le nom de la section dans lequel a été implanté le trello",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-291",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor",
+      "title": "Lien section (admin Trello) : déplie et sélectionne la section à l'ouverture",
+      "description": "Le clic sur le badge section dans Admin › Méga-outils › Trello ouvre l'éditeur projets avec ?section=. Le handler du queryParam ne faisait que scroller (arbre replié). Il sélectionne désormais la section (activeNodeId + highlightNodeId), ce qui déclenche l'expansion de la sidebar (expandToNode via activeFileId) jusqu'au dossier ciblé.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je clique sur le nom de la section cela doit m'ouvrir le menu sur la section indiqué et pas avec le menu fermé",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-292",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|trello",
+      "title": "Cartes Trello : césure des mots (zéro scroll horizontal) + popup détail au clic",
+      "description": "Les cartes du board Trello cassent désormais les mots trop longs (break-words + overflow-wrap:anywhere, min-w-0 sur le titre flex) : plus d'ascenseur horizontal. Le dépliage inline est remplacé par une popup (modale) ouverte au clic sur la carte/titre, affichant l'intégralité du contenu (titre, statut, priorité, description longue scrollable en whitespace-pre-wrap, créateur/date) avec édition et suppression intégrées. Signaux modalCardId + computed modalCard, méthodes openCard/closeModal.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "tests/fonctions/connecte/admin/mega-outils/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans l'affichage des cartes trello, il faut coupé les mots si ils sont trop long, il ne doit pas y avoir d'ascenseur horizontal pour les cartes. Lorsqu'on clique sur un titre d'une carte, affiche une popup avec la carte, cela permettra d'afficher tout le texte d'une carte même si la description est longue",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-293",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|trello",
+      "title": "Cartes Trello : double interaction (expand inline carte + popup au titre)",
+      "description": "Rétablit l'agrandissement inline de la carte au clic sur le corps (description tronquée line-clamp-4 + boutons Détail/Modifier/Supprimer), tout en conservant la popup détail ouverte au clic sur le titre (stopPropagation). Nouveau openCardEdit pour ouvrir directement la popup en édition depuis l'expand. expandedCardId réintroduit en parallèle de modalCardId.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "tests/fonctions/connecte/admin/mega-outils/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le popup est ok mais je veux garder l'option pour agrandir la carte (sans popup) lorsqu'on clique sur la carte hors titre et si on clique sur le titre, on ouvre un popup d'infos",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-294",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:mega-outils|trello",
+      "title": "Cartes Trello : layout responsive (priorité à droite/dessous, boutons wrap)",
+      "description": "Rendu responsive via flex-wrap (sans media query) : le badge priorité reste à droite du titre s'il y a la place et passe sous le titre quand la carte est étroite ; les 3 boutons de l'expand (Détail/Modifier/Supprimer) restent sur une même ligne si possible et passent les uns sous les autres quand la largeur est réduite. Créateur + date sur leur propre ligne wrap.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "si il y a de la place le tag doit rester à droite du titre et passer en dessous si la taille est réduite ; si la taille le permet les 3 boutons doivent être sur la même ligne et passer les uns en dessous des autres si la taille est réduite",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
     }
   ]
 }
