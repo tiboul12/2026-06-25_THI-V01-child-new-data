@@ -8,6 +8,7 @@ import { AdminHelpComponent } from './tabs/admin-help/admin-help.component';
 import { AdminThemeComponent } from './tabs/admin-theme/admin-theme.component';
 import { ConfigComponent } from '../user/config/config.component';
 import { AdminMegaOutilsComponent } from './tabs/admin-mega-outils/admin-mega-outils.component';
+import { AdminMemoComponent } from './tabs/admin-memo/admin-memo.component';
 import { AdminTabsRegistryService, AdminTabDef } from '@worganic/portail-core/data-access';
 
 const BASE_ADMIN_TABS: AdminTabDef[] = [
@@ -17,11 +18,12 @@ const BASE_ADMIN_TABS: AdminTabDef[] = [
   { id: 'config',       label: 'Config',       icon: 'settings',      component: ConfigComponent,           order: 4 },
   { id: 'theme',        label: 'Thème',        icon: 'palette',       component: AdminThemeComponent,       order: 5 },
   { id: 'mega-outils',  label: 'Méga-outils',  icon: 'extension',     component: AdminMegaOutilsComponent,  order: 6 },
+  { id: 'memo',         label: 'Mémo',         icon: 'menu_book',     component: AdminMemoComponent,        order: 7 },
 ];
 
 @Component({
     selector: 'app-admin',
-    imports: [CommonModule, NgComponentOutlet, AdminUsersComponent, AdminDeploymentsComponent, AdminHelpComponent, AdminThemeComponent, ConfigComponent, AdminMegaOutilsComponent],
+    imports: [CommonModule, NgComponentOutlet, AdminUsersComponent, AdminDeploymentsComponent, AdminHelpComponent, AdminThemeComponent, ConfigComponent, AdminMegaOutilsComponent, AdminMemoComponent],
     templateUrl: './admin.component.html',
     styleUrl: './admin.component.scss'
 })

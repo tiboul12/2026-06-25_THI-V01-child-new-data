@@ -1,6 +1,30 @@
 {
   "modifications": [
     {
+      "id": "mod-300",
+      "version": "B-0.254",
+      "date": "2026-06-07T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "system"],
+      "features": "portail:admin|memo,system:docs",
+      "title": "Admin : onglet Mémo + cahier des charges méga-outils",
+      "description": "Ajout d'un onglet 'Mémo' dans l'admin (order 7) avec 5 sections collapsibles : commandes Claude Code, méga-outils disponibles, raccourcis clavier, architecture/commandes, patterns & conventions. Création de docs/mega-outils.md (cahier des charges méga-outils) et .claude/commands/nouveau-mega-outil.md (commande slash).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-memo/admin-memo.component.html",
+        "apps/portail/src/app/pages/admin/admin.component.ts",
+        "apps/portail/src/app/pages/admin/admin.component.html",
+        "docs/mega-outils.md",
+        ".claude/commands/nouveau-mega-outil.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu admin ajoute une section qui servirait d'aide et d'information sur toutes les fonctions utils et possible à utilisé comme les commandes/ une sorte d'aide/mémo",
+      "startedAt": "2026-06-07T00:00:00.000Z",
+      "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
       "id": "mod-299",
       "version": "B-0.254",
       "date": "2026-06-05T00:00:00.000Z",
