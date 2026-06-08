@@ -30,5 +30,6 @@
   "2-5-2-5": "connecte/projets/editor/zone-preview",
   "2-5-2-6": "connecte/projets/editor/zone-structure",
   "2-5-2-7": "connecte/projets/editor/zone5-conversation",
-  "2-5-2-8": "connecte/projets/editor/zone5-historique"
+  "2-5-2-8": "connecte/projets/editor/zone5-historique",
+  "2-5-2-9": "connecte/projets/editor/tests-outil"
 }

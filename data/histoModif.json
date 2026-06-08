@@ -1,6 +1,195 @@
 {
   "modifications": [
     {
+      "id": "mod-332",
+      "version": "B-0.257",
+      "date": "2026-06-08T16:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests Résultats : détail des échecs avec testeur + commentaire",
+      "description": "Refonte de la section échecs dans le détail d'un run : carte par test échoué avec fond coloré selon criticité (bloquant=rouge, majeur=orange, mineur=jaune), badge criticité coloré, URL cliquable, nombre d'étapes. Section testeur : nom, badge Échoué, date, commentaire/notes en italique. Tri déjà en place par criticité (bloquants en premier).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "tu dois donné plus d'infos lorsqu'il y a des echoué, avec en tri par cridicité et la liste des testeurs avec leur résultat et le commentaire",
+      "startedAt": "2026-06-08T15:45:00.000Z",
+      "completedAt": "2026-06-08T16:00:00.000Z"
+    },
+    {
+      "id": "mod-331",
+      "version": "B-0.257",
+      "date": "2026-06-08T15:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests Exécution : barre de stats + fond rouge sur échec critique",
+      "description": "Ajout d'une barre de stats au-dessus de la liste des tests du run : barre de progression (complétés/total), compteur Passé (vert) et Échoué (rouge). Ajout du fond rouge (bg-red-500/10 border-red-500/40) sur les lignes complétées dont le résultat est fail et la criticité majeur ou bloquant.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Si le test est majeur et le test à echoué il faut mettre le fond en rouge, ajoute des infos au dessus des tests avec une barre de progression et les stats : nombre de Passé, échoué (juste au dessus des boutons dans une barre d'info)",
+      "startedAt": "2026-06-08T15:10:00.000Z",
+      "completedAt": "2026-06-08T15:30:00.000Z"
+    },
+    {
+      "id": "mod-330",
+      "version": "B-0.257",
+      "date": "2026-06-08T15:00:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests Exécution : boutons Passé/Échoué/Passer sur les lignes complétées",
+      "description": "Sur les tests déjà complétés, affichage des 3 boutons (Passé/Échoué/Passer) avec le bouton sélectionné en pleine couleur et les 2 non sélectionnés très grisés (opacity-15). Remplacement du badge résultat par ce groupe de 3 spans. La ligne est désormais gérée individuellement (pas d'opacity globale) pour permettre ce contraste.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsqu'un test est effectué il faut toujours affiché tous les boutons mais les grisé et laissé seulement le bouton selectionné",
+      "startedAt": "2026-06-08T14:45:00.000Z",
+      "completedAt": "2026-06-08T15:00:00.000Z"
+    },
+    {
+      "id": "mod-329",
+      "version": "B-0.257",
+      "date": "2026-06-08T14:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests Auto : bouton Arrêter le run IA",
+      "description": "Ajout d'un bouton 'Arrêter' dans la carte de progression du mode automatique. Stocke la subscription RxJS dans autoRunSub, appel unsubscribe() + isRunning.set(false) pour stopper proprement le flux SSE côté client.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "rajoute un bouton stoper le test pour le mode Automatique pour demandé à l'IA d'arrété son test",
+      "startedAt": "2026-06-08T14:15:00.000Z",
+      "completedAt": "2026-06-08T14:30:00.000Z"
+    },
+    {
+      "id": "mod-328",
+      "version": "B-0.257",
+      "date": "2026-06-08T14:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests Exécution : liste complète + boutons à droite + criticité colorée",
+      "description": "Refonte de l'onglet Exécution manuel : les tests complétés s'affichent au-dessus (grisés, avec badge résultat vert/rouge), le test actif est centré avec ses boutons d'action (Passé/Échoué/Passer) alignés à droite, les tests à venir sont listés en dessous (grisés à 30%). Badge criticité avec couleurs vives : bloquant=rouge vif (red-400+bg-red-500/25), majeur=orange (orange-400+bg-orange-500/20), mineur=jaune (yellow-400+bg-yellow-400/10). Ajout des computed signals completedCaseIds et upcomingCaseIds et des méthodes getManualCase/getManualResult.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans la partie Execution je voudrais les boutons à droite. Ensuite je voudrais que tous les tests terminé s'affiche les uns sous les autres et que les prochains soi affiché grisé. Rajoute aussi la criticité avec des couleurs plus vive plus la criticité augmente.",
+      "startedAt": "2026-06-08T13:30:00.000Z",
+      "completedAt": "2026-06-08T14:00:00.000Z"
+    },
+    {
+      "id": "mod-327",
+      "version": "B-0.257",
+      "date": "2026-06-08T13:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server", "projets"],
+      "features": "projets:editor|tests-outil,server:projets-tests-api",
+      "title": "Tests : fix run launch 404 + form Étapes",
+      "description": "Fix serveur : projTestsSave utilisait mkdirSync sur le dossier parent tests/ sans créer le sous-dossier runs/, causant un writeFileSync silencieusement raté sur les fichiers de run. Correction : mkdirSync(path.dirname(filePath)) crée le bon sous-dossier. Création manuelle de data/projets/:id/tests/runs/ pour le projet actif. Formulaire : étapes repositionnées en bas du form avec label plus visible et bouton + Étape intégré au titre.",
+      "files": [
+        "server/server-data.js",
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Erreur remet les étapes en dessous comme avant mais grossi le texte du titre et met le bouton + Etapes à coté du titre étapte / je n'arrive pas à lancer un tests manuel 404",
+      "startedAt": "2026-06-08T12:30:00.000Z",
+      "completedAt": "2026-06-08T13:00:00.000Z"
+    },
+    {
+      "id": "mod-326",
+      "version": "B-0.257",
+      "date": "2026-06-08T11:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "libs"],
+      "features": "projets:editor|tests-outil,libs:tests-models",
+      "title": "Tests : tableau, filtre criticité, radios form, champ URL",
+      "description": "Refactoring du cahier de recette : affichage des tests sous forme de tableau (N°, Titre, URL, Criticité, Étapes) avec en-têtes colonnes. Ajout d'un filtre par criticité (chips Tous/Bloquant/Majeur/Mineur). Remplacement des selects du formulaire par des boutons radio pour criticité et catégorie. Ajout du champ URL sur TestCase (modèle + form + affichage tableau + onglet exécution manuelle).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts",
+        "libs/portail-core/data-access/src/lib/tests-outil.models.ts",
+        "tests/fonctions/connecte/projets/editor/tests-outil/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "pourrais tu faire un affichage des tests plutôt sous forme de tableau et rajoute un filtre (criticité), pour le form pour rajouté un tests met plutôt des boutons radio que des listes déroulante pour limité les cliques, dans les tests rajoute une zone url",
+      "startedAt": "2026-06-08T10:30:00.000Z",
+      "completedAt": "2026-06-08T11:00:00.000Z"
+    },
+    {
+      "id": "mod-325",
+      "version": "B-0.257",
+      "date": "2026-06-08T10:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests : refactor Cahier — layout plein sans sidebar",
+      "description": "Suppression de la sidebar catégorie (panneau gauche w-44). Toutes les catégories s'affichent en sections accordéon dans la zone principale. Ajout drag & drop HTML5 pour réordonner les catégories et déplacer des tests entre catégories. Création/renommage de catégorie 100% inline (plus de prompt()). Ajout de test directement depuis le header de chaque catégorie. Section 'Sans catégorie' pour les tests orphelins.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts",
+        "tests/fonctions/connecte/projets/editor/tests-outil/fonctions.md",
+        "docs/structure/tests-outil.component.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je ne veux pas de la zone de menu dans le tests, tous doit ce géré dans la zone principal du tests avec ajout de catégori ou de tests, modification suppression et il faut pouvoir déplacer les catégories (avec ses tests) ou les tests dans une catégorie ou la changer de catégorie",
+      "startedAt": "2026-06-08T09:45:00.000Z",
+      "completedAt": "2026-06-08T10:00:00.000Z"
+    },
+    {
+      "id": "mod-324",
+      "version": "B-0.257",
+      "date": "2026-06-08T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "libs", "server", "data"],
+      "features": "projets:editor|tests-outil,libs:tests-models|tests-service,server:projets-tests-api",
+      "title": "Outil Tests : cahier de recette + exécution + résultats",
+      "description": "Ajout du nouvel outil projet 'Tests' (type `tests`, icône `science`). L'outil propose 3 onglets : (1) Cahier de recette — création manuelle et génération automatique depuis les fichiers Édition ou les boards Mockup ; (2) Exécution — mode automatique IA via SSE et mode manuel carte par carte pour un ou plusieurs testeurs ; (3) Résultats — historique des campagnes avec score, verdict GO/NO-GO basé sur la criticité des tests bloquants en échec, et tableau des erreurs triées par criticité.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/tests-outil.models.ts",
+        "libs/portail-core/data-access/src/lib/tests-outil.service.ts",
+        "libs/portail-core/data-access/src/index.ts",
+        "libs/portail-core/data-access/src/lib/project-files.service.ts",
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "server/server-data.js",
+        "docs/outils.md",
+        "docs/structure/tests-outil.component.md",
+        "tests/fonctions/_registry.json",
+        "tests/fonctions/connecte/projets/editor/tests-outil/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu me crait un plan complet pour un outils à rajouté au autres dans projet et qui doit permettre de lancer manuellement ou automatiquement des tests complet à partir de cahier de recette. Il faut donc avoir 2 parties qui sont la partie cahier de recette à créé automatiquement à partir des autres outils comme les datas de l'édition ou du mockup mais aussi manuellement en rajoutant des tests à effectué. Le but est de pouvoir avoir une liste complet de tests à effectué pour validé un projet. la seconde partie sera la partie tests qui pourra être lancer automatiquement (IA devra prendre les cahiers de tests et lancer chaque tests demandé pour le validé ou non) ou manuellement via formulaire et qui sera validé ou non par un ou plusieurs testeurs. Une troisième section sera une page de résultat avec toutes les statistique des tests, résumé et cas d'erreur dont la cridicité pourra empéché le GO du projet.",
+      "startedAt": "2026-06-08T00:00:00.000Z",
+      "completedAt": "2026-06-08T01:00:00.000Z"
+    },
+    {
       "id": "mod-323",
       "version": "B-0.256",
       "date": "2026-06-07T21:35:00.000Z",

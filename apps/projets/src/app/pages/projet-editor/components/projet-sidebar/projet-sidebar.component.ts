@@ -483,7 +483,8 @@ export class ProjetSidebarComponent implements OnChanges {
 
   onAddOutil(type: string): void {
     this.showAddOutilPopup.set(false);
-    const name = type === 'edition' ? 'Edition' : type;
+    const names: Record<string, string> = { edition: 'Edition', tests: 'Tests' };
+    const name = names[type] ?? type;
     this.outilCreate.emit({ type, name });
   }
 
@@ -495,6 +496,11 @@ export class ProjetSidebarComponent implements OnChanges {
     return this.activeOutilId === outil.id
       ? 'text-light-primary dark:text-primary'
       : 'text-light-text-muted dark:text-white/40';
+  }
+
+  getOutilIcon(outil: Outil): string {
+    const icons: Record<string, string> = { edition: 'edit_note', tests: 'science' };
+    return icons[outil.type] ?? 'folder_special';
   }
 
   @HostListener('document:click', ['$event'])

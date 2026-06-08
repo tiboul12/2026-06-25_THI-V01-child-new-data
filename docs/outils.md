@@ -210,7 +210,7 @@ DELETE /api/file-projects/:name/outils/:id
 | Nom | Type | Statut | Depuis |
 |-----|------|--------|--------|
 | Edition | `edition` | Actif | Origine |
-| Tests | `tests` | Bientôt | — |
+| Tests | `tests` | Actif | vB-0.258 |
 | Code | `code` | Bientôt | — |
 
 ---
