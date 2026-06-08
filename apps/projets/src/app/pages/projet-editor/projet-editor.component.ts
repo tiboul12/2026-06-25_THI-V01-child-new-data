@@ -17,6 +17,7 @@ import { ProjetToolbarComponent } from './components/projet-toolbar/projet-toolb
 import { ProjetSidebarComponent, DragDropEvent } from './components/projet-sidebar/projet-sidebar.component';
 import { ProjetEditorZoneComponent, FileSaveEvent, SectionInfo } from './components/projet-editor-zone/projet-editor-zone.component';
 import { EditionOutilComponent } from './outils/edition/edition-outil.component';
+import { TestsOutilComponent } from './outils/tests/tests-outil.component';
 import { ProjetConversationComponent } from './components/projet-conversation/projet-conversation.component';
 import { ProjetStatusbarComponent } from './components/projet-statusbar/projet-statusbar.component';
 import { ProjetHistoryComponent } from './components/projet-history/projet-history.component';
@@ -36,6 +37,7 @@ import { ProjetAiEditService } from './services/projet-ai-edit.service';
     ProjetToolbarComponent,
     ProjetSidebarComponent,
     EditionOutilComponent,
+    TestsOutilComponent,
     ProjetConversationComponent,
     ProjetStatusbarComponent,
     ProjetHistoryComponent,

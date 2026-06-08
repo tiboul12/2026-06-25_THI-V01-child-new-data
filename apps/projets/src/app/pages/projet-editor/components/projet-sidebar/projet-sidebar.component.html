@@ -35,10 +35,10 @@
             <span class="material-symbols-outlined text-xs text-light-primary dark:text-primary">edit_note</span>
             Edition
           </button>
-          <button class="w-full text-left px-3 py-1.5 text-[11px] text-light-text-muted dark:text-white/20 flex items-center gap-2 cursor-not-allowed" disabled>
-            <span class="material-symbols-outlined text-xs">science</span>
+          <button class="w-full text-left px-3 py-1.5 text-[11px] text-light-text dark:text-white/70 hover:bg-light-surface dark:hover:bg-white/5 flex items-center gap-2 transition-colors"
+                  (click)="onAddOutil('tests')">
+            <span class="material-symbols-outlined text-xs text-light-primary dark:text-primary">science</span>
             Tests
-            <span class="ml-auto text-[9px] opacity-60">bientôt</span>
           </button>
           <button class="w-full text-left px-3 py-1.5 text-[11px] text-light-text-muted dark:text-white/20 flex items-center gap-2 cursor-not-allowed" disabled>
             <span class="material-symbols-outlined text-xs">code</span>
@@ -64,7 +64,7 @@
             <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
           </button>
           <span class="material-symbols-outlined text-xs flex-shrink-0"
-                [ngClass]="getOutilIconClass(outil)">edit_note</span>
+                [ngClass]="getOutilIconClass(outil)">{{ getOutilIcon(outil) }}</span>
           <span class="text-[11px] font-medium truncate flex-1"
                 [ngClass]="activeOutilId === outil.id
                   ? 'text-light-primary dark:text-primary font-semibold'

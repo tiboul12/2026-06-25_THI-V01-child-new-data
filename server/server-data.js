@@ -8345,6 +8345,269 @@ app.delete('/api/mega-outils/mockup/:projectName/connections/:connId', async (re
 });
 
 // ============================================================
+// PROJETS-TESTS — Outil Tests (Cahier de recette + Exécution + Résultats)
+// ============================================================
+
+function projTestsDir(projectId) {
+    return path.join(BASE_DIR, 'projets', projectId, 'tests');
+}
+function projTestsLoad(projectId, file) {
+    const p = path.join(projTestsDir(projectId), file);
+    try { if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8')); }
+    catch (e) { console.error('[PROJ-TESTS] load error:', p, e.message); }
+    return null;
+}
+function projTestsSave(projectId, file, data) {
+    const filePath = path.join(projTestsDir(projectId), file);
+    try {
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        return true;
+    } catch (e) { console.error('[PROJ-TESTS] save error:', e.message); return false; }
+}
+function projTestsRunDir(projectId) { return path.join(projTestsDir(projectId), 'runs'); }
+function projTestsLoadRun(projectId, runId) { return projTestsLoad(projectId, `runs/${runId}.json`); }
+function projTestsSaveRun(projectId, runId, data) { return projTestsSave(projectId, `runs/${runId}.json`, data); }
+function projTestsRunId() { return 'run-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7); }
+function projTestsCaseId() { return 'tc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7); }
+function projTestsCatId() { return 'cat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6); }
+
+function computeTestSummary(results, cases, startedAt) {
+    const total = results.length;
+    const pass = results.filter(r => r.status === 'pass').length;
+    const fail = results.filter(r => r.status === 'fail').length;
+    const skip = results.filter(r => r.status === 'skip').length;
+    const pending = results.filter(r => r.status === 'pending').length;
+    const countable = pass + fail;
+    const score = countable > 0 ? Math.round((pass / countable) * 100) : 0;
+    const hasBloquantFail = results.some(r => {
+        if (r.status !== 'fail') return false;
+        const tc = cases.find(c => c.id === r.caseId);
+        return tc?.criticality === 'bloquant';
+    });
+    const goNoGo = hasBloquantFail ? 'NO-GO' : 'GO';
+    const durationMs = startedAt ? Date.now() - new Date(startedAt).getTime() : 0;
+    return { total, pass, fail, skip, pending, score, goNoGo, durationMs };
+}
+
+// GET /api/projets-tests/:id/suite
+app.get('/api/projets-tests/:id/suite', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const id = req.params.id;
+    let suite = projTestsLoad(id, 'suite.json');
+    if (!suite) {
+        suite = { projectId: id, categories: [], cases: [], updatedAt: new Date().toISOString() };
+        projTestsSave(id, 'suite.json', suite);
+    }
+    res.json(suite);
+});
+
+// PUT /api/projets-tests/:id/suite
+app.put('/api/projets-tests/:id/suite', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const id = req.params.id;
+    const existing = projTestsLoad(id, 'suite.json') || { projectId: id, categories: [], cases: [] };
+    const suite = { ...existing, ...req.body, projectId: id, updatedAt: new Date().toISOString() };
+    if (projTestsSave(id, 'suite.json', suite)) res.json(suite);
+    else res.status(500).json({ error: 'Erreur sauvegarde' });
+});
+
+// POST /api/projets-tests/:id/suite/generate
+app.post('/api/projets-tests/:id/suite/generate', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const id = req.params.id;
+    const { source } = req.body;
+    const now = new Date().toISOString();
+
+    if (source === 'ia') {
+        return res.json({ generated: [], message: 'Génération IA bientôt disponible' });
+    }
+
+    if (source === 'edition') {
+        const generated = [];
+        const projDir = path.join(BASE_DIR, 'projets', id);
+        function scanDir(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) { scanDir(full); continue; }
+                if (!entry.name.endsWith('.md')) continue;
+                let content;
+                try { content = fs.readFileSync(full, 'utf8'); } catch { continue; }
+                const lines = content.split('\n');
+                let current = null;
+                for (const line of lines) {
+                    const headMatch = line.match(/^#{1,3}\s+(.+)/);
+                    const testMatch = line.match(/^[-*]\s+\[[ x]\]\s+(.+)/i);
+                    const criteriaMatch = line.match(/crit[eè]re[s]?\s+(d['']acceptation|de\s+test)/i);
+                    if (headMatch) {
+                        current = headMatch[1].trim();
+                    }
+                    if (testMatch) {
+                        generated.push({
+                            id: projTestsCaseId(), categoryId: '', title: testMatch[1].trim(),
+                            description: current ? `Section : ${current}` : undefined,
+                            criticality: 'majeur', status: 'draft', source: 'edition',
+                            sourceRef: path.relative(projDir, full).replace(/\\/g, '/'),
+                            steps: [], createdAt: now, updatedAt: now
+                        });
+                    } else if (criteriaMatch && current) {
+                        generated.push({
+                            id: projTestsCaseId(), categoryId: '', title: `Vérifier : ${current}`,
+                            criticality: 'majeur', status: 'draft', source: 'edition',
+                            sourceRef: path.relative(projDir, full).replace(/\\/g, '/'),
+                            steps: [], createdAt: now, updatedAt: now
+                        });
+                    }
+                }
+            }
+        }
+        scanDir(projDir);
+        if (!generated.length) return res.json({ generated: [], message: 'Aucun critère de test trouvé dans les fichiers édition' });
+        return res.json({ generated });
+    }
+
+    if (source === 'mockup') {
+        try {
+            const [instances] = await pool.query(
+                "SELECT * FROM mega_outil_instances WHERE project_id = ? AND type = 'mockup' ORDER BY created_at ASC",
+                [id]
+            );
+            if (!instances.length) return res.json({ generated: [], message: 'Aucun mockup trouvé pour ce projet' });
+            const generated = [];
+            for (const inst of instances) {
+                const [elements] = await pool.query(
+                    'SELECT * FROM mega_outil_mockup_elements WHERE instance_id = ? ORDER BY created_at ASC',
+                    [inst.id]
+                );
+                const steps = elements.map((el, i) => ({
+                    order: i + 1,
+                    action: `Vérifier la présence de l'élément "${el.label || el.type}"`,
+                    expected: `L'élément "${el.label || el.type}" est visible`
+                }));
+                generated.push({
+                    id: projTestsCaseId(), categoryId: '', title: `Vérifier les éléments de "${inst.name}"`,
+                    description: `Board mockup : ${inst.name}`,
+                    criticality: 'majeur', status: 'draft', source: 'mockup', sourceRef: inst.id,
+                    steps, createdAt: now, updatedAt: now
+                });
+            }
+            return res.json({ generated });
+        } catch (e) { return res.status(500).json({ error: e.message }); }
+    }
+
+    res.status(400).json({ error: 'Source inconnue' });
+});
+
+// GET /api/projets-tests/:id/runs
+app.get('/api/projets-tests/:id/runs', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const id = req.params.id;
+    const runsDir = projTestsRunDir(id);
+    const runs = [];
+    if (fs.existsSync(runsDir)) {
+        for (const f of fs.readdirSync(runsDir)) {
+            if (!f.endsWith('.json')) continue;
+            try {
+                const run = JSON.parse(fs.readFileSync(path.join(runsDir, f), 'utf8'));
+                const { results: _r, ...light } = run;
+                runs.push(light);
+            } catch { /* ignore */ }
+        }
+    }
+    runs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    res.json({ runs });
+});
+
+// GET /api/projets-tests/:id/runs/:runId
+app.get('/api/projets-tests/:id/runs/:runId', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const run = projTestsLoadRun(req.params.id, req.params.runId);
+    if (!run) return res.status(404).json({ error: 'Run introuvable' });
+    res.json(run);
+});
+
+// DELETE /api/projets-tests/:id/runs/:runId
+app.delete('/api/projets-tests/:id/runs/:runId', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const p = path.join(projTestsRunDir(req.params.id), `${req.params.runId}.json`);
+    try {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/projets-tests/:id/runs/launch  (manuel + auto SSE)
+app.post('/api/projets-tests/:id/runs/launch', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const id = req.params.id;
+    const { mode, testerName, targetUrl, caseIds } = req.body;
+    const suite = projTestsLoad(id, 'suite.json') || { categories: [], cases: [] };
+    const activeCases = suite.cases.filter(c => c.status === 'active' && (!caseIds || caseIds.includes(c.id)));
+    if (!activeCases.length) return res.status(400).json({ error: 'Aucun test actif à exécuter' });
+
+    const runId = projTestsRunId();
+    const now = new Date().toISOString();
+    const run = {
+        id: runId, projectId: id, date: now, mode: mode || 'manual',
+        status: 'running', testerName: testerName || undefined, targetUrl: targetUrl || undefined,
+        caseIds: activeCases.map(c => c.id),
+        results: activeCases.map(c => ({ caseId: c.id, status: 'pending' })),
+        summary: { total: activeCases.length, pass: 0, fail: 0, skip: 0, pending: activeCases.length, score: 0, goNoGo: 'GO', durationMs: 0 },
+        createdAt: now
+    };
+    projTestsSaveRun(id, runId, run);
+
+    if (mode === 'auto') {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        const send = (ev, data) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
+        send('start', { runId, total: activeCases.length });
+        for (let i = 0; i < activeCases.length; i++) {
+            const tc = activeCases[i];
+            send('case-start', { caseId: tc.id, name: tc.title, index: i });
+            await new Promise(r => setTimeout(r, 200));
+            const result = { caseId: tc.id, status: 'pending', aiComment: 'Analyse automatique non encore implémentée' };
+            run.results[i] = result;
+            send('case-result', { result, index: i, total: activeCases.length });
+        }
+        run.status = 'completed';
+        run.summary = computeTestSummary(run.results, activeCases, run.createdAt);
+        projTestsSaveRun(id, runId, run);
+        send('complete', { runId, summary: run.summary });
+        res.end();
+        return;
+    }
+
+    res.json({ runId });
+});
+
+// PUT /api/projets-tests/:id/runs/:runId
+app.put('/api/projets-tests/:id/runs/:runId', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const run = projTestsLoadRun(req.params.id, req.params.runId);
+    if (!run) return res.status(404).json({ error: 'Run introuvable' });
+    if (req.body.results) run.results = req.body.results;
+    if (req.body.status) run.status = req.body.status;
+    if (run.status === 'completed') {
+        const suite = projTestsLoad(req.params.id, 'suite.json') || { cases: [] };
+        run.summary = computeTestSummary(run.results, suite.cases, run.createdAt);
+    }
+    projTestsSaveRun(req.params.id, req.params.runId, run);
+    res.json(run);
+});
+
+// ============================================================
 // Server Startup
 // ============================================================
 

@@ -17,7 +17,7 @@ export interface FileNode {
 
 export interface Outil {
   id: string;
-  type: 'edition';
+  type: 'edition' | 'tests';
   name: string;
   rootFolderIds: string[];
   createdAt: string;
