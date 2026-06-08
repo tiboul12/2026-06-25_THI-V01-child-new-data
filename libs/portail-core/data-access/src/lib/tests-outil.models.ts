@@ -67,6 +67,7 @@ export interface TestRun {
   status: 'running' | 'completed' | 'cancelled';
   testerName?: string;
   targetUrl?: string;
+  comment?: string;
   caseIds: string[];
   results: TestRunResult[];
   summary: TestRunSummary;

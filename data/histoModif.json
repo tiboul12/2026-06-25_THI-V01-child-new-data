@@ -1,6 +1,109 @@
 {
   "modifications": [
     {
+      "id": "mod-337",
+      "version": "B-0.258",
+      "date": "2026-06-08T19:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "server"],
+      "features": "projets:editor|tests-outil,server:projets-tests",
+      "title": "Tests : sélection catégories + commentaire avant lancement",
+      "description": "Avant de lancer un run (auto ou manuel), l'utilisateur peut choisir les catégories à tester (chips multi-select, 'Toutes' par défaut) et saisir un commentaire. Le commentaire est stocké sur le run et affiché dans la liste des résultats. Le filtre catégories passe les caseIds filtrés au serveur. Ajout GET /api/projets-tests/:id/runs/launch pour le SSE auto (EventSource). Fix getSessionUser pour lire le token depuis les query params (SSE auth).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts",
+        "libs/portail-core/data-access/src/lib/tests-outil.service.ts",
+        "libs/portail-core/data-access/src/lib/tests-outil.models.ts",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsqu'on lance un nouveau test (execution) on doit pouvoir choisir entre toutes les catégories ou selectionné une ou plusieurs catégorie à testé et ajouté un commentaire au tests",
+      "startedAt": "2026-06-08T19:10:00.000Z",
+      "completedAt": "2026-06-08T19:30:00.000Z"
+    },
+    {
+      "id": "mod-336",
+      "version": "B-0.258",
+      "date": "2026-06-08T19:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests Résultats : bouton supprimer run visible au hover",
+      "description": "Le bouton supprimer d'un run était opacity-0 sans group sur le parent, le rendant impossible à déclencher. Ajout de la classe group sur la ligne du run et passage à group-hover:opacity-100 pour révéler l'icône delete au survol de la ligne.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "On doit pouvoir supprimé un test effectué",
+      "startedAt": "2026-06-08T18:50:00.000Z",
+      "completedAt": "2026-06-08T19:00:00.000Z"
+    },
+    {
+      "id": "mod-335",
+      "version": "B-0.258",
+      "date": "2026-06-08T18:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "libs"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests : bannière IA en cours + bouton Annuler + Sans catégorie en premier",
+      "description": "Ajout d'une bannière de chargement (spinner + texte + bouton Annuler) pendant la génération IA via Observable + takeUntil pour cancellation propre de la requête HTTP. Section 'Sans catégorie' déplacée en tête de liste (avant les catégories triées). Méthode generateAITestsObs() ajoutée au service.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts",
+        "libs/portail-core/data-access/src/lib/tests-outil.service.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je lance la génération de tests par l'IA cela doit m'indiquer à l'écran que l'IA est en plein travaux et je dois avoir un bouton pour annulé l'action avec l'IA. Les tests Sans catégories doivent être indiqué en premier",
+      "startedAt": "2026-06-08T18:10:00.000Z",
+      "completedAt": "2026-06-08T18:30:00.000Z"
+    },
+    {
+      "id": "mod-334",
+      "version": "B-0.258",
+      "date": "2026-06-08T18:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["server", "projets"],
+      "features": "projets:editor|tests-outil,server:projets-tests-api",
+      "title": "Tests IA : utilise l'executor CLI (Claude/Gemini) au lieu de la clé API directe",
+      "description": "Ajout de POST /execute-prompt-sync dans server-executor.js (port 3002) : exécute Claude CLI ou Gemini CLI de façon synchrone et retourne { output }. La génération IA de tests dans server-data.js appelle maintenant cet endpoint au lieu du SDK Anthropic direct, résolvant l'erreur 'clé API non configurée' pour les utilisateurs utilisant le CLI.",
+      "files": [
+        "electron/executor/server-executor.js",
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Cela m'indique que la clé IA n'est pas configurer alors que dans la partie admin/config il est indiqué d'utilisé Claude cli ou gemini Cli, il faut utilisé l'IA sélectionné",
+      "startedAt": "2026-06-08T17:45:00.000Z",
+      "completedAt": "2026-06-08T18:00:00.000Z"
+    },
+    {
+      "id": "mod-333",
+      "version": "B-0.258",
+      "date": "2026-06-08T17:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "libs", "server"],
+      "features": "projets:editor|tests-outil,server:projets-tests-api",
+      "title": "Tests Cahier : génération IA depuis section d'édition",
+      "description": "Bouton 'Depuis Édition' ouvre un picker de sections (dossiers hiérarchiques du projet) avec indentation. Section sélectionnée affichée à droite du bouton. Bouton 'IA' activé → appelle Claude Haiku avec le contenu des .md de la section → propose une liste de tests avec checkboxes. Confirmation crée une catégorie au nom de la section et y ajoute les tests sélectionnés. Nouveau endpoint GET /api/projets-tests/:id/edition/sections. Génération IA remplace le stub 'bientôt'.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts",
+        "libs/portail-core/data-access/src/lib/tests-outil.service.ts",
+        "server/server-data.js",
+        "tests/fonctions/connecte/projets/editor/tests-outil/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le système de test lorsqu'on clique sur le bouton Depuis Edition, cela doit afficher toutes les sections (menu de l'édition) cela permet de sélectionner une section et cette section sera alors affichée (titre) à droite du bouton et lorsqu'on clique sur le bouton IA cela doit analyser la section pour créer une liste de tests à effectuer. Cela doit ensuite afficher les différents tests proposés avec des cases à cocher pour choisir quel tests doit être ajouté au cahier de recette, les tests sont alors enregistrés dans une catégorie du nom de la section",
+      "startedAt": "2026-06-08T16:30:00.000Z",
+      "completedAt": "2026-06-08T17:30:00.000Z"
+    },
+    {
       "id": "mod-332",
       "version": "B-0.257",
       "date": "2026-06-08T16:00:00.000Z",

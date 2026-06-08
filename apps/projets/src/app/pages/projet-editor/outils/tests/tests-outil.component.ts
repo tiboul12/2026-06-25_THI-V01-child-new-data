@@ -2,7 +2,7 @@ import {
   Component, Input, OnChanges, SimpleChanges,
   signal, computed, inject
 } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Subscription, Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MegaOutilInstance } from '@worganic/portail-core/data-access';
@@ -48,27 +48,142 @@ type TabId = 'cahier' | 'execution' | 'resultats';
       <div class="flex flex-col h-full overflow-hidden">
 
         <!-- Toolbar génération -->
-        <div class="px-3 py-2 flex items-center gap-2 border-b border-light-border dark:border-white/8 shrink-0 flex-wrap">
-          <button class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-light-surface dark:bg-white/5 hover:bg-light-border dark:hover:bg-white/10 transition-colors disabled:opacity-40"
-            (click)="generateFrom('edition')" [disabled]="generating()">
-            <span class="material-symbols-outlined text-xs">edit_note</span>Depuis Édition
-          </button>
+        <div class="px-3 py-2 flex items-center gap-2 border-b border-light-border dark:border-white/8 shrink-0 flex-wrap relative">
+
+          <!-- Depuis Édition + picker sections -->
+          <div class="relative">
+            <div class="flex items-center gap-1">
+              <button class="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors"
+                [ngClass]="showSectionPicker() ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-light-surface dark:bg-white/5 hover:bg-light-border dark:hover:bg-white/10'"
+                (click)="toggleSectionPicker()">
+                <span class="material-symbols-outlined text-xs">edit_note</span>Depuis Édition
+                <span class="material-symbols-outlined text-xs opacity-50">{{ showSectionPicker() ? 'expand_less' : 'expand_more' }}</span>
+              </button>
+              @if (selectedSection()) {
+                <span class="text-[10px] text-primary font-medium max-w-[120px] truncate" [title]="selectedSection()!.name">
+                  {{ selectedSection()!.name }}
+                </span>
+                <button class="text-[9px] opacity-40 hover:opacity-80 leading-none"
+                  (click)="selectedSection.set(null); iaProposals.set([])">✕</button>
+              }
+            </div>
+            <!-- Dropdown sections -->
+            @if (showSectionPicker()) {
+              <div class="absolute top-full left-0 z-50 mt-1 min-w-[220px] max-h-64 overflow-y-auto rounded-lg border border-light-border dark:border-white/15 bg-light-bg dark:bg-neutral-900 shadow-xl">
+                @if (!editionSections().length) {
+                  <div class="px-3 py-3 text-xs opacity-40 text-center">Aucune section trouvée</div>
+                }
+                @for (sec of editionSections(); track sec.id) {
+                  <button class="w-full text-left px-3 py-1.5 text-xs hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-1"
+                    [style.padding-left.px]="12 + sec.depth * 12"
+                    [class.text-primary]="selectedSection()?.id === sec.id"
+                    [class.font-medium]="selectedSection()?.id === sec.id"
+                    (click)="selectSection(sec)">
+                    <span class="material-symbols-outlined text-xs opacity-40">folder</span>
+                    {{ sec.name }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Depuis Mockup -->
           <button class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-light-surface dark:bg-white/5 hover:bg-light-border dark:hover:bg-white/10 transition-colors"
             [class.opacity-40]="!mockupInstances().length"
             (click)="generateFrom('mockup')" [disabled]="generating() || !mockupInstances().length"
             [title]="!mockupInstances().length ? 'Aucun mockup disponible' : ''">
             <span class="material-symbols-outlined text-xs">preview</span>Depuis Mockup
           </button>
-          <button class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-light-surface dark:bg-white/5 opacity-40 cursor-not-allowed" disabled>
-            <span class="material-symbols-outlined text-xs">smart_toy</span>IA
-            <span class="text-[9px]">bientôt</span>
+
+          <!-- IA — actif si section sélectionnée -->
+          <button class="flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors"
+            [ngClass]="selectedSection()
+              ? 'bg-primary text-white dark:text-btn-text hover:opacity-90'
+              : 'bg-light-surface dark:bg-white/5 opacity-40 cursor-not-allowed'"
+            [disabled]="!selectedSection() || generatingIA()"
+            (click)="generateFromIA()">
+            @if (generatingIA()) {
+              <span class="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+            } @else {
+              <span class="material-symbols-outlined text-xs">smart_toy</span>
+            }
+            IA
+            @if (!selectedSection()) { <span class="text-[9px] opacity-60">→ choisir section</span> }
           </button>
+
           <div class="flex-1"></div>
           <button class="flex items-center gap-1 px-2 py-1 text-xs rounded border border-light-border dark:border-white/10 hover:bg-light-surface dark:hover:bg-white/5 transition-colors"
             (click)="startAddCategory()">
             <span class="material-symbols-outlined text-xs">create_new_folder</span>Catégorie
           </button>
         </div>
+
+        <!-- Bannière chargement IA -->
+        @if (generatingIA()) {
+          <div class="mx-3 mt-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 flex items-center gap-3 shrink-0">
+            <div class="relative shrink-0">
+              <div class="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium">L'IA analyse "{{ selectedSection()?.name }}"...</div>
+              <div class="text-[10px] opacity-40 mt-0.5">Génération des tests en cours, cela peut prendre quelques secondes.</div>
+            </div>
+            <button class="flex items-center gap-1 px-3 py-1.5 text-[10px] rounded border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+              (click)="cancelAIGeneration()">
+              <span class="material-symbols-outlined text-xs">stop</span>Annuler
+            </button>
+          </div>
+        }
+
+        <!-- Panel propositions IA -->
+        @if (iaProposals().length) {
+          <div class="mx-3 mt-2 rounded-lg border border-primary/30 bg-primary/3 shrink-0 overflow-hidden">
+            <div class="flex items-center justify-between px-3 py-2 border-b border-primary/15">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm text-primary">smart_toy</span>
+                <span class="text-xs font-medium">{{ iaProposals().length }} tests proposés pour "{{ selectedSection()!.name }}"</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="text-[9px] text-primary hover:underline" (click)="toggleAllProposals()">
+                  {{ selectedProposalIds().size === iaProposals().length ? 'Tout désélectionner' : 'Tout sélectionner' }}
+                </button>
+                <button class="px-3 py-1 text-[10px] rounded bg-primary text-white dark:text-btn-text hover:opacity-90 disabled:opacity-40 transition-opacity"
+                  [disabled]="!selectedProposalIds().size"
+                  (click)="addSelectedProposals()">
+                  Ajouter ({{ selectedProposalIds().size }})
+                </button>
+                <button class="text-[9px] opacity-40 hover:opacity-70" (click)="iaProposals.set([])">✕</button>
+              </div>
+            </div>
+            <div class="max-h-72 overflow-y-auto divide-y divide-light-border dark:divide-white/5">
+              @for (p of iaProposals(); track p.id) {
+                <label class="flex items-start gap-2.5 px-3 py-2 cursor-pointer hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                  <input type="checkbox" class="mt-0.5 shrink-0 accent-primary"
+                    [checked]="selectedProposalIds().has(p.id)"
+                    (change)="toggleProposal(p.id)">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                      <span class="text-xs font-medium">{{ p.title }}</span>
+                      <span class="text-[9px] px-1.5 py-px rounded border shrink-0"
+                        [class.border-red-500/50]="p.criticality === 'bloquant'"
+                        [class.text-red-400]="p.criticality === 'bloquant'"
+                        [class.border-orange-400/50]="p.criticality === 'majeur'"
+                        [class.text-orange-400]="p.criticality === 'majeur'"
+                        [class.border-yellow-400/40]="p.criticality === 'mineur'"
+                        [class.text-yellow-400]="p.criticality === 'mineur'">{{ p.criticality }}</span>
+                    </div>
+                    @if (p.description) {
+                      <div class="text-[10px] opacity-50 leading-relaxed">{{ p.description }}</div>
+                    }
+                    @if (p.steps.length) {
+                      <div class="text-[9px] opacity-30 mt-0.5">{{ p.steps.length }} étape{{ p.steps.length > 1 ? 's' : '' }}</div>
+                    }
+                  </div>
+                </label>
+              }
+            </div>
+          </div>
+        }
 
         <!-- Filtre criticité -->
         <div class="flex items-center gap-1.5 px-3 py-1.5 border-b border-light-border dark:border-white/8 shrink-0">
@@ -98,6 +213,81 @@ type TabId = 'cahier' | 'execution' | 'resultats';
         <!-- Liste catégories avec tableau de tests -->
         <div class="flex-1 overflow-y-auto p-3 space-y-2"
           (dragover)="$event.preventDefault()" (drop)="onDropOnZone($event)">
+
+          <!-- Tests sans catégorie EN PREMIER -->
+          @if (uncategorizedCases().length || (editingCase()?.id === '__new__' && editingCase()?.categoryId === '')) {
+            <div class="rounded-lg border border-dashed border-light-border dark:border-white/8 overflow-hidden bg-light-bg dark:bg-surface">
+              <div class="flex items-center gap-2 px-2.5 py-1.5 bg-black/5 dark:bg-white/4">
+                <span class="material-symbols-outlined text-xs opacity-20">folder_off</span>
+                <span class="text-[10px] opacity-40 flex-1">Sans catégorie</span>
+                <button class="opacity-40 hover:opacity-70 flex items-center gap-0.5 text-[10px] transition-opacity"
+                  (click)="startAddTestInCat('')">
+                  <span class="material-symbols-outlined text-xs">add</span>
+                </button>
+              </div>
+              @if (uncategorizedCases().length) {
+                <table class="w-full text-xs border-collapse">
+                  <tbody>
+                    @for (tc of uncategorizedCases(); track tc.id; let i = $index) {
+                      @if (editingCase()?.id === tc.id) {
+                        <tr>
+                          <td colspan="6" class="p-0 border-t border-light-border dark:border-white/8">
+                            <div class="p-3 bg-light-bg dark:bg-surface border-l-2 border-primary">
+                              <ng-container *ngTemplateOutlet="caseForm; context: { $implicit: editingCase() }"></ng-container>
+                            </div>
+                          </td>
+                        </tr>
+                      } @else {
+                        <tr class="group border-t border-light-border/50 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                          [class.opacity-40]="draggedTestId() === tc.id"
+                          draggable="true"
+                          (dragstart)="onTestDragStart($event, tc.id)"
+                          (dragover)="onTestDragOver($event, tc.id)"
+                          (drop)="onTestDrop($event, tc.id)"
+                          (dragend)="onDragEnd()">
+                          <td class="px-2.5 py-1.5 text-center w-8 opacity-30">{{ i + 1 }}</td>
+                          <td class="px-2.5 py-1.5">
+                            <div class="font-medium">{{ tc.title }}</div>
+                            @if (tc.description) { <div class="text-[10px] opacity-40 mt-0.5">{{ tc.description }}</div> }
+                          </td>
+                          <td class="px-2.5 py-1.5 w-32">
+                            @if (tc.url) {
+                              <span class="text-[10px] opacity-40 truncate block max-w-[110px]">{{ tc.url }}</span>
+                            } @else { <span class="opacity-20">—</span> }
+                          </td>
+                          <td class="px-2.5 py-1.5 w-20">
+                            <span class="text-[9px] px-1.5 py-0.5 rounded-full border whitespace-nowrap"
+                              [class.border-red-500/40]="tc.criticality === 'bloquant'"
+                              [class.text-red-400]="tc.criticality === 'bloquant'"
+                              [class.border-orange-400/40]="tc.criticality === 'majeur'"
+                              [class.text-orange-400]="tc.criticality === 'majeur'"
+                              [class.border-yellow-400/40]="tc.criticality === 'mineur'"
+                              [class.text-yellow-400]="tc.criticality === 'mineur'">{{ tc.criticality }}</span>
+                          </td>
+                          <td class="px-2.5 py-1.5 text-center w-14 opacity-40">{{ tc.steps.length || '—' }}</td>
+                          <td class="px-2.5 py-1.5 w-14">
+                            <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                              <button class="p-0.5 hover:text-primary rounded" (click)="startEditCase(tc)">
+                                <span class="material-symbols-outlined text-xs">edit</span>
+                              </button>
+                              <button class="p-0.5 hover:text-red-400 rounded" (click)="removeCase(tc.id)">
+                                <span class="material-symbols-outlined text-xs">delete</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              }
+              @if (editingCase()?.id === '__new__' && editingCase()?.categoryId === '') {
+                <div class="p-3 border-t border-light-border dark:border-white/8 bg-light-bg dark:bg-surface border-l-2 border-primary">
+                  <ng-container *ngTemplateOutlet="caseForm; context: { $implicit: editingCase() }"></ng-container>
+                </div>
+              }
+            </div>
+          }
 
           @for (cat of categoriesWithTests(); track cat.id) {
 
@@ -254,81 +444,6 @@ type TabId = 'cahier' | 'execution' | 'resultats';
             }
           }
 
-          <!-- Tests sans catégorie -->
-          @if (uncategorizedCases().length || (editingCase()?.id === '__new__' && editingCase()?.categoryId === '')) {
-            <div class="rounded-lg border border-dashed border-light-border dark:border-white/8 overflow-hidden bg-light-bg dark:bg-surface">
-              <div class="flex items-center gap-2 px-2.5 py-1.5 bg-black/5 dark:bg-white/4">
-                <span class="material-symbols-outlined text-xs opacity-20">folder_off</span>
-                <span class="text-[10px] opacity-40 flex-1">Sans catégorie</span>
-                <button class="opacity-40 hover:opacity-70 flex items-center gap-0.5 text-[10px] transition-opacity"
-                  (click)="startAddTestInCat('')">
-                  <span class="material-symbols-outlined text-xs">add</span>
-                </button>
-              </div>
-              @if (uncategorizedCases().length) {
-                <table class="w-full text-xs border-collapse">
-                  <tbody>
-                    @for (tc of uncategorizedCases(); track tc.id; let i = $index) {
-                      @if (editingCase()?.id === tc.id) {
-                        <tr>
-                          <td colspan="6" class="p-0 border-t border-light-border dark:border-white/8">
-                            <div class="p-3 bg-light-bg dark:bg-surface border-l-2 border-primary">
-                              <ng-container *ngTemplateOutlet="caseForm; context: { $implicit: editingCase() }"></ng-container>
-                            </div>
-                          </td>
-                        </tr>
-                      } @else {
-                        <tr class="group border-t border-light-border/50 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                          [class.opacity-40]="draggedTestId() === tc.id"
-                          draggable="true"
-                          (dragstart)="onTestDragStart($event, tc.id)"
-                          (dragover)="onTestDragOver($event, tc.id)"
-                          (drop)="onTestDrop($event, tc.id)"
-                          (dragend)="onDragEnd()">
-                          <td class="px-2.5 py-1.5 text-center w-8 opacity-30">{{ i + 1 }}</td>
-                          <td class="px-2.5 py-1.5">
-                            <div class="font-medium">{{ tc.title }}</div>
-                            @if (tc.description) { <div class="text-[10px] opacity-40 mt-0.5">{{ tc.description }}</div> }
-                          </td>
-                          <td class="px-2.5 py-1.5 w-32">
-                            @if (tc.url) {
-                              <span class="text-[10px] opacity-40 truncate block max-w-[110px]">{{ tc.url }}</span>
-                            } @else { <span class="opacity-20">—</span> }
-                          </td>
-                          <td class="px-2.5 py-1.5 w-20">
-                            <span class="text-[9px] px-1.5 py-0.5 rounded-full border whitespace-nowrap"
-                              [class.border-red-500/40]="tc.criticality === 'bloquant'"
-                              [class.text-red-400]="tc.criticality === 'bloquant'"
-                              [class.border-orange-400/40]="tc.criticality === 'majeur'"
-                              [class.text-orange-400]="tc.criticality === 'majeur'"
-                              [class.border-yellow-400/40]="tc.criticality === 'mineur'"
-                              [class.text-yellow-400]="tc.criticality === 'mineur'">{{ tc.criticality }}</span>
-                          </td>
-                          <td class="px-2.5 py-1.5 text-center w-14 opacity-40">{{ tc.steps.length || '—' }}</td>
-                          <td class="px-2.5 py-1.5 w-14">
-                            <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                              <button class="p-0.5 hover:text-primary rounded" (click)="startEditCase(tc)">
-                                <span class="material-symbols-outlined text-xs">edit</span>
-                              </button>
-                              <button class="p-0.5 hover:text-red-400 rounded" (click)="removeCase(tc.id)">
-                                <span class="material-symbols-outlined text-xs">delete</span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      }
-                    }
-                  </tbody>
-                </table>
-              }
-              @if (editingCase()?.id === '__new__' && editingCase()?.categoryId === '') {
-                <div class="p-3 border-t border-light-border dark:border-white/8 bg-light-bg dark:bg-surface border-l-2 border-primary">
-                  <ng-container *ngTemplateOutlet="caseForm; context: { $implicit: editingCase() }"></ng-container>
-                </div>
-              }
-            </div>
-          }
-
           <!-- Ajout catégorie inline -->
           @if (addingCategory()) {
             <div class="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 flex items-center gap-2">
@@ -369,6 +484,49 @@ type TabId = 'cahier' | 'execution' | 'resultats';
             <span class="material-symbols-outlined text-sm">person</span>Manuel (testeur)
           </button>
         </div>
+
+        <!-- Sélection catégories + commentaire (communs aux deux modes, avant le lancement) -->
+        @if (!currentRun() && !isRunning()) {
+          @if (suite()?.categories?.length) {
+            <div>
+              <label class="block text-[10px] uppercase tracking-wider opacity-40 mb-2">Catégories à tester</label>
+              <div class="flex flex-wrap gap-1.5">
+                <!-- Chip "Toutes" -->
+                <button class="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-full border transition-colors"
+                  [ngClass]="!selectedRunCategories().size
+                    ? 'bg-primary border-primary text-white dark:text-btn-text font-medium'
+                    : 'border-light-border dark:border-white/15 opacity-60 hover:opacity-90'"
+                  (click)="clearRunCategories()">
+                  Toutes
+                  <span class="opacity-60 ml-0.5">({{ totalActiveCasesCount() }})</span>
+                </button>
+                @for (cat of suite()!.categories; track cat.id) {
+                  @if (catActiveCount(cat.id) > 0) {
+                    <button class="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-full border transition-colors"
+                      [ngClass]="selectedRunCategories().has(cat.id)
+                        ? 'bg-primary border-primary text-white dark:text-btn-text font-medium'
+                        : 'border-light-border dark:border-white/15 opacity-60 hover:opacity-90'"
+                      (click)="toggleRunCategory(cat.id)">
+                      {{ cat.name }}
+                      <span class="opacity-60 ml-0.5">({{ catActiveCount(cat.id) }})</span>
+                    </button>
+                  }
+                }
+              </div>
+              @if (selectedRunCategories().size && activeCasesCount() < totalActiveCasesCount()) {
+                <div class="mt-1.5 text-[10px] opacity-50">
+                  {{ activeCasesCount() }} test{{ activeCasesCount() > 1 ? 's' : '' }} sélectionné{{ activeCasesCount() > 1 ? 's' : '' }}
+                </div>
+              }
+            </div>
+          }
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider opacity-40 mb-1">Commentaire (optionnel)</label>
+            <input type="text" placeholder="Objectif de cette campagne de tests..."
+              class="w-full px-3 py-2 text-xs rounded border border-light-border dark:border-white/10 bg-transparent focus:outline-none focus:border-primary"
+              [(ngModel)]="runComment">
+          </div>
+        }
 
         @if (runMode() === 'auto') {
           <div class="flex flex-col gap-3">
@@ -615,12 +773,15 @@ type TabId = 'cahier' | 'execution' | 'resultats';
               <div class="text-center py-12 opacity-30 text-xs">Aucune campagne exécutée.</div>
             }
             @for (run of runs(); track run.id) {
-              <div class="flex items-center gap-3 px-3 py-2.5 rounded hover:bg-light-surface dark:hover:bg-white/5 cursor-pointer transition-colors mb-1"
+              <div class="group flex items-center gap-3 px-3 py-2.5 rounded hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors mb-1"
                 (click)="loadRunDetail(run.id)">
                 <span class="material-symbols-outlined text-sm opacity-50">{{ run.mode === 'auto' ? 'smart_toy' : 'person' }}</span>
                 <div class="flex-1 min-w-0">
                   <div class="text-xs font-medium">{{ run.date | date:'dd/MM/yyyy HH:mm' }}</div>
                   <div class="text-[10px] opacity-40">{{ run.mode === 'auto' ? 'Auto IA' : 'Manuel' }}@if (run.testerName) { — {{ run.testerName }} }</div>
+                  @if (run.comment) {
+                    <div class="text-[10px] opacity-30 italic truncate">{{ run.comment }}</div>
+                  }
                 </div>
                 <div class="text-sm font-bold"
                   [class.text-emerald-400]="run.summary?.goNoGo === 'GO'"
@@ -636,8 +797,9 @@ type TabId = 'cahier' | 'execution' | 'resultats';
                   [class.opacity-40]="!run.summary?.goNoGo">
                   {{ run.summary?.goNoGo ?? '–' }}
                 </span>
-                <button class="opacity-0 hover:opacity-100 p-1 text-red-400 transition-opacity"
-                  (click)="$event.stopPropagation(); deleteRun(run.id)">
+                <button class="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-300 transition-opacity shrink-0"
+                  (click)="$event.stopPropagation(); deleteRun(run.id)"
+                  title="Supprimer ce run">
                   <span class="material-symbols-outlined text-sm">delete</span>
                 </button>
               </div>
@@ -649,7 +811,12 @@ type TabId = 'cahier' | 'execution' | 'resultats';
               (click)="selectedRun.set(null)">
               <span class="material-symbols-outlined text-sm">arrow_back</span>Retour
             </button>
-            <div class="flex-1 text-xs opacity-40">{{ selectedRun()!.date | date:'dd/MM/yyyy HH:mm' }} — {{ selectedRun()!.mode === 'auto' ? 'Auto IA' : 'Manuel' }}</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs opacity-40">{{ selectedRun()!.date | date:'dd/MM/yyyy HH:mm' }} — {{ selectedRun()!.mode === 'auto' ? 'Auto IA' : 'Manuel' }}@if (selectedRun()!.testerName) { — {{ selectedRun()!.testerName }} }</div>
+              @if (selectedRun()!.comment) {
+                <div class="text-[10px] opacity-30 italic truncate">{{ selectedRun()!.comment }}</div>
+              }
+            </div>
             <span class="text-xs px-3 py-1 rounded-full font-bold"
               [class.bg-emerald-500/20]="selectedRun()!.summary?.goNoGo === 'GO'"
               [class.text-emerald-400]="selectedRun()!.summary?.goNoGo === 'GO'"
@@ -877,6 +1044,16 @@ export class TestsOutilComponent implements OnChanges {
   editingCase = signal<Partial<TestCase> | null>(null);
   generating = signal(false);
   generateMsg = signal('');
+
+  // ── Edition section picker + IA proposals
+  editionSections = signal<{ id: string; name: string; depth: number }[]>([]);
+  showSectionPicker = signal(false);
+  selectedSection = signal<{ id: string; name: string } | null>(null);
+  iaProposals = signal<Array<{ id: string; title: string; description?: string; criticality: string; steps: any[] }>>([]);
+  selectedProposalIds = signal<Set<string>>(new Set());
+  generatingIA = signal(false);
+  private aiCancel$ = new Subject<void>();
+  private aiGenSub?: Subscription;
   filterCriticality = signal<string>('all');
 
   editingCategoryId = signal<string | null>(null);
@@ -892,6 +1069,8 @@ export class TestsOutilComponent implements OnChanges {
   runMode = signal<'auto' | 'manual'>('auto');
   targetUrlValue = '';
   testerNameValue = '';
+  runComment = '';
+  selectedRunCategories = signal<Set<string>>(new Set());
   isRunning = signal(false);
   runProgress = signal<{ current: number; total: number }>({ current: 0, total: 0 });
   liveResults = signal<TestRunResult[]>([]);
@@ -936,8 +1115,17 @@ export class TestsOutilComponent implements OnChanges {
     this.uncategorizedCases().length
   );
 
-  readonly activeCasesCount = computed(() =>
-    this.suite()?.cases?.filter(c => c.status === 'active').length ?? 0
+  readonly filteredRunCaseIds = computed(() => {
+    const cats = this.selectedRunCategories();
+    return (this.suite()?.cases ?? [])
+      .filter(c => c.status === 'active' && (cats.size === 0 || cats.has(c.categoryId)))
+      .map(c => c.id);
+  });
+
+  readonly activeCasesCount = computed(() => this.filteredRunCaseIds().length);
+
+  readonly totalActiveCasesCount = computed(() =>
+    this.suite()?.cases.filter(c => c.status === 'active').length ?? 0
   );
 
   readonly runProgressPct = computed(() => {
@@ -1191,6 +1379,102 @@ export class TestsOutilComponent implements OnChanges {
   }
 
   // ── Génération
+  async toggleSectionPicker() {
+    if (this.showSectionPicker()) { this.showSectionPicker.set(false); return; }
+    if (!this.editionSections().length && this.projectId) {
+      const sections = await this.svc.getEditionSections(this.projectId);
+      this.editionSections.set(sections);
+    }
+    this.showSectionPicker.set(true);
+  }
+
+  selectSection(section: { id: string; name: string }) {
+    this.selectedSection.set(section);
+    this.showSectionPicker.set(false);
+    this.iaProposals.set([]);
+    this.selectedProposalIds.set(new Set());
+  }
+
+  generateFromIA() {
+    const section = this.selectedSection();
+    if (!section || !this.projectId) return;
+    this.generatingIA.set(true);
+    this.generateMsg.set('');
+    this.iaProposals.set([]);
+    this.aiGenSub = this.svc.generateAITestsObs(this.projectId, section.id, section.name)
+      .pipe(takeUntil(this.aiCancel$))
+      .subscribe({
+        next: ({ generated, message }) => {
+          if (message && !generated.length) {
+            this.generateMsg.set(message);
+            setTimeout(() => this.generateMsg.set(''), 6000);
+          } else {
+            const proposals = generated.map(g => ({
+              id: g.id ?? 'p-' + Math.random().toString(36).slice(2, 8),
+              title: g.title ?? 'Test sans titre',
+              description: g.description,
+              criticality: g.criticality ?? 'majeur',
+              steps: g.steps ?? [],
+            }));
+            this.iaProposals.set(proposals);
+            this.selectedProposalIds.set(new Set(proposals.map(p => p.id)));
+          }
+          this.generatingIA.set(false);
+        },
+        error: () => {
+          this.generateMsg.set('Erreur lors de la génération IA.');
+          setTimeout(() => this.generateMsg.set(''), 4000);
+          this.generatingIA.set(false);
+        },
+      });
+  }
+
+  cancelAIGeneration() {
+    this.aiCancel$.next();
+    this.aiGenSub?.unsubscribe();
+    this.generatingIA.set(false);
+    this.generateMsg.set('Génération annulée.');
+    setTimeout(() => this.generateMsg.set(''), 3000);
+  }
+
+  toggleProposal(id: string) {
+    const s = new Set(this.selectedProposalIds());
+    if (s.has(id)) s.delete(id); else s.add(id);
+    this.selectedProposalIds.set(s);
+  }
+
+  toggleAllProposals() {
+    const all = this.iaProposals().map(p => p.id);
+    if (this.selectedProposalIds().size === all.length) this.selectedProposalIds.set(new Set());
+    else this.selectedProposalIds.set(new Set(all));
+  }
+
+  async addSelectedProposals() {
+    const section = this.selectedSection();
+    if (!section || !this.projectId) return;
+    const selected = this.iaProposals().filter(p => this.selectedProposalIds().has(p.id));
+    if (!selected.length) return;
+    const s = { ...this.suite()! };
+    const now = new Date().toISOString();
+    let cat = s.categories.find(c => c.name === section.name);
+    let categoryId = cat?.id;
+    if (!cat) {
+      categoryId = 'cat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5);
+      s.categories = [...s.categories, { id: categoryId!, name: section.name, order: s.categories.length }];
+    }
+    const newCases: TestCase[] = selected.map(p => ({
+      id: p.id, title: p.title, description: p.description,
+      criticality: p.criticality as any, status: 'active' as TestStatus,
+      source: 'ia' as any, sourceRef: section.id, categoryId: categoryId!,
+      url: undefined, steps: p.steps, createdAt: now, updatedAt: now,
+    }));
+    await this.saveSuite({ ...s, cases: [...s.cases, ...newCases] });
+    this.iaProposals.set([]);
+    this.selectedProposalIds.set(new Set());
+    this.generateMsg.set(`${newCases.length} test(s) ajouté(s) dans "${section.name}"`);
+    setTimeout(() => this.generateMsg.set(''), 4000);
+  }
+
   async generateFrom(source: TestGenerationSource) {
     if (!this.projectId) return;
     this.generating.set(true);
@@ -1219,13 +1503,32 @@ export class TestsOutilComponent implements OnChanges {
 
   private autoRunSub?: Subscription;
 
+  toggleRunCategory(catId: string) {
+    const s = new Set(this.selectedRunCategories());
+    if (s.has(catId)) s.delete(catId); else s.add(catId);
+    this.selectedRunCategories.set(s);
+  }
+
+  clearRunCategories() {
+    this.selectedRunCategories.set(new Set());
+  }
+
+  catActiveCount(catId: string): number {
+    return this.suite()?.cases.filter(c => c.status === 'active' && c.categoryId === catId).length ?? 0;
+  }
+
   // ── Exécution auto
   launchAutoRun() {
     if (!this.projectId) return;
+    const caseIds = this.filteredRunCaseIds();
     this.isRunning.set(true);
     this.liveResults.set([]);
-    this.runProgress.set({ current: 0, total: this.activeCasesCount() });
-    this.autoRunSub = this.svc.launchAutoRun(this.projectId, { targetUrl: this.targetUrlValue || undefined }).subscribe({
+    this.runProgress.set({ current: 0, total: caseIds.length });
+    this.autoRunSub = this.svc.launchAutoRun(this.projectId, {
+      targetUrl: this.targetUrlValue || undefined,
+      caseIds: this.selectedRunCategories().size ? caseIds : undefined,
+      comment: this.runComment || undefined,
+    }).subscribe({
       next: ({ event, data }) => {
         if (event === 'start') this.runProgress.set({ current: 0, total: (data as any).total });
         if (event === 'case-result') {
@@ -1248,7 +1551,12 @@ export class TestsOutilComponent implements OnChanges {
   // ── Exécution manuelle
   async launchManualRun() {
     if (!this.projectId || !this.testerNameValue) return;
-    const { runId } = await this.svc.launchManualRun(this.projectId, { testerName: this.testerNameValue });
+    const caseIds = this.filteredRunCaseIds();
+    const { runId } = await this.svc.launchManualRun(this.projectId, {
+      testerName: this.testerNameValue,
+      caseIds: this.selectedRunCategories().size ? caseIds : undefined,
+      comment: this.runComment || undefined,
+    });
     const run = await this.svc.getRun(this.projectId, runId);
     this.currentRun.set(run);
     this.manualCaseIndex.set(0);

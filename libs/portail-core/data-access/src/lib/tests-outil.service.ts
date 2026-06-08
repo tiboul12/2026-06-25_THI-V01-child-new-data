@@ -44,6 +44,27 @@ export class TestsOutilService {
     );
   }
 
+  getEditionSections(projectId: string): Promise<{ id: string; name: string; depth: number }[]> {
+    return firstValueFrom(
+      this.http.get<{ sections: { id: string; name: string; depth: number }[] }>(
+        `${this.base(projectId)}/edition/sections`,
+        { headers: this.h() }
+      )
+    ).then(r => r.sections);
+  }
+
+  generateAITests(projectId: string, sectionId: string, sectionName: string): Promise<TestGenerateResponse> {
+    return firstValueFrom(this.generateAITestsObs(projectId, sectionId, sectionName));
+  }
+
+  generateAITestsObs(projectId: string, sectionId: string, sectionName: string): Observable<TestGenerateResponse> {
+    return this.http.post<TestGenerateResponse>(
+      `${this.base(projectId)}/suite/generate`,
+      { source: 'ia', sectionId, sectionName },
+      { headers: this.h() }
+    );
+  }
+
   getRuns(projectId: string): Promise<{ runs: Omit<TestRun, 'results'>[] }> {
     return firstValueFrom(
       this.http.get<{ runs: Omit<TestRun, 'results'>[] }>(`${this.base(projectId)}/runs`, { headers: this.h() })
@@ -65,6 +86,7 @@ export class TestsOutilService {
   launchManualRun(projectId: string, config: {
     testerName: string;
     caseIds?: string[];
+    comment?: string;
   }): Promise<{ runId: string }> {
     return firstValueFrom(
       this.http.post<{ runId: string }>(
@@ -88,12 +110,14 @@ export class TestsOutilService {
   launchAutoRun(projectId: string, config: {
     targetUrl?: string;
     caseIds?: string[];
+    comment?: string;
   }): Observable<{ event: string; data: unknown }> {
     return new Observable(observer => {
       const token = this.auth.getToken();
-      const params = new URLSearchParams({ mode: 'auto' });
+      const params = new URLSearchParams();
       if (config.targetUrl) params.set('targetUrl', config.targetUrl);
       if (config.caseIds?.length) params.set('caseIds', config.caseIds.join(','));
+      if (config.comment) params.set('comment', config.comment);
       if (token) params.set('token', token);
 
       const url = `${this.base(projectId)}/runs/launch?${params}`;

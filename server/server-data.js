@@ -3401,7 +3401,7 @@ function generateToken() {
 }
 
 function getSessionUser(req) {
-    const token = (req.headers['authorization'] || '').split(' ')[1];
+    const token = (req.headers['authorization'] || '').split(' ')[1] || req.query?.token;
     if (!token) return null;
     const session = activeSessions.get(token);
     if (!session || session.expiresAt < Date.now()) { activeSessions.delete(token); return null; }
@@ -8414,16 +8414,107 @@ app.put('/api/projets-tests/:id/suite', (req, res) => {
     else res.status(500).json({ error: 'Erreur sauvegarde' });
 });
 
+// GET /api/projets-tests/:id/edition/sections
+app.get('/api/projets-tests/:id/edition/sections', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const config = await getProjectConfig(req.params.id);
+    if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
+    function collectFolders(nodes, depth) {
+        const result = [];
+        for (const node of nodes || []) {
+            if (node.type === 'folder') {
+                result.push({ id: node.id, name: node.name, depth: depth || 0 });
+                result.push(...collectFolders(node.children, (depth || 0) + 1));
+            }
+        }
+        return result;
+    }
+    res.json({ sections: collectFolders(config.structure) });
+});
+
 // POST /api/projets-tests/:id/suite/generate
 app.post('/api/projets-tests/:id/suite/generate', async (req, res) => {
     const user = getSessionUser(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
     const id = req.params.id;
-    const { source } = req.body;
+    const { source, sectionId, sectionName } = req.body;
     const now = new Date().toISOString();
 
     if (source === 'ia') {
-        return res.json({ generated: [], message: 'Génération IA bientôt disponible' });
+        if (!sectionId) return res.json({ generated: [], message: 'Sélectionne une section d\'édition d\'abord.' });
+
+        const config = await getProjectConfig(id);
+        if (!config) return res.json({ generated: [], message: 'Projet non trouvé.' });
+        const sectionNode = findNodeById(config.structure, sectionId);
+        if (!sectionNode) return res.json({ generated: [], message: 'Section non trouvée.' });
+
+        function collectMdPaths(node) {
+            const paths = [];
+            if (node.type === 'file' && node.path && node.name.endsWith('.md')) paths.push(node.path);
+            for (const child of node.children || []) paths.push(...collectMdPaths(child));
+            return paths;
+        }
+
+        const projDir = path.join(PROJECTS_DIR, id);
+        const fileContents = [];
+        for (const filePath of collectMdPaths(sectionNode)) {
+            const abs = path.join(projDir, filePath);
+            if (fs.existsSync(abs)) {
+                try { fileContents.push(`### ${path.basename(filePath, '.md')}\n${fs.readFileSync(abs, 'utf8')}`); } catch {}
+            }
+        }
+
+        if (!fileContents.length) return res.json({ generated: [], message: `Aucun fichier Markdown dans la section "${sectionName}".` });
+
+        const prompt = `Tu es un expert QA. Analyse ce contenu de la section "${sectionName}" et génère une liste exhaustive de tests fonctionnels.
+
+${fileContents.join('\n\n---\n\n')}
+
+IMPORTANT : Retourne UNIQUEMENT un tableau JSON valide, sans aucun texte avant ou après :
+[{"title":"Titre court actionnable","description":"Ce qui est vérifié en détail","criticality":"bloquant","steps":[{"order":1,"action":"Action précise à effectuer","expected":"Résultat attendu"}]}]
+
+Règles :
+- criticality : "bloquant" (bloque la livraison), "majeur" (fonctionnalité importante), "mineur" (edge case)
+- Entre 3 et 15 tests, au minimum 1 étape par test
+- Les titres doivent être courts et actionnables`;
+
+        try {
+            // Appel à l'executor local (port 3002) qui gère Claude CLI / Gemini CLI
+            const executorBody = JSON.stringify({ content: prompt });
+            const output = await new Promise((resolve, reject) => {
+                const http = require('http');
+                const req2 = http.request({
+                    hostname: 'localhost', port: 3002, path: '/execute-prompt-sync',
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(executorBody) }
+                }, (r) => {
+                    let data = '';
+                    r.on('data', c => data += c);
+                    r.on('end', () => { try { resolve(JSON.parse(data)); } catch { reject(new Error('Réponse executor invalide')); } });
+                });
+                req2.setTimeout(120000, () => { req2.destroy(); reject(new Error('L\'IA met trop de temps à répondre (timeout 120s)')); });
+                req2.on('error', e => reject(new Error(`Executor inaccessible : ${e.message}. Vérifie que l'application est lancée.`)));
+                req2.write(executorBody);
+                req2.end();
+            });
+
+            if (output.error && !output.output) return res.json({ generated: [], message: `Erreur IA : ${output.error}` });
+            const text = output.output || '';
+            const jsonMatch = text.match(/\[[\s\S]*\]/);
+            if (!jsonMatch) return res.json({ generated: [], message: 'Réponse IA invalide — réessaie ou vérifie que l\'IA est bien configurée.' });
+            const proposals = JSON.parse(jsonMatch[0]);
+            const generated = proposals.map(p => ({
+                id: projTestsCaseId(), title: p.title || 'Test sans titre',
+                description: p.description, categoryId: '',
+                criticality: ['bloquant', 'majeur', 'mineur'].includes(p.criticality) ? p.criticality : 'majeur',
+                status: 'draft', source: 'ia', sourceRef: sectionId,
+                steps: (p.steps || []).map((s, i) => ({ order: i + 1, action: s.action || '', expected: s.expected || '' })),
+                createdAt: now, updatedAt: now
+            }));
+            return res.json({ generated });
+        } catch (e) {
+            return res.json({ generated: [], message: e.message });
+        }
     }
 
     if (source === 'edition') {
@@ -8543,52 +8634,65 @@ app.delete('/api/projets-tests/:id/runs/:runId', (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/projets-tests/:id/runs/launch  (manuel + auto SSE)
-app.post('/api/projets-tests/:id/runs/launch', async (req, res) => {
-    const user = getSessionUser(req);
-    if (!user) return res.status(401).json({ error: 'Non authentifié' });
-    const id = req.params.id;
-    const { mode, testerName, targetUrl, caseIds } = req.body;
-    const suite = projTestsLoad(id, 'suite.json') || { categories: [], cases: [] };
-    const activeCases = suite.cases.filter(c => c.status === 'active' && (!caseIds || caseIds.includes(c.id)));
-    if (!activeCases.length) return res.status(400).json({ error: 'Aucun test actif à exécuter' });
+// POST /api/projets-tests/:id/runs/launch  (manuel)
+// GET  /api/projets-tests/:id/runs/launch  (auto SSE via EventSource)
 
+function projTestsCreateRun(id, { mode, testerName, targetUrl, caseIds, comment }) {
+    const suite = projTestsLoad(id, 'suite.json') || { categories: [], cases: [] };
+    const caseIdList = caseIds ? (Array.isArray(caseIds) ? caseIds : caseIds.split(',')) : null;
+    const activeCases = suite.cases.filter(c => c.status === 'active' && (!caseIdList || caseIdList.includes(c.id)));
+    if (!activeCases.length) return null;
     const runId = projTestsRunId();
     const now = new Date().toISOString();
     const run = {
         id: runId, projectId: id, date: now, mode: mode || 'manual',
-        status: 'running', testerName: testerName || undefined, targetUrl: targetUrl || undefined,
+        status: 'running',
+        testerName: testerName || undefined,
+        targetUrl: targetUrl || undefined,
+        comment: comment || undefined,
         caseIds: activeCases.map(c => c.id),
         results: activeCases.map(c => ({ caseId: c.id, status: 'pending' })),
         summary: { total: activeCases.length, pass: 0, fail: 0, skip: 0, pending: activeCases.length, score: 0, goNoGo: 'GO', durationMs: 0 },
         createdAt: now
     };
     projTestsSaveRun(id, runId, run);
+    return { run, activeCases };
+}
 
-    if (mode === 'auto') {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.flushHeaders();
-        const send = (ev, data) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
-        send('start', { runId, total: activeCases.length });
-        for (let i = 0; i < activeCases.length; i++) {
-            const tc = activeCases[i];
-            send('case-start', { caseId: tc.id, name: tc.title, index: i });
-            await new Promise(r => setTimeout(r, 200));
-            const result = { caseId: tc.id, status: 'pending', aiComment: 'Analyse automatique non encore implémentée' };
-            run.results[i] = result;
-            send('case-result', { result, index: i, total: activeCases.length });
-        }
-        run.status = 'completed';
-        run.summary = computeTestSummary(run.results, activeCases, run.createdAt);
-        projTestsSaveRun(id, runId, run);
-        send('complete', { runId, summary: run.summary });
-        res.end();
-        return;
+app.post('/api/projets-tests/:id/runs/launch', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const result = projTestsCreateRun(req.params.id, req.body);
+    if (!result) return res.status(400).json({ error: 'Aucun test actif à exécuter' });
+    res.json({ runId: result.run.id });
+});
+
+app.get('/api/projets-tests/:id/runs/launch', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { targetUrl, caseIds, comment } = req.query;
+    const result = projTestsCreateRun(req.params.id, { mode: 'auto', targetUrl, caseIds, comment });
+    if (!result) return res.status(400).json({ error: 'Aucun test actif à exécuter' });
+    const { run, activeCases } = result;
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    const send = (ev, data) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
+    send('start', { runId: run.id, total: activeCases.length });
+    for (let i = 0; i < activeCases.length; i++) {
+        const tc = activeCases[i];
+        send('case-start', { caseId: tc.id, name: tc.title, index: i });
+        await new Promise(r => setTimeout(r, 200));
+        const result2 = { caseId: tc.id, status: 'pending', aiComment: 'Analyse automatique non encore implémentée' };
+        run.results[i] = result2;
+        send('case-result', { result: result2, index: i, total: activeCases.length });
     }
-
-    res.json({ runId });
+    run.status = 'completed';
+    run.summary = computeTestSummary(run.results, activeCases, run.createdAt);
+    projTestsSaveRun(req.params.id, run.id, run);
+    send('complete', { runId: run.id, summary: run.summary });
+    res.end();
 });
 
 // PUT /api/projets-tests/:id/runs/:runId
