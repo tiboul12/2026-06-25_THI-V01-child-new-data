@@ -23,9 +23,12 @@ Accès : utilisateur connecté, projet ouvert
 - **Archivage** : icône poubelle → test passe à `status: 'archived'` (non visible)
 - **Drag & drop tests** : poignée drag_indicator → réordonne au sein d'une catégorie OU déplace vers une autre catégorie (drop sur header de catégorie)
 - **Section "Sans catégorie"** : affiche les tests sans `categoryId` ou dont la catégorie a été supprimée
-- **Génération depuis Édition** : bouton → parse les .md du projet, retourne les `- [ ]` trouvés
+- **Génération depuis Édition** : bouton → ouvre un picker de sections (dossiers hiérarchiques du projet, indentés par profondeur)
+- **Section sélectionnée** : titre affiché à droite du bouton + bouton ✕ pour réinitialiser
+- **Génération IA** : activé quand une section est sélectionnée → envoie le contenu des .md de la section à Claude Haiku → retourne une liste de tests proposés
+- **Panel propositions IA** : liste de tests avec cases à cocher (tous sélectionnés par défaut), badge criticité coloré, description + nombre d'étapes
+- **Sélection des tests** : "Tout sélectionner / désélectionner" + bouton "Ajouter (N)" → crée ou réutilise une catégorie au nom de la section
 - **Génération depuis Mockup** : bouton (désactivé si aucun mockup) → génère 1 test par board
-- **Génération IA** : bouton désactivé + badge "bientôt"
 
 ## `2-5-2-9-2` — Onglet Exécution
 
@@ -41,13 +44,13 @@ Accès : utilisateur connecté, projet ouvert
 - **Mode manuel — validation** : boutons Passé / Échoué / Passer alignés à droite → passage au test suivant
 - **Mode manuel — fin** : dernier test validé → message de fin
 
-## `2-5-2-9-3` — Onglet Résultats
+## `2-5-2-9-3` — Onglet Résultats (vue matrice)
 
-- **Historique des runs** : liste date / mode / score% / badge GO–NO-GO
-- **Suppression d'un run** : icône poubelle → suppression définitive
-- **Vue détail** : clic sur un run → détail avec compteurs et tableau d'erreurs
-- **Compteurs** : Total / Passés / Échoués / Ignorés
-- **Score** : pourcentage coloré (vert ≥80%, orange ≥50%, rouge <50%)
-- **Verdict GO/NO-GO** : badge vert GO ou rouge NO-GO (NO-GO si bloquant en échec)
-- **Tableau des échecs** : erreurs triées par criticité (bloquants en premier), avec notes
-- **Retour liste** : bouton "Retour" vers l'historique
+- **Matrice tests × exécutions** : lignes = tests groupés par catégorie, colonnes = runs triés chronologiquement (plus ancien à gauche → plus récent à droite)
+- **Colonne nom tests** : sticky à gauche, affiche le titre tronqué avec un point de criticité coloré (rouge bloquant, orange majeur, jaune mineur)
+- **En-tête de colonne (run)** : date dd/MM HH:mm, mode (IA ou nom testeur), score global % coloré (vert ≥80%, orange ≥50%, rouge <50%)
+- **Bouton supprimer run** : icône poubelle visible au hover de l'en-tête de colonne → suppression définitive
+- **Ligne catégorie** : fond légèrement différencié, affiche le nom de la catégorie + score % par run (coloré selon seuils)
+- **Cellule test × run** : OK (vert, pass), KO (rouge, fail), PASSE (orange, skip), · (grisé, pending), — (grisé, non inclus dans ce run)
+- **Section "Sans catégorie"** : affiche les tests sans catégorie, avec les mêmes cellules
+- **État vide** : message "Aucune campagne exécutée" si aucun run

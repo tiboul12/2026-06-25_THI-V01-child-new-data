@@ -767,155 +767,141 @@ type TabId = 'cahier' | 'execution' | 'resultats';
     <!-- ── ONGLET RÉSULTATS ── -->
     @if (activeTab() === 'resultats') {
       <div class="flex flex-col h-full overflow-hidden">
-        @if (!selectedRun()) {
-          <div class="flex-1 overflow-y-auto p-3">
-            @if (!runs().length) {
-              <div class="text-center py-12 opacity-30 text-xs">Aucune campagne exécutée.</div>
-            }
-            @for (run of runs(); track run.id) {
-              <div class="group flex items-center gap-3 px-3 py-2.5 rounded hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors mb-1"
-                (click)="loadRunDetail(run.id)">
-                <span class="material-symbols-outlined text-sm opacity-50">{{ run.mode === 'auto' ? 'smart_toy' : 'person' }}</span>
-                <div class="flex-1 min-w-0">
-                  <div class="text-xs font-medium">{{ run.date | date:'dd/MM/yyyy HH:mm' }}</div>
-                  <div class="text-[10px] opacity-40">{{ run.mode === 'auto' ? 'Auto IA' : 'Manuel' }}@if (run.testerName) { — {{ run.testerName }} }</div>
-                  @if (run.comment) {
-                    <div class="text-[10px] opacity-30 italic truncate">{{ run.comment }}</div>
-                  }
-                </div>
-                <div class="text-sm font-bold"
-                  [class.text-emerald-400]="run.summary?.goNoGo === 'GO'"
-                  [class.text-red-400]="run.summary?.goNoGo === 'NO-GO'">
-                  {{ run.summary?.score ?? 0 }}%
-                </div>
-                <span class="text-[9px] px-2 py-0.5 rounded-full font-bold"
-                  [class.bg-emerald-500/20]="run.summary?.goNoGo === 'GO'"
-                  [class.text-emerald-400]="run.summary?.goNoGo === 'GO'"
-                  [class.bg-red-500/20]="run.summary?.goNoGo === 'NO-GO'"
-                  [class.text-red-400]="run.summary?.goNoGo === 'NO-GO'"
-                  [class.bg-light-surface]="!run.summary?.goNoGo"
-                  [class.opacity-40]="!run.summary?.goNoGo">
-                  {{ run.summary?.goNoGo ?? '–' }}
-                </span>
-                <button class="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-300 transition-opacity shrink-0"
-                  (click)="$event.stopPropagation(); deleteRun(run.id)"
-                  title="Supprimer ce run">
-                  <span class="material-symbols-outlined text-sm">delete</span>
-                </button>
-              </div>
-            }
-          </div>
+        @if (!matrixData().headers.length) {
+          <div class="flex-1 flex items-center justify-center text-xs opacity-30">Aucune campagne exécutée.</div>
         } @else {
-          <div class="flex items-center gap-2 px-3 py-2 border-b border-light-border dark:border-white/8 shrink-0">
-            <button class="flex items-center gap-1 text-xs opacity-60 hover:opacity-100 transition-opacity"
-              (click)="selectedRun.set(null)">
-              <span class="material-symbols-outlined text-sm">arrow_back</span>Retour
-            </button>
-            <div class="flex-1 min-w-0">
-              <div class="text-xs opacity-40">{{ selectedRun()!.date | date:'dd/MM/yyyy HH:mm' }} — {{ selectedRun()!.mode === 'auto' ? 'Auto IA' : 'Manuel' }}@if (selectedRun()!.testerName) { — {{ selectedRun()!.testerName }} }</div>
-              @if (selectedRun()!.comment) {
-                <div class="text-[10px] opacity-30 italic truncate">{{ selectedRun()!.comment }}</div>
-              }
-            </div>
-            <span class="text-xs px-3 py-1 rounded-full font-bold"
-              [class.bg-emerald-500/20]="selectedRun()!.summary?.goNoGo === 'GO'"
-              [class.text-emerald-400]="selectedRun()!.summary?.goNoGo === 'GO'"
-              [class.bg-red-500/20]="selectedRun()!.summary?.goNoGo === 'NO-GO'"
-              [class.text-red-400]="selectedRun()!.summary?.goNoGo === 'NO-GO'">
-              {{ selectedRun()!.summary?.goNoGo }}
-            </span>
-          </div>
-          <div class="flex-1 overflow-y-auto p-4">
-            <div class="grid grid-cols-4 gap-2 mb-4">
-              @for (stat of runStats(); track stat.label) {
-                <div class="rounded border border-light-border dark:border-white/10 p-2 text-center">
-                  <div class="text-lg font-bold" [class]="stat.color">{{ stat.value }}</div>
-                  <div class="text-[10px] opacity-40">{{ stat.label }}</div>
-                </div>
-              }
-            </div>
-            <div class="text-center mb-4">
-              <div class="text-4xl font-bold"
-                [class.text-emerald-400]="(selectedRun()!.summary?.score ?? 0) >= 80"
-                [class.text-amber-400]="(selectedRun()!.summary?.score ?? 0) >= 50 && (selectedRun()!.summary?.score ?? 0) < 80"
-                [class.text-red-400]="(selectedRun()!.summary?.score ?? 0) < 50">
-                {{ selectedRun()!.summary?.score ?? 0 }}%
-              </div>
-              <div class="text-xs opacity-40">de réussite</div>
-            </div>
-            <!-- Titre section -->
-            @if (failedResults().length) {
-              <div class="text-[10px] uppercase tracking-wider opacity-40 mb-1">
-                Échecs — triés par criticité
-              </div>
-            }
-            <div class="space-y-2">
-              @for (r of failedResults(); track r.caseId) {
-                @if (getCaseByCaseId(r.caseId); as tc) {
-                  <div class="rounded border overflow-hidden"
-                    [class.border-red-500/40]="tc.criticality === 'bloquant'"
-                    [class.bg-red-500/6]="tc.criticality === 'bloquant'"
-                    [class.border-orange-400/30]="tc.criticality === 'majeur'"
-                    [class.bg-orange-500/5]="tc.criticality === 'majeur'"
-                    [class.border-yellow-400/20]="tc.criticality === 'mineur'"
-                    [class.bg-yellow-400/4]="tc.criticality === 'mineur'">
-
-                    <!-- En-tête test -->
-                    <div class="flex items-start gap-2 px-3 py-2">
-                      <span class="shrink-0 w-2 h-2 rounded-full mt-1.5"
-                        [class.bg-red-500]="tc.criticality === 'bloquant'"
-                        [class.bg-orange-400]="tc.criticality === 'majeur'"
-                        [class.bg-yellow-400]="tc.criticality === 'mineur'"></span>
-                      <div class="flex-1 min-w-0">
-                        <div class="text-xs font-semibold mb-1">{{ tc.title }}</div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <span class="text-[9px] px-1.5 py-0.5 rounded border font-medium"
-                            [class.border-red-500]="tc.criticality === 'bloquant'"
-                            [class.text-red-400]="tc.criticality === 'bloquant'"
-                            [class.border-orange-400]="tc.criticality === 'majeur'"
-                            [class.text-orange-400]="tc.criticality === 'majeur'"
-                            [class.border-yellow-400]="tc.criticality === 'mineur'"
-                            [class.text-yellow-400]="tc.criticality === 'mineur'">{{ tc.criticality }}</span>
-                          @if (tc.url) {
-                            <a [href]="tc.url" target="_blank"
-                              class="text-[9px] text-primary hover:underline truncate max-w-[200px]">{{ tc.url }}</a>
-                          }
-                          @if (tc.steps.length) {
-                            <span class="text-[9px] opacity-30">{{ tc.steps.length }} étape{{ tc.steps.length > 1 ? 's' : '' }}</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Ligne testeur + résultat + commentaire -->
-                    <div class="border-t px-3 py-2 flex items-start gap-2"
-                      [class.border-red-500/20]="tc.criticality === 'bloquant'"
-                      [class.border-orange-400/15]="tc.criticality === 'majeur'"
-                      [class.border-yellow-400/10]="tc.criticality === 'mineur'">
-                      <span class="material-symbols-outlined text-sm opacity-30 shrink-0 mt-0.5">person</span>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <span class="text-[10px] font-medium opacity-70">{{ r.testedBy || 'IA' }}</span>
-                          <span class="text-[9px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-medium">✗ Échoué</span>
-                          @if (r.testedAt) {
-                            <span class="text-[9px] opacity-30">{{ r.testedAt | date:'dd/MM HH:mm' }}</span>
-                          }
-                        </div>
-                        @if (r.notes || r.aiComment) {
-                          <div class="mt-1 text-[10px] opacity-60 italic leading-relaxed">
-                            "{{ r.notes || r.aiComment }}"
-                          </div>
+          <div class="flex-1 overflow-auto">
+            <table class="border-collapse text-xs" style="min-width:max-content;width:100%">
+              <!-- En-tête : une colonne par run (ordre chronologique) -->
+              <thead class="sticky top-0 z-20">
+                <tr>
+                  <th class="sticky left-0 z-30 text-left px-3 py-2 border-b border-r border-light-border dark:border-white/8 bg-light-bg dark:bg-surface font-normal" style="min-width:200px">
+                    <span class="text-[10px] opacity-40">Tests</span>
+                  </th>
+                  @for (h of matrixData().headers; track h.run.id) {
+                    <th class="group text-center px-2 py-1.5 border-b border-r border-light-border dark:border-white/8 bg-light-bg dark:bg-surface" style="min-width:76px;max-width:100px">
+                      <div class="text-[9px] opacity-50 whitespace-nowrap">{{ h.run.date | date:'dd/MM HH:mm' }}</div>
+                      <div class="text-[9px] opacity-40 truncate">{{ h.run.mode === 'auto' ? 'IA' : (h.run.testerName || 'Manuel') }}</div>
+                      @if (h.globalScore !== null) {
+                        <div class="text-sm font-bold mt-0.5"
+                          [class.text-emerald-400]="h.globalScore >= 80"
+                          [class.text-amber-400]="h.globalScore >= 50 && h.globalScore < 80"
+                          [class.text-red-400]="h.globalScore < 50">{{ h.globalScore }}%</div>
+                      } @else {
+                        <div class="text-sm font-bold mt-0.5 opacity-20">–</div>
+                      }
+                      <button class="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-red-400 transition-opacity"
+                        (click)="deleteRun(h.run.id)" title="Supprimer ce run">
+                        <span class="material-symbols-outlined" style="font-size:11px">delete</span>
+                      </button>
+                    </th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (cat of matrixData().categories; track cat.category.id) {
+                  <!-- Ligne catégorie avec scores -->
+                  <tr>
+                    <td class="sticky left-0 z-10 px-3 py-1.5 border-b border-r border-light-border dark:border-white/8 bg-light-surface dark:bg-white/[0.04] font-semibold" style="font-size:11px">
+                      {{ cat.category.name }}
+                    </td>
+                    @for (s of cat.catScores; track s.runId) {
+                      <td class="text-center border-b border-r border-light-border dark:border-white/8 py-1"
+                        [class.bg-emerald-500]="s.score !== null && s.score >= 80"
+                        [class.bg-amber-400]="s.score !== null && s.score >= 50 && s.score < 80"
+                        [class.bg-red-500]="s.score !== null && s.score < 50">
+                        @if (s.score !== null) {
+                          <span class="font-bold text-black" style="font-size:10px">{{ s.score }}%</span>
+                        } @else {
+                          <span class="opacity-20" style="font-size:9px">–</span>
                         }
-                      </div>
-                    </div>
-
-                  </div>
+                      </td>
+                    }
+                  </tr>
+                  <!-- Lignes tests -->
+                  @for (t of cat.tests; track t.testCase.id) {
+                    <tr class="hover:bg-black/[0.03] dark:hover:bg-white/[0.02] transition-colors">
+                      <td class="sticky left-0 z-10 px-3 py-1.5 border-b border-r border-light-border dark:border-white/8 bg-light-bg dark:bg-surface">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                          <span class="shrink-0 w-1.5 h-1.5 rounded-full"
+                            [class.bg-red-500]="t.testCase.criticality === 'bloquant'"
+                            [class.bg-orange-400]="t.testCase.criticality === 'majeur'"
+                            [class.bg-yellow-400]="t.testCase.criticality === 'mineur'"></span>
+                          <span class="truncate" style="font-size:11px" [title]="t.testCase.title">{{ t.testCase.title }}</span>
+                        </div>
+                      </td>
+                      @for (r of t.results; track r.runId) {
+                        <td class="text-center border-b border-r border-light-border dark:border-white/8 py-1.5">
+                          @if (r.cell; as cell) {
+                            @if (cell.status === 'pass') {
+                              <span class="px-1.5 py-0.5 rounded font-bold bg-emerald-500 text-black" style="font-size:9px">OK</span>
+                            } @else if (cell.status === 'fail') {
+                              <span class="px-1.5 py-0.5 rounded font-bold bg-red-500 text-black" style="font-size:9px">KO</span>
+                            } @else if (cell.status === 'skip') {
+                              <span class="px-1.5 py-0.5 rounded font-medium bg-neutral-600 dark:bg-neutral-700 text-white/80" style="font-size:9px">PASSE</span>
+                            } @else {
+                              <span class="opacity-20" style="font-size:9px">·</span>
+                            }
+                          } @else {
+                            <span class="opacity-15" style="font-size:9px">—</span>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
                 }
-              }
-              @if (!failedResults().length) {
-                <div class="text-center py-4 text-xs opacity-30">Aucun test en échec.</div>
-              }
-            </div>
+                <!-- Sans catégorie -->
+                @if (matrixData().uncategorized.length) {
+                  <tr>
+                    <td class="sticky left-0 z-10 px-3 py-1.5 border-b border-r border-light-border dark:border-white/8 bg-light-surface dark:bg-white/[0.04] font-semibold opacity-50" style="font-size:11px">
+                      Sans catégorie
+                    </td>
+                    @for (s of matrixData().uncategorizedScores; track s.runId) {
+                      <td class="text-center border-b border-r border-light-border dark:border-white/8 py-1"
+                        [class.bg-emerald-500]="s.score !== null && s.score >= 80"
+                        [class.bg-amber-400]="s.score !== null && s.score >= 50 && s.score < 80"
+                        [class.bg-red-500]="s.score !== null && s.score < 50">
+                        @if (s.score !== null) {
+                          <span class="font-bold text-black" style="font-size:10px">{{ s.score }}%</span>
+                        } @else {
+                          <span class="opacity-20" style="font-size:9px">–</span>
+                        }
+                      </td>
+                    }
+                  </tr>
+                  @for (t of matrixData().uncategorized; track t.testCase.id) {
+                    <tr class="hover:bg-black/[0.03] dark:hover:bg-white/[0.02] transition-colors">
+                      <td class="sticky left-0 z-10 px-3 py-1.5 border-b border-r border-light-border dark:border-white/8 bg-light-bg dark:bg-surface">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                          <span class="shrink-0 w-1.5 h-1.5 rounded-full"
+                            [class.bg-red-500]="t.testCase.criticality === 'bloquant'"
+                            [class.bg-orange-400]="t.testCase.criticality === 'majeur'"
+                            [class.bg-yellow-400]="t.testCase.criticality === 'mineur'"></span>
+                          <span class="truncate" style="font-size:11px" [title]="t.testCase.title">{{ t.testCase.title }}</span>
+                        </div>
+                      </td>
+                      @for (r of t.results; track r.runId) {
+                        <td class="text-center border-b border-r border-light-border dark:border-white/8 py-1.5">
+                          @if (r.cell; as cell) {
+                            @if (cell.status === 'pass') {
+                              <span class="px-1.5 py-0.5 rounded font-bold bg-emerald-500 text-black" style="font-size:9px">OK</span>
+                            } @else if (cell.status === 'fail') {
+                              <span class="px-1.5 py-0.5 rounded font-bold bg-red-500 text-black" style="font-size:9px">KO</span>
+                            } @else if (cell.status === 'skip') {
+                              <span class="px-1.5 py-0.5 rounded font-medium bg-neutral-600 dark:bg-neutral-700 text-white/80" style="font-size:9px">PASSE</span>
+                            } @else {
+                              <span class="opacity-20" style="font-size:9px">·</span>
+                            }
+                          } @else {
+                            <span class="opacity-15" style="font-size:9px">—</span>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
           </div>
         }
       </div>
@@ -1041,6 +1027,7 @@ export class TestsOutilComponent implements OnChanges {
   activeTab = signal<TabId>('cahier');
   suite = signal<TestSuite | null>(null);
   runs = signal<Omit<TestRun, 'results'>[]>([]);
+  fullRuns = signal<TestRun[]>([]);
   editingCase = signal<Partial<TestCase> | null>(null);
   generating = signal(false);
   generateMsg = signal('');
@@ -1077,7 +1064,6 @@ export class TestsOutilComponent implements OnChanges {
   currentRun = signal<TestRun | null>(null);
   manualCaseIndex = signal(0);
   manualNotes = '';
-  selectedRun = signal<TestRun | null>(null);
 
   // ── Computed
   readonly mockupInstances = computed(() => this.megaOutilInstances.filter(i => i.type === 'mockup'));
@@ -1165,26 +1151,61 @@ export class TestsOutilComponent implements OnChanges {
     return this.currentRun()?.results.find(r => r.caseId === caseId);
   }
 
-  readonly failedResults = computed(() => {
-    const run = this.selectedRun();
-    if (!run) return [];
-    const order = { bloquant: 0, majeur: 1, mineur: 2 };
-    return [...(run.results?.filter(r => r.status === 'fail') ?? [])].sort((a, b) => {
-      const ca = this.suite()?.cases?.find(c => c.id === a.caseId);
-      const cb = this.suite()?.cases?.find(c => c.id === b.caseId);
-      return (order[ca?.criticality ?? 'mineur'] ?? 2) - (order[cb?.criticality ?? 'mineur'] ?? 2);
-    });
-  });
+  readonly sortedFullRuns = computed(() =>
+    [...this.fullRuns()].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  );
 
-  readonly runStats = computed(() => {
-    const s = this.selectedRun()?.summary;
-    if (!s) return [];
-    return [
-      { label: 'Total', value: s.total, color: '' },
-      { label: 'Passés', value: s.pass, color: 'text-emerald-400' },
-      { label: 'Échoués', value: s.fail, color: 'text-red-400' },
-      { label: 'Ignorés', value: s.skip, color: 'text-amber-400' },
-    ];
+  readonly matrixData = computed(() => {
+    const suite = this.suite();
+    const runs = this.sortedFullRuns();
+    const empty = { headers: [] as { run: TestRun; globalScore: number | null }[], categories: [] as { category: TestCategory; catScores: { runId: string; score: number | null }[]; tests: { testCase: TestCase; results: { runId: string; cell: TestRunResult | null }[] }[] }[], uncategorized: [] as { testCase: TestCase; results: { runId: string; cell: TestRunResult | null }[] }[], uncategorizedScores: [] as { runId: string; score: number | null }[] };
+    if (!suite) return empty;
+
+    const activeCases = suite.cases.filter(c => c.status !== 'archived');
+    const runMeta = runs.map(run => ({
+      run,
+      caseSet: new Set(run.caseIds),
+      resultMap: new Map(run.results.map(r => [r.caseId, r])),
+    }));
+
+    const getCell = (caseId: string, meta: { caseSet: Set<string>; resultMap: Map<string, TestRunResult> }): TestRunResult | null => {
+      if (!meta.caseSet.has(caseId)) return null;
+      return meta.resultMap.get(caseId) ?? { caseId, status: 'pending' };
+    };
+
+    const scoreFor = (cases: TestCase[], meta: { caseSet: Set<string>; resultMap: Map<string, TestRunResult> }): number | null => {
+      const included = cases.filter(c => meta.caseSet.has(c.id));
+      if (!included.length) return null;
+      const passed = included.filter(c => meta.resultMap.get(c.id)?.status === 'pass').length;
+      return Math.round((passed / included.length) * 100);
+    };
+
+    const catIds = new Set(suite.categories.map(c => c.id));
+
+    const headers = runMeta.map(meta => ({ run: meta.run, globalScore: scoreFor(activeCases, meta) }));
+
+    const categories = [...suite.categories]
+      .sort((a, b) => a.order - b.order)
+      .map(cat => {
+        const cases = activeCases.filter(c => c.categoryId === cat.id);
+        return {
+          category: cat,
+          catScores: runMeta.map(meta => ({ runId: meta.run.id, score: scoreFor(cases, meta) })),
+          tests: cases.map(tc => ({
+            testCase: tc,
+            results: runMeta.map(meta => ({ runId: meta.run.id, cell: getCell(tc.id, meta) })),
+          })),
+        };
+      });
+
+    const uncategorizedCases = activeCases.filter(c => !c.categoryId || !catIds.has(c.categoryId));
+    const uncategorizedScores = runMeta.map(meta => ({ runId: meta.run.id, score: scoreFor(uncategorizedCases, meta) }));
+    const uncategorized = uncategorizedCases.map(tc => ({
+      testCase: tc,
+      results: runMeta.map(meta => ({ runId: meta.run.id, cell: getCell(tc.id, meta) })),
+    }));
+
+    return { headers, categories, uncategorized, uncategorizedScores };
   });
 
   ngOnChanges(changes: SimpleChanges) {
@@ -1199,6 +1220,12 @@ export class TestsOutilComponent implements OnChanges {
     ]);
     this.suite.set(suite);
     this.runs.set(runs);
+    if (runs.length) {
+      const fullRuns = await Promise.all(runs.map(r => this.svc.getRun(this.projectId!, r.id)));
+      this.fullRuns.set(fullRuns);
+    } else {
+      this.fullRuns.set([]);
+    }
   }
 
   // ── Catégories
@@ -1583,16 +1610,10 @@ export class TestsOutilComponent implements OnChanges {
   }
 
   // ── Résultats
-  async loadRunDetail(runId: string) {
-    if (!this.projectId) return;
-    this.selectedRun.set(await this.svc.getRun(this.projectId, runId) as TestRun);
-  }
-
   async deleteRun(runId: string) {
     if (!this.projectId) return;
     await this.svc.deleteRun(this.projectId, runId);
     await this.loadData();
-    if (this.selectedRun()?.id === runId) this.selectedRun.set(null);
   }
 
   // ── Helpers

@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-338",
+      "version": "B-0.259",
+      "date": "2026-06-09T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|tests-outil",
+      "title": "Tests : onglet Résultats en vue matrice",
+      "description": "L'onglet Résultats affiche une matrice tests × exécutions : lignes = tests groupés par catégorie, colonnes = runs triés chronologiquement. Cellules : badge fond vert/texte noir (OK), fond rouge/texte noir (KO), fond gris-foncé/texte clair (PASSE), — grisé (non testé). Score % par run dans les en-têtes de catégorie (y compris 'Sans catégorie'). Score global % en en-tête de colonne. Suppression du run par hover colonne. fullRuns charge les runs complets en parallèle.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/tests/tests-outil.component.ts",
+        "tests/fonctions/connecte/projets/editor/tests-outil/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans projets pour l'outils tests/resultat je voudrais un autre format d'affichage, le système doit listé l'ensemble des tests comme l'affichage de la page Cahier de recette, mais cela doit rajouté une colonne par test (Execution) en grisant les lignes non testé pour chaque test et en indiquant si OK/KO/PASSE pour chaque task et par catégorie. - Tout en haut le résultat global en pourcentage, dans chaque catégorie le résultat de la catégorie en pourcentage. le but est de voir l'ensemble des tests par ordre chronologique et de voir l'évolution par date et test.",
+      "startedAt": "2026-06-09T10:00:00.000Z",
+      "completedAt": "2026-06-09T10:30:00.000Z"
+    },
+    {
       "id": "mod-337",
       "version": "B-0.258",
       "date": "2026-06-08T19:30:00.000Z",
