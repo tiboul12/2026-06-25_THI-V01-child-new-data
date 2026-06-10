@@ -104,6 +104,11 @@
               [projectName]="project()?.title ?? ''"
               [megaOutilInstances]="megaOutilInstances()"
               [activeOutilId]="activeOutilId()" />
+        } @else if (activeOutil()!.type === 'agenda') {
+          <app-agenda-outil
+              [projectId]="project()?.id ?? null"
+              [projectName]="project()?.title ?? ''"
+              [activeOutilId]="activeOutilId()" />
         }
       } @else if (diffEntry()) {
         <app-projet-diff

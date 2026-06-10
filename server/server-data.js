@@ -5862,6 +5862,54 @@ app.delete('/api/file-projects/:name/outils/:outilId', async (req, res) => {
 });
 
 // ============================================================
+// Agenda par projet
+// ============================================================
+
+const agendaDir = (name) => path.join(PROJECTS_DIR, name, 'agenda');
+
+// GET /api/file-projects/:name/agenda
+app.get('/api/file-projects/:name/agenda', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const dir = agendaDir(req.params.name);
+    if (!fs.existsSync(dir)) return res.json([]);
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    const events = files.map(f => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
+    res.json(events);
+});
+
+// POST /api/file-projects/:name/agenda
+app.post('/api/file-projects/:name/agenda', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const dir = agendaDir(req.params.name);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const event = { id: crypto.randomUUID(), ...req.body };
+    fs.writeFileSync(path.join(dir, `${event.id}.json`), JSON.stringify(event, null, 2));
+    res.json(event);
+});
+
+// PATCH /api/file-projects/:name/agenda/:id
+app.patch('/api/file-projects/:name/agenda/:id', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const file = path.join(agendaDir(req.params.name), `${req.params.id}.json`);
+    if (!fs.existsSync(file)) return res.status(404).json({ error: 'Événement non trouvé' });
+    const event = { ...JSON.parse(fs.readFileSync(file, 'utf8')), ...req.body };
+    fs.writeFileSync(file, JSON.stringify(event, null, 2));
+    res.json(event);
+});
+
+// DELETE /api/file-projects/:name/agenda/:id
+app.delete('/api/file-projects/:name/agenda/:id', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const file = path.join(agendaDir(req.params.name), `${req.params.id}.json`);
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    res.json({ success: true });
+});
+
+// ============================================================
 // Git par projet : sync, pull, status
 // ============================================================
 
