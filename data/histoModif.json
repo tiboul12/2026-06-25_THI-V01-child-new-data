@@ -1,12 +1,71 @@
 {
   "modifications": [
     {
+      "id": "mod-343",
+      "version": "B-0.262",
+      "date": "2026-06-10T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|agenda",
+      "title": "Agenda : corrections UI + drag & drop mois/semaine",
+      "description": "Corrections multiples sur l'outil agenda : texte noir sur fond primary (today circle, bouton, tags), titre popup avec guillemets doubles, fermeture popup uniquement via bouton, vue année fond sombre via style inline, cases mois bleu foncé #060d2e, drag & drop sur vue mois (déplacement par jour), drag & drop semaine avec pointer-events:none pour permettre le drop sur les cellules d'heures sous les événements.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/outils/agenda/agenda-outil.component.ts",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "corrections UI agenda : contraste texte, popup, drag & drop semaine/mois",
+      "startedAt": "2026-06-10T19:00:00.000Z",
+      "completedAt": "2026-06-10T21:00:00.000Z"
+    },
+    {
+      "id": "mod-342",
+      "version": "B-0.262",
+      "date": "2026-06-10T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets",
+        "libs",
+        "server"
+      ],
+      "features": "projets:editor|agenda,libs:agenda-outil,server:api",
+      "title": "Outil Agenda : calendrier projet avec vues semaine/mois/année",
+      "description": "Ajout du nouvel outil projet \"agenda\" permettant de gérer des événements liés au projet. 3 vues : semaine (grille horaire), mois (calendrier classique), année (12 colonnes). Popup de création/édition/suppression avec titre, dates, description, couleur. Chaque événement stocké en JSON individuel dans data/projets/{id}/agenda/. Service AgendaOutilService, modèle AgendaEvent, 4 routes API REST, intégration complète dans le sidebar et l'éditeur.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/project-files.service.ts",
+        "libs/portail-core/data-access/src/lib/agenda-outil.models.ts",
+        "libs/portail-core/data-access/src/lib/agenda-outil.service.ts",
+        "libs/portail-core/data-access/src/index.ts",
+        "apps/projets/src/app/pages/projet-editor/outils/agenda/agenda-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "server/server-data.js",
+        "docs/outils.md",
+        "docs/structure/agenda-outil.component.md",
+        "tests/fonctions/connecte/projets/editor/agenda-outil/fonctions.md",
+        "tests/fonctions/_registry.json"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "crait moi un nouvel outil agenda, le but est de pouvoir ajouter l'outil agenda dans le menu principal comme editor et test. Lorsqu'on clique sur agenda la zone central 4 affichera un agenda avec plusieurs onglet pour affichage 1 semaine (heure en colonne), 1 mois (une case par jour), 1 année (1 mois par colonne et jour dans les colonnes ). Dans une case (jours) cela ouvre un popup pour rajouté un evènement. on peux rajouté un element pour plusieurs heures ou plusieurs jours (mois), on doit pouvoir ajouté plusieurs évènement pour une journée. Les évènements seront lié uniquement au projet. Chaque évènement sera rajouté dans le dossier du projet avec un fichier au format json.",
+      "startedAt": "2026-06-10T18:00:00.000Z",
+      "completedAt": "2026-06-10T19:00:00.000Z"
+    },
+    {
       "id": "mod-341",
       "version": "B-0.262",
       "date": "2026-06-10T00:00:00.000Z",
       "type": "fix",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|toolbar",
       "title": "Fix décalage toolbar : hauteur boutons Partager/Non sauvegardé",
       "description": "Le bouton 'Partager mes modifications' (padding réduit à 2px/1px, icône 13px) et le bouton 'Non sauvegardé' (suppression border+py-0.5, passage à px-1 seul) ne provoquent plus de décalage vertical dans la barre Sauvegarde.",
@@ -26,7 +85,9 @@
       "date": "2026-06-10T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|toolbar",
       "title": "Transfert barre Modifications/Partager dans la ligne Sauvegarde",
       "description": "Les 3 blocs code-publish-bar (Modifications en cours / Annuler / Partager mes modifications) positionnés sous la toolbar ont été intégrés directement dans la Ligne 1 de la toolbar (barre Sauvegardé). Un flex-1 pousse le contenu à droite. Les anciens blocs séparés ont été supprimés.",
@@ -45,7 +106,10 @@
       "date": "2026-06-10T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "server"],
+      "scope": [
+        "projets",
+        "server"
+      ],
       "features": "projets:editor|sidebar",
       "title": "Sidebar : sections/fichiers invisibles dans outil Edition",
       "description": "Les dossiers racines de l'outil Edition ne s'affichaient pas dans la sidebar car rootFolderIds était vide ([]) dans config.json. Trois corrections : (1) migrateOutils auto-répare les rootFolderIds vides en les populant depuis config.structure, (2) POST /folders ajoute atomiquement le nouveau dossier dans rootFolderIds côté serveur, (3) processSectionsChange remplace les appels fire-and-forget par un seul appel groupé pour éliminer la race condition.",
@@ -65,7 +129,9 @@
       "date": "2026-06-09T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests : onglet Résultats en vue matrice",
       "description": "L'onglet Résultats affiche une matrice tests × exécutions : lignes = tests groupés par catégorie, colonnes = runs triés chronologiquement. Cellules : badge fond vert/texte noir (OK), fond rouge/texte noir (KO), fond gris-foncé/texte clair (PASSE), — grisé (non testé). Score % par run dans les en-têtes de catégorie (y compris 'Sans catégorie'). Score global % en en-tête de colonne. Suppression du run par hover colonne. fullRuns charge les runs complets en parallèle.",
@@ -85,7 +151,10 @@
       "date": "2026-06-08T19:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "server"],
+      "scope": [
+        "projets",
+        "server"
+      ],
       "features": "projets:editor|tests-outil,server:projets-tests",
       "title": "Tests : sélection catégories + commentaire avant lancement",
       "description": "Avant de lancer un run (auto ou manuel), l'utilisateur peut choisir les catégories à tester (chips multi-select, 'Toutes' par défaut) et saisir un commentaire. Le commentaire est stocké sur le run et affiché dans la liste des résultats. Le filtre catégories passe les caseIds filtrés au serveur. Ajout GET /api/projets-tests/:id/runs/launch pour le SSE auto (EventSource). Fix getSessionUser pour lire le token depuis les query params (SSE auth).",
@@ -107,7 +176,9 @@
       "date": "2026-06-08T19:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests Résultats : bouton supprimer run visible au hover",
       "description": "Le bouton supprimer d'un run était opacity-0 sans group sur le parent, le rendant impossible à déclencher. Ajout de la classe group sur la ligne du run et passage à group-hover:opacity-100 pour révéler l'icône delete au survol de la ligne.",
@@ -126,7 +197,10 @@
       "date": "2026-06-08T18:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests : bannière IA en cours + bouton Annuler + Sans catégorie en premier",
       "description": "Ajout d'une bannière de chargement (spinner + texte + bouton Annuler) pendant la génération IA via Observable + takeUntil pour cancellation propre de la requête HTTP. Section 'Sans catégorie' déplacée en tête de liste (avant les catégories triées). Méthode generateAITestsObs() ajoutée au service.",
@@ -146,7 +220,10 @@
       "date": "2026-06-08T18:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server", "projets"],
+      "scope": [
+        "server",
+        "projets"
+      ],
       "features": "projets:editor|tests-outil,server:projets-tests-api",
       "title": "Tests IA : utilise l'executor CLI (Claude/Gemini) au lieu de la clé API directe",
       "description": "Ajout de POST /execute-prompt-sync dans server-executor.js (port 3002) : exécute Claude CLI ou Gemini CLI de façon synchrone et retourne { output }. La génération IA de tests dans server-data.js appelle maintenant cet endpoint au lieu du SDK Anthropic direct, résolvant l'erreur 'clé API non configurée' pour les utilisateurs utilisant le CLI.",
@@ -166,7 +243,11 @@
       "date": "2026-06-08T17:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs", "server"],
+      "scope": [
+        "projets",
+        "libs",
+        "server"
+      ],
       "features": "projets:editor|tests-outil,server:projets-tests-api",
       "title": "Tests Cahier : génération IA depuis section d'édition",
       "description": "Bouton 'Depuis Édition' ouvre un picker de sections (dossiers hiérarchiques du projet) avec indentation. Section sélectionnée affichée à droite du bouton. Bouton 'IA' activé → appelle Claude Haiku avec le contenu des .md de la section → propose une liste de tests avec checkboxes. Confirmation crée une catégorie au nom de la section et y ajoute les tests sélectionnés. Nouveau endpoint GET /api/projets-tests/:id/edition/sections. Génération IA remplace le stub 'bientôt'.",
@@ -188,7 +269,9 @@
       "date": "2026-06-08T16:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests Résultats : détail des échecs avec testeur + commentaire",
       "description": "Refonte de la section échecs dans le détail d'un run : carte par test échoué avec fond coloré selon criticité (bloquant=rouge, majeur=orange, mineur=jaune), badge criticité coloré, URL cliquable, nombre d'étapes. Section testeur : nom, badge Échoué, date, commentaire/notes en italique. Tri déjà en place par criticité (bloquants en premier).",
@@ -207,7 +290,9 @@
       "date": "2026-06-08T15:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests Exécution : barre de stats + fond rouge sur échec critique",
       "description": "Ajout d'une barre de stats au-dessus de la liste des tests du run : barre de progression (complétés/total), compteur Passé (vert) et Échoué (rouge). Ajout du fond rouge (bg-red-500/10 border-red-500/40) sur les lignes complétées dont le résultat est fail et la criticité majeur ou bloquant.",
@@ -226,7 +311,9 @@
       "date": "2026-06-08T15:00:00.000Z",
       "type": "fix",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests Exécution : boutons Passé/Échoué/Passer sur les lignes complétées",
       "description": "Sur les tests déjà complétés, affichage des 3 boutons (Passé/Échoué/Passer) avec le bouton sélectionné en pleine couleur et les 2 non sélectionnés très grisés (opacity-15). Remplacement du badge résultat par ce groupe de 3 spans. La ligne est désormais gérée individuellement (pas d'opacity globale) pour permettre ce contraste.",
@@ -245,7 +332,9 @@
       "date": "2026-06-08T14:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests Auto : bouton Arrêter le run IA",
       "description": "Ajout d'un bouton 'Arrêter' dans la carte de progression du mode automatique. Stocke la subscription RxJS dans autoRunSub, appel unsubscribe() + isRunning.set(false) pour stopper proprement le flux SSE côté client.",
@@ -264,7 +353,9 @@
       "date": "2026-06-08T14:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests Exécution : liste complète + boutons à droite + criticité colorée",
       "description": "Refonte de l'onglet Exécution manuel : les tests complétés s'affichent au-dessus (grisés, avec badge résultat vert/rouge), le test actif est centré avec ses boutons d'action (Passé/Échoué/Passer) alignés à droite, les tests à venir sont listés en dessous (grisés à 30%). Badge criticité avec couleurs vives : bloquant=rouge vif (red-400+bg-red-500/25), majeur=orange (orange-400+bg-orange-500/20), mineur=jaune (yellow-400+bg-yellow-400/10). Ajout des computed signals completedCaseIds et upcomingCaseIds et des méthodes getManualCase/getManualResult.",
@@ -283,7 +374,10 @@
       "date": "2026-06-08T13:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server", "projets"],
+      "scope": [
+        "server",
+        "projets"
+      ],
       "features": "projets:editor|tests-outil,server:projets-tests-api",
       "title": "Tests : fix run launch 404 + form Étapes",
       "description": "Fix serveur : projTestsSave utilisait mkdirSync sur le dossier parent tests/ sans créer le sous-dossier runs/, causant un writeFileSync silencieusement raté sur les fichiers de run. Correction : mkdirSync(path.dirname(filePath)) crée le bon sous-dossier. Création manuelle de data/projets/:id/tests/runs/ pour le projet actif. Formulaire : étapes repositionnées en bas du form avec label plus visible et bouton + Étape intégré au titre.",
@@ -303,7 +397,10 @@
       "date": "2026-06-08T11:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor|tests-outil,libs:tests-models",
       "title": "Tests : tableau, filtre criticité, radios form, champ URL",
       "description": "Refactoring du cahier de recette : affichage des tests sous forme de tableau (N°, Titre, URL, Criticité, Étapes) avec en-têtes colonnes. Ajout d'un filtre par criticité (chips Tous/Bloquant/Majeur/Mineur). Remplacement des selects du formulaire par des boutons radio pour criticité et catégorie. Ajout du champ URL sur TestCase (modèle + form + affichage tableau + onglet exécution manuelle).",
@@ -324,7 +421,9 @@
       "date": "2026-06-08T10:00:00.000Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|tests-outil",
       "title": "Tests : refactor Cahier — layout plein sans sidebar",
       "description": "Suppression de la sidebar catégorie (panneau gauche w-44). Toutes les catégories s'affichent en sections accordéon dans la zone principale. Ajout drag & drop HTML5 pour réordonner les catégories et déplacer des tests entre catégories. Création/renommage de catégorie 100% inline (plus de prompt()). Ajout de test directement depuis le header de chaque catégorie. Section 'Sans catégorie' pour les tests orphelins.",
@@ -345,7 +444,12 @@
       "date": "2026-06-08T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs", "server", "data"],
+      "scope": [
+        "projets",
+        "libs",
+        "server",
+        "data"
+      ],
       "features": "projets:editor|tests-outil,libs:tests-models|tests-service,server:projets-tests-api",
       "title": "Outil Tests : cahier de recette + exécution + résultats",
       "description": "Ajout du nouvel outil projet 'Tests' (type `tests`, icône `science`). L'outil propose 3 onglets : (1) Cahier de recette — création manuelle et génération automatique depuis les fichiers Édition ou les boards Mockup ; (2) Exécution — mode automatique IA via SSE et mode manuel carte par carte pour un ou plusieurs testeurs ; (3) Résultats — historique des campagnes avec score, verdict GO/NO-GO basé sur la criticité des tests bloquants en échec, et tableau des erreurs triées par criticité.",
@@ -377,7 +481,10 @@
       "date": "2026-06-07T21:35:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs", "server"],
+      "scope": [
+        "libs",
+        "server"
+      ],
       "features": "libs:mega-outils,server:mockup-api",
       "title": "Mockup : types TS + routes API serveur",
       "description": "Correction compilation TS (MegaOutilType 'mockup', thumbnailData, MockupConnection, MockupElement/Comment/ElementType, constantes MOCKUP_ELEMENT_LABELS/DEFAULTS) et ajout méthodes service. Ajout routes API serveur pour elements/comments/diagram/connections. Création tables DB mega_outil_mockup_elements, _comments, _connections, _diagram_positions + migration thumbnail_data. Ajout mockupUpdate$ + SSE listener mockup_update dans ProjetCollabService. Export MockupBoardComponent.",
@@ -400,7 +507,9 @@
       "date": "2026-06-07T23:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mockup|diagram",
       "title": "Mockup diagramme : points d'ancrage intelligents",
       "description": "Les connexions entre nodes du diagramme mockup calculaient toujours le point de départ à droite de la source et le point d'arrivée à gauche de la cible. Remplacé par mockupConnPath() qui choisit les ancres selon la direction dominante : horizontal (droite/gauche) ou vertical (bas/haut). La courbe de Bézier s'adapte automatiquement quand les cards changent de position.",
@@ -420,7 +529,9 @@
       "date": "2026-06-07T22:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|preview|mockup",
       "title": "Mockup : clic chip/tab scrolle vers le board",
       "description": "Cliquer sur un chip mockup en mode Preview/Code/Structure ou sur un onglet mockup dans la barre MO déroule le panel du bas et scrolle vers le app-mockup-board correspondant. Chaque board est wrappé dans un div avec id='mockup-board-{id}'. Le clic sur l'onglet tab appelle selectMockupFromMarker au lieu de selectMegaOutil.",
@@ -440,7 +551,9 @@
       "date": "2026-06-07T22:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|code|mockup|liaison",
       "title": "Mockup : insertion Liaison à la position du curseur",
       "description": "Le bouton Liaison sauvegarde la position du curseur dans la textarea avant d'ouvrir le popup. Après sélection d'un mockup, {{MOCKUP:id}} est inséré à la fin de la ligne courante (position curseur) au lieu d'être systématiquement placé après l'en-tête de section. Fallback sur l'ancienne logique si le curseur n'est pas positionné.",
@@ -459,7 +572,9 @@
       "date": "2026-06-07T21:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|code|structure|mockup",
       "title": "Mockup : chips inline en mode Code et Structure",
       "description": "En mode Code, les lignes {{MOCKUP:...}} apparaissent comme chips via le mirror overlay (ed-mockup-card). En mode Structure, les marqueurs étaient extraits de textContent et affichés en bas de la card — correctif : les marqueurs MOCKUP restent dans textContent (position préservée), parseStructureNodes ne les strip plus. Le corps de la struct card utilise getStructBodySegments() pour alterner textareas et chips inline à la bonne position. rebuildNodeRawContent ne ré-injecte plus les markers (déjà dans textContent).",
@@ -480,7 +595,9 @@
       "date": "2026-06-07T20:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|code|structure|visu|mockup",
       "title": "Mockup : fix card Code/Structure + lien vers édition en Preview",
       "description": "Fix : les regexes de détection des marqueurs MOCKUP (MOCKUP_MARKER_SRC, mirror lines, deduplication) ne supportaient pas les paramètres optionnels |caption|align|width, donc {{MOCKUP:id|||400px}} n'était pas reconnu comme marqueur → texte brut affiché en mode Code et Structure. Correction : regexes étendues avec (?:\\|[^}]*)?. Ajout d'un bouton 'Modifier le mockup' (icône open_in_new) qui apparaît au survol du thumbnail/placeholder en mode Preview et navigue vers l'instance mockup.",
@@ -500,7 +617,9 @@
       "date": "2026-06-07T20:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|visu|mockup",
       "title": "Mockup visu : fix rendu raw code + options image (légende/alignement/largeur)",
       "description": "Fix bug : les marqueurs {{MOCKUP:id}} apparaissaient en texte brut en mode Visu à cause de (1) nodeToMd() ignorant les éléments contenteditable=false sans data-img-id, les marqueurs MOCKUP étaient perdus lors du flush dirty, (2) le dirty path de initVisuSectionHtml() ne traitait pas les tokens MOCKUP avant marked.parse(). Corrections : ajout data-mockup-id sur les éléments générés, détection dans nodeToMd(), helper parseVisuMd() pour le dirty path. Nouvelle fonctionnalité : support des paramètres {{MOCKUP:id|caption|align|width}}, clic sur un mockup ouvre le panneau ImagePropsPanel pour éditer légende/alignement/largeur, applyMockupPropsToMarker() met à jour le marqueur dans le contenu, 'Supprimer' retire le marqueur de la section.",
@@ -521,7 +640,10 @@
       "date": "2026-06-07T23:45:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor|preview|mockup-card,libs:mega-outils|mockup-board",
       "title": "Mockup : affichage thumbnail en mode Preview + bouton régénérer",
       "description": "Fix Preview : les marqueurs {{MOCKUP:id}} sont transformés en <figure> avec thumbnail SVG avant le passage dans marked.parse() (pattern identique à {{IMG:...}}). Si le thumbnail est absent, un placeholder 📐 est affiché. Cache de preview étendu avec clé 'thumbKey' (hash des thumbnailData des instances) et invalidé via ngOnChanges quand les instances changent. Bouton 📸 ajouté dans le header du MockupBoardComponent pour régénérer manuellement le thumbnail (utile pour les mockups créés avant la feature).",
@@ -541,7 +663,12 @@
       "date": "2026-06-07T23:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["libs", "projets", "server", "data"],
+      "scope": [
+        "libs",
+        "projets",
+        "server",
+        "data"
+      ],
       "features": "libs:mega-outils|mockup-board,projets:editor|mockup-card",
       "title": "Mockup : génération et affichage du thumbnail SVG dans l'éditeur",
       "description": "Lorsqu'un mockup est édité (ajout/suppression/déplacement/renommage d'élément), un thumbnail SVG est généré en base64 et sauvegardé sur l'instance en DB (champ thumbnail_data MEDIUMTEXT). Dans le mode Édition/Préview, la card {{MOCKUP:id}} affiche le thumbnail SVG réel à la place du code. Colonne DB : ALTER TABLE mega_outil_instances ADD COLUMN thumbnail_data MEDIUMTEXT.",
@@ -566,7 +693,9 @@
       "date": "2026-06-07T23:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|mockup-board",
       "title": "Mockup Board : correctifs toolbar + multi-select + resize groupe",
       "description": "3 correctifs : (1) Icônes distribute_horizontal/vertical corrigées (noms inversés causaient affichage texte brut). (2) Toolbar compacte icônes-only avec overflow-x-auto pour éviter le débordement. (3) Multi-select : Shift+clic transfère maintenant le selectedElementId dans multiSelectedIds avant d'ajouter le nouvel élément — le premier élément reste sélectionné. (4) isInsideContainer utilise le centre de l'élément au lieu de ses 4 coins : le groupe reste solidaire après un redimensionnement du conteneur.",
@@ -585,7 +714,9 @@
       "date": "2026-06-07T22:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|mockup-board",
       "title": "Mockup Board : dégrouper + distribution uniforme H/V",
       "description": "Dégrouper : bouton visible quand un conteneur est sélectionné seul — supprime le container en laissant les enfants à leur position. Distribution : boutons 'distribuer H' et 'distribuer V' visibles à partir de 3 éléments multi-sélectionnés (icônes distribute_horizontal/vertical). Répartit les éléments avec un espacement uniforme entre eux.",
@@ -604,7 +735,9 @@
       "date": "2026-06-07T22:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|mockup-board",
       "title": "Mockup Board : déplacement du groupe solidaire avec ses enfants",
       "description": "Correction : déplacer un élément de type 'container' (groupe) embarque maintenant tous les éléments contenus dans ses limites. DragState étendu avec 'children[]' (startX/startY). onMouseMove déplace aussi les enfants avec le même delta. onMouseUp sauvegarde tous les éléments déplacés (conteneur + enfants) en une seule passe.",
@@ -623,7 +756,9 @@
       "date": "2026-06-07T21:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|mockup-board",
       "title": "Mockup Board : édition texte, suppression, duplication, alignement, groupement",
       "description": "Ajout d'une barre d'outils d'édition au-dessus du canvas quand un élément est sélectionné. Fonctionnalités : édition du label (bouton + dialog modal), suppression (Delete key ou bouton), duplication (Ctrl+D ou bouton), alignement gauche/centre/droite (canvas ou groupe), regroupement de 2+ éléments dans un conteneur. Multi-sélection via Shift+clic avec badge de comptage. Keyboard shortcuts : Delete, Enter (edit), Escape (deselect), Ctrl+D (duplicate).",
@@ -642,7 +777,9 @@
       "date": "2026-06-07T20:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils|mockup",
       "title": "Mockup : bouton suppression liaison sur les cards",
       "description": "Ajout d'un bouton X (visible au hover) sur les cards {{MOCKUP:id}} dans le miroir. Cliquer dessus supprime le marqueur du contenu ET efface le folderId de l'instance en DB (via updateInstance), empêchant repairMissingMockupMarkers de le réinsérer. Le mockup lui-même n'est pas supprimé.",
@@ -663,7 +800,9 @@
       "date": "2026-06-07T19:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils|mockup",
       "title": "Mockup : barre MO redessinée + liaison popup + cards cliquables",
       "description": "Refonte de la barre Mega-outils : onglets Trello/Mockup avec badge count, barre secondaire scrollable (VS Code style) avec chevrons + bouton ^ pour replier. Liaison ouvre un popup de sélection du mockup à insérer (au lieu d'insertion directe). Cards {{MOCKUP:id}} dans le miroir deviennent cliquables et activent le panneau mockup. Guard anti-doublon dans insertMockupMarkerInSection + deduplicateMockupMarkers() au chargement. Bouton + Nouveau dans le diagramme, rechargement du diagramme après création.",
@@ -684,7 +823,9 @@
       "date": "2026-06-07T17:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils|mockup|diagram",
       "title": "Mockup : diagramme intégré en onglet dans le panneau Liste",
       "description": "Le bouton 'Diagramme' (qui renvoyait vers la page portail) est remplacé par deux onglets 'Liste' / 'Diagramme' dans le panneau 'Liste des mockups'. L'onglet Diagramme affiche un canvas SVG interactif avec les nœuds du projet courant, les connexions, le drag & drop de nœuds, la création/suppression de connexions avec label et la sauvegarde des positions. Les méthodes diagram sont portées depuis MockupPageComponent dans ProjetEditorZoneComponent. L'onglet se réinitialise à 'list' à chaque fermeture du panneau.",
@@ -704,7 +845,9 @@
       "date": "2026-06-07T15:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils|trello",
       "title": "Trello : DB-only, plus de marqueur dans le contenu",
       "description": "Passage du méga-outil Trello en mode DB-only. Avant : le board s'affichait en cherchant {{TRELLO:id}} dans unifiedContent — un marqueur corrompu (coupé sur 2 lignes) causait la disparition du board. Après : recomputeContentTrelloIds utilise inst.folderId === activeFolderId (focusedHandle.id ou activeNodeId) au lieu du scan de contenu. Plus d'insertion de marqueur dans confirmTrelloPopup. stripTrelloMarkersFromUnifiedContent() nettoie les marqueurs existants (y compris corrompus, via regex [^}]*) au chargement des fichiers et déclenche une sauvegarde.",
@@ -723,7 +866,9 @@
       "date": "2026-06-07T14:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils|mockup",
       "title": "Mockup : marqueur visible + injection section garantie",
       "description": "Fix 1 : insertion du marqueur {{MOCKUP:id}} directement dans la section cible (via insertMockupMarkerInSection + sectionRanges) au lieu de insertAt (qui insérait à la position du curseur=0 quand le focus était hors de la textarea). Fix 2 : repairMissingMockupMarkers() appelé dans ngOnChanges quand megaOutilInstances arrive — auto-injecte les marqueurs absents pour les mockups existants avec folderId. Fix 3 : carte visuelle violette dans le miroir de code pour le marqueur {{MOCKUP:id}} (interface MirrorLine + isMockupMarker/mockupInstId + template @else if + classes CSS ed-mockup-card), similaire aux cartes images vertes.",
@@ -744,7 +889,9 @@
       "date": "2026-06-07T13:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils|mockup",
       "title": "Mockup : panneau bas absent après navigation vers section",
       "description": "Correction du bug où le canvas mockup n'apparaissait pas dans le panneau bas après navigation via 'Liste des mockups'. Cause : enterFocusMode() changeait unifiedContent (contenu de la section ciblée uniquement) puis appelait recomputeAll(), mais recomputeAll() ne recalculait pas contentTrelloIds ni contentMockupIds. Le panneau bas conditionnée par contentMockupIds.length > 0 restait donc vide. Fix : ajout des appels recomputeContentTrelloIds() et recomputeContentMockupIds() à la fin de recomputeAll(), afin que chaque fois que unifiedContent change (focus mode, édition, rechargement), les IDs des panneaux bas soient immédiatement mis à jour.",
@@ -763,7 +910,9 @@
       "date": "2026-06-07T12:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils|mockup",
       "title": "Mockup : 4 bugs résolus (badge nav, noms uniques, liste, icônes)",
       "description": "Correction de 4 bugs post-implémentation du méga-outil Mockup : (1) Badge click dans la barre rapide navigue désormais vers la section contenant {{MOCKUP:id}} via resolveMockupFolderId — séparé de la logique Trello. (2) Icônes et couleurs différenciés dans la barre rapide : design_services/violet pour mockup, view_kanban/bleu pour trello. (3) Validation unicité du nom avant création (mockupNameError signal + check dans confirmMockupPopup). (4) Bouton 'Liste des mockups' dans la sidebar + vue liste en zone centrale (même pattern que liste des trellos, avec bouton Diagramme vers portail /mockup). CSS app-mockup-board ajouté dans ed-trello-panel__body. Fix filtrage : 'Liste des trellos' filtrée sur type=trello uniquement. Fix mutual exclusion : onTrelloListClick/onMockupListClick ferment l'autre liste avant d'ouvrir la leur — évite le cas où showMockupList reste true quand on clique Liste des trellos puis re-clique Liste des mockups (pas de changement détecté par ngOnChanges).",
@@ -789,7 +938,12 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "projets", "libs", "server"],
+      "scope": [
+        "portail",
+        "projets",
+        "libs",
+        "server"
+      ],
       "features": "system:mega-outils|mockup,portail:admin,projets:editor",
       "title": "Méga-outil Mockup : canvas SVG + commentaires + diagramme + intégration éditeur",
       "description": "Création complète du méga-outil Mockup : éditeur SVG avec 16 types d'éléments UI (drag/resize), panel commentaires par élément, page /mockup avec onglet liste et onglet diagramme (nœuds reliés par flèches). Intégration dans l'éditeur projet via marqueur {{MOCKUP:id}}, barre rapide, popup création et panneau bas collapsible. Backend : 4 tables MySQL, routes REST complètes, SSE broadcastMockupUpdate. Section Mockup dans l'admin mega-outils.",
@@ -820,7 +974,9 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
-      "scope": ["portail"],
+      "scope": [
+        "portail"
+      ],
       "features": "portail:admin|memo|help",
       "title": "Admin : fusion onglet Help dans Mémo",
       "description": "Suppression de l'onglet Help séparé. Le CRUD aide contextuelle est maintenant une section collapsible 'Aide contextuelle' (teal) dans AdminMemoComponent. Le badge count est conservé sur l'onglet Mémo. Nettoyage de admin.component.ts (suppression helpEditId, import AdminHelpComponent).",
@@ -842,7 +998,10 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "system"],
+      "scope": [
+        "portail",
+        "system"
+      ],
       "features": "portail:admin|memo,system:docs",
       "title": "Outils projet : docs + commande slash + mémo admin",
       "description": "Création de docs/outils.md (cahier des charges outils projet : Edition, Tests, Code) et .claude/commands/nouvel-outil.md (commande slash). Mise à jour AdminMemoComponent : ajout section 'Outils projet' (rose) avec tableau statuts + tip, ajout /nouvel-outil dans la liste des commandes.",
@@ -864,7 +1023,10 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "system"],
+      "scope": [
+        "portail",
+        "system"
+      ],
       "features": "portail:admin|memo,system:docs",
       "title": "Admin : onglet Mémo + cahier des charges méga-outils",
       "description": "Ajout d'un onglet 'Mémo' dans l'admin (order 7) avec 5 sections collapsibles : commandes Claude Code, méga-outils disponibles, raccourcis clavier, architecture/commandes, patterns & conventions. Création de docs/mega-outils.md (cahier des charges méga-outils) et .claude/commands/nouveau-mega-outil.md (commande slash).",
@@ -888,7 +1050,11 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["server", "libs", "portail"],
+      "scope": [
+        "server",
+        "libs",
+        "portail"
+      ],
       "features": "server:mega-outils,libs:mega-outils|trello,portail:admin|mega-outils",
       "title": "Admin méga-outils Trello : liaison projet/section, lien éditeur et gestion des cartes",
       "description": "La section Admin › Méga-outils › Trello affiche désormais chaque instance avec ses infos de liaison (projet, outil, section) et un aperçu des cartes par colonne. Serveur : l'endpoint trello/all résout folderName (findNodeById sur la structure) et outilName (config.outils) avec cache de config par projet. Client : trello-admin embarque le composant trello-board (CRUD complet des cartes) en dépliage, expose un Output openInEditor ; le wrapper portail ouvre l'éditeur sur la section via navigateToProjets('projets/{id}?section={folderId}'). Bouton Rafraîchir + suppression d'instance conservés.",
@@ -912,7 +1078,11 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["server", "libs", "projets"],
+      "scope": [
+        "server",
+        "libs",
+        "projets"
+      ],
       "features": "server:mega-outils,libs:mega-outils|trello|collab,projets:editor",
       "title": "Trello : synchronisation temps réel des cartes et instances (SSE)",
       "description": "Les modifications de trellos et de cartes sont désormais diffusées en direct aux autres utilisateurs via SSE. Serveur : helper broadcastTrelloUpdate(instanceId, action, projectId) appelé sur create/patch/delete d'instance et create/update/delete/reorder de carte, diffusé sur le canal collab du projet (event 'trello_update'). Client : ProjetCollabService expose trelloUpdate$ et écoute l'événement SSE. Le composant trello-board recharge ses cartes quand l'instance concernée est modifiée ; le ProjetEditor recharge la liste d'instances sur les actions instance_*. Plus besoin de rafraîchir manuellement.",
@@ -934,7 +1104,10 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "libs:mega-outils|trello,projets:editor|zone-trello",
       "title": "Trello : zone agrandie, bouton + Carte épinglé et lisible, couleur boutons",
       "description": "Zone basse Trello agrandie (panneau 560px, board 500px) pour afficher le formulaire d'ajout en entier. Le bouton '+ Carte' et le formulaire sont épinglés en bas (flex-shrink-0) : l'ascenseur reste sur la liste des cartes, plus sur le bouton. Fond solide (dark:bg-surface) sous '+ Carte' + texte rendu lisible (au lieu du fond transparent/texte effacé). Boutons Ajouter/Enregistrer : ajout de dark:text-btn-text pour un texte lisible sur la couleur primaire claire.",
@@ -954,7 +1127,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|trello",
       "title": "Trello : boutons Ajouter/Annuler du formulaire de carte toujours visibles",
       "description": "Le formulaire d'ajout de carte dépassait la hauteur fixe de la colonne et ses boutons Ajouter/Annuler étaient coupés. Le corps de chaque colonne (cartes + formulaire d'ajout) est désormais dans un conteneur scrollable (flex-1 min-h-0 overflow-y-auto), rendant le bouton de validation toujours atteignable quelle que soit la hauteur du board.",
@@ -973,7 +1148,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|toolbar|zone-trello-list",
       "title": "Onglet Mega-outils : navigue vers la section du trello (au lieu du document entier)",
       "description": "Le clic sur un onglet de la barre Mega-outils (ex: 'Mon Trello') navigue désormais vers la section où le trello est incrusté au lieu d'afficher tout le document. Extraction du helper resolveTrelloFolderId (marqueur dans docSections, fallback inst.folderId) réutilisé par la liste et l'onglet ; nouvelle méthode selectMegaOutil émet megaOutilSelect + trelloNavigate. onMegaOutilSelect ne force plus activeNodeId à null.",
@@ -994,7 +1171,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-trello-list",
       "title": "Liste des trellos : section résolue via le marqueur (fix 'Sans section')",
       "description": "La section affichée dans la liste des trellos est désormais déduite de la position du marqueur {{TRELLO:id}} dans docSections (source de vérité, indépendante du mode focus), avec fallback sur inst.folderId. Corrige l'affichage 'Sans section' alors que le trello est bien incrusté dans une section, et fiabilise le bouton 'Aller à la section'. Ajout du signal trelloSections + recomputeTrelloSections().",
@@ -1014,7 +1193,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|sidebar|zone-trello-list",
       "title": "Liste des trellos : bouton sidebar + vue centrale avec aperçu et lien section",
       "description": "Ajout d'un bouton 'Liste des trellos' au pied de la sidebar, visible dès qu'au moins un trello existe dans l'outil (input trelloCount). Au clic, la zone centrale affiche une grille de cartes : nom du trello, aperçu du nombre de cartes par colonne (À faire/En cours/Terminé/Bloqué, chargé via getTrelloCards), section d'origine et bouton 'Aller à la section'. Navigation via le nouvel output trelloNavigate (sélection réelle de la section + fermeture de la liste), threadé sidebar→parent→edition-outil→zone. La liste se ferme aussi à toute sélection dans la sidebar.",
@@ -1040,7 +1221,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-structure",
       "title": "Trello : marqueur masqué en mode Structure",
       "description": "Le marqueur {{TRELLO:id}} n'apparaît plus dans la textarea de contenu du mode Structure. Ajout de StructureNode.trelloMarkers : les marqueurs sont extraits du textContent dans parseStructureNodes (masqués à l'affichage) et ré-injectés en fin de section dans rebuildNodeRawContent à la sauvegarde, sans perte. Le board reste affiché en zone basse.",
@@ -1059,7 +1242,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "Trello : marqueur masqué en mode Code",
       "description": "Le marqueur d'insertion {{TRELLO:id}} n'est plus affiché en texte brut dans la zone Code : la ligne du marqueur est rendue vide dans le miroir (texte de la textarea déjà transparent), en préservant la hauteur de ligne pour l'alignement. Le board reste affiché uniquement en zone basse.",
@@ -1078,7 +1263,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|trello",
       "title": "Trello : colonnes en pleine largeur (plus d'ascenseur horizontal)",
       "description": "Les colonnes du board Trello (À faire / En cours / Terminé / Bloqué) passent de w-64 flex-shrink-0 à flex-1 min-w-0 et le conteneur de overflow-x-auto à overflow-x-hidden : les 4 colonnes se répartissent sur toute la largeur disponible, supprimant l'ascenseur horizontal. S'applique partout où le composant trello-board est utilisé.",
@@ -1097,7 +1284,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code|zone-preview",
       "title": "Trello affiché en zone basse partagée (tous modes)",
       "description": "Les méga-outils Trello incrustés (marqueur {{TRELLO:id}}) ne s'affichent plus inline : suppression du chip en mode Code et du board inline en Preview. Un panneau bas partagé (contentTrelloIds calculé depuis unifiedContent) affiche les board(s) du contenu courant de façon identique en Code, Structure et Preview. Panneau à hauteur fixe ~400px, repliable (trelloPanelCollapsed). Champs isTrello/trelloId et méthode trelloIdsForSection retirés.",
@@ -1120,7 +1309,11 @@
       "date": "2026-06-03T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "server", "libs"],
+      "scope": [
+        "projets",
+        "server",
+        "libs"
+      ],
       "features": "projets:editor|sidebar|outils,server:file-projects,libs:data-access",
       "title": "Système d'outils extensible dans l'éditeur projets",
       "description": "Création d'un système d'outils pour l'éditeur projets. La sidebar est restructurée pour afficher les outils par projet (titre → popup ajout → liste outils → sous-items). L'outil Edition encapsule l'éditeur markdown existant dans EditionOutilComponent. Zone 4 devient un router dynamique basé sur le type d'outil actif. Migration automatique des projets existants vers un outil Edition par défaut. Architecture extensible pour futurs types (Tests, Code).",
@@ -6570,7 +6763,12 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "server", "libs", "data"],
+      "scope": [
+        "projets",
+        "server",
+        "libs",
+        "data"
+      ],
       "features": "projets:editor|sidebar,server:file-projects,libs:data-access,data:projets",
       "title": "Stockage des dossiers par sous-dossier d'outil",
       "description": "Les dossiers racines de chaque outil sont désormais stockés dans un sous-dossier portant le type de l'outil (ex: edition/mon-dossier/). Modification du serveur (POST folders et files), du service Angular et de la sidebar pour passer outilSlug. Script de migration migrate-project-tool-paths.js pour les projets existants. Tous les projets en cours migrés.",
@@ -6597,7 +6795,9 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|sidebar",
       "title": "Renommage \"Dossier\" → \"Section\" dans l'outil Edition",
       "description": "Dans la sidebar de l'éditeur, le libellé \"Nouveau dossier\" devient \"Nouvelle section\" et le placeholder \"Nom du dossier\" devient \"Nom de la section\". Physiquement, les dossiers restent des dossiers sur le disque.",
@@ -6616,7 +6816,10 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "server"],
+      "scope": [
+        "projets",
+        "server"
+      ],
       "features": "projets:editor|sidebar,server:file-projects",
       "title": "Fix : nouvelles sections créées à la racine au lieu du sous-dossier outil",
       "description": "Deux causes : (1) getProjectConfig préférait MySQL (ancienne structure sans préfixe edition/) sur le config.json migré → ajout d'une comparaison de timestamps pour préférer le filesystem quand il est plus récent. (2) processSectionsChange ne passait pas outilSlug → ajout du paramètre. Script de migration mis à jour pour gérer la fusion quand la destination existe déjà (re-migration).",
@@ -6637,7 +6840,9 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["server"],
+      "scope": [
+        "server"
+      ],
       "features": "server:file-projects",
       "title": "Fix migration MySQL : connexion correcte via db.js",
       "description": "Le script de migration utilisait une connexion MySQL locale inexistante. Remplacé par require('./db') (connexion Hostinger). MySQL est maintenant correctement mis à jour. Gestion de la fusion (merge) quand le dossier destination existe déjà lors d'une re-migration.",
@@ -6656,7 +6861,12 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "portail", "server", "libs"],
+      "scope": [
+        "projets",
+        "portail",
+        "server",
+        "libs"
+      ],
       "features": "projets:editor|sidebar,portail:admin|trello,server:mega-outils,libs:data-access|shared-ui",
       "title": "Système Mega-Outils + Trello kanban",
       "description": "Mise en place du système mega-outils partagés entre menus. Premier mega-outil : Trello (kanban 4 colonnes, cartes avec titre/description/statut/priorité/créateur/date). Tables MySQL mega_outil_instances et mega_outil_trello_cards. API REST complète. Intégration dans l'éditeur projets (sidebar + Zone 4 switchable). Page Trello globale dans portail (/trello). Onglet Admin Méga-outils.",
@@ -6690,7 +6900,9 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "fix",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|sidebar",
       "title": "Mega-outils : sous-barre permanente sidebar + Trello inline Zone 4",
       "description": "La section Mega-outils devient une sous-barre permanente en bas du panneau sidebar (toujours visible, header + liste instances). Les boards Trello s'affichent inline en bas de Zone 4 (sous l'éditeur texte) au lieu de remplacer la zone. Plusieurs boards côte à côte (scroll horizontal).",
@@ -6710,7 +6922,9 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "fix",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "Mega-outils : barre de boutons sous la toolbar de style",
       "description": "Déplacement de la barre de boutons mega-outils dans projet-editor-zone, juste sous la toolbar de style (Code/Structure/Preview + formatage). Inputs/outputs threadés via edition-outil. Retrait de la barre de la sidebar. Chaque instance Trello est un bouton cliquable + bouton '+ Trello'.",
@@ -6734,7 +6948,9 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "Trello : popup de configuration + insertion d'un marqueur au curseur",
       "description": "Correction de la couleur de la barre mega-outils (bg-surface). Le bouton + Trello ouvre désormais un popup de configuration (nom du tableau). À la confirmation, l'instance est créée puis un marqueur {{TRELLO:id}} est inséré à l'endroit du curseur dans le contenu texte. La zone éditeur crée l'instance directement via MegaOutilsService et émet megaOutilCreated.",
@@ -6757,7 +6973,9 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-preview",
       "title": "Trello : rendu inline du board en mode Preview à la position du marqueur",
       "description": "Les marqueurs {{TRELLO:id}} sont rendus comme boards Trello réels en mode Preview, juste après la section qui les contient (élément non éditable). Les marqueurs sont masqués du contenteditable affiché et préservés à la sauvegarde (preserveTrelloMarkers) pour ne pas être perdus lors de l'édition. Suppression du panneau de boards en bas de Zone 4.",
@@ -6779,7 +6997,10 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor|zone-code,libs:shared-ui",
       "title": "Trello : board visuel dans tous les modes + bouton supprimer",
       "description": "Les boards Trello s'affichent comme blocs visuels dans TOUS les modes (Code/Structure/Preview), jamais en code brut. Abandon de l'approche marqueur {{TRELLO:id}} dans le texte (impossible dans le textarea Code). Les boards sont rendus dans un panneau dédié en haut de la zone de contenu. Ajout d'un bouton supprimer (avec confirmation) sur chaque board pour effacer toute la section Trello (instance + cartes).",
@@ -6803,7 +7024,9 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-preview",
       "title": "Trello : board lié à la section via marqueur, rendu en Preview",
       "description": "Le board Trello est lié à la section qui contient son marqueur {{TRELLO:id}}. En mode Preview, le board remplace le marqueur (masqué) et ne s'affiche que dans les sections ayant un marqueur ; une section sans Trello n'affiche rien. Marqueurs préservés à l'édition. Bouton supprimer retire l'instance ET le marqueur du contenu. Note : en mode Code (textarea), le marqueur reste visible comme source.",
@@ -6823,7 +7046,11 @@
       "date": "2026-06-04T00:00:00.000Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "server", "libs"],
+      "scope": [
+        "projets",
+        "server",
+        "libs"
+      ],
       "features": "projets:editor|zone-preview,server:mega-outils,libs:data-access",
       "title": "Trello : association à la section via folderId (sans marqueur texte)",
       "description": "Abandon du marqueur {{TRELLO:id}} dans le contenu (visible en mode Code). L'instance Trello porte désormais un champ folder_id (colonne MySQL ajoutée) = section où le curseur se trouve à la création. En Preview, le board ne s'affiche que dans la section dont l'id correspond à instance.folderId. Aucune trace dans le texte → rien en mode Code. Marqueurs résiduels d'anciens contenus masqués en Preview. Bouton supprimer retire l'instance.",
@@ -6846,7 +7073,9 @@
       "date": "2026-06-05T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code,projets:editor|zone-preview",
       "title": "Trello : shortcode rendu (chip en Code, board en Preview) sur le modèle des images",
       "description": "Le shortcode {{TRELLO:id}} suit le même modèle que les images {{IMG:id}} : en mode Code le miroir affiche un chip propre (icône + nom, clic → Preview) au lieu du code brut, grâce au textarea transparent superposé au miroir Angular ; en Preview le shortcode est remplacé par le board complet. Ajout de isTrello/trelloId à MirrorLine et détection dans recomputeMirrorLines. Marqueurs masqués du contenteditable et préservés à la sauvegarde. Suppression retire l'instance + le shortcode.",
@@ -6866,7 +7095,11 @@
       "date": "2026-06-06T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["libs", "portail", "projets"],
+      "scope": [
+        "libs",
+        "portail",
+        "projets"
+      ],
       "features": "libs:mega-outils|trello,portail:admin|mega-outils,projets:editor",
       "title": "Admin Trello : menu, projet et section en liens cliquables",
       "description": "Dans Admin › Méga-outils › Trello, chaque instance affiche désormais le menu (outil) utilisé, le nom du projet et la section sous forme de badges cliquables qui ouvrent la partie correspondante dans l'éditeur projets. La navigation passe par openInEditor (étendu avec outilId) puis construit l'URL avec les query params section et outil. L'éditeur projets lit le query param 'outil' pour sélectionner le bon menu au chargement.",
@@ -6887,7 +7120,11 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs", "server", "projets"],
+      "scope": [
+        "libs",
+        "server",
+        "projets"
+      ],
       "features": "libs:mega-outils|trello,server:mega-outils,projets:editor",
       "title": "Admin Trello : badges corrects (menu/projet/section) + section dans l'en-tête board + boutons",
       "description": "Corrige les badges de la vue Admin › Méga-outils › Trello : le menu affiche « projets » (module), le nom du projet est résolu via frank_projects.title (COALESCE avec file_project_meta.display_name, JOIN COLLATE utf8mb4_unicode_ci) au lieu du display_name périmé, et la section est résolue via le folder_id. Le folder_id de l'instance est désormais synchronisé en base depuis l'éditeur (recomputeTrelloSections → updateInstance) à partir de la position réelle du marqueur {{TRELLO:id}}, l'endpoint PATCH instances/:id acceptant folderId. L'en-tête du board Trello (composant partagé) affiche le nom de la section où il est implanté via le nouvel @Input sectionName. Réorganisation des boutons admin : Éditeur en haut, Supprimer en dessous, Gérer les cartes à droite.",
@@ -6912,7 +7149,9 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor",
       "title": "Lien section (admin Trello) : déplie et sélectionne la section à l'ouverture",
       "description": "Le clic sur le badge section dans Admin › Méga-outils › Trello ouvre l'éditeur projets avec ?section=. Le handler du queryParam ne faisait que scroller (arbre replié). Il sélectionne désormais la section (activeNodeId + highlightNodeId), ce qui déclenche l'expansion de la sidebar (expandToNode via activeFileId) jusqu'au dossier ciblé.",
@@ -6931,7 +7170,9 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|trello",
       "title": "Cartes Trello : césure des mots (zéro scroll horizontal) + popup détail au clic",
       "description": "Les cartes du board Trello cassent désormais les mots trop longs (break-words + overflow-wrap:anywhere, min-w-0 sur le titre flex) : plus d'ascenseur horizontal. Le dépliage inline est remplacé par une popup (modale) ouverte au clic sur la carte/titre, affichant l'intégralité du contenu (titre, statut, priorité, description longue scrollable en whitespace-pre-wrap, créateur/date) avec édition et suppression intégrées. Signaux modalCardId + computed modalCard, méthodes openCard/closeModal.",
@@ -6951,7 +7192,9 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|trello",
       "title": "Cartes Trello : double interaction (expand inline carte + popup au titre)",
       "description": "Rétablit l'agrandissement inline de la carte au clic sur le corps (description tronquée line-clamp-4 + boutons Détail/Modifier/Supprimer), tout en conservant la popup détail ouverte au clic sur le titre (stopPropagation). Nouveau openCardEdit pour ouvrir directement la popup en édition depuis l'expand. expandedCardId réintroduit en parallèle de modalCardId.",
@@ -6971,7 +7214,9 @@
       "date": "2026-06-07T00:00:00.000Z",
       "type": "fix",
       "commitType": "AMELIORATION",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:mega-outils|trello",
       "title": "Cartes Trello : layout responsive (priorité à droite/dessous, boutons wrap)",
       "description": "Rendu responsive via flex-wrap (sans media query) : le badge priorité reste à droite du titre s'il y a la place et passe sous le titre quand la carte est étroite ; les 3 boutons de l'expand (Détail/Modifier/Supprimer) restent sur une même ligne si possible et passent les uns sous les autres quand la largeur est réduite. Créateur + date sur leur propre ligne wrap.",

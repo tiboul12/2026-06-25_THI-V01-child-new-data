@@ -81,6 +81,18 @@ Aucune ligne → OK. Des lignes → corriger avant de continuer.
 
 **Boutons primaires** — `text-white dark:text-btn-text` nécessite `--btn-text-color` dans `data/child/theme.json` si la couleur primaire est claire.
 
+**Fermeture des popups** — Ne jamais fermer un popup au clic sur le backdrop. La fermeture doit être explicite : bouton ✕, bouton Annuler, ou validation du formulaire. Ne pas utiliser `(click)="closePopup()"` sur le backdrop ni `$event.stopPropagation()` sur le contenu.
+
+**Contraste texte sur fond clair/primary** — La couleur primary de ce thème est claire (dorée). Toujours utiliser `text-black` (jamais `text-white`) sur un fond `bg-primary`. Règle générale : sur tout fond clair (bg-primary, bg-white, bg-light-surface…), le texte doit être sombre (`text-black` ou `text-gray-900`).
+
+**Interpolation Angular avec apostrophe** — Dans un template inline (backticks TypeScript), les singles quotes à l'intérieur de `{{ }}` ne doivent pas contenir d'apostrophe :
+- ❌ `{{ cond ? 'Modifier l\'événement' : 'Créer' }}` → le `'` ferme la string, affiche le code brut
+- ✅ `{{ cond ? "Modifier l'événement" : 'Créer' }}` → guillemets doubles pour les strings avec apostrophe
+
+**`[class.dark:xxx]`** — Les bindings Angular `[class.xxx]` ne supportent pas les `:` (dark mode) :
+- ❌ `[class.dark:text-white]="condition"` → classe jamais appliquée
+- ✅ `[ngClass]="condition ? 'dark:text-white' : ''"` → correct
+
 ---
 
 ## Règle obligatoire : Historique des modifications

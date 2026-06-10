@@ -211,6 +211,7 @@ DELETE /api/file-projects/:name/outils/:id
 |-----|------|--------|--------|
 | Edition | `edition` | Actif | Origine |
 | Tests | `tests` | Actif | vB-0.258 |
+| Agenda | `agenda` | Actif | vB-0.262 |
 | Code | `code` | Bientôt | — |
 
 ---
