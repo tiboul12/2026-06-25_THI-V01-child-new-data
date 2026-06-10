@@ -29,7 +29,7 @@
   <!-- Barre d'outils -->
   <div class="flex flex-col bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
 
-    <!-- Ligne 1 : Sauvegarde + badge FTP/sync -->
+    <!-- Ligne 1 : Sauvegarde + badge FTP/sync + zone Modifications/Partager -->
     <div class="flex items-center gap-3 px-3 pt-1.5 pb-1">
 
       <!-- Statut sauvegarde -->
@@ -39,7 +39,7 @@
         <button type="button"
                 (click)="forceSave()"
                 title="Cliquer pour sauvegarder maintenant"
-                class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 px-2 py-0.5 rounded border border-orange-400/30 hover:border-orange-300/50 hover:bg-orange-400/10 transition-colors cursor-pointer">
+                class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 px-1 rounded hover:bg-orange-400/10 transition-colors cursor-pointer">
           <span class="material-symbols-outlined text-sm">save</span> Non sauvegardé
         </button>
       } @else if (saveStatus === 'error') {
@@ -88,6 +88,48 @@
           {{ backupBadge[backupType].label }}
         </span>
       }
+
+      <div class="flex-1"></div>
+
+      <!-- Zone Modifications / Annuler / Partager (intégrée dans la barre Sauvegarde) -->
+      @if (showCodePublishBar) {
+        <span class="code-publish-bar__info">
+          <span class="material-symbols-outlined">edit</span>
+          Modifications en cours
+        </span>
+        <div class="flex items-center gap-2">
+          <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
+          <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
+            <span class="material-symbols-outlined">share</span>
+            Partager mes modifications
+          </button>
+        </div>
+      } @else if (showCrossModePendingBar) {
+        <span class="code-publish-bar__info">
+          <span class="material-symbols-outlined">edit</span>
+          Modifications Code en attente
+        </span>
+        <div class="flex items-center gap-2">
+          <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
+          <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
+            <span class="material-symbols-outlined">share</span>
+            Partager mes modifications
+          </button>
+        </div>
+      } @else if (backupType && structureHasPending()) {
+        <span class="code-publish-bar__info">
+          <span class="material-symbols-outlined">edit</span>
+          Modifications en cours
+        </span>
+        <div class="flex items-center gap-2">
+          <button class="visu-publish-bar__cancel" (click)="cancelStructureEdit()">Annuler</button>
+          <button class="visu-publish-bar__publish" (click)="publishStructureEdit()" [disabled]="isPublishing()">
+            <span class="material-symbols-outlined">share</span>
+            Partager mes modifications
+          </button>
+        </div>
+      }
+
     </div>
 
     <!-- Ligne 2 : Tabs + boutons de formatage -->
@@ -388,56 +430,6 @@
     </div>
   }
 
-  <!-- Barre Annuler/Partager mode Code (projets avec sauvegarde externe uniquement) -->
-  @if (showCodePublishBar) {
-    <div class="code-publish-bar">
-      <span class="code-publish-bar__info">
-        <span class="material-symbols-outlined">edit</span>
-        Modifications en cours
-      </span>
-      <div class="code-publish-bar__actions">
-        <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
-        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
-          <span class="material-symbols-outlined">share</span>
-          Partager mes modifications
-        </button>
-      </div>
-    </div>
-  }
-
-  <!-- Barre Code pending persistante — visible en Structure et Preview si une modif Code n'a pas été publiée -->
-  @if (showCrossModePendingBar) {
-    <div class="code-publish-bar">
-      <span class="code-publish-bar__info">
-        <span class="material-symbols-outlined">edit</span>
-        Modifications Code en attente
-      </span>
-      <div class="code-publish-bar__actions">
-        <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
-        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
-          <span class="material-symbols-outlined">share</span>
-          Partager mes modifications
-        </button>
-      </div>
-    </div>
-  }
-
-  <!-- Barre Annuler/Partager mode Structure (projets avec sauvegarde externe uniquement) -->
-  @if (backupType && structureHasPending()) {
-    <div class="code-publish-bar">
-      <span class="code-publish-bar__info">
-        <span class="material-symbols-outlined">edit</span>
-        Modifications en cours
-      </span>
-      <div class="code-publish-bar__actions">
-        <button class="visu-publish-bar__cancel" (click)="cancelStructureEdit()">Annuler</button>
-        <button class="visu-publish-bar__publish" (click)="publishStructureEdit()" [disabled]="isPublishing()">
-          <span class="material-symbols-outlined">share</span>
-          Partager mes modifications
-        </button>
-      </div>
-    </div>
-  }
 
   <!-- Barre Annuler/Partager mode Preview (projets avec sauvegarde externe uniquement) -->
   @if (backupType && mode === 'visu' && editingVisuSectionId()) {

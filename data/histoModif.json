@@ -1,6 +1,45 @@
 {
   "modifications": [
     {
+      "id": "mod-341",
+      "version": "B-0.262",
+      "date": "2026-06-10T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|toolbar",
+      "title": "Fix décalage toolbar : hauteur boutons Partager/Non sauvegardé",
+      "description": "Le bouton 'Partager mes modifications' (padding réduit à 2px/1px, icône 13px) et le bouton 'Non sauvegardé' (suppression border+py-0.5, passage à px-1 seul) ne provoquent plus de décalage vertical dans la barre Sauvegarde.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le bouton Partager mes modifications est trop grand (hauteur) et lorsqu'il apparait provoque un petit decalage des zones en dessous, il faut le réduire en hauteur pour ne plus avoir ce decalage / il y a encore un decalage a cause du bouton non sauvegardé",
+      "startedAt": "2026-06-10T17:30:00.000Z",
+      "completedAt": "2026-06-10T17:45:00.000Z"
+    },
+    {
+      "id": "mod-340",
+      "version": "B-0.261",
+      "date": "2026-06-10T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|toolbar",
+      "title": "Transfert barre Modifications/Partager dans la ligne Sauvegarde",
+      "description": "Les 3 blocs code-publish-bar (Modifications en cours / Annuler / Partager mes modifications) positionnés sous la toolbar ont été intégrés directement dans la Ligne 1 de la toolbar (barre Sauvegardé). Un flex-1 pousse le contenu à droite. Les anciens blocs séparés ont été supprimés.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "transfert la zone d'info modification et partage dans la barre Sauvegarde",
+      "startedAt": "2026-06-10T17:20:00.000Z",
+      "completedAt": "2026-06-10T17:30:00.000Z"
+    },
+    {
       "id": "mod-339",
       "version": "B-0.260",
       "date": "2026-06-10T00:00:00.000Z",

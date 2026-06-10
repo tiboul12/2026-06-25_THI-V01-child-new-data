@@ -843,7 +843,7 @@
   border-top: 1px solid rgba(37, 99, 235, 0.15);
 
   &__cancel {
-    padding: 4px 12px;
+    padding: 1px 10px;
     font-size: 12px;
     border-radius: 4px;
     border: 1px solid rgba(0, 0, 0, 0.15);
@@ -859,7 +859,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 14px;
+    padding: 2px 12px;
     font-size: 12px;
     font-weight: 500;
     border-radius: 4px;
@@ -869,7 +869,7 @@
     cursor: pointer;
     transition: background 0.15s;
     &:hover { background: #1d4ed8; }
-    .material-symbols-outlined { font-size: 14px; }
+    .material-symbols-outlined { font-size: 13px; }
   }
 }
 
