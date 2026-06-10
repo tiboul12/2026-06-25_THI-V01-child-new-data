@@ -4732,15 +4732,21 @@ function cleanStructure(items) {
 }
 
 function migrateOutils(config) {
-    if (config.outils && config.outils.length > 0) return config;
-    const rootFolderIds = (config.structure || [])
-        .filter(n => n.type === 'folder')
-        .map(n => n.id);
+    const topFolderIds = (config.structure || []).filter(n => n.type === 'folder').map(n => n.id);
+    if (config.outils && config.outils.length > 0) {
+        // Repair: si un outil edition a rootFolderIds vide mais que des dossiers existent en structure, auto-populer
+        for (const outil of config.outils) {
+            if (outil.type === 'edition' && (!outil.rootFolderIds || outil.rootFolderIds.length === 0) && topFolderIds.length > 0) {
+                outil.rootFolderIds = topFolderIds;
+            }
+        }
+        return config;
+    }
     config.outils = [{
         id: require('crypto').randomUUID(),
         type: 'edition',
         name: 'Edition',
-        rootFolderIds,
+        rootFolderIds: topFolderIds,
         createdAt: config.createdAt || new Date().toISOString()
     }];
     return config;
@@ -5519,6 +5525,14 @@ app.post('/api/file-projects/:name/folders', async (req, res) => {
             children: [{ id: crypto.randomUUID(), type: 'file', name: 'contenu.md', path: contentPath, order: 1 }]
         };
         parentItems.push(newFolder);
+
+        // Si dossier racine avec outilSlug → ajouter à rootFolderIds de l'outil correspondant
+        if (!parentId && outilSlug) {
+            const outil = (config.outils || []).find(o => o.type === outilSlug);
+            if (outil && !(outil.rootFolderIds || []).includes(newFolder.id)) {
+                outil.rootFolderIds = [...(outil.rootFolderIds || []), newFolder.id];
+            }
+        }
 
         await saveProjectConfig(req.params.name, config);
         try {

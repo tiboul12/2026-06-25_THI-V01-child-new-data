@@ -1077,14 +1077,6 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
             newFolderIds.set(fullPath, folder.id);
             section.folderId = folder.id;
             this.trackFolderCreate(folder);
-            // Si root folder (pas de parent) → l'associer à l'outil actif
-            if (!parentId && this.activeOutil()) {
-              const outilId = this.activeOutilId()!;
-              const updatedRootIds = [...(this.activeOutil()!.rootFolderIds), folder.id];
-              this.projectFilesService.updateOutil(this.projectFolderName, outilId, { rootFolderIds: updatedRootIds })
-                .then(() => this.outils.update(list => list.map(o => o.id === outilId ? { ...o, rootFolderIds: updatedRootIds } : o)))
-                .catch(e => console.warn('[ProjetEditor] updateOutil rootFolderIds failed:', e));
-            }
             const file = (folder.children || []).find(c => c.type === 'file') || await this.projectFilesService.createFile(this.projectFolderName, { name: 'contenu', parentId: folder.id, content: section.content });
             section.fileId = file.id;
           } catch (e) {
@@ -1093,6 +1085,19 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
           } finally {
             this.pendingFolders.delete(fullPath);
           }
+        }
+
+        // Mise à jour des rootFolderIds en un seul appel (évite la race condition des appels parallèles)
+        const newRootFolderIds = toCreate
+          .filter(s => !s.parentFolderId && s.folderId)
+          .map(s => s.folderId as string);
+        if (newRootFolderIds.length > 0 && this.activeOutil()) {
+          const outilId = this.activeOutilId()!;
+          const currentRootIds = this.activeOutil()!.rootFolderIds;
+          const updatedRootIds = [...currentRootIds, ...newRootFolderIds.filter(id => !currentRootIds.includes(id))];
+          this.projectFilesService.updateOutil(this.projectFolderName, outilId, { rootFolderIds: updatedRootIds })
+            .then(() => this.outils.update(list => list.map(o => o.id === outilId ? { ...o, rootFolderIds: updatedRootIds } : o)))
+            .catch(e => console.warn('[ProjetEditor] updateOutil rootFolderIds failed:', e));
         }
 
         // 4. Missing content files

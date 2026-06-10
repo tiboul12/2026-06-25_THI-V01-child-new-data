@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-339",
+      "version": "B-0.260",
+      "date": "2026-06-10T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "server"],
+      "features": "projets:editor|sidebar",
+      "title": "Sidebar : sections/fichiers invisibles dans outil Edition",
+      "description": "Les dossiers racines de l'outil Edition ne s'affichaient pas dans la sidebar car rootFolderIds était vide ([]) dans config.json. Trois corrections : (1) migrateOutils auto-répare les rootFolderIds vides en les populant depuis config.structure, (2) POST /folders ajoute atomiquement le nouveau dossier dans rootFolderIds côté serveur, (3) processSectionsChange remplace les appels fire-and-forget par un seul appel groupé pour éliminer la race condition.",
+      "files": [
+        "server/server-data.js",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu projets/edition les menus sections (ancien dossier) et fichier ne s'affiche pas, pourtant ils sont bien dans la zone 4 de texte et dans le dossier edition du projet",
+      "startedAt": "2026-06-10T17:00:00.000Z",
+      "completedAt": "2026-06-10T17:15:00.000Z"
+    },
+    {
       "id": "mod-338",
       "version": "B-0.259",
       "date": "2026-06-09T00:00:00.000Z",
