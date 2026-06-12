@@ -2,14 +2,14 @@ import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleCha
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService, MockupConnection, TrelloCard, TrelloStatus, TRELLO_STATUS_LABELS, TRELLO_PRIORITY_LABELS } from '@worganic/portail-core/data-access';
+import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService, MockupConnection, TrelloCard, TrelloStatus, TRELLO_STATUS_LABELS, TRELLO_PRIORITY_LABELS, ArrayGrid, ArrayCellStyle } from '@worganic/portail-core/data-access';
 import { marked } from 'marked';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { ProjetCollabService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { ImagePropsPanelComponent, ImageProps } from '../image-props-panel/image-props-panel.component';
 import { SlashCommandMenuComponent, SlashCommand } from '../slash-command-menu/slash-command-menu.component';
-import { TrelloBoardComponent, MockupBoardComponent } from '@worganic/shared/ui';
+import { TrelloBoardComponent, MockupBoardComponent, ArrayBoardComponent } from '@worganic/shared/ui';
 
 export interface FileSaveEvent {
   fileId: string;
@@ -170,7 +170,7 @@ interface MockupDiagDragState {
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
-  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent, TrelloBoardComponent, MockupBoardComponent],
+  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent, TrelloBoardComponent, MockupBoardComponent, ArrayBoardComponent],
   templateUrl: './projet-editor-zone.component.html',
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
@@ -280,8 +280,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   readonly MOCK_DIAG_H = 1000;
   readonly Math = Math;
 
-  // Barre MO — type actif déplié (trello / mockup / null)
-  moActiveType = signal<'trello' | 'mockup' | null>(null);
+  // Popup de configuration d'un nouveau Array
+  showArrayPopup = signal(false);
+  arrayName = '';
+  arrayCreating = signal(false);
+  // Zone basse : boards Array incrustés dans le contenu courant (tous les modes)
+  contentArrayIds: string[] = [];
+  arrayPanelCollapsed = signal(false);
+  private lastArrayLoadKey = '';
+  visuArrayGrids = new Map<string, ArrayGrid>();
+  private visuGridsLoading = false;
+  private lastArrayCodeFromGrid = new Map<string, string>();
+
+  // Barre MO — type actif déplié (trello / mockup / array / null)
+  moActiveType = signal<'trello' | 'mockup' | 'array' | null>(null);
   // Popup de liaison : choisir quel mockup insérer dans la section courante
   showMockupLiaisonPopup = signal(false);
   private liaisonCursorPos = -1;
@@ -588,6 +600,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (changes['megaOutilInstances']) {
       this.recomputeContentTrelloIds();
       this.recomputeContentMockupIds();
+      this.recomputeContentArrayIds();
       if (this.hasLoaded) this.repairMissingMockupMarkers();
       if (this.showTrelloList) { this.loadTrelloListCounts(); this.recomputeTrelloSections(); }
       if (this.showMockupList) { this.recomputeMockupSections(); }
@@ -950,6 +963,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.mode === 'visu') this.buildVisuSections();
     this.recomputeContentTrelloIds();
     this.recomputeContentMockupIds();
+    this.recomputeContentArrayIds();
   }
 
   private recomputeHandles() {
@@ -1338,6 +1352,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     this.recomputeContentTrelloIds();
     this.recomputeContentMockupIds();
+    this.recomputeContentArrayIds();
   }
 
   /** Ids Trello dont le folderId correspond à la section active (mode DB-only, sans marqueur dans le contenu). */
@@ -1360,6 +1375,312 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (!ids.includes(id) && this.megaOutilInstances.some(i => i.id === id)) ids.push(id);
     }
     this.contentMockupIds = ids;
+  }
+
+  /** Ids Array dont le folderId correspond à la section active. */
+  private recomputeContentArrayIds() {
+    const activeFolderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
+    this.contentArrayIds = this.arrayInstances
+      .filter(i => i.folderId === activeFolderId)
+      .map(i => i.id);
+    this.loadArrayGrid();
+  }
+
+  get arrayInstances(): MegaOutilInstance[] {
+    return this.megaOutilInstances.filter(i => i.type === 'array');
+  }
+
+  arrayInstanceName(id: string): string {
+    return this.megaOutilInstances.find(i => i.id === id)?.name || 'Mon Tableau';
+  }
+
+  private async loadArrayGrid() {
+    const key = `${this.mode}:${[...this.contentArrayIds].sort().join(',')}`;
+    if (this.lastArrayLoadKey === key) return;
+    this.lastArrayLoadKey = key;
+    if (!this.contentArrayIds.length) return;
+    for (const id of this.contentArrayIds) {
+      try {
+        let grid = await this.megaOutilsSvc.getArrayGrid(id);
+        // Récupération : si la grille DB est vide, tenter de restaurer depuis docSections (tous les modes)
+        const isGridEmpty = !grid.cells.some(row => row.some(c => c.value?.trim()));
+        if (isGridEmpty) {
+          grid = await this.tryRecoverGridFromDocSections(id, grid) ?? grid;
+        }
+        const instFolderId = this.arrayInstances.find(i => i.id === id)?.folderId;
+        if (this.mode === 'edit') {
+          await this.saveArrayCsvFile(id, grid, instFolderId ?? undefined);
+        } else {
+          this.visuArrayGrids.set(id, grid);
+          if (this.mode === 'visu') this.buildVisuSections();
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  private async tryRecoverGridFromDocSections(id: string, emptyGrid: ArrayGrid): Promise<ArrayGrid | null> {
+    const inst = this.arrayInstances.find(i => i.id === id);
+    if (!inst?.folderId) return null;
+    const sec = this.docSections.find(s => s.folderId === inst.folderId);
+    if (!sec) return null;
+    const blockMatch = sec.textContent.match(/'array\n([\s\S]*?)\n'/);
+    const oldContent = blockMatch?.[1]?.trim() ?? '';
+    if (!oldContent) return null;
+    // Seulement si ancien format markdown (pas déjà nouveau format)
+    if (oldContent.includes('cols:') || /^[A-Z]+\d+:/m.test(oldContent)) return null;
+    const recovered = this.recoverGridFromMarkdownTable(oldContent, emptyGrid);
+    if (!recovered) return null;
+    try {
+      return await this.megaOutilsSvc.updateArrayGrid(id, recovered);
+    } catch { return null; }
+  }
+
+  private recoverGridFromMarkdownTable(md: string, base: ArrayGrid): ArrayGrid | null {
+    const rawRows = md.split('\n').filter(l => l.trim().startsWith('|'));
+    const dataRows = rawRows.filter(l => !l.includes('---'));
+    if (dataRows.length === 0) return null;
+    const cells = dataRows.map(row =>
+      row.split('|').slice(1, -1).map(c => ({ value: c.trim() }))
+    );
+    if (!cells.some(row => row.some(c => c.value))) return null;
+    const colCount = Math.max(...cells.map(r => r.length));
+    const paddedCells = cells.map(r => {
+      while (r.length < colCount) r.push({ value: '' });
+      return r;
+    });
+    return { ...base, cells: paddedCells, colCount, rowCount: cells.length };
+  }
+
+  private async loadAllVisuArrayGrids() {
+    this.visuGridsLoading = true;
+    for (const inst of this.arrayInstances) {
+      if (!this.visuArrayGrids.has(inst.id)) {
+        try {
+          const grid = await this.megaOutilsSvc.getArrayGrid(inst.id);
+          this.visuArrayGrids.set(inst.id, grid);
+        } catch { /* ignore */ }
+      }
+    }
+    this.visuGridsLoading = false;
+    if (this.mode === 'visu') this.buildVisuSections();
+  }
+
+  private arrayColLetter(c: number): string {
+    let result = '';
+    let n = c;
+    while (n >= 0) {
+      result = String.fromCharCode(65 + (n % 26)) + result;
+      n = Math.floor(n / 26) - 1;
+    }
+    return result;
+  }
+
+  private serializeArrayGrid(grid: ArrayGrid): string {
+    const lines: string[] = [];
+    if (grid.colWidths?.length) lines.push(`cols:${grid.colWidths.join(',')}`);
+    if (grid.rowHeights?.length) lines.push(`rows:${grid.rowHeights.join(',')}`);
+    for (let r = 0; r < grid.cells.length; r++) {
+      for (let c = 0; c < (grid.cells[r]?.length ?? 0); c++) {
+        const cell = grid.cells[r][c];
+        const v = cell?.value ?? '';
+        const s = cell?.style ?? {};
+        const hasStyle = s.bold || s.italic || s.bgColor || s.textColor || (s.align && s.align !== 'left');
+        if (!v && !hasStyle) continue;
+        const ref = this.arrayColLetter(c) + (r + 1);
+        let entry = `${ref}:${v}`;
+        if (s.bold) entry += '|bold';
+        if (s.italic) entry += '|italic';
+        if (s.align && s.align !== 'left') entry += `|${s.align}`;
+        if (s.bgColor) entry += `|bg=${s.bgColor}`;
+        if (s.textColor) entry += `|color=${s.textColor}`;
+        lines.push(entry);
+      }
+    }
+    return lines.join('\n');
+  }
+
+  private deserializeArrayGrid(code: string, fallback: ArrayGrid): Partial<ArrayGrid> | null {
+    const lines = code.split('\n');
+    let colWidths: number[] | null = null;
+    let rowHeights: number[] | null = null;
+    const cellMap = new Map<string, { value: string; style?: ArrayCellStyle }>();
+    let maxRow = -1, maxCol = -1;
+
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (line.startsWith('cols:')) {
+        const w = line.slice(5).split(',').map(Number).filter(n => n > 0);
+        if (w.length) colWidths = w;
+        continue;
+      }
+      if (line.startsWith('rows:')) {
+        const h = line.slice(5).split(',').map(Number).filter(n => n > 0);
+        if (h.length) rowHeights = h;
+        continue;
+      }
+      const colonIdx = line.indexOf(':');
+      if (colonIdx < 1) continue;
+      const refStr = line.slice(0, colonIdx).toUpperCase();
+      const rest = line.slice(colonIdx + 1);
+      const refMatch = refStr.match(/^([A-Z]+)(\d+)$/);
+      if (!refMatch) continue;
+      let colNum = 0;
+      for (const ch of refMatch[1]) colNum = colNum * 26 + (ch.charCodeAt(0) - 64);
+      colNum -= 1;
+      const rowNum = parseInt(refMatch[2]) - 1;
+      if (rowNum < 0 || colNum < 0) continue;
+      maxRow = Math.max(maxRow, rowNum);
+      maxCol = Math.max(maxCol, colNum);
+      const parts = rest.split('|');
+      const value = parts[0];
+      const style: ArrayCellStyle = {};
+      for (let i = 1; i < parts.length; i++) {
+        const p = parts[i].trim().toLowerCase();
+        if (p === 'bold') style.bold = true;
+        else if (p === 'italic') style.italic = true;
+        else if (p === 'center') style.align = 'center';
+        else if (p === 'right') style.align = 'right';
+        else if (p === 'left') style.align = 'left';
+        else if (p.startsWith('bg=')) style.bgColor = p.slice(3);
+        else if (p.startsWith('color=')) style.textColor = p.slice(6);
+      }
+      cellMap.set(refStr, Object.keys(style).length > 0 ? { value, style } : { value });
+    }
+
+    const colCount = colWidths ? colWidths.length : (maxCol >= 0 ? maxCol + 1 : fallback.colCount);
+    const rowCount = rowHeights ? rowHeights.length : (maxRow >= 0 ? maxRow + 1 : fallback.rowCount);
+    if (colCount <= 0 || rowCount <= 0) return null;
+
+    const cells: { value: string; style?: ArrayCellStyle }[][] = [];
+    for (let r = 0; r < rowCount; r++) {
+      const row: { value: string; style?: ArrayCellStyle }[] = [];
+      for (let c = 0; c < colCount; c++) {
+        row.push(cellMap.get(this.arrayColLetter(c) + (r + 1)) ?? { value: '' });
+      }
+      cells.push(row);
+    }
+    return { cells, colWidths: colWidths ?? fallback.colWidths, rowHeights: rowHeights ?? fallback.rowHeights, colCount, rowCount };
+  }
+
+  private async saveArrayCsvFile(instanceId: string, grid: ArrayGrid, overrideFolderId?: string) {
+    if (!this.projectName || !instanceId) return;
+    const inst = overrideFolderId ? null : this.arrayInstances.find(i => i.id === instanceId);
+    const activeFolderId = overrideFolderId ?? this.focusedHandle?.id ?? this.activeNodeId ?? inst?.folderId ?? null;
+    if (!activeFolderId) return;
+    const folderNode = this.findNode(activeFolderId, this.files);
+    if (!folderNode) return;
+
+    const hasData = grid.cells.some(row => row.some(c => c.value?.trim()));
+    if (!hasData) return;
+
+    const newContent = this.serializeArrayGrid(grid);
+    if (!newContent) return;
+
+    this.lastArrayCodeFromGrid.set(instanceId, newContent);
+
+    const existingFile = (folderNode.children || []).find(
+      c => c.type === 'file' && c.name === 'array'
+    );
+
+    try {
+      if (existingFile) {
+        if ((existingFile.content ?? '').trim() !== newContent.trim()) {
+          await this.svc.updateFile(this.projectName, existingFile.id, newContent);
+          existingFile.content = newContent;
+          this.docSections = this.buildDocSections(this.files, 1);
+          const rebuilt = this.reconstructFromSections();
+          if (rebuilt !== this.unifiedContent) {
+            this.unifiedContent = rebuilt;
+            this.lastSavedContent = rebuilt;
+            const ta = this.textareaRef?.nativeElement;
+            if (ta) ta.value = rebuilt;
+            this.recomputeAll();
+            this.cdr.markForCheck();
+          }
+        }
+      } else {
+        await this.svc.createFile(this.projectName, {
+          name: 'array',
+          parentId: activeFolderId,
+          content: newContent,
+        });
+        this.refresh.emit();
+      }
+    } catch (e) {
+      console.error('[EditorZone] saveArrayCsvFile échoué :', e);
+    }
+  }
+
+  private syncArrayCodeToGrid(sections: SectionInfo[]) {
+    if (this.mode !== 'edit') return;
+    for (const sec of sections) {
+      if (!sec.folderId) continue;
+      const af = sec.additionalFiles.find(f => f.name === 'array');
+      if (!af) continue;
+      const inst = this.arrayInstances.find(i => i.folderId === sec.folderId);
+      if (!inst) continue;
+      // N'agir que si loadArrayGrid() a déjà initialisé la map (évite d'écraser avec un ancien format)
+      if (!this.lastArrayCodeFromGrid.has(inst.id)) continue;
+      const currentCode = af.content.trim();
+      const lastKnown = this.lastArrayCodeFromGrid.get(inst.id)!.trim();
+      if (currentCode === lastKnown) continue;
+      // Valider que le contenu est bien au nouveau format (au moins une ligne A1:...)
+      const hasNewFormat = /^[A-Z]+\d+:/m.test(currentCode) || /^cols:/m.test(currentCode) || /^rows:/m.test(currentCode);
+      if (!hasNewFormat) continue;
+      // L'utilisateur a modifié le bloc 'array en code → synchroniser vers la grille
+      this.lastArrayCodeFromGrid.set(inst.id, currentCode);
+      const fallback = this.visuArrayGrids.get(inst.id) ?? { instanceId: inst.id, cells: [], colWidths: [], rowHeights: [], colCount: 3, rowCount: 5, updatedAt: '' };
+      const partial = this.deserializeArrayGrid(currentCode, fallback as ArrayGrid);
+      if (!partial) continue;
+      this.megaOutilsSvc.updateArrayGrid(inst.id, { ...fallback, ...partial } as ArrayGrid)
+        .then(updated => { this.visuArrayGrids.set(inst.id, updated); })
+        .catch(() => {});
+    }
+  }
+
+  async onArrayGridChanged(instanceId: string, grid: ArrayGrid) {
+    this.visuArrayGrids.set(instanceId, grid);
+    await this.saveArrayCsvFile(instanceId, grid);
+    if (this.mode === 'visu') this.buildVisuSections();
+  }
+
+  async deleteArrayInstance(id: string) {
+    try {
+      await this.megaOutilsSvc.deleteInstance(id);
+      this.megaOutilDeleted.emit(id);
+    } catch (e) {
+      console.error('[EditorZone] deleteArrayInstance échoué :', e);
+    }
+  }
+
+  openArrayPopup() {
+    this.arrayName = 'Mon Tableau';
+    this.showArrayPopup.set(true);
+  }
+
+  cancelArrayPopup() { this.showArrayPopup.set(false); }
+
+  async confirmArrayPopup() {
+    const name = (this.arrayName || '').trim() || 'Mon Tableau';
+    if (!this.projectName) return;
+    const folderId = this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
+    this.arrayCreating.set(true);
+    try {
+      const inst = await this.megaOutilsSvc.createInstance({
+        type: 'array',
+        name,
+        projectId: this.projectName,
+        outilId: this.activeOutilId || undefined,
+        folderId,
+      });
+      this.showArrayPopup.set(false);
+      this.megaOutilCreated.emit(inst);
+    } catch (e) {
+      console.error('[EditorZone] confirmArrayPopup échoué :', e);
+    } finally {
+      this.arrayCreating.set(false);
+    }
   }
 
   private recomputeRenderedHtml() {
@@ -2588,6 +2909,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.unifiedContent = contentToParse;
     const sections = this.parseContent();
     this.unifiedContent = saved;
+    this.syncArrayCodeToGrid(sections);
     this.sectionsChange.emit(sections);
   }
 
@@ -3717,6 +4039,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     });
     // Initialiser le innerHTML des contenteditable après le rendu Angular
     setTimeout(() => this.initVisuSectionHtml(), 0);
+    // Si des instances Array n'ont pas encore de grille chargée, les charger (async)
+    if (this.mode === 'visu' && !this.visuGridsLoading) {
+      const unloaded = this.arrayInstances.filter(i => !this.visuArrayGrids.has(i.id));
+      if (unloaded.length > 0) this.loadAllVisuArrayGrids();
+    }
   }
 
   private buildVisuSectionHtml(sec: DocSection): string {
@@ -3745,6 +4072,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         inner = inner.replace(wrapped, ph.html).replace(ph.token, ph.html);
       }
       const token = `@@FB${fileBlocks.length}@@`;
+      // Bloc array → tableau HTML stylisé depuis la grille en cache
+      if (trimmed === 'array') {
+        const arrInst = this.arrayInstances.find(i => i.folderId === sec.folderId);
+        const cachedGrid = arrInst ? this.visuArrayGrids.get(arrInst.id) : null;
+        if (cachedGrid) {
+          fileBlocks.push({ token, html: `<div class="visu-array-wrap" contenteditable="false">${this.renderArrayVisuHtml(cachedGrid)}</div>`, md: mdSource });
+          return `\n\n${token}\n\n`;
+        }
+      }
       const encoded = btoa(unescape(encodeURIComponent(mdSource)));
       fileBlocks.push({
         token,
@@ -3796,6 +4132,41 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (const mk of mockupTokens) {
       html = html.replace(new RegExp(`<p>\\s*${mk.token}\\s*</p>`, 'g'), mk.html).replace(mk.token, mk.html);
     }
+    return html;
+  }
+
+  private renderArrayVisuHtml(grid: ArrayGrid): string {
+    const rows = grid.cells;
+    if (!rows.length || !rows[0]?.length) return '<p class="visu-array-empty">Tableau vide</p>';
+    let html = '<table class="visu-array-table">';
+    if (grid.colWidths?.length) {
+      html += '<colgroup>';
+      for (let c = 0; c < grid.colCount; c++) {
+        const w = grid.colWidths[c] ?? 100;
+        html += `<col style="width:${w}px">`;
+      }
+      html += '</colgroup>';
+    }
+    html += '<tbody>';
+    for (let r = 0; r < rows.length; r++) {
+      const rowH = grid.rowHeights?.[r] ?? 32;
+      html += `<tr style="height:${rowH}px">`;
+      for (let c = 0; c < (rows[r]?.length ?? 0); c++) {
+        const cell = rows[r][c];
+        const s = cell?.style ?? {};
+        const styles: string[] = [];
+        if (s.bgColor) styles.push(`background-color:${s.bgColor}`);
+        if (s.textColor) styles.push(`color:${s.textColor}`);
+        if (s.bold) styles.push('font-weight:bold');
+        if (s.italic) styles.push('font-style:italic');
+        if (s.align) styles.push(`text-align:${s.align}`);
+        const styleAttr = styles.length ? ` style="${styles.join(';')}"` : '';
+        const displayVal = cell?.value?.startsWith('=') && cell?.computed ? cell.computed : (cell?.value ?? '');
+        html += `<td${styleAttr}>${this.escapeHtml(displayVal)}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
     return html;
   }
 
@@ -4867,10 +5238,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return fileNode.name === 'contenu.md' || !node.additionalBlocks.length;
   }
 
+  /** Retourne les instances Array liées à un nœud Structure donné (par folderId). */
+  arrayInstancesForNode(node: StructureNode): MegaOutilInstance[] {
+    if (!node.folderId) return [];
+    return this.arrayInstances.filter(i => i.folderId === node.folderId);
+  }
+
   // Indique si un bloc additionnel donné doit être affiché
   structNodeShowBlock(node: StructureNode, block: StructureAdditionalBlock): boolean {
-    // Le fichier trello.md est un fichier système : le board s'affiche via le panel en bas
+    // Les fichiers système (trello.md, array) s'affichent via le panel en bas uniquement
     if (this.slugify(block.title) === 'trello') return false;
+    if (this.slugify(block.title) === 'array') return false;
     if (!this.activeNodeId) return true;
     const fileNode = this.findNode(this.activeNodeId, this.files);
     if (!fileNode || fileNode.type !== 'file' || this.isImageFile(fileNode.name)) return true;
@@ -5268,7 +5646,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // ── Barre MO ─────────────────────────────────────────────────────────────────
 
-  toggleMoType(type: 'trello' | 'mockup') {
+  toggleMoType(type: 'trello' | 'mockup' | 'array') {
     this.moActiveType.update(cur => cur === type ? null : type);
   }
 

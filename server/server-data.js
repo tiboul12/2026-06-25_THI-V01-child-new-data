@@ -8406,6 +8406,282 @@ app.delete('/api/mega-outils/mockup/:projectName/connections/:connId', async (re
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── ARRAY (Tableur) ───────────────────────────────────────────────────────────
+
+async function broadcastArrayUpdate(instanceId, action, projectId) {
+    try {
+        let pid = projectId;
+        if (!pid && instanceId) {
+            const [r] = await pool.query('SELECT project_id FROM mega_outil_instances WHERE id = ?', [instanceId]);
+            pid = r[0]?.project_id;
+        }
+        if (pid) broadcastToProject(pid, 'array_update', { instanceId: instanceId || null, projectId: pid, action });
+    } catch (e) { console.warn('[mega-outils] broadcastArrayUpdate failed:', e.message); }
+}
+
+function emptyGrid(colCount = 3, rowCount = 5) {
+    const cells = Array.from({ length: rowCount }, () =>
+        Array.from({ length: colCount }, () => ({ value: '' }))
+    );
+    const colWidths  = Array(colCount).fill(100);
+    const rowHeights = Array(rowCount).fill(28);
+    return { cells, colWidths, rowHeights, colCount, rowCount };
+}
+
+// GET /api/mega-outils/array/all
+app.get('/api/mega-outils/array/all', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        const [rows] = await pool.query(`
+            SELECT i.*, g.cells, g.col_widths, g.row_heights, g.col_count, g.row_count, g.updated_at AS grid_updated_at,
+                   p.name AS project_name, f.name AS folder_name
+            FROM mega_outil_instances i
+            LEFT JOIN mega_outil_array_grids g ON g.instance_id = i.id
+            LEFT JOIN frank_projects p ON p.id = i.project_id
+            LEFT JOIN frank_project_nodes f ON f.id = i.folder_id
+            WHERE i.type = 'array'
+            ORDER BY i.created_at DESC
+        `);
+        const result = rows.map(r => ({
+            instance: {
+                id: r.id, type: r.type, name: r.name, projectId: r.project_id,
+                outilId: r.outil_id, folderId: r.folder_id,
+                createdAt: r.created_at, updatedAt: r.updated_at,
+            },
+            grid: r.cells ? {
+                instanceId: r.id,
+                cells: JSON.parse(r.cells),
+                colWidths: JSON.parse(r.col_widths || '[]'),
+                rowHeights: JSON.parse(r.row_heights || '[]'),
+                colCount: r.col_count || 3,
+                rowCount: r.row_count || 5,
+                updatedAt: r.grid_updated_at,
+            } : null,
+            projectName: r.project_name,
+            folderName: r.folder_name,
+        }));
+        res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/mega-outils/array/:instanceId/grid
+app.get('/api/mega-outils/array/:instanceId/grid', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { instanceId } = req.params;
+    try {
+        const [rows] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        if (rows.length === 0) {
+            const g = emptyGrid();
+            await pool.query(
+                'INSERT INTO mega_outil_array_grids (instance_id, cells, col_widths, row_heights, col_count, row_count) VALUES (?,?,?,?,?,?)',
+                [instanceId, JSON.stringify(g.cells), JSON.stringify(g.colWidths), JSON.stringify(g.rowHeights), g.colCount, g.rowCount]
+            );
+            return res.json({ instanceId, ...g, updatedAt: new Date().toISOString() });
+        }
+        const r = rows[0];
+        res.json({
+            instanceId,
+            cells: JSON.parse(r.cells),
+            colWidths: JSON.parse(r.col_widths || '[]'),
+            rowHeights: JSON.parse(r.row_heights || '[]'),
+            colCount: r.col_count,
+            rowCount: r.row_count,
+            updatedAt: r.updated_at,
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /api/mega-outils/array/:instanceId/grid
+app.put('/api/mega-outils/array/:instanceId/grid', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { instanceId } = req.params;
+    const { cells, colWidths, rowHeights, colCount, rowCount } = req.body;
+    try {
+        await pool.query(`
+            INSERT INTO mega_outil_array_grids (instance_id, cells, col_widths, row_heights, col_count, row_count)
+            VALUES (?,?,?,?,?,?)
+            ON DUPLICATE KEY UPDATE cells=VALUES(cells), col_widths=VALUES(col_widths),
+              row_heights=VALUES(row_heights), col_count=VALUES(col_count), row_count=VALUES(row_count)
+        `, [instanceId, JSON.stringify(cells), JSON.stringify(colWidths), JSON.stringify(rowHeights), colCount, rowCount]);
+        await broadcastArrayUpdate(instanceId, 'update', null);
+        const [rows] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        const r = rows[0];
+        res.json({
+            instanceId,
+            cells: JSON.parse(r.cells),
+            colWidths: JSON.parse(r.col_widths || '[]'),
+            rowHeights: JSON.parse(r.row_heights || '[]'),
+            colCount: r.col_count,
+            rowCount: r.row_count,
+            updatedAt: r.updated_at,
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/mega-outils/array/:instanceId/cell
+app.patch('/api/mega-outils/array/:instanceId/cell', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { instanceId } = req.params;
+    const { row, col, cell } = req.body;
+    try {
+        const [rows] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        let g;
+        if (rows.length === 0) { g = emptyGrid(); }
+        else {
+            const r = rows[0];
+            g = {
+                cells: JSON.parse(r.cells),
+                colWidths: JSON.parse(r.col_widths || '[]'),
+                rowHeights: JSON.parse(r.row_heights || '[]'),
+                colCount: r.col_count,
+                rowCount: r.row_count,
+            };
+        }
+        if (g.cells[row] && g.cells[row][col] !== undefined) {
+            g.cells[row][col] = cell;
+        }
+        await pool.query(`
+            INSERT INTO mega_outil_array_grids (instance_id, cells, col_widths, row_heights, col_count, row_count)
+            VALUES (?,?,?,?,?,?)
+            ON DUPLICATE KEY UPDATE cells=VALUES(cells)
+        `, [instanceId, JSON.stringify(g.cells), JSON.stringify(g.colWidths), JSON.stringify(g.rowHeights), g.colCount, g.rowCount]);
+        await broadcastArrayUpdate(instanceId, 'cell_update', null);
+        const [updated] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        const ur = updated[0];
+        res.json({
+            instanceId,
+            cells: JSON.parse(ur.cells),
+            colWidths: JSON.parse(ur.col_widths || '[]'),
+            rowHeights: JSON.parse(ur.row_heights || '[]'),
+            colCount: ur.col_count,
+            rowCount: ur.row_count,
+            updatedAt: ur.updated_at,
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/array/:instanceId/grid/addRow
+app.post('/api/mega-outils/array/:instanceId/grid/addRow', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { instanceId } = req.params;
+    try {
+        const [rows] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        let g = rows.length === 0 ? emptyGrid() : {
+            cells: JSON.parse(rows[0].cells),
+            colWidths: JSON.parse(rows[0].col_widths || '[]'),
+            rowHeights: JSON.parse(rows[0].row_heights || '[]'),
+            colCount: rows[0].col_count,
+            rowCount: rows[0].row_count,
+        };
+        g.cells.push(Array(g.colCount).fill(null).map(() => ({ value: '' })));
+        g.rowHeights.push(28);
+        g.rowCount++;
+        await pool.query(`
+            INSERT INTO mega_outil_array_grids (instance_id, cells, col_widths, row_heights, col_count, row_count)
+            VALUES (?,?,?,?,?,?)
+            ON DUPLICATE KEY UPDATE cells=VALUES(cells), row_heights=VALUES(row_heights), row_count=VALUES(row_count)
+        `, [instanceId, JSON.stringify(g.cells), JSON.stringify(g.colWidths), JSON.stringify(g.rowHeights), g.colCount, g.rowCount]);
+        await broadcastArrayUpdate(instanceId, 'add_row', null);
+        const [updated] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        const ur = updated[0];
+        res.json({ instanceId, cells: JSON.parse(ur.cells), colWidths: JSON.parse(ur.col_widths || '[]'), rowHeights: JSON.parse(ur.row_heights || '[]'), colCount: ur.col_count, rowCount: ur.row_count, updatedAt: ur.updated_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/mega-outils/array/:instanceId/grid/addCol
+app.post('/api/mega-outils/array/:instanceId/grid/addCol', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { instanceId } = req.params;
+    try {
+        const [rows] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        let g = rows.length === 0 ? emptyGrid() : {
+            cells: JSON.parse(rows[0].cells),
+            colWidths: JSON.parse(rows[0].col_widths || '[]'),
+            rowHeights: JSON.parse(rows[0].row_heights || '[]'),
+            colCount: rows[0].col_count,
+            rowCount: rows[0].row_count,
+        };
+        g.cells.forEach(row => row.push({ value: '' }));
+        g.colWidths.push(100);
+        g.colCount++;
+        await pool.query(`
+            INSERT INTO mega_outil_array_grids (instance_id, cells, col_widths, row_heights, col_count, row_count)
+            VALUES (?,?,?,?,?,?)
+            ON DUPLICATE KEY UPDATE cells=VALUES(cells), col_widths=VALUES(col_widths), col_count=VALUES(col_count)
+        `, [instanceId, JSON.stringify(g.cells), JSON.stringify(g.colWidths), JSON.stringify(g.rowHeights), g.colCount, g.rowCount]);
+        await broadcastArrayUpdate(instanceId, 'add_col', null);
+        const [updated] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        const ur = updated[0];
+        res.json({ instanceId, cells: JSON.parse(ur.cells), colWidths: JSON.parse(ur.col_widths || '[]'), rowHeights: JSON.parse(ur.row_heights || '[]'), colCount: ur.col_count, rowCount: ur.row_count, updatedAt: ur.updated_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/mega-outils/array/:instanceId/grid/row/:row
+app.delete('/api/mega-outils/array/:instanceId/grid/row/:row', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { instanceId } = req.params;
+    const rowIdx = parseInt(req.params.row, 10);
+    try {
+        const [rows] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Grille introuvable' });
+        const g = {
+            cells: JSON.parse(rows[0].cells),
+            colWidths: JSON.parse(rows[0].col_widths || '[]'),
+            rowHeights: JSON.parse(rows[0].row_heights || '[]'),
+            colCount: rows[0].col_count,
+            rowCount: rows[0].row_count,
+        };
+        if (rowIdx >= 0 && rowIdx < g.cells.length && g.cells.length > 1) {
+            g.cells.splice(rowIdx, 1);
+            if (g.rowHeights.length > rowIdx) g.rowHeights.splice(rowIdx, 1);
+            g.rowCount = g.cells.length;
+        }
+        await pool.query('UPDATE mega_outil_array_grids SET cells=?, row_heights=?, row_count=? WHERE instance_id=?',
+            [JSON.stringify(g.cells), JSON.stringify(g.rowHeights), g.rowCount, instanceId]);
+        await broadcastArrayUpdate(instanceId, 'delete_row', null);
+        const [updated] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        const ur = updated[0];
+        res.json({ instanceId, cells: JSON.parse(ur.cells), colWidths: JSON.parse(ur.col_widths || '[]'), rowHeights: JSON.parse(ur.row_heights || '[]'), colCount: ur.col_count, rowCount: ur.row_count, updatedAt: ur.updated_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /api/mega-outils/array/:instanceId/grid/col/:col
+app.delete('/api/mega-outils/array/:instanceId/grid/col/:col', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    const { instanceId } = req.params;
+    const colIdx = parseInt(req.params.col, 10);
+    try {
+        const [rows] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Grille introuvable' });
+        const g = {
+            cells: JSON.parse(rows[0].cells),
+            colWidths: JSON.parse(rows[0].col_widths || '[]'),
+            rowHeights: JSON.parse(rows[0].row_heights || '[]'),
+            colCount: rows[0].col_count,
+            rowCount: rows[0].row_count,
+        };
+        if (colIdx >= 0 && colIdx < g.colCount && g.colCount > 1) {
+            g.cells.forEach(row => row.splice(colIdx, 1));
+            if (g.colWidths.length > colIdx) g.colWidths.splice(colIdx, 1);
+            g.colCount = g.cells[0]?.length || 0;
+        }
+        await pool.query('UPDATE mega_outil_array_grids SET cells=?, col_widths=?, col_count=? WHERE instance_id=?',
+            [JSON.stringify(g.cells), JSON.stringify(g.colWidths), g.colCount, instanceId]);
+        await broadcastArrayUpdate(instanceId, 'delete_col', null);
+        const [updated] = await pool.query('SELECT * FROM mega_outil_array_grids WHERE instance_id = ?', [instanceId]);
+        const ur = updated[0];
+        res.json({ instanceId, cells: JSON.parse(ur.cells), colWidths: JSON.parse(ur.col_widths || '[]'), rowHeights: JSON.parse(ur.row_heights || '[]'), colCount: ur.col_count, rowCount: ur.row_count, updatedAt: ur.updated_at });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ============================================================
 // PROJETS-TESTS — Outil Tests (Cahier de recette + Exécution + Résultats)
 // ============================================================
@@ -8939,6 +9215,18 @@ app.listen(PORT, async () => {
             PRIMARY KEY (instance_id, project_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `).catch(e => console.error('[DB] mega_outil_mockup_diagram_positions init error:', e.message));
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS mega_outil_array_grids (
+            instance_id   VARCHAR(36)   PRIMARY KEY,
+            cells         JSON          NOT NULL DEFAULT '[]',
+            col_widths    JSON          NOT NULL DEFAULT '[]',
+            row_heights   JSON          NOT NULL DEFAULT '[]',
+            col_count     INT           NOT NULL DEFAULT 3,
+            row_count     INT           NOT NULL DEFAULT 5,
+            updated_at    DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `).catch(e => console.error('[DB] mega_outil_array_grids init error:', e.message));
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS frank_project_steps (

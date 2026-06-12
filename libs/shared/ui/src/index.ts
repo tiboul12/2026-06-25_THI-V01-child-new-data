@@ -25,3 +25,4 @@ export * from './lib/tools/wo/wo-tools-panel/wo-tools-panel.component';
 export * from './lib/mega-outils/trello/trello-board.component';
 export * from './lib/mega-outils/trello/trello-admin.component';
 export * from './lib/mega-outils/mockup/mockup-board.component';
+export * from './lib/mega-outils/array/array-board.component';

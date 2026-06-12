@@ -1,6 +1,209 @@
 {
   "modifications": [
     {
+      "id": "mod-360",
+      "version": "B-0.265",
+      "date": "2026-06-12T19:15:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|array-code-sync",
+      "title": "Array : format code complet + sync bidirectionnelle",
+      "description": "Nouveau format dans le bloc 'array en mode Code : chaque cellule est écrite sur une ligne (A1:valeur|bold|bg=#ff0000|center), avec entêtes cols:w1,w2 et rows:h1,h2. Formules conservées brutes (=SUM(A1:A3)). Sync code→grille : saveAll() appelle syncArrayCodeToGrid() qui détecte les changements dans le bloc 'array, parse via deserializeArrayGrid() et pousse via updateArrayGrid(). Dedup via lastArrayCodeFromGrid + guard has() + validation nouveau format (/^[A-Z]+\\d+:/) pour éviter la boucle et prévenir l'écrasement par ancien format markdown. Récupération : si DB vide + fichier ancien format markdown → recoverGridFromMarkdownTable() reconstruit la grille.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/array-outil/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans l'affichage en mode code on a les datas du tableau mais pas les infos de configuration et les calculs, ont doit avoir toutes les informations qui permettrais de recréé le tableau en mode code. On peux modifié le tableau via la view tableau mais aussi via le code qui modifirait automatiquement les datas de la view",
+      "startedAt": "2026-06-12T18:40:00.000Z",
+      "completedAt": "2026-06-12T19:00:00.000Z"
+    },
+    {
+      "id": "mod-359",
+      "version": "B-0.265",
+      "date": "2026-06-12T18:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|array-preview",
+      "title": "Array : tableau stylisé en mode Preview",
+      "description": "En mode Preview (visu), le bloc 'array' de la section est remplacé par un tableau HTML stylisé généré depuis la grille ArrayGrid en cache. Les couleurs de fond/texte, gras, italique et alignement des cellules sont appliqués via des attributs style inline. Chargement asynchrone de toutes les grilles au premier affichage en mode visu via loadAllVisuArrayGrids(). Mise à jour automatique si onArrayGridChanged est appelé.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/array-outil/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le mode preview le tableau doit être stilisé [Image #3], avec ligne couleur et style",
+      "startedAt": "2026-06-12T18:15:00.000Z",
+      "completedAt": "2026-06-12T18:30:00.000Z"
+    },
+    {
+      "id": "mod-358",
+      "version": "B-0.265",
+      "date": "2026-06-12T16:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|array-panel",
+      "title": "Array : panneau bas visible en mode Structure",
+      "description": "Regroupement des panneaux Trello/Array/Mockup dans un container .ed-panels-zone (flex-shrink:0, overflow-y:auto, max-height:60vh). Résout le bug où deux panneaux (Array+Mockup 560px chacun) poussaient le struct-wrap à 0px de hauteur, rendant le panneau Array visible au top au lieu du bas. Array masqué en mode Code (mode !== edit) comme Mockup.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "la view tableau dans le mode Structure doit être affiché en bas comme pour mockup et trello",
+      "startedAt": "2026-06-12T15:30:00.000Z",
+      "completedAt": "2026-06-12T16:00:00.000Z"
+    },
+    {
+      "id": "mod-357",
+      "version": "B-0.265",
+      "date": "2026-06-12T15:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:array-board",
+      "title": "Array : menu contextuel dédié lignes et colonnes",
+      "description": "Clic droit sur les en-têtes de colonnes (A, B, C...) et de lignes (1, 2, 3...) ouvre un menu contextuel dédié avec gras, italique, alignement et couleurs pour toute la ligne ou colonne. Le menu cellule conserve uniquement les options cellule + supprimer. ctxMenu étendu avec un champ target: cell|row|col.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/array/array-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je doit pouvoir avoir les mêmes fonctions des cases, couleur, style etc pour les lignes et les colonnes",
+      "startedAt": "2026-06-12T14:30:00.000Z",
+      "completedAt": "2026-06-12T15:00:00.000Z"
+    },
+    {
+      "id": "mod-356",
+      "version": "B-0.265",
+      "date": "2026-06-12T14:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:array-board",
+      "title": "Array : 500 au clic entête colonne/ligne",
+      "description": "Suppression du (mousedown) sur le <th> et <td> d'entête (gardé uniquement sur le handle de resize) : évite de déclencher un PUT à chaque clic. Correction de onMouseUp qui envoyait { colWidths, rowHeights } uniquement au lieu de la grille complète, causant cells=undefined dans le SQL.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/array/array-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je clique sur le titre d'une colonne ou d'une ligne j'ai un msg d'erreur dans la console PUT http://localhost:3001/api/mega-outils/array/.../grid 500 (Internal Server Error)",
+      "startedAt": "2026-06-12T13:30:00.000Z",
+      "completedAt": "2026-06-12T14:00:00.000Z"
+    },
+    {
+      "id": "mod-355",
+      "version": "B-0.265",
+      "date": "2026-06-12T13:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:array-board",
+      "title": "Array : Enter valide la formule sans rouvrir l'édition",
+      "description": "Ajout de e.stopPropagation() dans onInputKeydown pour Enter/Tab/Escape : empêche le bubble du keydown vers le <td> qui appelait startEdit() après commitEdit(), rouvrant l'édition et masquant le résultat calculé.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/array/array-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je met une formule dans une case le bouton entrée doit validé cette formule et affiché le calcul",
+      "startedAt": "2026-06-12T12:30:00.000Z",
+      "completedAt": "2026-06-12T13:00:00.000Z"
+    },
+    {
+      "id": "mod-354",
+      "version": "B-0.265",
+      "date": "2026-06-12T12:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["libs"],
+      "features": "libs:array-board",
+      "title": "Array : couleurs ligne/colonne + copier/couper/coller",
+      "description": "Fix du menu contextuel (stopPropagation empêche la fermeture au clic du color picker). Ajout coloration fond/texte par ligne et par colonne. Ajout copier/couper/coller dans le menu contextuel et via Ctrl+C/X/V clavier. setBgColor/setTextColor ferment le menu après application.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/array/array-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le changement de couleur texte et fond ne fonctionne pas, il faut le rajouté pour les lignes et colonne et rajouté une option copier/couper coller au case",
+      "startedAt": "2026-06-12T11:30:00.000Z",
+      "completedAt": "2026-06-12T12:00:00.000Z"
+    },
+    {
+      "id": "mod-353",
+      "version": "B-0.265",
+      "date": "2026-06-12T11:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:array-board",
+      "title": "Array : formules réactives au changement de valeur",
+      "description": "Ajout de recomputeAllFormulas() dans ArrayBoardComponent : après chaque mutation de cellule (commitEdit, addRow, addCol, deleteRow, deleteCol) et au chargement initial (loadGrid), toutes les cellules formule sont recalculées localement avec les nouvelles valeurs. Double passe pour supporter les formules chaînées.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/array/array-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "quand je fait une formule avec différente case et que je valide, le résultat s'affiche bien, mais si je change la valeur d'une case le résultat ne change pas, le résultat doit être intéractif et réagir au changement de valeur des cases selectionné",
+      "startedAt": "2026-06-12T10:30:00.000Z",
+      "completedAt": "2026-06-12T11:00:00.000Z"
+    },
+    {
+      "id": "mod-352",
+      "version": "B-0.265",
+      "date": "2026-06-12T10:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["libs"],
+      "features": "libs:array-board",
+      "title": "Array : mode construction de formule Excel-like",
+      "description": "Implémentation du mode formule interactif dans ArrayBoardComponent : taper '=' passe en mode formule, cliquer une cellule insère sa référence (ex: B2) dans l'input sans fermer l'édition, les cellules référencées sont surlignées en bleu. Correction du bug #ERR causé par commitEdit déclenché au clic pendant la saisie d'une formule incomplète.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/array/array-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "quand je veux mettre une formule dans une case, je met '=' et je clique sur la première case et la j'ai un msg d'erreur #ERR, je doit pouvoir mettre= selectionné une case appuyé sur un signe d'opération et sur une autre case et cela doit affiché le résultat, si je reclique sur la case je doit pouvoir changer la formule",
+      "startedAt": "2026-06-12T09:00:00.000Z",
+      "completedAt": "2026-06-12T10:00:00.000Z"
+    },
+    {
+      "id": "mod-351",
+      "version": "B-0.265",
+      "date": "2026-06-12T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "libs", "server", "data"],
+      "features": "projets:editor|array-panel,libs:array-board,server:array-routes,data:mega-outils",
+      "title": "Mega-Outil Array (tableur interactif)",
+      "description": "Création du méga-outil Array : tableur interactif avec édition inline, formules (SUM/AVG/COUNT/MAX/MIN), redimensionnement colonnes/lignes, styles de cellules, sync temps réel SSE et persistance fichier 'array' dans la section. Panneau affiché dans les 3 modes (Code/Structure/Preview).",
+      "files": [
+        "libs/portail-core/data-access/src/lib/mega-outils.models.ts",
+        "libs/portail-core/data-access/src/lib/mega-outils.service.ts",
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "libs/shared/ui/src/lib/mega-outils/array/array-board.component.ts",
+        "libs/shared/ui/src/index.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "server/server-data.js",
+        "tests/fonctions/_registry.json",
+        "tests/fonctions/connecte/projets/editor/array-outil/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "crait un MO dans le type d'un tableur. Il faudra créé un fichier array.csv qui sera insérrer dans le dossier de la section. Dans le mode Code les datas seront affiché au format texte markdown tableau (array) et uniquement en code, le même code que l'on vas retrouvé dans le fichier array.csv. En mode structure, le format d'affichage sera une ballise array:nom du tableau comme une image ou un mockup, une view tableau sera affiché en bas comme pour un trello avec le tableau affiché graphiquement...",
+      "startedAt": "2026-06-12T00:00:00.000Z",
+      "completedAt": "2026-06-12T00:00:00.000Z"
+    },
+    {
       "id": "mod-350",
       "version": "B-0.264",
       "date": "2026-06-12T00:00:00.000Z",

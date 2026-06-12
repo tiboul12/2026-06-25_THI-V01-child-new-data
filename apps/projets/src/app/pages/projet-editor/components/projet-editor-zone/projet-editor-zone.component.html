@@ -231,6 +231,23 @@
         }
       </button>
 
+      <!-- Bouton type Array -->
+      <button type="button"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+              [ngClass]="moActiveType() === 'array'
+                ? 'bg-lime-500/15 text-lime-400 border border-lime-500/30'
+                : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
+              (click)="toggleMoType('array')">
+        <span class="material-symbols-outlined text-[12px]">table</span>
+        Tableau
+        @if (arrayInstances.length > 0) {
+          <span class="ml-0.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full text-[9px] font-bold"
+                [ngClass]="moActiveType() === 'array' ? 'bg-lime-500/30 text-lime-300' : 'bg-light-border dark:bg-white/10 text-light-text-muted dark:text-white/40'">
+            {{ arrayInstances.length }}
+          </span>
+        }
+      </button>
+
       <!-- Bouton replier la barre secondaire -->
       @if (moActiveType() !== null) {
         <button type="button"
@@ -256,18 +273,18 @@
         <!-- Liste instances scrollable -->
         <div #moInstanceList
              class="flex-1 flex items-center gap-0.5 overflow-x-hidden py-0.5">
-          @for (inst of (moActiveType() === 'trello' ? trelloInstances : mockupInstances); track inst.id) {
+          @for (inst of (moActiveType() === 'trello' ? trelloInstances : moActiveType() === 'array' ? arrayInstances : mockupInstances); track inst.id) {
             <button type="button"
                     class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors whitespace-nowrap"
                     [ngClass]="activeMegaOutilId === inst.id
-                      ? (moActiveType() === 'mockup' ? 'bg-violet-500/15 text-violet-400 border border-violet-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30')
+                      ? (moActiveType() === 'mockup' ? 'bg-violet-500/15 text-violet-400 border border-violet-500/30' : moActiveType() === 'array' ? 'bg-lime-500/15 text-lime-400 border border-lime-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30')
                       : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
                     (click)="inst.type === 'mockup' ? selectMockupFromMarker(inst.id) : selectMegaOutil(inst)">
-              <span class="material-symbols-outlined text-[11px]">{{ inst.type === 'mockup' ? 'design_services' : 'view_kanban' }}</span>
+              <span class="material-symbols-outlined text-[11px]">{{ inst.type === 'mockup' ? 'design_services' : inst.type === 'array' ? 'table' : 'view_kanban' }}</span>
               {{ inst.name }}
             </button>
           }
-          @if ((moActiveType() === 'trello' ? trelloInstances : mockupInstances).length === 0) {
+          @if ((moActiveType() === 'trello' ? trelloInstances : moActiveType() === 'array' ? arrayInstances : mockupInstances).length === 0) {
             <span class="text-[11px] text-light-text-muted dark:text-white/25 italic px-2">Aucun</span>
           }
         </div>
@@ -288,6 +305,16 @@
                   class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 mr-1 rounded text-[11px] text-blue-500 dark:text-blue-400 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 transition-colors"
                   title="Créer un nouveau Trello"
                   (click)="openTrelloPopup()">
+            <span class="material-symbols-outlined text-[12px]">add</span> Nouveau
+          </button>
+        }
+
+        <!-- Actions Array -->
+        @if (moActiveType() === 'array') {
+          <button type="button"
+                  class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 mr-1 rounded text-[11px] text-lime-500 dark:text-lime-400 hover:bg-lime-500/10 border border-transparent hover:border-lime-500/30 transition-colors"
+                  title="Créer un nouveau Tableau"
+                  (click)="openArrayPopup()">
             <span class="material-symbols-outlined text-[12px]">add</span> Nouveau
           </button>
         }
@@ -321,6 +348,37 @@
     }
 
   </div>
+  }
+
+  <!-- Popup configuration nouveau Array -->
+  @if (showArrayPopup()) {
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+      <div class="w-80 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-lime-500/10 border border-lime-500/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-lime-400 text-base">table</span>
+          </div>
+          <h3 class="text-sm font-semibold text-light-text dark:text-white">Nouveau Tableau</h3>
+        </div>
+        <label class="block text-[11px] font-medium text-light-text-muted dark:text-white/50 mb-1">Nom du tableau</label>
+        <input class="w-full text-sm bg-light-background dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-3 py-2 text-light-text dark:text-white outline-none focus:border-lime-500 dark:focus:border-lime-400"
+               [(ngModel)]="arrayName"
+               (keydown.enter)="confirmArrayPopup()"
+               (keydown.escape)="cancelArrayPopup()"
+               placeholder="Mon Tableau"
+               autofocus />
+        <div class="mb-4"></div>
+        <div class="flex gap-2">
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg bg-lime-500 text-black font-semibold hover:bg-lime-600 transition-colors disabled:opacity-50"
+                  [disabled]="arrayCreating()"
+                  (click)="confirmArrayPopup()">
+            {{ arrayCreating() ? 'Création…' : 'Créer' }}
+          </button>
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors"
+                  (click)="cancelArrayPopup()">Annuler</button>
+        </div>
+      </div>
+    </div>
   }
 
   <!-- Popup configuration nouveau Mockup -->
@@ -1008,6 +1066,15 @@
                 }
               }
 
+              <!-- Tags Array liés à cette section -->
+              @for (arr of arrayInstancesForNode(node); track arr.id) {
+                <div class="struct-body-mockup-line">
+                  <span class="ed-mockup-card" style="border-color:rgba(163,230,53,.3);color:#a3e635">
+                    <span class="material-symbols-outlined ed-img-icon" style="color:#a3e635">table</span>
+                    <span class="ed-mockup-card__label">tableau:{{ arr.name }}</span>
+                  </span>
+                </div>
+              }
 
             </div>
           }
@@ -1251,63 +1318,97 @@
       </div>
     }
 
-    <!-- Zone basse : boards Trello — tous modes -->
-    @if (contentTrelloIds.length > 0) {
-      <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="trelloPanelCollapsed()">
-        <div class="ed-trello-panel__head">
-          <span class="material-symbols-outlined">view_kanban</span>
-          <span class="ed-trello-panel__title">
-            {{ contentTrelloIds.length > 1 ? contentTrelloIds.length + ' tableaux' : trelloInstanceName(contentTrelloIds[0]) }}
-          </span>
-          <button type="button" class="ed-trello-panel__toggle"
-                  [title]="trelloPanelCollapsed() ? 'Afficher' : 'Réduire'"
-                  (click)="trelloPanelCollapsed.set(!trelloPanelCollapsed())">
-            <span class="material-symbols-outlined">{{ trelloPanelCollapsed() ? 'expand_less' : 'expand_more' }}</span>
-          </button>
-        </div>
-        @if (!trelloPanelCollapsed()) {
-          <div class="ed-trello-panel__body">
-            @for (tid of contentTrelloIds; track tid) {
-              <app-trello-board
-                [instanceId]="tid"
-                [boardName]="trelloInstanceName(tid)"
-                [sectionName]="trelloSectionName(tid)"
-                [deletable]="true"
-                (deleteBoard)="deleteTrelloInstance($event)"
-                (cardsChanged)="onTrelloCardsChanged(tid, $event)" />
-            }
-          </div>
-        }
-      </div>
-    }
+    <!-- Zone basse : tous les boards (Trello, Array, Mockup) dans un container scrollable -->
+    @if (contentTrelloIds.length > 0 || (contentArrayIds.length > 0 && mode !== 'edit') || (contentMockupIds.length > 0 && mode !== 'edit')) {
+      <div class="ed-panels-zone">
 
-    <!-- Zone basse : boards Mockup — mode Structure et Preview uniquement -->
-    @if (contentMockupIds.length > 0 && mode !== 'edit') {
-      <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="mockupPanelCollapsed()">
-        <div class="ed-trello-panel__head">
-          <span class="material-symbols-outlined" style="color:#a78bfa">design_services</span>
-          <span class="ed-trello-panel__title">
-            {{ contentMockupIds.length > 1 ? contentMockupIds.length + ' mockups' : mockupInstanceName(contentMockupIds[0]) }}
-          </span>
-          <button type="button" class="ed-trello-panel__toggle"
-                  [title]="mockupPanelCollapsed() ? 'Afficher' : 'Réduire'"
-                  (click)="mockupPanelCollapsed.set(!mockupPanelCollapsed())">
-            <span class="material-symbols-outlined">{{ mockupPanelCollapsed() ? 'expand_less' : 'expand_more' }}</span>
-          </button>
-        </div>
-        @if (!mockupPanelCollapsed()) {
-          <div class="ed-trello-panel__body" #mockupPanelBody>
-            @for (mid of contentMockupIds; track mid) {
-              <div [id]="'mockup-board-' + mid">
-                <app-mockup-board
-                  [instanceId]="mid"
-                  [boardName]="mockupInstanceName(mid)"
-                  [deletable]="true"
-                  (deleteBoard)="deleteMockupInstance($event)" />
+        @if (contentTrelloIds.length > 0) {
+          <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="trelloPanelCollapsed()">
+            <div class="ed-trello-panel__head">
+              <span class="material-symbols-outlined">view_kanban</span>
+              <span class="ed-trello-panel__title">
+                {{ contentTrelloIds.length > 1 ? contentTrelloIds.length + ' tableaux' : trelloInstanceName(contentTrelloIds[0]) }}
+              </span>
+              <button type="button" class="ed-trello-panel__toggle"
+                      [title]="trelloPanelCollapsed() ? 'Afficher' : 'Réduire'"
+                      (click)="trelloPanelCollapsed.set(!trelloPanelCollapsed())">
+                <span class="material-symbols-outlined">{{ trelloPanelCollapsed() ? 'expand_less' : 'expand_more' }}</span>
+              </button>
+            </div>
+            @if (!trelloPanelCollapsed()) {
+              <div class="ed-trello-panel__body">
+                @for (tid of contentTrelloIds; track tid) {
+                  <app-trello-board
+                    [instanceId]="tid"
+                    [boardName]="trelloInstanceName(tid)"
+                    [sectionName]="trelloSectionName(tid)"
+                    [deletable]="true"
+                    (deleteBoard)="deleteTrelloInstance($event)"
+                    (cardsChanged)="onTrelloCardsChanged(tid, $event)" />
+                }
               </div>
             }
           </div>
         }
+
+        @if (contentArrayIds.length > 0 && mode !== 'edit') {
+          <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="arrayPanelCollapsed()">
+            <div class="ed-trello-panel__head">
+              <span class="material-symbols-outlined" style="color:#a3e635;font-size:16px">table</span>
+              <span class="ed-trello-panel__title">
+                {{ contentArrayIds.length > 1 ? contentArrayIds.length + ' tableaux' : arrayInstanceName(contentArrayIds[0]) }}
+              </span>
+              <button type="button" class="ed-trello-panel__toggle"
+                      [title]="arrayPanelCollapsed() ? 'Afficher' : 'Réduire'"
+                      (click)="arrayPanelCollapsed.set(!arrayPanelCollapsed())">
+                <span class="material-symbols-outlined">{{ arrayPanelCollapsed() ? 'expand_less' : 'expand_more' }}</span>
+              </button>
+            </div>
+            @if (!arrayPanelCollapsed()) {
+              <div class="ed-trello-panel__body">
+                @for (aid of contentArrayIds; track aid) {
+                  <app-array-board
+                    [instanceId]="aid"
+                    [boardName]="arrayInstanceName(aid)"
+                    [deletable]="true"
+                    [readonly]="mode === 'visu'"
+                    (deleteBoard)="deleteArrayInstance($event)"
+                    (gridChanged)="onArrayGridChanged(aid, $event)" />
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @if (contentMockupIds.length > 0 && mode !== 'edit') {
+          <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="mockupPanelCollapsed()">
+            <div class="ed-trello-panel__head">
+              <span class="material-symbols-outlined" style="color:#a78bfa">design_services</span>
+              <span class="ed-trello-panel__title">
+                {{ contentMockupIds.length > 1 ? contentMockupIds.length + ' mockups' : mockupInstanceName(contentMockupIds[0]) }}
+              </span>
+              <button type="button" class="ed-trello-panel__toggle"
+                      [title]="mockupPanelCollapsed() ? 'Afficher' : 'Réduire'"
+                      (click)="mockupPanelCollapsed.set(!mockupPanelCollapsed())">
+                <span class="material-symbols-outlined">{{ mockupPanelCollapsed() ? 'expand_less' : 'expand_more' }}</span>
+              </button>
+            </div>
+            @if (!mockupPanelCollapsed()) {
+              <div class="ed-trello-panel__body" #mockupPanelBody>
+                @for (mid of contentMockupIds; track mid) {
+                  <div [id]="'mockup-board-' + mid">
+                    <app-mockup-board
+                      [instanceId]="mid"
+                      [boardName]="mockupInstanceName(mid)"
+                      [deletable]="true"
+                      (deleteBoard)="deleteMockupInstance($event)" />
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
       </div>
     }
 
