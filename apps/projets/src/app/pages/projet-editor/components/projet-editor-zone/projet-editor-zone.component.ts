@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleCha
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService, MockupConnection } from '@worganic/portail-core/data-access';
+import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService, MockupConnection, TrelloCard, TrelloStatus, TRELLO_STATUS_LABELS, TRELLO_PRIORITY_LABELS } from '@worganic/portail-core/data-access';
 import { marked } from 'marked';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { ProjetCollabService } from '@worganic/portail-core/data-access';
@@ -247,6 +247,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // Zone basse : boards Trello incrustés dans le contenu courant (affichés dans tous les modes)
   contentTrelloIds: string[] = [];
   trelloPanelCollapsed = signal(false);
+  // Mode Code : cards Trello affichées en Markdown (chargées async)
+  trelloCodeCards = signal<Record<string, TrelloCard[]>>({});
+  readonly trelloStatusOrder: TrelloStatus[] = ['todo', 'in-progress', 'done', 'blocked'];
+  private lastTrelloCodeLoadKey = '';
 
   // Popup de configuration d'un nouveau Mockup
   showMockupPopup = signal(false);
@@ -616,6 +620,109 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return this.megaOutilInstances.filter(i => i.type === 'trello');
   }
 
+  /** Charge les cards Trello pour le panneau Markdown en mode Code. */
+  private async loadTrelloCodeCards() {
+    const key = `${this.mode}:${[...this.contentTrelloIds].sort().join(',')}`;
+    if (this.lastTrelloCodeLoadKey === key) return;
+    this.lastTrelloCodeLoadKey = key;
+    if (this.mode !== 'edit' || !this.contentTrelloIds.length) {
+      this.trelloCodeCards.set({});
+      return;
+    }
+    const result: Record<string, TrelloCard[]> = {};
+    await Promise.all(this.contentTrelloIds.map(async id => {
+      try { result[id] = await this.megaOutilsSvc.getTrelloCards(id); }
+      catch { result[id] = []; }
+    }));
+    this.trelloCodeCards.set(result);
+    this.cdr.markForCheck();
+    this.saveTrelloMarkdownFile();
+  }
+
+  /** Retourne les cards d'un board pour un statut donné, triées par orderIndex. */
+  trelloCardsByStatus(instId: string, status: TrelloStatus): TrelloCard[] {
+    return (this.trelloCodeCards()[instId] || [])
+      .filter(c => c.status === status)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  trelloCodeStatusLabel(status: TrelloStatus): string {
+    return TRELLO_STATUS_LABELS[status];
+  }
+
+  /** Génère la ligne Markdown d'une card Trello pour le mode Code. */
+  trelloCardCodeText(card: TrelloCard): string {
+    const cb: Record<TrelloStatus, string> = { 'todo': '[ ]', 'in-progress': '[~]', 'done': '[x]', 'blocked': '[!]' };
+    const priority = TRELLO_PRIORITY_LABELS[card.priority] || card.priority;
+    const date = new Date(card.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    return `- ${cb[card.status]} ${card.title} \`[${priority}]\` — ${card.creatorName || 'admin'} · ${date}`;
+  }
+
+  /** Retourne du HTML safe (syntaxe surlignée) pour une ligne texte. */
+  trelloCodeLineSafeHtml(text: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(this.syntaxHighlight(text));
+  }
+
+  /**
+   * Crée ou met à jour le fichier trello.md dans le dossier de la section active.
+   * Le fichier contient toutes les cards du/des board(s) Trello au format Markdown.
+   * Déclenche un refresh du parent pour que le fichier apparaisse dans la sidebar
+   * et dans le contenu de l'éditeur.
+   */
+  private async saveTrelloMarkdownFile() {
+    if (!this.projectName || !this.contentTrelloIds.length) return;
+    const cards = this.trelloCodeCards();
+    const hasCards = this.contentTrelloIds.some(id => (cards[id] || []).length > 0);
+    if (!hasCards) return;
+
+    const activeFolderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
+    if (!activeFolderId) return;
+
+    const folderNode = this.findNode(activeFolderId, this.files);
+    if (!folderNode) return;
+
+    // Génère le contenu Markdown complet
+    const lines: string[] = [];
+    for (const id of this.contentTrelloIds) {
+      const boardCards = cards[id] || [];
+      if (!boardCards.length) continue;
+      lines.push(`## Trello: ${this.trelloInstanceName(id)}`, '');
+      for (const status of this.trelloStatusOrder) {
+        const sc = boardCards.filter(c => c.status === status).sort((a, b) => a.orderIndex - b.orderIndex);
+        if (!sc.length) continue;
+        lines.push(`### ${TRELLO_STATUS_LABELS[status]}`);
+        for (const card of sc) lines.push(this.trelloCardCodeText(card));
+        lines.push('');
+      }
+    }
+    const content = lines.join('\n').trim();
+    if (!content) return;
+
+    // Cherche un trello.md existant dans le dossier
+    const existingFile = (folderNode.children || []).find(
+      c => c.type === 'file' && c.name === 'trello.md'
+    );
+
+    try {
+      if (existingFile) {
+        // Mise à jour silencieuse si le contenu a changé
+        if ((existingFile.content ?? '').trim() !== content.trim()) {
+          await this.svc.updateFile(this.projectName, existingFile.id, content);
+        }
+      } else {
+        // Première création → refresh pour faire apparaître le fichier dans la sidebar
+        await this.svc.createFile(this.projectName, {
+          name: 'trello.md',
+          parentId: activeFolderId,
+          content,
+        });
+        this.refresh.emit();
+      }
+    } catch (e) {
+      console.error('[EditorZone] saveTrelloMarkdownFile échoué :', e);
+    }
+  }
+
   private async loadTrelloListCounts() {
     const result: Record<string, { todo: number; 'in-progress': number; done: number; blocked: number; total: number }> = {};
     for (const inst of this.trelloInstances) {
@@ -897,7 +1004,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private recomputeRanges() {
     const lines = this.unifiedContent.split('\n');
     const flatHeads: { lineIdx: number; level: number; name: string }[] = [];
+
+    // Détecter les plages de lignes à l'intérieur des blocs fichier pour les exclure du scan de headings
+    const blockLineRanges: [number, number][] = [];
+    let bInBlock = false;
+    let bDelim = '';
+    let bStart = -1;
     for (let i = 0; i < lines.length; i++) {
+      if (!bInBlock) {
+        const bm = /^(['`^])(.+)$/.exec(lines[i]);
+        if (bm) { bInBlock = true; bDelim = bm[1]; bStart = i; }
+      } else if (lines[i].trim() === bDelim) {
+        blockLineRanges.push([bStart, i]);
+        bInBlock = false;
+      }
+    }
+    const isInsideBlock = (i: number) => blockLineRanges.some(([s, e]) => i > s && i < e);
+
+    for (let i = 0; i < lines.length; i++) {
+      if (isInsideBlock(i)) continue;
       const m = /^(#{1,4}) (.+)$/.exec(lines[i]);
       if (m) flatHeads.push({ lineIdx: i, level: m[1].length, name: m[2].trim() });
     }
@@ -1153,10 +1278,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const ib = inlineBlockMap.get(i) || null;
       const m = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}\s*$/i.exec(line.trim());
       if (m) {
-        const img = this.allImages.find(im => im.id === m[1]);
         return {
-          text: line, safeHtml: '', isImage: true,
-          imageId: m[1], imageName: img?.name || '', imagePath: img?.path || '',
+          text: line, safeHtml: this.syntaxHighlight(line), isImage: false,
+          imageId: '', imageName: '', imagePath: '',
           highlightKind: kind, lineIndex: i,
           isFold: false, foldSectionId: '', foldLineCount: 0,
           inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
@@ -1174,18 +1298,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           isMockupMarker: false, mockupInstId: '',
         };
       }
-      // Marqueur Trello : masqué (board affiché en zone basse)
-      const isTrelloMarker = /^\{\{TRELLO:[a-zA-Z0-9-]+\}\}\s*$/.test(line.trim());
-      const mockupM = /^\{\{MOCKUP:([a-zA-Z0-9-]+)(?:\|[^}]*)?\}\}\s*$/.exec(line.trim());
-      const isMockupMarker = !!mockupM;
-      const mockupInstId = mockupM ? mockupM[1] : '';
       return {
-        text: line, safeHtml: (isTrelloMarker || isMockupMarker) ? ' ' : this.syntaxHighlight(line), isImage: false,
+        text: line, safeHtml: this.syntaxHighlight(line), isImage: false,
         imageId: '', imageName: '', imagePath: '',
         highlightKind: kind, lineIndex: i,
         isFold: false, foldSectionId: '', foldLineCount: 0,
         inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
-        isMockupMarker, mockupInstId,
+        isMockupMarker: false, mockupInstId: '',
       };
     });
 
@@ -1200,6 +1319,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       .filter(i => i.folderId === activeFolderId)
       .map(i => i.id);
     this.recomputeTrelloSections();
+    this.loadTrelloCodeCards();
   }
 
   /** Ids Mockup dont le marqueur {{MOCKUP:id}} est présent dans le contenu courant (tous modes). */
@@ -1412,12 +1532,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   // ── Syntax highlighting pour le miroir Code ──────────────────
-  private syntaxHighlight(text: string): string {
+  syntaxHighlight(text: string): string {
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const trimmed = text.trimStart();
     if (!trimmed) return ' ';
+
+    // HTML comment (inclut les marqueurs WORGANIC-TRELLO)
+    if (trimmed.startsWith('<!--') && trimmed.includes('-->')) {
+      return `<span class="syn-comment">${esc(text)}</span>`;
+    }
+
+    // Délimiteur de fichier additionnel (' ou ` ou ^) seul sur la ligne ou suivi d'un nom
+    if (/^(['`^])(.*)$/.test(trimmed)) {
+      return `<span class="syn-file-delim">${esc(text)}</span>`;
+    }
 
     // Headings
     const hm = /^(#{1,6})\s/.exec(trimmed);
@@ -1548,7 +1678,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.mode === 'edit') {
       this.unfoldAll();
       if (this.focusedHandle) this.exitFocusMode();
-      else this.saveAll();
+      else {
+        this.saveAll();
+      }
     } else if (this.mode === 'visu') {
       this.flushVisuSections();
       this.teardownVisuSelectionListener();
@@ -1564,6 +1696,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     if (m === 'edit') {
       setTimeout(() => this.applyFocusByActiveNode(), 0);
+      this.loadTrelloCodeCards();
     }
     if (m === 'structure') {
       this.structureNodes = this.parseStructureNodes();
@@ -2435,11 +2568,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const text = this.unifiedContent;
     const folderMap = this.buildFolderMap(this.files);
     const sections: SectionInfo[] = [];
+
+    // Pré-scan des blocs fichier pour exclure leurs headings internes (ex: ## Trello: ...) de la détection de sections
+    const fileBlockCharRanges: [number, number][] = [];
+    const blockPreScan = /^(['`^])([^\n]+)(?:\n([\s\S]*?))?\n?\1/gm;
+    let bp: RegExpExecArray | null;
+    while ((bp = blockPreScan.exec(text)) !== null) {
+      fileBlockCharRanges.push([bp.index, bp.index + bp[0].length - 1]);
+    }
+    const isInsideFileBlock = (pos: number) => fileBlockCharRanges.some(([s, e]) => pos > s && pos <= e);
+
     const regex = /^(#{1,4}) (.+)$/gm;
     const matches: { level: number; name: string; index: number; contentStart: number }[] = [];
     let m: RegExpExecArray | null;
     while ((m = regex.exec(text)) !== null) {
-      matches.push({ level: m[1].length, name: m[2].trim(), index: m.index, contentStart: m.index + m[0].length + 1 });
+      if (!isInsideFileBlock(m.index)) {
+        matches.push({ level: m[1].length, name: m[2].trim(), index: m.index, contentStart: m.index + m[0].length + 1 });
+      }
     }
     for (let i = 0; i < matches.length; i++) {
       const current = matches[i];
@@ -4696,6 +4841,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   // Indique si un bloc additionnel donné doit être affiché
   structNodeShowBlock(node: StructureNode, block: StructureAdditionalBlock): boolean {
+    // Le fichier trello.md est un fichier système : le board s'affiche via le panel en bas
+    if (this.slugify(block.title) === 'trello') return false;
     if (!this.activeNodeId) return true;
     const fileNode = this.findNode(this.activeNodeId, this.files);
     if (!fileNode || fileNode.type !== 'file' || this.isImageFile(fileNode.name)) return true;
@@ -4720,6 +4867,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const lines = this.unifiedContent.split('\n');
     const nodes: StructureNode[] = [];
     const headingRe = /^(#{1,4}) (.+)$/;
+
+    // Pré-calcul des plages à l'intérieur des blocs fichiers ('...' `...` ^...^)
+    // pour ne pas traiter les headings internes comme de vrais headings de section
+    const blockLineRanges: [number, number][] = [];
+    let bInBlock = false, bDelim = '', bStart = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (!bInBlock) {
+        const bm = /^(['`^])(.+)$/.exec(lines[i]);
+        if (bm) { bInBlock = true; bDelim = bm[1]; bStart = i; }
+      } else if (lines[i].trim() === bDelim) {
+        blockLineRanges.push([bStart, i]);
+        bInBlock = false;
+      }
+    }
+    const isInsideBlock = (i: number) => blockLineRanges.some(([s, e]) => i > s && i < e);
 
     let currentLevel = 0;
     let currentTitle = '';
@@ -4761,6 +4923,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     };
 
     for (let i = 0; i < lines.length; i++) {
+      if (isInsideBlock(i)) {
+        if (currentLineStart >= 0) contentLines.push(lines[i]);
+        continue;
+      }
       const m = headingRe.exec(lines[i]);
       if (m) {
         pushNode(i - 1);
@@ -4862,21 +5028,27 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return Math.max(2, Math.min(node.textContent.split('\n').length + 1, 25));
   }
 
-  getStructBodySegments(textContent: string): Array<{ type: 'text' | 'mockup'; value: string; mockupId: string }> {
+  getStructBodySegments(textContent: string): Array<{ type: 'text' | 'mockup' | 'image'; value: string; mockupId: string; imageId: string; imageName: string }> {
     const lines = textContent.split('\n');
-    const result: Array<{ type: 'text' | 'mockup'; value: string; mockupId: string }> = [];
+    const result: Array<{ type: 'text' | 'mockup' | 'image'; value: string; mockupId: string; imageId: string; imageName: string }> = [];
     const textBuf: string[] = [];
     for (const line of lines) {
-      const m = /^\{\{MOCKUP:([a-zA-Z0-9-]+)(?:\|[^}]*)?\}\}\s*$/.exec(line.trim());
-      if (m) {
-        result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '' });
+      const mockupM = /^\{\{MOCKUP:([a-zA-Z0-9-]+)(?:\|[^}]*)?\}\}\s*$/.exec(line.trim());
+      const imgM = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}\s*$/i.exec(line.trim());
+      if (mockupM) {
+        result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '', imageId: '', imageName: '' });
         textBuf.length = 0;
-        result.push({ type: 'mockup', value: line.trim(), mockupId: m[1] });
+        result.push({ type: 'mockup', value: line.trim(), mockupId: mockupM[1], imageId: '', imageName: '' });
+      } else if (imgM) {
+        result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '', imageId: '', imageName: '' });
+        textBuf.length = 0;
+        const img = this.allImages.find(im => im.id === imgM[1]);
+        result.push({ type: 'image', value: line.trim(), mockupId: '', imageId: imgM[1], imageName: img?.name || '' });
       } else {
         textBuf.push(line);
       }
     }
-    result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '' });
+    result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '', imageId: '', imageName: '' });
     return result;
   }
 
@@ -5127,6 +5299,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 80);
     }
+  }
+
+  /** Supprime le marqueur {{IMG:id...}} du contenu (ne supprime pas le fichier image). */
+  removeImageMarker(imageId: string): void {
+    const re = new RegExp(`\\{\\{IMG:${imageId}(?:\\|[^}]*)?\\}\\}`);
+    const lines = this.unifiedContent.split('\n');
+    const idx = lines.findIndex(l => re.test(l.trim()));
+    if (idx === -1) return;
+    lines.splice(idx, 1);
+    this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+    this.scheduleSave();
   }
 
   /** Supprime le marqueur {{MOCKUP:id}} du contenu et efface le folderId de l'instance. */

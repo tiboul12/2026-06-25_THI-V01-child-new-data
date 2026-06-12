@@ -1,6 +1,108 @@
 {
   "modifications": [
     {
+      "id": "mod-348",
+      "version": "B-0.263",
+      "date": "2026-06-12T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-structure",
+      "title": "Structure : masquer le fichier trello.md dans la vue texte",
+      "description": "En mode Structure, lorsqu'un Trello est lié à une section, le fichier trello.md généré automatiquement (contenant des headings ## et ###) brisait le parsing de parseStructureNodes en créant des faux nœuds de section et laissait le délimiteur `'trello` visible dans la zone texte. Correction : pré-calcul des plages de blocs fichiers dans parseStructureNodes (même logique que recomputeRanges) pour ignorer les headings internes lors du scan.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-structure/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "non cela ne fonctionne pas, je recommence en mode Structure lorsque dans la section il à été inséré un Trello il ne faut pas affiché d'info comme \"'trello\" dans la view texte, cela doit indiqué comme dans le fichier texte du contenue. Le trello doit juste être affiché dans la view en dessous",
+      "startedAt": "2026-06-12T10:00:00.000Z",
+      "completedAt": "2026-06-12T10:10:00.000Z"
+    },
+    {
+      "id": "mod-347",
+      "version": "B-0.263",
+      "date": "2026-06-12T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-structure",
+      "title": "Mode Structure : masquage de la barre Mega-outils",
+      "description": "En mode Structure, la barre Mega-outils (MEGA-OUTILS / Trello / Mockup) est masquée. Le bloc additionnel 'trello' (trello.md) est masqué dans les cards de structure — le board s'affiche via le panel en zone basse. Les modes Code et Preview sont inchangés.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-structure/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu projet/editon dans le mode structure, cela ne doit pas affiché en haut la notion de trello, seul la view en dessous est affiché. ne pas touché au mode Code et preview qui est OK.",
+      "startedAt": "2026-06-12T00:00:00.000Z",
+      "completedAt": "2026-06-12T00:00:00.000Z"
+    },
+    {
+      "id": "mod-346",
+      "version": "B-0.263",
+      "date": "2026-06-11T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code",
+      "title": "Mode Code : Trello persisté comme vrai fichier trello.md dans le dossier section",
+      "description": "Quand une section a un Trello associé (folderId), un vrai fichier trello.md est créé/mis à jour dans le dossier de la section via ProjectFilesService.createFile()/updateFile(). Le contenu Markdown liste toutes les cards par statut (## Trello: nom, ### colonne, - [checkbox] titre `[priorité]` — auteur · date). Refresh uniquement à la première création ; comparaison de contenu pour éviter les re-écritures inutiles. Suppression de toute injection virtuelle (strip/inject, TRELLO_INJECT_MARKER, contentWithoutTrelloBlocks, stripTrelloMarkdownBlocks, injectTrelloMarkdownIntoContent). trello.md inclus normalement dans buildDocSections → apparaît comme bloc 'trello dans le mode Code, stable sans apparition/disparition.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le trello est composé de différentes tasks, chaque task doit être transformé en code, chaque task est une ligne de code (affiché dans le mode code), le mode code doit avoir toutes les informtions au format markdown, texte, fichier, images, task, mockup etc",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z"
+    },
+    {
+      "id": "mod-345",
+      "version": "B-0.263",
+      "date": "2026-06-11T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code|zone-structure",
+      "title": "Edition : comportement images/mockups/trello par mode (Code/Structure/Preview)",
+      "description": "Mode Code : les marqueurs {{IMG:...}}, {{MOCKUP:...}} et {{TRELLO:...}} s'affichent désormais comme du code brut (syntaxHighlight) au lieu de cartes visuelles. Mode Structure : les images apparaissent maintenant comme des blocs visuels (chip avec icône + nom + bouton de déliaison), identiques aux chips mockup. Panneaux bas Trello et Mockup : masqués en mode Code, visibles uniquement en mode Structure et Preview.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans le menu nous avons un outils edition, cet outils à 3 modes : Code/structure/preview...",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z"
+    },
+    {
+      "id": "mod-344",
+      "version": "B-0.263",
+      "date": "2026-06-11T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|sidebar",
+      "title": "Sidebar : clic sur section Edition depuis Agenda bascule vers l'outil Edition",
+      "description": "Quand l'outil Agenda est actif (zone 4) et que l'utilisateur clique sur une section de l'outil Edition dans le sidebar, la zone 4 bascule automatiquement vers l'outil Edition et navigue vers la section sélectionnée. Implémenté via findOutilForNode() qui parcourt les rootFolderIds de chaque outil pour identifier le propriétaire du noeud cliqué.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans le menu projet/Agenda, si je clique sur une section du menu edition l'affichage de la zone 4 doit faire apparaitre l'outils edition sur la section selectionné",
+      "startedAt": "2026-06-11T00:00:00.000Z",
+      "completedAt": "2026-06-11T00:00:00.000Z"
+    },
+    {
       "id": "mod-343",
       "version": "B-0.262",
       "date": "2026-06-10T00:00:00.000Z",

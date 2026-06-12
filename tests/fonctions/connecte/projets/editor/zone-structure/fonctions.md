@@ -13,6 +13,8 @@ Vue : arborescence éditable des sections du document
 - **Contenu** : texte principal de la section (éditable)
 - **Blocs additionnels** : fichiers Markdown secondaires d'une section (éditables)
 - **Marqueur Trello masqué** : `{{TRELLO:id}}` est extrait du contenu (`StructureNode.trelloMarkers`) et n'apparaît pas dans la textarea ; ré-injecté en fin de section à la sauvegarde. Le board s'affiche en zone basse (voir `2-5-2-5-16`)
+- **Bloc trello.md masqué** : le fichier `trello.md` généré automatiquement (contenu des cards) est détecté comme bloc additionnel de titre "trello" (`structNodeShowBlock` retourne `false`). Les headings `##` de ce fichier ne brisent pas le parsing de structure grâce à la pré-détection des plages de blocs dans `parseStructureNodes`
+- **Barre Mega-outils masquée** : en mode Structure, la barre "MEGA-OUTILS / Trello / Mockup" n'est pas affichée — seul le panel Trello/Mockup en zone basse reste visible
 - **Filtre par sélection** : si un nœud est actif dans la sidebar → `filteredStructureNodes` n'affiche que la section et ses enfants
 
 ---
