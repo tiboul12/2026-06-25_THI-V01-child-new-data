@@ -708,6 +708,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         // Mise à jour silencieuse si le contenu a changé
         if ((existingFile.content ?? '').trim() !== content.trim()) {
           await this.svc.updateFile(this.projectName, existingFile.id, content);
+          // Propager en mémoire : mettre à jour le nœud, reconstruire docSections + unifiedContent + toutes les vues
+          existingFile.content = content;
+          this.docSections = this.buildDocSections(this.files, 1);
+          const newContent = this.reconstructFromSections();
+          if (newContent !== this.unifiedContent) {
+            this.unifiedContent = newContent;
+            this.lastSavedContent = newContent;
+            const ta = this.textareaRef?.nativeElement;
+            if (ta) ta.value = newContent;
+            // recomputeAll est sûr ici : loadTrelloCodeCards() est bloqué par le dedup key en mode Code
+            this.recomputeAll();
+            this.cdr.markForCheck();
+          }
         }
       } else {
         // Première création → refresh pour faire apparaître le fichier dans la sidebar
@@ -721,6 +734,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     } catch (e) {
       console.error('[EditorZone] saveTrelloMarkdownFile échoué :', e);
     }
+  }
+
+  /** Reçoit les cards mises à jour depuis app-trello-board, régénère trello.md. */
+  async onTrelloCardsChanged(instanceId: string, updatedCards: TrelloCard[]) {
+    const merged: Record<string, TrelloCard[]> = { ...this.trelloCodeCards(), [instanceId]: updatedCards };
+    // Récupère les boards manquants (mode non-Code : trelloCodeCards peut être vide)
+    const missing = this.contentTrelloIds.filter(id => id !== instanceId && !merged[id]);
+    if (missing.length > 0) {
+      await Promise.all(missing.map(async id => {
+        try { merged[id] = await this.megaOutilsSvc.getTrelloCards(id); }
+        catch { merged[id] = []; }
+      }));
+    }
+    this.trelloCodeCards.set(merged);
+    await this.saveTrelloMarkdownFile();
   }
 
   private async loadTrelloListCounts() {

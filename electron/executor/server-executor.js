@@ -1307,6 +1307,50 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================================
+// POST /execute-prompt-sync — Exécute un prompt et retourne { output } en une seule réponse JSON
+// Utilisé par server-data.js pour la génération IA de tests sans SSE
+// ============================================================
+app.post('/execute-prompt-sync', async (req, res) => {
+    const { content: promptContent, provider: bodyProvider } = req.body;
+    if (!promptContent) return res.status(400).json({ error: 'content required' });
+
+    const settings = getCurrentSettings();
+    const rawProvider = bodyProvider || settings.provider || 'claude';
+    const provider = rawProvider.split('-')[0];
+    const model = settings.model || 'claude-sonnet-4-6';
+
+    try {
+        const output = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => { proc.kill(); reject(new Error('Timeout 90s')); }, 90000);
+            let out = '';
+            let proc;
+
+            if (provider === 'gemini') {
+                const escaped = promptContent.replace(/"/g, '\\"').replace(/\n/g, ' ');
+                proc = spawn('cmd', ['/c', `echo "${escaped}" | gemini --yolo`], {
+                    shell: false, env: { ...process.env, FORCE_COLOR: '0' },
+                    stdio: ['ignore', 'pipe', 'pipe']
+                });
+            } else {
+                proc = spawn('claude', ['--model', model, '--dangerously-skip-permissions', '--print'], {
+                    env: { ...process.env, FORCE_COLOR: '0' }, shell: true,
+                    stdio: ['pipe', 'pipe', 'pipe']
+                });
+                if (proc.stdin) { proc.stdin.write(promptContent); proc.stdin.end(); }
+            }
+
+            proc.stdout?.on('data', d => { out += d.toString(); });
+            proc.on('close', () => { clearTimeout(timeout); resolve(out); });
+            proc.on('error', err => { clearTimeout(timeout); reject(err); });
+        });
+
+        res.json({ output, provider });
+    } catch (e) {
+        res.json({ output: '', error: e.message });
+    }
+});
+
+// ============================================================
 // Server Startup
 // ============================================================
 

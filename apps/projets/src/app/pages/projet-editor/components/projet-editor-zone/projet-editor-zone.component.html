@@ -188,7 +188,8 @@
 
   </div>
 
-  <!-- Barre Mega-outils -->
+  <!-- Barre Mega-outils (masquée en mode Structure) -->
+  @if (mode !== 'structure') {
   <div class="flex-shrink-0 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-surface">
 
     <!-- Ligne principale : label + boutons de type -->
@@ -320,6 +321,7 @@
     }
 
   </div>
+  }
 
   <!-- Popup configuration nouveau Mockup -->
   @if (showMockupPopup()) {
@@ -942,7 +944,7 @@
                 </button>
               </div>
 
-              <!-- Corps : contenu texte avec chips Mockup inline -->
+              <!-- Corps : contenu texte avec chips Mockup et Image inline -->
               @if (structNodeShowText(node)) {
                 <div class="struct-card__body">
                   @for (seg of getStructBodySegments(node.textContent); track $index) {
@@ -955,6 +957,20 @@
                           <span class="ed-mockup-card__remove material-symbols-outlined"
                                 title="Supprimer la liaison"
                                 (click)="removeMockupMarker(seg.mockupId); $event.stopPropagation()">close</span>
+                        </span>
+                      </div>
+                    } @else if (seg.type === 'image') {
+                      <div class="struct-body-mockup-line">
+                        <span class="ed-img-card-wrap">
+                          <span class="ed-img-card">
+                            <span class="ed-img-icon material-symbols-outlined">image</span>
+                            <span class="ed-img-name">{{ seg.imageName }}</span>
+                            <button class="ed-img-act"
+                                    title="Délier l'image (ne supprime pas le fichier)"
+                                    (click)="removeImageMarker(seg.imageId); $event.stopPropagation()">
+                              <span class="material-symbols-outlined">close</span>
+                            </button>
+                          </span>
                         </span>
                       </div>
                     } @else {
@@ -1235,7 +1251,7 @@
       </div>
     }
 
-    <!-- Zone basse : boards Trello incrustés dans le contenu (affichée dans tous les modes) -->
+    <!-- Zone basse : boards Trello — tous modes -->
     @if (contentTrelloIds.length > 0) {
       <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="trelloPanelCollapsed()">
         <div class="ed-trello-panel__head">
@@ -1257,15 +1273,16 @@
                 [boardName]="trelloInstanceName(tid)"
                 [sectionName]="trelloSectionName(tid)"
                 [deletable]="true"
-                (deleteBoard)="deleteTrelloInstance($event)" />
+                (deleteBoard)="deleteTrelloInstance($event)"
+                (cardsChanged)="onTrelloCardsChanged(tid, $event)" />
             }
           </div>
         }
       </div>
     }
 
-    <!-- Zone basse : boards Mockup incrustés dans le contenu -->
-    @if (contentMockupIds.length > 0) {
+    <!-- Zone basse : boards Mockup — mode Structure et Preview uniquement -->
+    @if (contentMockupIds.length > 0 && mode !== 'edit') {
       <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="mockupPanelCollapsed()">
         <div class="ed-trello-panel__head">
           <span class="material-symbols-outlined" style="color:#a78bfa">design_services</span>

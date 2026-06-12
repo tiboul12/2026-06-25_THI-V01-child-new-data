@@ -518,6 +518,10 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
   }
 
   onNodeSelect(node: FileNode) {
+    const ownerOutilId = this.findOutilForNode(node.id);
+    if (ownerOutilId && ownerOutilId !== this.activeOutilId()) {
+      this.activeOutilId.set(ownerOutilId);
+    }
     this.showTrelloList.set(false);
     this.showMockupList.set(false);
     this.activeNodeId.set(node.id);
@@ -1478,6 +1482,34 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         if (node.id === id) return node;
         const found = this.findFolderById(id, node.children || []);
         if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  private findOutilForNode(nodeId: string): string | null {
+    for (const outil of this.outils()) {
+      if (!outil.rootFolderIds.length) continue;
+      for (const rootId of outil.rootFolderIds) {
+        if (this.isNodeInSubtree(nodeId, rootId)) return outil.id;
+      }
+    }
+    return null;
+  }
+
+  private isNodeInSubtree(nodeId: string, rootId: string): boolean {
+    if (rootId === nodeId) return true;
+    const root = this.findFolderById(rootId, this.files());
+    if (!root?.children) return false;
+    return !!this.findNodeAnywhere(nodeId, root.children);
+  }
+
+  private findNodeAnywhere(id: string, nodes: FileNode[]): FileNode | null {
+    for (const n of nodes) {
+      if (n.id === id) return n;
+      if (n.children) {
+        const f = this.findNodeAnywhere(id, n.children);
+        if (f) return f;
       }
     }
     return null;

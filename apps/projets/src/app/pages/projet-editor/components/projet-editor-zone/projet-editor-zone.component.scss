@@ -1597,6 +1597,8 @@
 .syn-italic { color: #8250df; font-style: italic; }
 .syn-inline-code { color: #d63384; background: rgba(175, 184, 193, 0.18); border-radius: 2px; padding: 0 2px; }
 .syn-strike { color: rgba(0, 0, 0, 0.38); text-decoration: line-through; }
+.syn-comment { color: rgba(0, 0, 0, 0.28); font-style: italic; }
+.syn-file-delim { color: #059669; font-weight: 600; }
 
 :host-context(.dark) {
   .syn-h1 { color: #58a6ff; }
@@ -1613,6 +1615,8 @@
   .syn-italic { color: #d2a8ff; }
   .syn-inline-code { color: #f778ba; background: rgba(110, 118, 129, 0.2); }
   .syn-strike { color: rgba(255, 255, 255, 0.3); }
+  .syn-comment { color: rgba(255, 255, 255, 0.25); }
+  .syn-file-delim { color: #34d399; }
 }
 
 // ── Mode Preview (lecture seule, propre) ──────────────────────────

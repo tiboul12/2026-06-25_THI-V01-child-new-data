@@ -269,7 +269,8 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   @Input() boardName  = 'Trello';
   @Input() sectionName = '';
   @Input() deletable  = false;
-  @Output() deleteBoard = new EventEmitter<string>();
+  @Output() deleteBoard  = new EventEmitter<string>();
+  @Output() cardsChanged = new EventEmitter<TrelloCard[]>();
 
   confirmDeleteBoard = signal(false);
 
@@ -281,6 +282,7 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   private svc = inject(MegaOutilsService);
   private collab = inject(ProjetCollabService);
   private trelloSub?: Subscription;
+  private hasInitialized = false;
 
   cards = signal<TrelloCard[]>([]);
   loading = signal(true);
@@ -335,8 +337,12 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
     if (!this.instanceId) return;
     try {
       this.cards.set(await this.svc.getTrelloCards(this.instanceId));
+      if (this.hasInitialized) {
+        this.cardsChanged.emit(this.cards());
+      }
     } finally {
       this.loading.set(false);
+      this.hasInitialized = true;
     }
   }
 
@@ -359,6 +365,7 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
     });
     this.cards.update(c => [...c, card]);
     this.cancelAdd();
+    this.cardsChanged.emit(this.cards());
   }
 
   // ── Edit ─────────────────────────────────────────────────────────────────
@@ -379,6 +386,7 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
     });
     this.cards.update(cs => cs.map(c => c.id === updated.id ? updated : c));
     this.editCardId.set(null);
+    this.cardsChanged.emit(this.cards());
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -416,6 +424,7 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
     this.deleteConfirmId.set(null);
     this.expandedCardId.set(null);
     this.closeModal();
+    this.cardsChanged.emit(this.cards());
   }
 
   // ── Drag & Drop entre colonnes ────────────────────────────────────────────
@@ -438,5 +447,6 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
     const updated = await this.svc.updateTrelloCard(this.instanceId, id, { status: col });
     this.cards.update(cs => cs.map(c => c.id === id ? updated : c));
     this.draggedCardId = null;
+    this.cardsChanged.emit(this.cards());
   }
 }

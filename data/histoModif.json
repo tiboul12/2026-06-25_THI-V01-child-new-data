@@ -1,6 +1,48 @@
 {
   "modifications": [
     {
+      "id": "mod-350",
+      "version": "B-0.264",
+      "date": "2026-06-12T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "libs"],
+      "features": "projets:editor|zone-code,libs:trello-board",
+      "title": "Trello : propagation live des mutations vers Code et Preview",
+      "description": "Ajout du @Output() cardsChanged sur TrelloBoardComponent, émis après chaque mutation locale (ajout, édition, suppression, drag-drop) et après rechargement SSE. Dans le zone component, le handler onTrelloCardsChanged reçoit les cards mises à jour, charge les boards manquants si mode non-Code, met à jour trelloCodeCards puis appelle saveTrelloMarkdownFile. Cette méthode met désormais aussi à jour existingFile.content en mémoire, reconstruit docSections et unifiedContent, rafraîchit la textarea DOM et les vues rendues (miroir + preview), sans passer par recomputeContentTrelloIds pour éviter de vider trelloCodeCards.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai mis à jour trello le titre d'une task celle ci c'est mise à jour au bout de quelques secondes dans le fichier du trello. Mais le texte dans le mode Code n'a pas été mise à jour, ni la version preview. Toutes les versions doivent être mise à jour en direct",
+      "startedAt": "2026-06-12T10:10:00.000Z",
+      "completedAt": "2026-06-12T10:30:00.000Z"
+    },
+    {
+      "id": "mod-349",
+      "version": "B-0.264",
+      "date": "2026-06-12T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code",
+      "title": "Trello : sync live entre les 3 modes",
+      "description": "Suppression de la condition mode !== 'edit' sur le panneau Trello de l'éditeur. Le composant app-trello-board est désormais monté dans les 3 modes (Code, Structure, Preview) et reste actif lors des changements de mode. Cela garantit que les modifications de tâches (ajout, titre, déplacement) sont visibles en temps réel dans tous les modes et que les événements SSE collaboratifs sont reçus quel que soit le mode actif.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "le système trello est affiché de 3 façon différentes suivant le mode Code/Structure/Preview. Mais chaque version doit être identique , si une donnée est modifié dans un mode les autres modes doivent être mise à jours automatiquement. Si une task est rajouté, si un titre est modifié, si une task change de niveau ou est deplacé, tous les autres affichage doivent ce mettre à jour en live.",
+      "startedAt": "2026-06-12T10:00:00.000Z",
+      "completedAt": "2026-06-12T10:05:00.000Z"
+    },
+    {
       "id": "mod-348",
       "version": "B-0.263",
       "date": "2026-06-12T00:00:00.000Z",

@@ -33,7 +33,7 @@ Vue : textarea Markdown à gauche, rendu HTML miroir à droite
 - **Highlights** : sections surlignées selon `highlightNodeId`
 - **Scroll auto** : `scrollToNodeId` → défile vers la section demandée
 - **Rendu Markdown** : via `marked`
-- **Marqueur Trello** : `{{TRELLO:id}}` est masqué (ligne rendue vide, plus de texte brut ni de chip) ; le board apparaît uniquement dans la zone basse (voir `2-5-2-5-16`)
+- **Marqueur Trello** : `{{TRELLO:id}}` est présent dans le texte brut ; le board Trello complet est affiché dans le panneau bas (voir `2-5-2-4-15`)
 
 ---
 
@@ -123,6 +123,29 @@ Via les boutons de la toolbar (voir toolbar/fonctions.md) ou raccourcis :
 | Escape | Fermer menu slash commands |
 | / | Ouvrir menu slash commands (si début de ligne) |
 | Tab | Indentation |
+
+---
+
+## `2-5-2-4-15` — Panneau Trello en mode Code
+
+- **Affichage** : le panneau `app-trello-board` s'affiche dans les 3 modes (Code, Structure, Preview) dès qu'un Trello est associé à la section active
+- **Synchronisation live** : le composant reste monté lors des changements de mode → les modifications (ajout/édition/déplacement de tâche) faites dans un mode sont immédiatement visibles dans les autres
+- **SSE** : les mises à jour de collaborateurs (`trelloUpdate$`) sont reçues dans tous les modes puisque le board n'est jamais détruit
+- **Propagation vers Code/Preview** : `@Output() cardsChanged` émis après chaque mutation locale (ajout, édition, suppression, drag-drop) et après rechargement SSE → `onTrelloCardsChanged` met à jour `trelloCodeCards`, régénère `trello.md` sur le serveur ET en mémoire (`existingFile.content`), reconstruit `docSections` + `unifiedContent`, rafraîchit la textarea et le rendu Preview
+
+---
+
+## `2-5-2-4-14` — Fichier trello.md persisté dans le dossier section (mode Code)
+
+- **Déclenchement** : quand la section active a un Trello associé (`folderId` correspondant), `loadTrelloCodeCards()` charge les cards puis appelle `saveTrelloMarkdownFile()`
+- **Création/mise à jour** : `ProjectFilesService.createFile()` ou `updateFile()` — le fichier `trello.md` est écrit sur le serveur dans le dossier de la section
+- **Format Markdown** :
+  - `## Trello: Nom du board`
+  - `### À FAIRE / EN COURS / TERMINÉ / BLOQUÉ`
+  - `- [ ] Titre task \`[Priorité]\` — auteur · date` (checkbox : `[ ]` todo, `[~]` in-progress, `[x]` done, `[!]` blocked)
+- **Refresh** : `refresh.emit()` après écriture → le parent recharge l'arbre de fichiers → `trello.md` apparaît dans la sidebar et dans l'éditeur comme tout autre fichier additionnel
+- **Cache** : recharge uniquement si `mode:ids` change (`lastTrelloCodeLoadKey`)
+- **Colonnes vides** : non écrites dans le fichier
 
 ---
 
