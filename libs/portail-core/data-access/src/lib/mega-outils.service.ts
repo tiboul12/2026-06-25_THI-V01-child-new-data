@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_DATA_URL } from './tokens';
 import { AuthService } from './auth.service';
-import { MegaOutilInstance, MegaOutilType, MockupConnection, MockupElement, MockupElementType, MockupComment, TrelloCard } from './mega-outils.models';
+import { MegaOutilInstance, MegaOutilType, MockupConnection, MockupElement, MockupElementType, MockupComment, TrelloCard, ArrayCell, ArrayGrid } from './mega-outils.models';
 
 @Injectable({ providedIn: 'root' })
 export class MegaOutilsService {
@@ -134,5 +134,39 @@ export class MegaOutilsService {
     return firstValueFrom(this.http.delete<void>(
       `${this.apiUrl}/api/mega-outils/mockup/${instanceId}/comments/${commentId}`, { headers: this.h() }
     ));
+  }
+
+  // ── Array (Tableur) ────────────────────────────────────────────────────────
+
+  getArrayGrid(instanceId: string): Promise<ArrayGrid> {
+    return firstValueFrom(this.http.get<ArrayGrid>(`${this.apiUrl}/api/mega-outils/array/${instanceId}/grid`, { headers: this.h() }));
+  }
+
+  updateArrayGrid(instanceId: string, grid: Partial<ArrayGrid>): Promise<ArrayGrid> {
+    return firstValueFrom(this.http.put<ArrayGrid>(`${this.apiUrl}/api/mega-outils/array/${instanceId}/grid`, grid, { headers: this.h() }));
+  }
+
+  updateArrayCell(instanceId: string, row: number, col: number, cell: ArrayCell): Promise<ArrayGrid> {
+    return firstValueFrom(this.http.patch<ArrayGrid>(`${this.apiUrl}/api/mega-outils/array/${instanceId}/cell`, { row, col, cell }, { headers: this.h() }));
+  }
+
+  addArrayRow(instanceId: string): Promise<ArrayGrid> {
+    return firstValueFrom(this.http.post<ArrayGrid>(`${this.apiUrl}/api/mega-outils/array/${instanceId}/grid/addRow`, {}, { headers: this.h() }));
+  }
+
+  addArrayCol(instanceId: string): Promise<ArrayGrid> {
+    return firstValueFrom(this.http.post<ArrayGrid>(`${this.apiUrl}/api/mega-outils/array/${instanceId}/grid/addCol`, {}, { headers: this.h() }));
+  }
+
+  deleteArrayRow(instanceId: string, row: number): Promise<ArrayGrid> {
+    return firstValueFrom(this.http.delete<ArrayGrid>(`${this.apiUrl}/api/mega-outils/array/${instanceId}/grid/row/${row}`, { headers: this.h() }));
+  }
+
+  deleteArrayCol(instanceId: string, col: number): Promise<ArrayGrid> {
+    return firstValueFrom(this.http.delete<ArrayGrid>(`${this.apiUrl}/api/mega-outils/array/${instanceId}/grid/col/${col}`, { headers: this.h() }));
+  }
+
+  getAllArrayBoards(): Promise<{ instance: MegaOutilInstance; grid: ArrayGrid; projectName: string; folderName: string | null }[]> {
+    return firstValueFrom(this.http.get<any[]>(`${this.apiUrl}/api/mega-outils/array/all`, { headers: this.h() }));
   }
 }

@@ -1,4 +1,4 @@
-export type MegaOutilType = 'trello' | 'mockup';
+export type MegaOutilType = 'trello' | 'mockup' | 'array';
 
 export interface MegaOutilInstance {
   id: string;
@@ -59,6 +59,32 @@ export const TRELLO_PRIORITY_COLORS: Record<TrelloPriority, string> = {
   'high':     'bg-orange-500/20 text-orange-400',
   'critical': 'bg-red-500/20 text-red-400',
 };
+
+// ── Array (Tableur) ────────────────────────────────────────────────────────────
+
+export interface ArrayCellStyle {
+  bgColor?: string;
+  textColor?: string;
+  bold?: boolean;
+  italic?: boolean;
+  align?: 'left' | 'center' | 'right';
+}
+
+export interface ArrayCell {
+  value: string;
+  computed?: string;
+  style?: ArrayCellStyle;
+}
+
+export interface ArrayGrid {
+  instanceId: string;
+  cells: ArrayCell[][];
+  colWidths: number[];
+  rowHeights: number[];
+  colCount: number;
+  rowCount: number;
+  updatedAt: string;
+}
 
 // ── Mockup ─────────────────────────────────────────────────────────────────────
 
