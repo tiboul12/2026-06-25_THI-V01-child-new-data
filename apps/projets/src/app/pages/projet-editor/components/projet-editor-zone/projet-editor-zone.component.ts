@@ -629,6 +629,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (changes['activeNodeId']) {
       this.recomputeHighlights();
       this.applyFocusByActiveNode();
+      // Ouverture de section : synchroniser bloc Trello ↔ fichier trello-NOM.
+      setTimeout(() => this.healTrelloSectionOnOpen(), 60);
       // Hors mode Code, le board suit la section active (applyFocusByActiveNode ne fait rien) :
       // recalculer les ids selon la nouvelle sélection.
       if (this.mode !== 'edit') {
@@ -883,14 +885,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return this.trelloSections()[id]?.name ?? '';
   }
 
-  /** Id du fichier (nœud sidebar "TL: NOM") d'une instance Trello. */
+  /** Nœud fichier Trello (trello-NOM / legacy "trello" / "TL: NOM") d'une instance dans un dossier. */
+  private findTrelloFileNode(folderId: string | null, instName: string): FileNode | undefined {
+    if (!folderId) return undefined;
+    const folder = this.findNode(folderId, this.files);
+    if (!folder?.children) return undefined;
+    const byName = folder.children.find(c => {
+      if (c.type !== 'file') return false;
+      const b = c.name.replace(/\.md$/, '');
+      return this.isTrelloFileBase(b) && this.slugify(this.trelloNameFromBase(b)) === this.slugify(instName);
+    });
+    if (byName) return byName;
+    // Legacy : fichier "trello" unique du dossier
+    return folder.children.find(c => c.type === 'file' && this.slugify(c.name.replace(/\.md$/, '')) === 'trello');
+  }
+
+  /** Id du fichier Trello d'une instance. */
   private trelloFileId(inst: MegaOutilInstance, folderId: string | null): string | null {
-    if (!folderId) return null;
-    const folderNode = this.findNode(folderId, this.files);
-    const fileNode = folderNode?.children?.find(
-      c => c.type === 'file' && this.slugify(c.name.replace(/\.md$/, '').replace(/^TL:\s*/i, '')) === this.slugify(inst.name)
-    );
-    return fileNode?.id ?? null;
+    return this.findTrelloFileNode(folderId, inst.name)?.id ?? null;
   }
 
   /** Clic sur un onglet Mega-outils : sélectionne l'instance et navigue vers son élément. */
@@ -991,31 +1003,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
             textContent += child.content.trimEnd() + '\n';
           }
         } else {
-          // Fichier Trello → sérialiser en fence ```TRELLO: NOM
-          // Nouveau format : fichier "TL: NOM". Legacy : fichier "trello" (match par folderId).
+          // Fichier Trello (trello-NOM / trello / legacy "TL: NOM") → injecter le bloc ```TRELLO: NOM
           const childBase = child.name.replace(/\.md$/, '');
-          const isTlFile = /^TL:\s*/i.test(childBase);
-          const trelloBaseName = childBase.replace(/^TL:\s*/i, '');
-          let trelloInst = this.trelloInstances.find(
-            t => t.folderId === node.id && this.slugify(t.name) === this.slugify(trelloBaseName)
-          );
-          if (!trelloInst && !isTlFile && this.slugify(childBase) === 'trello') {
-            // Instance du dossier non déjà représentée par un fichier "TL: NOM"
-            const tlNames = (node.children || [])
-              .filter(c => c.type === 'file' && /^TL:\s*/i.test(c.name.replace(/\.md$/, '')))
-              .map(c => this.slugify(c.name.replace(/\.md$/, '').replace(/^TL:\s*/i, '')));
-            trelloInst = this.trelloInstances.find(
-              t => t.folderId === node.id && !tlNames.includes(this.slugify(t.name))
-            );
-          }
-          // Un fichier "TL: NOM" est toujours un trello (même sans instance encore créée → code collé inchangé)
-          if (trelloInst || isTlFile) {
-            const name = trelloInst?.name ?? trelloBaseName;
-            // Legacy : retirer la ligne d'en-tête "## Trello: NOM" du corps
-            const body = (child.content || '').replace(/^#{1,4}\s*Trello:.*$/im, '').trim();
-            textContent += body
-              ? `\n\`\`\`TRELLO: ${name}\n${body}\n\`\`\`\n`
-              : `\n\`\`\`TRELLO: ${name}\n\`\`\`\n`;
+          if (this.isTrelloFileBase(childBase)) {
+            const raw = child.content || '';
+            if (/^\s*```/.test(raw)) {
+              // Nouveau format : le contenu EST le bloc complet → injecter tel quel
+              textContent += '\n' + raw.trim() + '\n';
+            } else {
+              // Legacy (corps seul / ## Trello:) → résoudre le nom et envelopper en fence
+              let name = this.trelloNameFromBase(childBase);
+              if (!name) name = this.trelloInstances.find(t => t.folderId === node.id)?.name ?? 'Trello';
+              const body = raw.replace(/^#{1,4}\s*Trello:.*$/im, '').trim();
+              textContent += body
+                ? `\n\`\`\`TRELLO: ${name}\n${body}\n\`\`\`\n`
+                : `\n\`\`\`TRELLO: ${name}\n\`\`\`\n`;
+            }
           } else {
             // Document additionnel classique
             textContent += `\n'${childBase}\n${child.content || ''}\n'\n`;
@@ -1169,6 +1172,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         bInBlock = false;
       }
     }
+    // Blocs de code fencés ```…``` (Trello, corrompus, ou code normal) : exclure leurs ### internes
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('```')) {
+        for (let j = i + 1; j < lines.length; j++) {
+          if (lines[j].trim() === '```') { blockLineRanges.push([i, j]); i = j; break; }
+        }
+      }
+    }
     const isInsideBlock = (i: number) => blockLineRanges.some(([s, e]) => i > s && i < e);
 
     for (let i = 0; i < lines.length; i++) {
@@ -1230,9 +1241,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
             if (lines[j].trim() === '```') { endLine = j; break; }
           }
           if (endLine !== -1) {
-            const fileNode = additionalFiles.find(f =>
-              this.slugify(f.name.replace(/\.md$/, '').replace(/^TL:\s*/i, '')) === this.slugify(tname)
-            );
+            const fileNode = additionalFiles.find(f => {
+              const b = f.name.replace(/\.md$/, '');
+              return this.isTrelloFileBase(b) &&
+                (this.slugify(this.trelloNameFromBase(b)) === this.slugify(tname) || this.slugify(b) === 'trello');
+            });
             if (fileNode) {
               this.fileRanges.push({ fileId: fileNode.id, lineStart: i, lineEnd: endLine });
             }
@@ -2522,28 +2535,31 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         result.push(inst);
       }
     }
-    // 2) Fichiers "TL: NOM" présents dans le dossier (nouveau format)
+    // 2) Fichiers Trello (trello-NOM / trello / TL: NOM) présents dans le dossier
     const folder = this.findNode(folderId, this.files);
     for (const c of folder?.children || []) {
       if (c.type !== 'file') continue;
       const base = c.name.replace(/\.md$/, '');
-      if (!/^TL:\s*/i.test(base)) continue;
-      const tn = base.replace(/^TL:\s*/i, '');
-      const inst = this.trelloInstances.find(i => this.slugify(i.name) === this.slugify(tn));
+      if (!this.isTrelloFileBase(base)) continue;
+      const tn = this.trelloNameFromBase(base);
+      const inst = tn
+        ? this.trelloInstances.find(i => this.slugify(i.name) === this.slugify(tn))
+        : this.trelloInstances.find(i => i.folderId === folderId);
       if (inst && !result.includes(inst)) result.push(inst);
     }
     return result;
   }
 
-  /** En Preview, si le nœud actif est un fichier Trello ("TL: NOM"), retourne l'id d'instance à afficher en board. */
+  /** En Preview, si le nœud actif est un fichier Trello, retourne l'id d'instance à afficher en board. */
   get previewTrelloInstanceId(): string | null {
     if (this.mode !== 'visu' || !this.activeNodeId) return null;
     const node = this.findNode(this.activeNodeId, this.files);
     if (!node || node.type !== 'file') return null;
     const base = node.name.replace(/\.md$/, '');
-    if (!/^TL:\s*/i.test(base)) return null;
-    const trelloName = base.replace(/^TL:\s*/i, '');
+    if (!this.isTrelloFileBase(base)) return null;
+    const trelloName = this.trelloNameFromBase(base);
     const parentId = this.findParentFolder(this.activeNodeId, this.files)?.id;
+    if (!trelloName) return this.trelloInstances.find(i => i.folderId === parentId)?.id ?? null;
     return (this.trelloInstances.find(i => i.folderId === parentId && this.slugify(i.name) === this.slugify(trelloName))
          ?? this.trelloInstances.find(i => this.slugify(i.name) === this.slugify(trelloName)))?.id ?? null;
   }
@@ -2556,8 +2572,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.isImageFile(node.name)) return null;
     if (node.name === 'contenu.md') return null;
 
-    // Fichier Trello ("TL: NOM") → rendu par app-trello-board (voir previewTrelloInstanceId), pas en markdown
-    if (/^TL:\s*/i.test(node.name.replace(/\.md$/, ''))) return null;
+    // Fichier Trello → rendu par app-trello-board (voir previewTrelloInstanceId), pas en markdown
+    if (this.isTrelloFileBase(node.name.replace(/\.md$/, ''))) return null;
 
     const content = node.content || '';
 
@@ -3184,7 +3200,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       for (const n of nodes) {
         if (n.type === 'file') {
           const base = n.name.replace(/\.md$/, '');
-          if (/^TL:\s*/i.test(base)) represented.add(this.slugify(base.replace(/^TL:\s*/i, '')));
+          const tn = this.trelloNameFromBase(base);
+          if (tn) represented.add(this.slugify(tn));
           if (n.content) scanContent(n.content);
         }
         if (n.children) walk(n.children);
@@ -3253,10 +3270,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.seenTrelloMarkers.delete(inst.id);
         // Supprimer le fichier trello.md correspondant (la suppression orpheline parente est
         // limitée aux changements structurels ; ici la simple suppression du fence ne l'est pas).
-        const folderNode = inst.folderId ? this.findNode(inst.folderId, this.files) : null;
-        const fileNode = folderNode?.children?.find(
-          c => c.type === 'file' && this.slugify(c.name.replace(/\.md$/, '').replace(/^TL:\s*/i, '')) === this.slugify(inst.name)
-        );
+        const fileNode = this.findTrelloFileNode(inst.folderId ?? null, inst.name);
         if (fileNode && this.projectName) {
           this.svc.deleteFile(this.projectName, fileNode.id).catch(() => {});
           fileDeleted = true;
@@ -3265,7 +3279,38 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.megaOutilDeleted.emit(inst.id);
       }
     }
-    if (fileDeleted) this.refresh.emit();
+    // Pas de refresh.emit() ici : un rechargement re-sérialiserait le fichier "TL: NOM" en
+    // ```TRELLO: NOM et écraserait le code corrompu manuellement. Le texte corrompu reste tel
+    // quel et part dans contenu.md via la sauvegarde normale (parseContent → sectionsChange).
+    void fileDeleted;
+  }
+
+  /** À l'ouverture d'une section : si un bloc ```TRELLO: NOM est présent sans fichier trello-NOM,
+   *  crée le fichier (via une sauvegarde). Le cas inverse (fichier sans bloc) est géré par
+   *  buildDocSections qui injecte le contenu du fichier dans la section. */
+  private healTrelloSectionOnOpen() {
+    if (this.mode !== 'edit' || !this.hasLoaded) return;
+    const folderId = this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null);
+    if (!folderId) return;
+    let sectionText = '';
+    if (this.focusedHandle) {
+      sectionText = this.unifiedContent;
+    } else {
+      const sr = this.sectionRanges.find(r => r.folderId === folderId);
+      if (sr) sectionText = this.unifiedContent.split('\n').slice(sr.lineStart, sr.lineEnd + 1).join('\n');
+    }
+    const blockNames = [...sectionText.matchAll(/^```(?:## Trello:|TRELLO:) (.+)$/gm)].map(m => m[1].trim());
+    if (!blockNames.length) return;
+    const folder = this.findNode(folderId, this.files);
+    const hasFile = (name: string) => (folder?.children || []).some(c =>
+      c.type === 'file' && this.isTrelloFileBase(c.name.replace(/\.md$/, '')) &&
+      this.slugify(this.trelloNameFromBase(c.name.replace(/\.md$/, ''))) === this.slugify(name));
+    if (blockNames.some(n => !hasFile(n))) {
+      // Crée l'instance manquante puis force une sauvegarde → parseContent crée le fichier trello-NOM.
+      this.ensureTrelloInstancesFromContent(this.unifiedContent);
+      this.lastSavedContent = '';
+      this.saveAll();
+    }
   }
 
   /** Label de colonne (### À faire) → statut Trello. */
@@ -3374,10 +3419,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     while ((bp = blockPreScan.exec(text)) !== null) {
       fileBlockCharRanges.push([bp.index, bp.index + bp[0].length - 1]);
     }
-    // Pré-scan des fences Trello (```TRELLO: NOM ... ```) pour exclure leurs ### internes de la détection de sections
-    const trelloFencePreScan = /^```(?:## Trello:|TRELLO:) (.+)\n([\s\S]*?)```(?=\n|$)/gm;
+    // Pré-scan de TOUT bloc de code fencé (```…```) — y compris Trello et marqueurs corrompus
+    // (```TRELO:) — pour exclure leurs ### internes de la détection de sections (le corps reste du texte).
+    const codeFencePreScan = /^```[^\n]*\n[\s\S]*?\n```(?=\n|$)/gm;
     let tp: RegExpExecArray | null;
-    while ((tp = trelloFencePreScan.exec(text)) !== null) {
+    while ((tp = codeFencePreScan.exec(text)) !== null) {
       fileBlockCharRanges.push([tp.index, tp.index + tp[0].length - 1]);
     }
     const isInsideFileBlock = (pos: number) => fileBlockCharRanges.some(([s, e]) => pos > s && pos <= e);
@@ -3434,12 +3480,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         return ' '.repeat(match.length);
       });
 
-      // Extraire les fences Trello (```TRELLO: NOM ... ```) comme fichiers additionnels système 'trello'
+      // Extraire les fences Trello (```TRELLO: NOM ... ```) comme fichiers physiques "trello-NOM"
+      // dont le CONTENU est le bloc complet (jamais vide).
       const trelloFenceRe = /^```(?:## Trello:|TRELLO:) (.+)\n([\s\S]*?)```(?=\n|$)/gm;
       spacedContent = spacedContent.replace(trelloFenceRe, (match: string, title: string, content: string, offset: number) => {
-        // Le fichier/nœud sidebar est préfixé "TL: " (le fence code reste ```TRELLO: NOM)
-        const afName = 'TL: ' + title.trim();
-        const af: AdditionalFile = { name: afName, content: (content || '').replace(/\n$/, '').trimEnd(), fileId: null, orderedChildIds: [] };
+        const name = title.trim();
+        const body = (content || '').replace(/\n+$/, '');
+        const fullBlock = body.trim() ? '```TRELLO: ' + name + '\n' + body + '\n```' : '```TRELLO: ' + name + '\n```';
+        const afName = 'trello-' + name;
+        const af: AdditionalFile = { name: afName, content: fullBlock, fileId: null, orderedChildIds: [] };
         const found = info?.files.find(f => this.slugify(f.name.replace(/\.md$/, '')) === this.slugify(af.name));
         if (found) {
           af.fileId = found.id;
@@ -3567,6 +3616,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   /** Nom d'une instance à partir de son id. */
   trelloInstanceName(id: string): string {
     return this.megaOutilInstances.find(i => i.id === id)?.name || 'Mon Trello';
+  }
+
+  /** True si un nom de fichier (sans .md) désigne un fichier Trello : "trello", "trello-NOM" ou legacy "TL: NOM". */
+  isTrelloFileBase(base: string): boolean {
+    return /^trello(-|$)/i.test(base) || /^TL:\s*/i.test(base);
+  }
+
+  /** Nom du trello extrait d'un nom de fichier ("trello-NOM"/"TL: NOM" → NOM ; "trello" legacy → ''). */
+  trelloNameFromBase(base: string): string {
+    if (/^trello-/i.test(base)) return base.replace(/^trello-/i, '').trim();
+    if (/^TL:\s*/i.test(base)) return base.replace(/^TL:\s*/i, '').trim();
+    return '';
   }
 
   mockupInstanceName(id: string): string {
@@ -4543,9 +4604,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     contentMd = contentMd.replace(/^(?!```)(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_m, _d, name, content) => {
       const trimmed = (name as string).trim();
       const rawContent = (content as string) || '';
-      // Bloc Trello stocké en délimiteur (fichier "TL: NOM") → retiré du HTML
+      // Bloc Trello stocké en délimiteur (fichier trello-NOM / TL: NOM) → retiré du HTML
       // (rendu par app-trello-board dans le template, voir trelloInstancesForVisuSection)
-      if (/^TL:\s*/i.test(trimmed)) return '';
+      if (this.isTrelloFileBase(trimmed)) return '';
       const mdSource = `'${trimmed}\n${rawContent.trimEnd()}\n'`;
       // Traiter les {{IMG:...|caption|align|width}} à l'intérieur du bloc avant marked.parse
       const blockImgTokens: { token: string; html: string }[] = [];
@@ -5785,9 +5846,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         bInBlock = false;
       }
     }
-    // Plages des fences Trello (```TRELLO: NOM ... ```) : exclure leurs ### internes de la détection de headings
+    // Plages de TOUT bloc de code fencé ```…``` (Trello, corrompu, code normal) : exclure leurs ### internes
     for (let i = 0; i < lines.length; i++) {
-      if (/^```(?:## Trello:|TRELLO:) /.test(lines[i].trim())) {
+      if (lines[i].startsWith('```')) {
         for (let j = i + 1; j < lines.length; j++) {
           if (lines[j].trim() === '```') { blockLineRanges.push([i, j]); i = j; break; }
         }

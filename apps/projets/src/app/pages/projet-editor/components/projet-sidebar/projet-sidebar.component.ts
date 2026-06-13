@@ -75,6 +75,16 @@ export class ProjetSidebarComponent implements OnChanges {
     this.projectSelect.emit();
   }
 
+  /** Libellé d'affichage d'un nœud : fichier Trello (trello-NOM / trello / TL: NOM) → "TL: NOM". */
+  nodeDisplayName(node: FileNode): string {
+    if (node.type !== 'file') return node.name;
+    const base = node.name.replace(/\.md$/, '');
+    if (/^trello-/i.test(base)) return 'TL: ' + base.replace(/^trello-/i, '');
+    if (/^trello$/i.test(base)) return 'TL: Trello';
+    if (/^TL:\s*/i.test(base)) return base;
+    return base;
+  }
+
   // ── Verrous collaboration ──────────────────────────────────
 
   isLockedByMe(nodeId: string): boolean { return this.collab.isLockedByMe(nodeId); }

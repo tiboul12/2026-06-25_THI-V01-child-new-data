@@ -1,6 +1,65 @@
 {
   "modifications": [
     {
+      "id": "mod-387",
+      "version": "B-0.273",
+      "date": "2026-06-14T09:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : synchronisation bloc ↔ fichier à l'ouverture de la section",
+      "description": "À l'ouverture d'une section (clic dans le menu), synchronisation bidirectionnelle bloc Trello ↔ fichier trello-NOM : healTrelloSectionOnOpen() détecte les blocs ```TRELLO: NOM présents dans la section sans fichier correspondant et force une sauvegarde → parseContent crée le fichier trello-NOM. Le cas inverse (fichier présent sans bloc dans le texte) est géré par buildDocSections qui injecte le contenu du fichier dans la section. Déclenché sur changement d'activeNodeId.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "A l'ouverture de la section, si le texte est présent et le fichier non, cela doit créé le fichier ; idem si le fichier est créé et le texte non présent, cela doit ajouté le texte.",
+      "startedAt": "2026-06-14T09:10:00.000Z",
+      "completedAt": "2026-06-14T09:30:00.000Z"
+    },
+    {
+      "id": "mod-386",
+      "version": "B-0.273",
+      "date": "2026-06-14T09:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : fichier physique 'trello-NOM.md' contenant le bloc complet (plus de fichier vide)",
+      "description": "Le fichier physique d'un trello était nommé 'TL: NOM' avec un contenu vide (corps seul, 0 octet à la création). Désormais : nom du fichier = 'trello-NOM' (plusieurs trellos/section possibles), contenu = le BLOC COMPLET ```TRELLO: NOM ... ``` (jamais vide). buildDocSections injecte le contenu tel quel s'il commence par ```; sinon enveloppe (legacy). Affichage sidebar 'TL: NOM' via nodeDisplayName(). Helpers isTrelloFileBase/trelloNameFromBase/findTrelloFileNode centralisent la détection (couvre trello-NOM, 'trello' legacy, et 'TL: NOM' existant). Compat ascendante des anciens fichiers 'TL: NOM'.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "créer un fichier physique trello.md (ou trello-NOM) dans la section avec le code du trello dedans ; actuellement crée un fichier 'TL' vide 0oc",
+      "startedAt": "2026-06-14T08:30:00.000Z",
+      "completedAt": "2026-06-14T09:00:00.000Z"
+    },
+    {
+      "id": "mod-385",
+      "version": "B-0.273",
+      "date": "2026-06-13T23:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : marqueur corrompu (```TRLO:) ne doit pas modifier le code (texte transféré)",
+      "description": "Quand le marqueur ```TRELLO: est corrompu (ex: ```TRELO:), le corps du bloc (### À faire, tâches…) était PERDU : (1) reconcileTrelloLifecycle émettait refresh.emit() → re-sérialisation du fichier 'TL: NOM' écrasant la correction → refresh supprimé ; (2) surtout, le ### interne du bloc corrompu (non reconnu comme fence Trello) était interprété comme un TITRE de section → découpage et perte du corps. Fix racine : exclure les ### internes de TOUT bloc de code fencé ```…``` (Trello, corrompu, ou code normal) de la détection de sections — dans parseContent (codeFencePreScan générique), recomputeRanges et parseStructureNodes (blockLineRanges générique sur startsWith('```')). Résultat : le texte corrompu reste intact, transféré dans contenu.md ; instance + trello.md supprimés ; board/onglet disparaissent. Le code n'est jamais effacé.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "un trello est identifié grace à ```TRELLO: et ```. Si ```TRELLO: devient ```TRLO:, ne modifie pas le code, transfère le texte de trello.md vers contenu.md (texte simple), la vue trello disparait, la section TRELLO est supprimée. Le code ne doit pas être effacé juste transféré",
+      "startedAt": "2026-06-13T23:15:00.000Z",
+      "completedAt": "2026-06-13T23:30:00.000Z"
+    },
+    {
       "id": "mod-384",
       "version": "B-0.272",
       "date": "2026-06-13T23:00:00.000Z",

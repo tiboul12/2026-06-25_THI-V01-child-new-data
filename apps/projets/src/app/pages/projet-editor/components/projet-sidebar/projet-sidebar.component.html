@@ -225,7 +225,7 @@
         <span class="text-[11px] truncate leading-5 flex-1"
               [class]="getNodeLabelClasses(node)"
               [class.!text-red-400]="collab.isLocalPending(node.id)">
-          {{ node.type === 'file' ? node.name.replace('.md', '') : node.name }}
+          {{ nodeDisplayName(node) }}
         </span>
 
         <!-- Icône Conversation (Forum) -->
