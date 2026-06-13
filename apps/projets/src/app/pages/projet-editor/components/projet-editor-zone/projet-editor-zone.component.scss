@@ -2542,3 +2542,12 @@ $struct-colors: (
   &--done     { .trello-list-col__label { color: #22c55e; } border-color: rgba(34, 197, 94, 0.25); }
   &--blocked  { .trello-list-col__label { color: #ef4444; } border-color: rgba(239, 68, 68, 0.25); }
 }
+
+/* Wrapper du board app-trello-board en mode Preview (composant Angular → style scopé) */
+.visu-trello-board-wrap {
+  height: 72vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+

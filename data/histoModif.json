@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-376",
+      "version": "B-0.271",
+      "date": "2026-06-13T18:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : en Preview, board visuel inline (kanban) au lieu du panneau bas",
+      "description": "En mode Preview, le panneau board du bas n'est plus affiché (trello gated à mode === 'structure'). À la place, le VRAI composant app-trello-board est rendu dans la zone d'édition, de façon identique que l'on sélectionne le fichier Trello 'TL: NOM' (getter previewTrelloInstanceId ; singleFileVisuPreview retourne null pour ces fichiers) OU la section (dossier) le contenant (trelloInstancesForVisuSection, boucle dans le template après le contenu de section). Le bloc Trello est retiré du HTML de section (buildVisuSectionHtml strip fence + délimiteur 'TL:'). Wrapper .visu-trello-board-wrap (height 72vh). Le rendu HTML kanban via [innerHTML] sanitizé ne fonctionnait pas (styles ignorés) → usage du composant réel partout.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode Preview pour le trello, il ne faut pas affiché la view basse TRELLO de la section. La vue trello doit être affiché au format visuel directement dans la zone d'edition.",
+      "startedAt": "2026-06-13T18:15:00.000Z",
+      "completedAt": "2026-06-13T18:45:00.000Z"
+    },
+    {
       "id": "mod-375",
       "version": "B-0.270",
       "date": "2026-06-13T18:00:00.000Z",

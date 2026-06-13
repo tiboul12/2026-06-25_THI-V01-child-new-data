@@ -2449,6 +2449,35 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // Cache du rendu HTML d'un document affiché en standalone
   private fileVisuPreviewCache: { fileId: string; rawContent: string; thumbKey: string; html: string; name: string } | null = null;
 
+  /** Instances Trello d'une section (dossier) pour affichage en board dans le Preview. */
+  trelloInstancesForVisuSection(folderId: string): MegaOutilInstance[] {
+    const folder = this.findNode(folderId, this.files);
+    if (!folder?.children) return [];
+    const result: MegaOutilInstance[] = [];
+    for (const c of folder.children) {
+      if (c.type !== 'file') continue;
+      const base = c.name.replace(/\.md$/, '');
+      if (!/^TL:\s*/i.test(base)) continue;
+      const tn = base.replace(/^TL:\s*/i, '');
+      const inst = this.trelloInstances.find(i => this.slugify(i.name) === this.slugify(tn));
+      if (inst && !result.includes(inst)) result.push(inst);
+    }
+    return result;
+  }
+
+  /** En Preview, si le nœud actif est un fichier Trello ("TL: NOM"), retourne l'id d'instance à afficher en board. */
+  get previewTrelloInstanceId(): string | null {
+    if (this.mode !== 'visu' || !this.activeNodeId) return null;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node || node.type !== 'file') return null;
+    const base = node.name.replace(/\.md$/, '');
+    if (!/^TL:\s*/i.test(base)) return null;
+    const trelloName = base.replace(/^TL:\s*/i, '');
+    const parentId = this.findParentFolder(this.activeNodeId, this.files)?.id;
+    return (this.trelloInstances.find(i => i.folderId === parentId && this.slugify(i.name) === this.slugify(trelloName))
+         ?? this.trelloInstances.find(i => this.slugify(i.name) === this.slugify(trelloName)))?.id ?? null;
+  }
+
   // Preview standalone d'un document texte (lecture seule)
   get singleFileVisuPreview(): { name: string; html: string } | null {
     if (!this.activeNodeId) return null;
@@ -2457,7 +2486,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.isImageFile(node.name)) return null;
     if (node.name === 'contenu.md') return null;
 
+    // Fichier Trello ("TL: NOM") → rendu par app-trello-board (voir previewTrelloInstanceId), pas en markdown
+    if (/^TL:\s*/i.test(node.name.replace(/\.md$/, ''))) return null;
+
     const content = node.content || '';
+
     const thumbKey = this.megaOutilInstances.filter(i => i.thumbnailData).map(i => `${i.id}:${i.thumbnailData!.length}`).join(',');
     if (this.fileVisuPreviewCache
         && this.fileVisuPreviewCache.fileId === node.id
@@ -4344,6 +4377,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     contentMd = contentMd.replace(/^(?!```)(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_m, _d, name, content) => {
       const trimmed = (name as string).trim();
       const rawContent = (content as string) || '';
+      // Bloc Trello stocké en délimiteur (fichier "TL: NOM") → retiré du HTML
+      // (rendu par app-trello-board dans le template, voir trelloInstancesForVisuSection)
+      if (/^TL:\s*/i.test(trimmed)) return '';
       const mdSource = `'${trimmed}\n${rawContent.trimEnd()}\n'`;
       // Traiter les {{IMG:...|caption|align|width}} à l'intérieur du bloc avant marked.parse
       const blockImgTokens: { token: string; html: string }[] = [];
@@ -4378,6 +4414,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       });
       return `\n\n${token}\n\n`;
     });
+
+    // Bloc Trello (fence) → retiré du HTML (rendu par app-trello-board dans le template)
+    contentMd = contentMd.replace(/^```(?:## Trello:|TRELLO:) (.+)\n([\s\S]*?)```(?=\n|$)/gm, () => '');
 
     // Remplacer les images (placeholders) — supporte {{IMG:id|caption|align|width}}
     const imgTokens: { token: string; html: string }[] = [];

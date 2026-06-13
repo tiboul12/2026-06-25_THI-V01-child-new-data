@@ -1061,6 +1061,16 @@
         <div class="visu-content-wrap">
 
           <!-- Preview standalone d'un document (lecture seule) -->
+          @if (previewTrelloInstanceId; as tid) {
+            <div class="visu-section-wrap visu-trello-board-wrap">
+              <app-trello-board
+                [instanceId]="tid"
+                [boardName]="trelloInstanceName(tid)"
+                [deletable]="false"
+                (cardsChanged)="onTrelloCardsChanged(tid, $event)" />
+            </div>
+          }
+
           @if (singleFileVisuPreview; as preview) {
             <div class="visu-section-wrap">
               <h2 class="visu-sec-heading">{{ preview.name }}</h2>
@@ -1198,6 +1208,17 @@
                    (input)="onVisuSectionInput(sec.sectionId)">
               </div>
 
+              <!-- Boards Trello de la section (vrai composant, identique à la sélection du fichier) -->
+              @for (tinst of trelloInstancesForVisuSection(sec.sectionId); track tinst.id) {
+                <div class="visu-trello-board-wrap">
+                  <app-trello-board
+                    [instanceId]="tinst.id"
+                    [boardName]="trelloInstanceName(tinst.id)"
+                    [deletable]="false"
+                    (cardsChanged)="onTrelloCardsChanged(tinst.id, $event)" />
+                </div>
+              }
+
               <!-- Ligne d'insertion (visible au hover) -->
               <div class="visu-insert-row">
                 <button class="visu-insert-btn"
@@ -1239,10 +1260,10 @@
     }
 
     <!-- Zone basse : tous les boards (Trello, Array, Mockup) dans un container scrollable -->
-    @if ((contentTrelloIds.length > 0 && mode !== 'edit') || (contentArrayIds.length > 0 && mode !== 'edit') || (contentMockupIds.length > 0 && mode !== 'edit')) {
+    @if ((contentTrelloIds.length > 0 && mode === 'structure') || (contentArrayIds.length > 0 && mode !== 'edit') || (contentMockupIds.length > 0 && mode !== 'edit')) {
       <div class="ed-panels-zone">
 
-        @if (contentTrelloIds.length > 0) {
+        @if (contentTrelloIds.length > 0 && mode === 'structure') {
           <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="trelloPanelCollapsed()">
             <div class="ed-trello-panel__head">
               <span class="material-symbols-outlined">view_kanban</span>
