@@ -85,8 +85,7 @@
 
   </div>
 
-  <!-- Barre Mega-outils (masquée en mode Structure) -->
-  @if (mode !== 'structure') {
+  <!-- Barre Mega-outils (visible dans tous les modes) -->
   <div class="flex-shrink-0 border-b border-light-border dark:border-white/10 bg-light-surface dark:bg-surface">
 
     <!-- Ligne principale : label + boutons de type -->
@@ -258,7 +257,6 @@
     }
 
   </div>
-  }
 
   <!-- Popup configuration nouveau Array -->
   @if (showArrayPopup()) {

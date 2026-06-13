@@ -35,6 +35,7 @@ import {
       (megaOutilCreated)="megaOutilCreated.emit($event)"
       (megaOutilDeleted)="megaOutilDeleted.emit($event)"
       (closeTrelloList)="closeTrelloList.emit()"
+      (openTrelloList)="openTrelloList.emit()"
       (trelloNavigate)="trelloNavigate.emit($event)"
       (closeMockupList)="closeMockupList.emit()"
       (mockupNavigate)="mockupNavigate.emit($event)"
@@ -76,6 +77,7 @@ export class EditionOutilComponent {
   @Output() megaOutilCreated = new EventEmitter<MegaOutilInstance>();
   @Output() megaOutilDeleted = new EventEmitter<string>();
   @Output() closeTrelloList = new EventEmitter<void>();
+  @Output() openTrelloList = new EventEmitter<void>();
   @Output() trelloNavigate = new EventEmitter<string>();
   @Output() closeMockupList = new EventEmitter<void>();
   @Output() mockupNavigate = new EventEmitter<string>();

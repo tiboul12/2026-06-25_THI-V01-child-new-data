@@ -1,6 +1,47 @@
 {
   "modifications": [
     {
+      "id": "mod-389",
+      "version": "B-0.274",
+      "date": "2026-06-14T10:20:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils",
+      "title": "Structure : afficher la barre méga-outils",
+      "description": "La barre méga-outils (Trello/Mockup/Tableau + onglets instances) était masquée en mode Structure (@if mode !== 'structure'). Suppression de cette condition → la barre est désormais visible dans tous les modes (Code, Structure, Preview).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans la version Structure, rajoute la bar Mega outils",
+      "startedAt": "2026-06-14T10:15:00.000Z",
+      "completedAt": "2026-06-14T10:20:00.000Z"
+    },
+    {
+      "id": "mod-388",
+      "version": "B-0.274",
+      "date": "2026-06-14T10:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|mega-outils,projets:editor|sidebar",
+      "title": "Trello : le bouton Trello de la barre MO ouvre la vue Liste ; suppression du bouton sidebar",
+      "description": "Le bouton Trello de la barre méga-outils ouvre désormais la vue 'Liste des trellos' (toggleMoType émet openTrelloList → onTrelloListClick → showTrelloList ; ferme via closeTrelloList au re-clic). Ajout de l'@Output openTrelloList sur la zone éditeur, forwardé par le wrapper edition-outil (app-edition-outil), binding dans le parent. Suppression du bouton 'Liste des trellos' en bas de la sidebar (le déclencheur unique est maintenant la barre MO).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/outils/edition/edition-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on clique sur le bouton Trello dans la barre des MEGA-OUTILS cela doit afficher la liste des trellos dans une vue spécifique ; le bouton qui envoyait vers cette vue en bas du menu doit être supprimé",
+      "startedAt": "2026-06-14T09:45:00.000Z",
+      "completedAt": "2026-06-14T10:00:00.000Z"
+    },
+    {
       "id": "mod-387",
       "version": "B-0.273",
       "date": "2026-06-14T09:30:00.000Z",

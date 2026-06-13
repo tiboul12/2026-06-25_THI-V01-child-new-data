@@ -256,6 +256,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // Vue "Liste des trellos" (zone centrale) déclenchée depuis la sidebar
   @Input()  showTrelloList = false;
   @Output() closeTrelloList = new EventEmitter<void>();
+  @Output() openTrelloList = new EventEmitter<void>();
   // Navigation vers la section d'origine d'un trello (sélection réelle, contrairement à nodeActive)
   @Output() trelloNavigate = new EventEmitter<string>();
 
@@ -6229,7 +6230,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // ── Barre MO ─────────────────────────────────────────────────────────────────
 
   toggleMoType(type: 'trello' | 'mockup' | 'array') {
-    this.moActiveType.update(cur => cur === type ? null : type);
+    const next = this.moActiveType() === type ? null : type;
+    this.moActiveType.set(next);
+    // Le bouton Trello ouvre/ferme aussi la vue "Liste des trellos".
+    if (type === 'trello') {
+      if (next === 'trello') this.openTrelloList.emit();
+      else this.closeTrelloList.emit();
+    }
   }
 
   scrollMoLeft() {
