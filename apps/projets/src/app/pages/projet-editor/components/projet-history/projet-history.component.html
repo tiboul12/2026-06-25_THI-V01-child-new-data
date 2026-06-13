@@ -161,10 +161,8 @@
 
   <!-- Modale de confirmation -->
   @if (clearOpen()) {
-    <div class="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
-         (click)="cancelClear()">
-      <div class="bg-[#1a1a25] border border-white/10 rounded-lg p-4 w-full max-w-[280px] flex flex-col gap-3"
-           (click)="$event.stopPropagation()">
+    <div class="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+      <div class="bg-[#1a1a25] border border-white/10 rounded-lg p-4 w-full max-w-[280px] flex flex-col gap-3">
 
         <h3 class="text-[12px] font-semibold text-white/90 flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[14px] text-red-400">warning</span>

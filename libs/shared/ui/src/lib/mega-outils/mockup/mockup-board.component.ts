@@ -409,10 +409,8 @@ const CANVAS_H = 900;
 
       <!-- Dialog édition du texte (overlay centré) -->
       @if (editingElementId()) {
-        <div class="absolute inset-0 bg-black/50 z-50 flex items-center justify-center"
-             (click)="cancelLabelEdit()">
-          <div class="bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-xl p-5 w-72 shadow-2xl"
-               (click)="$event.stopPropagation()">
+        <div class="absolute inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div class="bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-xl p-5 w-72 shadow-2xl">
             <p class="text-sm font-semibold text-light-text dark:text-white/90 mb-1">Modifier le texte</p>
             <p class="text-[11px] text-light-text-muted dark:text-white/40 mb-3">{{ editingElementType }}</p>
             <input class="w-full text-sm bg-light-surface dark:bg-white/[0.05] border border-light-border dark:border-white/10 rounded px-3 py-2 text-light-text dark:text-white/80 focus:outline-none focus:border-violet-500/50"

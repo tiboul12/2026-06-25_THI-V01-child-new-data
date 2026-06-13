@@ -235,9 +235,9 @@
           </span>
         }
 
-        <!-- Indicateur verrou (rouge si modifications locales non partagées) -->
+        <!-- Indicateur verrou : jaune = mes modifications locales non partagées ; rouge = verrouillé par un autre -->
         @if (collab.isLocalPending(node.id)) {
-          <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-red-400 ml-0.5"
+          <span class="material-symbols-outlined text-[10px] flex-shrink-0 text-amber-400 ml-0.5"
                 [title]="'Modifications locales non partagées'">
             lock
           </span>

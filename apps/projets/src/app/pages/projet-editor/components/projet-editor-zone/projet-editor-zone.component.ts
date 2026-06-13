@@ -83,6 +83,7 @@ interface MirrorLine {
   mockupInstId: string;
   isTrelloBlock: boolean;
   trelloName: string;
+  isPending: boolean;
 }
 
 interface HoverPreview {
@@ -195,6 +196,34 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (!this.hasFtpBackup || this.ftpSyncGlobalStatus !== 'syncing') return false;
     if (!this.activeNodeId) return false;
     return this.nodeSyncStatus.get(this.activeNodeId) === 'unknown';
+  }
+
+  /** True si une section (dossier) OU une de ses entités enfants (fichier/bloc) est verrouillée par un autre.
+   *  Les verrous sont granulaires (posés sur contenu.md / un bloc "folderId##..."), pas sur le folderId. */
+  isFolderLockedByOther(folderId: string | null | undefined): boolean {
+    if (!folderId) return false;
+    if (this.collab.isLockedByOther(folderId)) return true;
+    for (const [nodeId] of this.collab.locks()) {
+      if (!this.collab.isLockedByOther(nodeId)) continue;
+      if (nodeId.startsWith(folderId + '##')) return true; // bloc de cette section
+      if (this.findParentFolder(nodeId, this.files)?.id === folderId) return true; // fichier enfant
+    }
+    return false;
+  }
+
+  /** Section active verrouillée par un autre utilisateur (cadenas rouge) → lecture seule totale. */
+  get isActiveSectionLockedByOther(): boolean {
+    return this.isFolderLockedByOther(this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null));
+  }
+
+  /** True si la section d'une instance Trello est verrouillée par un autre utilisateur. */
+  isTrelloInstanceLocked(instId: string): boolean {
+    return this.isFolderLockedByOther(this.resolveTrelloFolderId(instId));
+  }
+
+  /** True si la section d'une instance Array est verrouillée par un autre utilisateur. */
+  isArrayInstanceLocked(instId: string): boolean {
+    return this.isFolderLockedByOther(this.arrayInstances.find(i => i.id === instId)?.folderId);
   }
 
   readonly backupBadge: Record<string, { icon: string; label: string; css: string }> = {
@@ -579,6 +608,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Amorcer le suivi des marqueurs Trello présents au chargement (pour détecter
       // ensuite une suppression/corruption même sans sauvegarde intermédiaire).
       this.seedSeenTrelloMarkers(this.focusedHandle ? this.fullContentBackup : this.unifiedContent);
+      // Nettoyage des instances Trello orphelines (sans bloc/fichier correspondant)
+      if (!this.focusedHandle) this.cleanupOrphanTrelloInstances();
       // Nettoyer les marqueurs {{TRELLO:...}} du contenu (approche DB-only)
       const trelloStripped = !this.focusedHandle && this.stripTrelloMarkersFromUnifiedContent();
       // Supprimer les marqueurs {{MOCKUP:id}} dupliqués
@@ -960,17 +991,31 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
             textContent += child.content.trimEnd() + '\n';
           }
         } else {
-          // Fichier Trello (préfixe "TL: ", lié à une instance) → sérialiser en fence ```TRELLO: NOM
+          // Fichier Trello → sérialiser en fence ```TRELLO: NOM
+          // Nouveau format : fichier "TL: NOM". Legacy : fichier "trello" (match par folderId).
           const childBase = child.name.replace(/\.md$/, '');
+          const isTlFile = /^TL:\s*/i.test(childBase);
           const trelloBaseName = childBase.replace(/^TL:\s*/i, '');
-          const trelloInst = this.trelloInstances.find(
+          let trelloInst = this.trelloInstances.find(
             t => t.folderId === node.id && this.slugify(t.name) === this.slugify(trelloBaseName)
           );
-          if (trelloInst) {
-            const body = (child.content || '').trim();
+          if (!trelloInst && !isTlFile && this.slugify(childBase) === 'trello') {
+            // Instance du dossier non déjà représentée par un fichier "TL: NOM"
+            const tlNames = (node.children || [])
+              .filter(c => c.type === 'file' && /^TL:\s*/i.test(c.name.replace(/\.md$/, '')))
+              .map(c => this.slugify(c.name.replace(/\.md$/, '').replace(/^TL:\s*/i, '')));
+            trelloInst = this.trelloInstances.find(
+              t => t.folderId === node.id && !tlNames.includes(this.slugify(t.name))
+            );
+          }
+          // Un fichier "TL: NOM" est toujours un trello (même sans instance encore créée → code collé inchangé)
+          if (trelloInst || isTlFile) {
+            const name = trelloInst?.name ?? trelloBaseName;
+            // Legacy : retirer la ligne d'en-tête "## Trello: NOM" du corps
+            const body = (child.content || '').replace(/^#{1,4}\s*Trello:.*$/im, '').trim();
             textContent += body
-              ? `\n\`\`\`TRELLO: ${trelloInst.name}\n${body}\n\`\`\`\n`
-              : `\n\`\`\`TRELLO: ${trelloInst.name}\n\`\`\`\n`;
+              ? `\n\`\`\`TRELLO: ${name}\n${body}\n\`\`\`\n`
+              : `\n\`\`\`TRELLO: ${name}\n\`\`\`\n`;
           } else {
             // Document additionnel classique
             textContent += `\n'${childBase}\n${child.content || ''}\n'\n`;
@@ -1365,15 +1410,28 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const lines = this.unifiedContent.split('\n');
     const folderHl = new Set<number>();
     const fileHl = new Set<number>();
+    const pendingHl = new Set<number>();
     for (const r of this.sectionRanges) {
       if (this.highlightedFolderIds.has(r.folderId)) {
         for (let i = r.lineStart; i <= r.lineEnd; i++) folderHl.add(i);
+      }
+      // Fond jaune : section avec mes modifications locales non partagées (cadenas jaune)
+      if (this.collab.isLocalPending(r.folderId)) {
+        for (let i = r.lineStart; i <= r.lineEnd; i++) pendingHl.add(i);
       }
     }
     for (const r of this.fileRanges) {
       if (this.highlightedFileIds.has(r.fileId)) {
         for (let i = r.lineStart; i <= r.lineEnd; i++) fileHl.add(i);
       }
+      if (this.collab.isLocalPending(r.fileId)) {
+        for (let i = r.lineStart; i <= r.lineEnd; i++) pendingHl.add(i);
+      }
+    }
+    // Mode focus : si l'entité focusée (dossier/fichier/trello) a des modifs en attente,
+    // tout le contenu affiché est jaune (pas de sectionRange/fileRange à mapper en focus fichier).
+    if (this.focusedHandle && this.collab.isLocalPending(this.focusedHandle.id)) {
+      for (let i = 0; i < lines.length; i++) pendingHl.add(i);
     }
     // Purge les marqueurs {{IMG:xxx}} dont l'image n'existe plus
     // Exclut les images uploadées tout récemment (pas encore propagées dans this.files)
@@ -1410,7 +1468,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           isFold: false, foldSectionId: '', foldLineCount: 0,
           inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
           isMockupMarker: false, mockupInstId: '',
-          isTrelloBlock: false, trelloName: '',
+          isTrelloBlock: false, trelloName: '', isPending: pendingHl.has(i),
         };
       }
       const fm = /^\{\{FOLD:([a-zA-Z0-9-]+):(\d+)\}\}$/.exec(line.trim());
@@ -1422,7 +1480,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           isFold: true, foldSectionId: fm[1], foldLineCount: parseInt(fm[2], 10),
           inlineBlockId: null, inlineBlockKind: null,
           isMockupMarker: false, mockupInstId: '',
-          isTrelloBlock: false, trelloName: '',
+          isTrelloBlock: false, trelloName: '', isPending: pendingHl.has(i),
         };
       }
       const tm = /^```(?:## Trello:|TRELLO:) (.+)$/.exec(line.trim());
@@ -1434,7 +1492,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           isFold: false, foldSectionId: '', foldLineCount: 0,
           inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
           isMockupMarker: false, mockupInstId: '',
-          isTrelloBlock: true, trelloName: tm[1].trim(),
+          isTrelloBlock: true, trelloName: tm[1].trim(), isPending: pendingHl.has(i),
         };
       }
       return {
@@ -1444,7 +1502,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         isFold: false, foldSectionId: '', foldLineCount: 0,
         inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
         isMockupMarker: false, mockupInstId: '',
-        isTrelloBlock: false, trelloName: '',
+        isTrelloBlock: false, trelloName: '', isPending: pendingHl.has(i),
       };
     });
 
@@ -2449,12 +2507,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // Cache du rendu HTML d'un document affiché en standalone
   private fileVisuPreviewCache: { fileId: string; rawContent: string; thumbKey: string; html: string; name: string } | null = null;
 
-  /** Instances Trello d'une section (dossier) pour affichage en board dans le Preview. */
+  /** True si la section d'un nœud Structure est verrouillée par un autre utilisateur. */
+  isStructNodeLocked(node: StructureNode): boolean {
+    return this.isFolderLockedByOther(node.folderId);
+  }
+
+  /** Instances Trello d'une section (dossier) pour affichage en board dans le Preview.
+   *  Couvre le nouveau format (fichier "TL: NOM") ET le legacy (instance liée par folderId). */
   trelloInstancesForVisuSection(folderId: string): MegaOutilInstance[] {
-    const folder = this.findNode(folderId, this.files);
-    if (!folder?.children) return [];
     const result: MegaOutilInstance[] = [];
-    for (const c of folder.children) {
+    // 1) Instances liées à la section par folderId (couvre legacy : fichier "trello" / ## Trello:)
+    for (const inst of this.trelloInstances) {
+      if ((inst.folderId === folderId || this.resolveTrelloFolderId(inst.id) === folderId) && !result.includes(inst)) {
+        result.push(inst);
+      }
+    }
+    // 2) Fichiers "TL: NOM" présents dans le dossier (nouveau format)
+    const folder = this.findNode(folderId, this.files);
+    for (const c of folder?.children || []) {
       if (c.type !== 'file') continue;
       const base = c.name.replace(/\.md$/, '');
       if (!/^TL:\s*/i.test(base)) continue;
@@ -2531,6 +2601,26 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const name = node.name.replace(/\.md$/, '');
     this.fileVisuPreviewCache = { fileId: node.id, rawContent: content, thumbKey, html, name };
     return { name, html };
+  }
+
+  /** Bloque toute saisie quand le curseur/sélection touche une section verrouillée par un autre. */
+  onTextareaBeforeInput(event: Event) {
+    if (this.isSelectionInLockedSection()) event.preventDefault();
+  }
+
+  /** True si la sélection courante de la textarea chevauche une section verrouillée par un autre. */
+  private isSelectionInLockedSection(): boolean {
+    const ta = this.textareaRef?.nativeElement;
+    if (!ta) return false;
+    const lockedRanges = this.sectionRanges.filter(r => this.isFolderLockedByOther(r.folderId));
+    if (!lockedRanges.length) return false;
+    const startLine = ta.value.substring(0, ta.selectionStart).split('\n').length - 1;
+    const endLine = ta.value.substring(0, ta.selectionEnd).split('\n').length - 1;
+    return lockedRanges.some(r =>
+      (startLine >= r.lineStart && startLine <= r.lineEnd) ||
+      (endLine >= r.lineStart && endLine <= r.lineEnd) ||
+      (startLine < r.lineStart && endLine > r.lineEnd)
+    );
   }
 
   // ── Edit-mode events ────────────────────────────────────────
@@ -3063,6 +3153,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // corrompu restant est intégré à contenu.md (il n'est plus reconnu comme fence Trello).
     this.reconcileTrelloLifecycle(contentToParse);
 
+    // Marqueur ```TRELLO: NOM collé sans instance DB → créer l'instance (onglet MO + board).
+    // unifiedContent (et non contentToParse) car sectionRanges en dépend pour résoudre le folderId.
+    this.ensureTrelloInstancesFromContent(this.unifiedContent);
+
     // Sync inverse code → board/BDD : éditer/supprimer une task dans le code applique
     // la modification aux cartes en base (le board se rafraîchit via SSE).
     if (this.trelloAutoSync()) this.reconcileTrelloCardsFromCode(contentToParse);
@@ -3076,10 +3170,67 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.sectionsChange.emit(sections);
   }
 
+  /** Supprime les instances Trello orphelines : aucune représentation (marqueur ```TRELLO:/## Trello:,
+   *  fichier "TL: NOM" ou "trello") dans les fichiers du projet ni dans le contenu live. */
+  private cleanupOrphanTrelloInstances() {
+    if (!this.hasLoaded || !this.trelloInstances.length) return;
+    const represented = new Set<string>();
+    const re = /(?:```(?:## Trello:|TRELLO:)|^#{2,4}\s*Trello:)\s*(.+)$/gim;
+    const scanContent = (content: string) => {
+      let m; re.lastIndex = 0;
+      while ((m = re.exec(content)) !== null) represented.add(this.slugify(m[1].trim()));
+    };
+    const walk = (nodes: FileNode[]) => {
+      for (const n of nodes) {
+        if (n.type === 'file') {
+          const base = n.name.replace(/\.md$/, '');
+          if (/^TL:\s*/i.test(base)) represented.add(this.slugify(base.replace(/^TL:\s*/i, '')));
+          if (n.content) scanContent(n.content);
+        }
+        if (n.children) walk(n.children);
+      }
+    };
+    walk(this.files);
+    scanContent(this.focusedHandle ? this.fullContentBackup : this.unifiedContent);
+
+    for (const inst of this.trelloInstances) {
+      if (!represented.has(this.slugify(inst.name))) {
+        this.megaOutilsSvc.deleteInstance(inst.id).catch(() => {});
+        this.megaOutilDeleted.emit(inst.id);
+      }
+    }
+  }
+
   /** Enregistre les instances dont le marqueur Trello est déjà présent dans le contenu fourni. */
   private seedSeenTrelloMarkers(content: string) {
     for (const inst of this.trelloInstances) {
       if (this.contentHasTrelloMarker(content, inst.name)) this.seenTrelloMarkers.add(inst.id);
+    }
+  }
+
+  /** Crée une instance Trello pour chaque marqueur ```TRELLO: NOM du contenu sans instance existante. */
+  private ensureTrelloInstancesFromContent(content: string) {
+    if (!this.projectName) return;
+    const lines = content.split('\n');
+    const seen = new Set<string>();
+    for (let i = 0; i < lines.length; i++) {
+      const m = /^```(?:## Trello:|TRELLO:) (.+)$/.exec(lines[i].trim());
+      if (!m) continue;
+      const name = m[1].trim();
+      const slug = this.slugify(name);
+      if (seen.has(slug)) continue;
+      seen.add(slug);
+      if (this.trelloInstances.some(t => this.slugify(t.name) === slug)) continue;
+      // Section du marqueur (folderId)
+      const sr = this.sectionRanges.find(r => i >= r.lineStart && i <= r.lineEnd);
+      const folderId = sr?.folderId ?? this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null) ?? undefined;
+      this.megaOutilsSvc.createInstance({
+        type: 'trello', name, projectId: this.projectName,
+        outilId: this.activeOutilId || undefined, folderId: folderId ?? undefined,
+      }).then(inst => {
+        this.seenTrelloMarkers.add(inst.id);
+        this.megaOutilCreated.emit(inst);
+      }).catch(() => {});
     }
   }
 
@@ -3177,6 +3328,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const parsed = this.parseTrelloBodyCards(mm[1] || '');
       const dbCards = loaded[inst.id] || [];
       const usedDb = new Set<string>();
+      // Liste optimiste reflétant le code après réconciliation (évite les doublons :
+      // les prochains save voient les cartes déjà créées sans attendre le rechargement BDD).
+      const newLocal: TrelloCard[] = [];
 
       for (const p of parsed) {
         const match = dbCards.find(d => !usedDb.has(d.id) && d.title.trim().toLowerCase() === p.title.toLowerCase());
@@ -3185,14 +3339,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           if (match.status !== p.status || match.priority !== p.priority || (match.description || '').trim() !== p.description) {
             this.megaOutilsSvc.updateTrelloCard(inst.id, match.id, { status: p.status, priority: p.priority, description: p.description || undefined }).catch(() => {});
           }
+          newLocal.push({ ...match, status: p.status, priority: p.priority, description: p.description });
         } else {
-          this.megaOutilsSvc.createTrelloCard(inst.id, { title: p.title, status: p.status, priority: p.priority, description: p.description || undefined }).catch(() => {});
+          const tmpId = 'tmp-' + Math.random().toString(36).slice(2);
+          newLocal.push({
+            id: tmpId, instanceId: inst.id, title: p.title, status: p.status, priority: p.priority,
+            description: p.description, orderIndex: newLocal.length,
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+          } as TrelloCard);
+          this.megaOutilsSvc.createTrelloCard(inst.id, { title: p.title, status: p.status, priority: p.priority, description: p.description || undefined })
+            .then(card => this.trelloCodeCards.update(m => ({ ...m, [inst.id]: (m[inst.id] || []).map(c => c.id === tmpId ? card : c) })))
+            .catch(() => {});
         }
       }
       // Cartes en BDD absentes du code → supprimées
       for (const d of dbCards) {
         if (!usedDb.has(d.id)) this.megaOutilsSvc.deleteTrelloCard(inst.id, d.id).catch(() => {});
       }
+      // MAJ optimiste du cache local : il reflète désormais le code (source de vérité)
+      this.trelloCodeCards.update(m => ({ ...m, [inst.id]: newLocal }));
     }
   }
 
@@ -3590,6 +3755,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   insertAt(before: string, after = '') {
+    if (this.isActiveSectionLockedByOther) return;
     const ta = this.textareaRef?.nativeElement;
     if (!ta) return;
     const start = ta.selectionStart;
@@ -4860,10 +5026,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         }).catch(() => {});
       } catch (e: any) {
         console.warn('[PublishCode cross-mode] erreur:', e);
-        const msg = e?.error?.pushFailed
-          ? 'Sauvegardé localement — synchronisation échouée'
-          : 'Erreur lors du partage des modifications';
-        this.showPublishErrorToast(msg);
+        this.showPublishErrorToast(this.buildPublishErrorMsg(e));
       } finally {
         this.isPublishing.set(false);
       }
@@ -4937,10 +5100,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }).catch(() => {});
     } catch (e: any) {
       console.warn('[PublishCode] erreur:', e);
-      const msg = e?.error?.pushFailed
-        ? 'Sauvegardé localement — synchronisation GitHub échouée'
-        : 'Erreur lors du partage des modifications';
-      this.showPublishErrorToast(msg);
+      this.showPublishErrorToast(this.buildPublishErrorMsg(e));
     } finally {
       this.isPublishing.set(false);
     }
@@ -4955,6 +5115,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.publishErrorMessage.set(msg);
     this.publishErrorToastVisible.set(true);
     setTimeout(() => this.publishErrorToastVisible.set(false), 6000);
+  }
+
+  /** Message d'erreur de partage explicite (423 verrou, push échoué, ou générique). */
+  private buildPublishErrorMsg(e: any): string {
+    if (e?.status === 423 || e?.error?.error === 'Section verrouillée') {
+      return `Section verrouillée par ${e?.error?.lockedBy || 'un autre utilisateur'} — partage impossible`;
+    }
+    if (e?.error?.pushFailed) return 'Sauvegardé localement — synchronisation échouée';
+    return 'Erreur lors du partage des modifications';
   }
 
   onVisuSectionInput(sectionId: string) {

@@ -182,3 +182,4 @@ Via les boutons de la toolbar (voir toolbar/fonctions.md) ou raccourcis :
 | Section verrouillée | Barre Annuler/Partager visible |
 | Barre cross-mode | Barre persistante si switch de mode avec pending |
 | Lecture seule FTP | `[readonly]` sur textarea si section en cours de sync |
+| Section verrouillée (autre user) | Lecture seule **totale** : textarea code, inputs Structure, board Trello (`readonly`), board Array, insertions toolbar/slash. Getters `isActiveSectionLockedByOther` / `isTrelloInstanceLocked` / `isArrayInstanceLocked` / `isStructNodeLocked` |

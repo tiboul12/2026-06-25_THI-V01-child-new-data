@@ -293,10 +293,8 @@
 
   <!-- Popup configuration nouveau Mockup -->
   @if (showMockupPopup()) {
-    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]"
-         (click)="cancelMockupPopup()">
-      <div class="w-80 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5"
-           (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+      <div class="w-80 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5">
         <div class="flex items-center gap-2 mb-4">
           <div class="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
             <span class="material-symbols-outlined text-violet-400 text-base">design_services</span>
@@ -332,10 +330,8 @@
 
   <!-- Popup Liaison mockup : choisir quel mockup insérer dans la section courante -->
   @if (showMockupLiaisonPopup()) {
-    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
-         (click)="showMockupLiaisonPopup.set(false)">
-      <div class="bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-xl p-5 w-80 shadow-2xl"
-           (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+      <div class="bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-xl p-5 w-80 shadow-2xl">
         <p class="text-sm font-semibold text-light-text dark:text-white/90 mb-1">Insérer un mockup</p>
         <p class="text-[11px] text-light-text-muted dark:text-white/40 mb-3">dans la section courante</p>
         @if (mockupInstances.length === 0) {
@@ -359,10 +355,8 @@
 
   <!-- Popup configuration nouveau Trello -->
   @if (showTrelloPopup()) {
-    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]"
-         (click)="cancelTrelloPopup()">
-      <div class="w-80 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5"
-           (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+      <div class="w-80 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5">
         <div class="flex items-center gap-2 mb-4">
           <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
             <span class="material-symbols-outlined text-blue-400 text-base">view_kanban</span>
@@ -662,10 +656,8 @@
 
       <!-- Dialog label connexion -->
       @if (mockupConnLabelDialog()) {
-        <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
-             (click)="mockupConnLabelDialog.set(false)">
-          <div class="bg-white dark:bg-background border border-light-border dark:border-white/10 rounded-xl p-6 w-80 shadow-2xl"
-               (click)="$event.stopPropagation()">
+        <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+          <div class="bg-white dark:bg-background border border-light-border dark:border-white/10 rounded-xl p-6 w-80 shadow-2xl">
             <p class="text-sm text-light-text dark:text-white/80 mb-3">Label de la connexion (optionnel)</p>
             <input class="w-full text-sm bg-light-surface dark:bg-white/[0.05] border border-light-border dark:border-white/10 rounded px-3 py-2 text-light-text dark:text-white/80 focus:outline-none focus:border-violet-500/50 mb-3"
                    placeholder="ex: page connectée, flow inscription..."
@@ -708,7 +700,8 @@
                  [class.ed-line--hl-file]="line.highlightKind === 'file'"
                  [class.ed-line--hl-block]="line.inlineBlockId && hoveredHandle?.id === line.inlineBlockId"
                  [class.ed-line--image]="line.isImage"
-                 [class.ed-line--fold]="line.isFold">
+                 [class.ed-line--fold]="line.isFold"
+                 [class.ed-line--pending]="line.isPending">
               <!-- Numéro de ligne -->
               <span class="ed-lnum">{{ $index + 1 }}</span>
               @if (line.isFold) {
@@ -793,7 +786,8 @@
                   class="ed-textarea"
                   spellcheck="false"
                   [value]="unifiedContent"
-                  [readonly]="isActiveSectionUnsynced"
+                  [readonly]="isActiveSectionUnsynced || isActiveSectionLockedByOther"
+                  (beforeinput)="onTextareaBeforeInput($event)"
                   (input)="onTextareaInput($event)"
                   (keydown)="onTextareaKeydown($event)"
                   (scroll)="onTextareaScroll($event)"
@@ -903,6 +897,7 @@
                 <span class="struct-card__badge" [attr.data-level]="node.level">H{{ node.level }}</span>
                 <input class="struct-card__title"
                        [value]="node.title"
+                       [readonly]="isStructNodeLocked(node)"
                        (input)="onStructTitleInput(node, $event)"
                        (blur)="onStructTitleBlur(node, $event)"
                        placeholder="Titre requis"
@@ -954,6 +949,7 @@
                     } @else {
                       <textarea class="struct-card__content"
                                 [value]="seg.value"
+                                [readonly]="isStructNodeLocked(node)"
                                 [rows]="getStructSegmentRows(seg.value)"
                                 (input)="onStructSegmentInput(node, $index, $event)"
                                 placeholder="Contenu de la section…"
@@ -971,6 +967,7 @@
                       <span class="struct-block__badge" title="Document additionnel">{{ block.delimiter }}</span>
                       <input class="struct-block__title"
                              [value]="block.title"
+                             [readonly]="isStructNodeLocked(node)"
                              (input)="onStructBlockTitleInput(node, block, $event)"
                              placeholder="Titre du document"
                              spellcheck="false"
@@ -978,6 +975,7 @@
                     </div>
                     <textarea class="struct-block__content"
                               [value]="block.content"
+                              [readonly]="isStructNodeLocked(node)"
                               [rows]="getStructBlockRows(block)"
                               (input)="onStructBlockContentInput(node, block, $event)"
                               placeholder="Contenu du document…"
@@ -1067,6 +1065,7 @@
                 [instanceId]="tid"
                 [boardName]="trelloInstanceName(tid)"
                 [deletable]="false"
+                [readonly]="isTrelloInstanceLocked(tid)"
                 (cardsChanged)="onTrelloCardsChanged(tid, $event)" />
             </div>
           }
@@ -1215,6 +1214,7 @@
                     [instanceId]="tinst.id"
                     [boardName]="trelloInstanceName(tinst.id)"
                     [deletable]="false"
+                    [readonly]="isTrelloInstanceLocked(tinst.id)"
                     (cardsChanged)="onTrelloCardsChanged(tinst.id, $event)" />
                 </div>
               }
@@ -1283,7 +1283,8 @@
                     [instanceId]="tid"
                     [boardName]="trelloInstanceName(tid)"
                     [sectionName]="trelloSectionName(tid)"
-                    [deletable]="true"
+                    [deletable]="!isTrelloInstanceLocked(tid)"
+                    [readonly]="isTrelloInstanceLocked(tid)"
                     (deleteBoard)="deleteTrelloInstance($event)"
                     (cardsChanged)="onTrelloCardsChanged(tid, $event)" />
                 }
@@ -1311,8 +1312,8 @@
                   <app-array-board
                     [instanceId]="aid"
                     [boardName]="arrayInstanceName(aid)"
-                    [deletable]="true"
-                    [readonly]="mode === 'visu'"
+                    [deletable]="!isArrayInstanceLocked(aid)"
+                    [readonly]="mode === 'visu' || isArrayInstanceLocked(aid)"
                     (deleteBoard)="deleteArrayInstance($event)"
                     (gridChanged)="onArrayGridChanged(aid, $event)" />
                 }

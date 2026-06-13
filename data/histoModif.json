@@ -1,6 +1,168 @@
 {
   "modifications": [
     {
+      "id": "mod-384",
+      "version": "B-0.272",
+      "date": "2026-06-13T23:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : carte ajoutée en Code dupliquée au passage en Structure",
+      "description": "reconcileTrelloCardsFromCode créait une carte depuis le code mais ne mettait pas à jour le cache local trelloCodeCards → au save suivant (cache obsolète), la carte n'était pas vue comme existante et était recréée → doublon visible dans le board. Fix : la réconciliation construit une liste optimiste (newLocal) reflétant le code et met à jour trelloCodeCards (carte temporaire remplacée par la vraie au retour de createTrelloCard). Les doublons déjà en base sont nettoyés au prochain save (carte non matchée par titre = supprimée).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Lorsque je rajoute une task dans le mode Code et que je passe dans le mode Structure la task est doublé",
+      "startedAt": "2026-06-13T22:45:00.000Z",
+      "completedAt": "2026-06-13T23:00:00.000Z"
+    },
+    {
+      "id": "mod-383",
+      "version": "B-0.272",
+      "date": "2026-06-13T22:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Coller un bloc ```TRELLO: ``` : code inchangé + création fichier/instance",
+      "description": "Coller un bloc ```TRELLO: NOM ... ``` en mode Code modifiait le code : le fichier 'TL: NOM' créé n'avait pas d'instance DB → buildDocSections le re-sérialisait en délimiteur 'TL: NOM'. Fix : (1) un fichier 'TL: NOM' est TOUJOURS sérialisé en fence ```TRELLO: NOM (instance optionnelle) → code collé inchangé ; (2) ensureTrelloInstancesFromContent() (dans saveAll) crée l'instance DB pour tout marqueur ```TRELLO: NOM sans instance (résolution folderId via sectionRanges) → fichier sidebar + onglet MO + board. Les cartes du bloc collé alimentent le board via reconcileTrelloCardsFromCode au save suivant.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je colle un code avec les spécifications TRELLO (commence par ```TRELLO: et fini par ```) cela ne doit pas changer le code, mais doit créer le fichier trello.md et l'element dans le menu. Actuellement le code est modifié.",
+      "startedAt": "2026-06-13T22:15:00.000Z",
+      "completedAt": "2026-06-13T22:30:00.000Z"
+    },
+    {
+      "id": "mod-382",
+      "version": "B-0.272",
+      "date": "2026-06-13T22:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "libs"],
+      "features": "projets:editor|popups,libs:mega-outils",
+      "title": "Popups : ne plus fermer au clic sur le backdrop (fermeture via boutons uniquement)",
+      "description": "Conformément à la règle CLAUDE.md, suppression de la fermeture au clic sur le backdrop pour tous les popups : retrait du (click) de fermeture sur l'overlay et du $event.stopPropagation() sur le contenu. Popups concernés : zone éditeur (mockup, liaison mockup, trello, label connexion), liste projets (copie, nouveau), historique (vider), conversation (prompt/contexte/IA info), board trello (modal carte), board mockup (label). La fermeture se fait uniquement via les boutons ✕ / Annuler / validation.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projets/projets.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-history/projet-history.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html",
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "libs/shared/ui/src/lib/mega-outils/mockup/mockup-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je clique en dehors d'un popup, celui ce ferme, enlève cette fonction, lorsqu'on veux fermé le popup on à les boutons ou le bouton fermé",
+      "startedAt": "2026-06-13T21:45:00.000Z",
+      "completedAt": "2026-06-13T22:00:00.000Z"
+    },
+    {
+      "id": "mod-381",
+      "version": "B-0.272",
+      "date": "2026-06-13T21:30:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Suppression des instances Trello orphelines (onglet sans bloc correspondant)",
+      "description": "Un onglet trello (ex: 'Roadmap MVP #1') pouvait subsister dans la barre MO sans bloc/fichier réel (instance orpheline en BDD) → clic affichait juste des listes. cleanupOrphanTrelloInstances() (appelée au chargement, hors focus) construit l'ensemble des noms de trellos représentés (marqueurs ```TRELLO:/## Trello: dans les fichiers + contenu live, fichiers 'TL: NOM' / 'trello') et supprime en BDD toute instance trello non représentée (deleteInstance + megaOutilDeleted). Détection sur this.files (contenu) + contenu live pour éviter de supprimer un trello fraîchement créé.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "ce que tu indique comme un trello n'en n'est pas un mais ce sont des liste → supprimer l'instance orpheline",
+      "startedAt": "2026-06-13T21:10:00.000Z",
+      "completedAt": "2026-06-13T21:30:00.000Z"
+    },
+    {
+      "id": "mod-380",
+      "version": "B-0.272",
+      "date": "2026-06-13T21:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Preview : afficher aussi les trellos au format legacy (board manquant)",
+      "description": "Quand une section contient un trello au format legacy (bloc 'trello / ## Trello: NAME, fichier 'trello') en plus d'un trello au nouveau format (TL: NOM), seul le nouveau s'affichait en Preview. trelloInstancesForVisuSection ne se base plus uniquement sur les fichiers 'TL:' mais inclut toute instance liée à la section par folderId (ou resolveTrelloFolderId), couvrant le legacy. Le board app-trello-board charge ses cartes par instanceId, indépendamment du format markdown. En mode Code, buildDocSections sérialise aussi le fichier legacy 'trello' en fence ```TRELLO: NOM (instance du dossier non déjà prise par un fichier 'TL:', en-tête ## Trello: retiré du corps) → le trello legacy devient visible en Code et migre au format TL: à la prochaine sauvegarde.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "j'ai actuellement 2 tag trello indiqué, le second s'affiche bien mais je ne vois pas le premier trello",
+      "startedAt": "2026-06-13T20:50:00.000Z",
+      "completedAt": "2026-06-13T21:00:00.000Z"
+    },
+    {
+      "id": "mod-379",
+      "version": "B-0.272",
+      "date": "2026-06-13T20:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code",
+      "title": "Zone Code : fond jaune sur la section avec modifications locales non partagées",
+      "description": "Les lignes d'une section (ou fichier additionnel) ayant des modifications locales non partagées (isLocalPending, cadenas jaune) ont désormais un fond jaune dans la zone Code. Ajout du flag MirrorLine.isPending (calculé via pendingHl dans recomputeMirrorLines) + classe .ed-line--pending (placée en dernier pour primer sur le surlignage de sélection bleu/vert). Gère aussi le mode focus (fichier/trello) : si l'entité focusée est pending, tout le contenu affiché est jaune (pas de sectionRange/fileRange mappable en focus fichier).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le background de la section TRELLO doit être en jaune",
+      "startedAt": "2026-06-13T20:30:00.000Z",
+      "completedAt": "2026-06-13T20:45:00.000Z"
+    },
+    {
+      "id": "mod-378",
+      "version": "B-0.272",
+      "date": "2026-06-13T20:15:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|verrou-section",
+      "title": "Verrou : cadenas jaune (mes modifs en attente) vs rouge (autre user) + message partage explicite",
+      "description": "Le cadenas sidebar utilisait la même couleur rouge pour isLocalPending (mes modifications non partagées) et isLockedByOther (verrou d'un autre) → confusion. isLocalPending passe en jaune (text-amber-400), isLockedByOther reste rouge. De plus, l'erreur de partage générique masquait la vraie cause : buildPublishErrorMsg() affiche désormais 'Section verrouillée par X — partage impossible' quand le serveur renvoie 423 (la mise à jour de fichier est refusée si un autre utilisateur détient le verrou).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "il est indiqué Modification local non partagé, mais lorsque je veux partagé j'ai un message d'erreur. Lorsque la section est verouillé de mon coté il faudrait le cadenas en jaune et en rouge lorsque c'est un autre utilisateur",
+      "startedAt": "2026-06-13T20:00:00.000Z",
+      "completedAt": "2026-06-13T20:15:00.000Z"
+    },
+    {
+      "id": "mod-377",
+      "version": "B-0.272",
+      "date": "2026-06-13T19:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "libs"],
+      "features": "projets:editor|verrou-section,libs:trello-board",
+      "title": "Section verrouillée (autre user) : tout est en lecture seule (code, trello, array, structure)",
+      "description": "Quand une section est verrouillée par un autre utilisateur (cadenas rouge), plus aucune modification possible. Les verrous étant granulaires (posés sur l'entité contenu.md ou un bloc 'folderId##...', pas sur le folderId), ajout de isFolderLockedByOther(folderId) qui scanne aussi les verrous des entités enfants. Getters isActiveSectionLockedByOther (textarea code readonly), isTrelloInstanceLocked / isArrayInstanceLocked / isStructNodeLocked basés dessus. app-trello-board reçoit un @Input readonly (gardes sur startAdd/submitAdd/startEdit/saveEdit/askDelete/confirmDelete/onDragStart/onDrop, masquage des boutons +Carte/Modifier/Supprimer, drag désactivé). app-array-board readonly + non supprimable si verrouillé. Inputs/textarea de la zone Structure en readonly. insertAt (toolbar/slash) bloqué. Garde (beforeinput) onTextareaBeforeInput/isSelectionInLockedSection : bloque la saisie/collage quand le curseur est dans une section verrouillée même en vue plein-document (pas seulement la section active). Preview déjà géré (contenteditable false).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "quand une section est verouillé (cadenas rouge), on ne doit pas pouvoir écrire et modifié quoi que ce soi dans cette section (code, trello, mockup etc), toute est verouillé dans cette section",
+      "startedAt": "2026-06-13T19:00:00.000Z",
+      "completedAt": "2026-06-13T19:30:00.000Z"
+    },
+    {
       "id": "mod-376",
       "version": "B-0.271",
       "date": "2026-06-13T18:45:00.000Z",

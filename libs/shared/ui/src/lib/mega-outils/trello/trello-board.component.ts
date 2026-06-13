@@ -85,7 +85,7 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
                      [class.ring-1]="expandedCardId() === card.id"
                      [class.ring-light-primary]="expandedCardId() === card.id"
                      [class.dark:ring-primary]="expandedCardId() === card.id"
-                     draggable="true"
+                     [draggable]="!readonly"
                      (dragstart)="onDragStart($event, card)"
                      (click)="toggleExpand(card.id)">
 
@@ -119,20 +119,22 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
                                 (click)="openCard(card)">
                           <span class="material-symbols-outlined text-[10px]">open_in_full</span> Détail
                         </button>
-                        <button class="text-[10px] px-2 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-colors flex items-center gap-1"
-                                (click)="openCardEdit(card)">
-                          <span class="material-symbols-outlined text-[10px]">edit</span> Modifier
-                        </button>
-                        @if (deleteConfirmId() === card.id) {
-                          <button class="text-[10px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 font-semibold hover:bg-red-500/20 transition-colors"
-                                  (click)="confirmDelete(card)">Confirmer</button>
-                          <button class="text-[10px] px-2 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors"
-                                  (click)="cancelDelete()">Annuler</button>
-                        } @else {
-                          <button class="text-[10px] px-2 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-red-400 transition-colors flex items-center gap-1"
-                                  (click)="askDelete(card.id)">
-                            <span class="material-symbols-outlined text-[10px]">delete</span> Supprimer
+                        @if (!readonly) {
+                          <button class="text-[10px] px-2 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-primary dark:hover:text-primary transition-colors flex items-center gap-1"
+                                  (click)="openCardEdit(card)">
+                            <span class="material-symbols-outlined text-[10px]">edit</span> Modifier
                           </button>
+                          @if (deleteConfirmId() === card.id) {
+                            <button class="text-[10px] px-2 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 font-semibold hover:bg-red-500/20 transition-colors"
+                                    (click)="confirmDelete(card)">Confirmer</button>
+                            <button class="text-[10px] px-2 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors"
+                                    (click)="cancelDelete()">Annuler</button>
+                          } @else {
+                            <button class="text-[10px] px-2 py-1 rounded border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/40 hover:text-red-400 transition-colors flex items-center gap-1"
+                                    (click)="askDelete(card.id)">
+                              <span class="material-symbols-outlined text-[10px]">delete</span> Supprimer
+                            </button>
+                          }
                         }
                       </div>
                     </div>
@@ -164,7 +166,7 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
                           (click)="cancelAdd()">Annuler</button>
                 </div>
               </div>
-            } @else {
+            } @else if (!readonly) {
               <button class="flex-shrink-0 w-full flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium text-light-text dark:text-white/70 hover:text-light-primary dark:hover:text-primary transition-colors border-t border-light-border dark:border-white/8 bg-light-surface dark:bg-surface"
                       (click)="startAdd(col)">
                 <span class="material-symbols-outlined text-sm">add</span> Carte
@@ -177,9 +179,8 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
 
       <!-- Popup détail carte -->
       @if (modalCard(); as card) {
-        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" (click)="closeModal()">
-          <div class="w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl border border-light-border dark:border-white/10 bg-light-surface dark:bg-surface shadow-2xl overflow-hidden"
-               (click)="$event.stopPropagation()">
+        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
+          <div class="w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl border border-light-border dark:border-white/10 bg-light-surface dark:bg-surface shadow-2xl overflow-hidden">
 
             <!-- Header -->
             <div class="flex items-start gap-2 px-4 py-3 border-b border-light-border dark:border-white/8 flex-shrink-0">
@@ -269,6 +270,8 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   @Input() boardName  = 'Trello';
   @Input() sectionName = '';
   @Input() deletable  = false;
+  /** Lecture seule : aucune création/édition/suppression/déplacement de carte possible. */
+  @Input() readonly   = false;
   @Output() deleteBoard  = new EventEmitter<string>();
   @Output() cardsChanged = new EventEmitter<TrelloCard[]>();
 
@@ -349,6 +352,7 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   // ── Add ──────────────────────────────────────────────────────────────────
 
   startAdd(col: TrelloStatus) {
+    if (this.readonly) return;
     this.addingInColumn.set(col);
     this.addForm = { title: '', description: '', status: col, priority: 'medium' };
   }
@@ -356,6 +360,7 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   cancelAdd() { this.addingInColumn.set(null); }
 
   async submitAdd(col: TrelloStatus) {
+    if (this.readonly) return;
     if (!this.addForm.title.trim()) return;
     const card = await this.svc.createTrelloCard(this.instanceId, {
       title: this.addForm.title.trim(),
@@ -371,6 +376,7 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   // ── Edit ─────────────────────────────────────────────────────────────────
 
   startEdit(card: TrelloCard) {
+    if (this.readonly) return;
     this.editCardId.set(card.id);
     this.editForm = { title: card.title, description: card.description || '', status: card.status, priority: card.priority };
   }
@@ -378,6 +384,7 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   cancelEdit() { this.editCardId.set(null); }
 
   async saveEdit(card: TrelloCard) {
+    if (this.readonly) return;
     const updated = await this.svc.updateTrelloCard(this.instanceId, card.id, {
       title: this.editForm.title.trim() || card.title,
       description: this.editForm.description.trim() || undefined,
@@ -415,10 +422,11 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
     this.deleteConfirmId.set(null);
   }
 
-  askDelete(id: string)    { this.deleteConfirmId.set(id); }
+  askDelete(id: string)    { if (this.readonly) return; this.deleteConfirmId.set(id); }
   cancelDelete()           { this.deleteConfirmId.set(null); }
 
   async confirmDelete(card: TrelloCard) {
+    if (this.readonly) return;
     await this.svc.deleteTrelloCard(this.instanceId, card.id);
     this.cards.update(cs => cs.filter(c => c.id !== card.id));
     this.deleteConfirmId.set(null);
@@ -432,13 +440,15 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   private draggedCardId: string | null = null;
 
   onDragStart(e: DragEvent, card: TrelloCard) {
+    if (this.readonly) { e.preventDefault(); return; }
     this.draggedCardId = card.id;
     e.dataTransfer?.setData('text/plain', card.id);
   }
 
-  onDragOver(e: DragEvent, _col: TrelloStatus) { e.preventDefault(); }
+  onDragOver(e: DragEvent, _col: TrelloStatus) { if (!this.readonly) e.preventDefault(); }
 
   async onDrop(e: DragEvent, col: TrelloStatus) {
+    if (this.readonly) return;
     e.preventDefault();
     const id = this.draggedCardId || e.dataTransfer?.getData('text/plain');
     if (!id) return;
