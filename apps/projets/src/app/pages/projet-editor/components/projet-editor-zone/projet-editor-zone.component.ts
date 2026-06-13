@@ -829,35 +829,31 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return this.trelloSections()[id]?.name ?? '';
   }
 
-  /** Clic sur un onglet Mega-outils : sélectionne l'instance et navigue vers sa section. */
-  selectMegaOutil(inst: MegaOutilInstance) {
-    this.megaOutilSelect.emit(inst);
-    const folderId = inst.type === 'mockup'
-      ? this.resolveMockupFolderId(inst.id)
-      : this.resolveTrelloFolderId(inst.id);
-    if (folderId) this.trelloNavigate.emit(folderId);
-    if (inst.type === 'trello' && this.mode === 'edit') {
-      setTimeout(() => this.scrollToTrelloBlock(inst.id), 50);
-    }
+  /** Id du fichier (nœud sidebar "TL: NOM") d'une instance Trello. */
+  private trelloFileId(inst: MegaOutilInstance, folderId: string | null): string | null {
+    if (!folderId) return null;
+    const folderNode = this.findNode(folderId, this.files);
+    const fileNode = folderNode?.children?.find(
+      c => c.type === 'file' && this.slugify(c.name.replace(/\.md$/, '').replace(/^TL:\s*/i, '')) === this.slugify(inst.name)
+    );
+    return fileNode?.id ?? null;
   }
 
-  /** En mode Code, sélectionne le bloc ```TRELLO: NAME dans la textarea et scrolle dessus. */
-  private scrollToTrelloBlock(instId: string) {
-    const name = this.trelloInstanceName(instId);
-    const openMarker = `\`\`\`TRELLO: ${name}`;
-    const content = this.unifiedContent;
-    const start = content.indexOf(openMarker);
-    if (start < 0) return;
-    const afterOpen = content.indexOf('\n', start);
-    const closeIdx = afterOpen >= 0 ? content.indexOf('\n```', afterOpen) : -1;
-    const blockEnd = closeIdx >= 0 ? closeIdx + 4 : content.length;
-    const ta = this.textareaRef?.nativeElement;
-    if (!ta) return;
-    const linesBefore = content.substring(0, start).split('\n').length - 1;
-    const totalLines = content.split('\n').length;
-    ta.scrollTop = (linesBefore / totalLines) * ta.scrollHeight;
-    ta.focus();
-    ta.setSelectionRange(start, blockEnd);
+  /** Clic sur un onglet Mega-outils : sélectionne l'instance et navigue vers son élément. */
+  selectMegaOutil(inst: MegaOutilInstance) {
+    this.megaOutilSelect.emit(inst);
+    if (inst.type === 'mockup') {
+      const fid = this.resolveMockupFolderId(inst.id);
+      if (fid) this.trelloNavigate.emit(fid);
+      return;
+    }
+    // Trello : en mode édition, focuser sur le fichier Trello (sa seule section) ; sinon la section.
+    const folderId = this.resolveTrelloFolderId(inst.id);
+    if (this.mode === 'edit') {
+      const fileId = this.trelloFileId(inst, folderId);
+      if (fileId) { this.trelloNavigate.emit(fileId); return; }
+    }
+    if (folderId) this.trelloNavigate.emit(folderId);
   }
 
   private resolveMockupFolderId(instId: string): string | null {
@@ -941,10 +937,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
             textContent += child.content.trimEnd() + '\n';
           }
         } else {
-          // Fichier Trello (lié à une instance trello de cette section) → sérialiser en fence ```TRELLO: NOM
+          // Fichier Trello (préfixe "TL: ", lié à une instance) → sérialiser en fence ```TRELLO: NOM
           const childBase = child.name.replace(/\.md$/, '');
+          const trelloBaseName = childBase.replace(/^TL:\s*/i, '');
           const trelloInst = this.trelloInstances.find(
-            t => t.folderId === node.id && this.slugify(t.name) === this.slugify(childBase)
+            t => t.folderId === node.id && this.slugify(t.name) === this.slugify(trelloBaseName)
           );
           if (trelloInst) {
             const body = (child.content || '').trim();
@@ -1156,6 +1153,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
       let i = r.lineStart + 1;
       while (i <= r.lineEnd) {
+        // Bloc Trello : ```TRELLO: NOM ... ``` → plage du fichier "TL: NOM"
+        const tm = /^```(?:## Trello:|TRELLO:) (.+)$/.exec(lines[i].trim());
+        if (tm) {
+          const tname = tm[1].trim();
+          let endLine = -1;
+          for (let j = i + 1; j <= r.lineEnd; j++) {
+            if (lines[j].trim() === '```') { endLine = j; break; }
+          }
+          if (endLine !== -1) {
+            const fileNode = additionalFiles.find(f =>
+              this.slugify(f.name.replace(/\.md$/, '').replace(/^TL:\s*/i, '')) === this.slugify(tname)
+            );
+            if (fileNode) {
+              this.fileRanges.push({ fileId: fileNode.id, lineStart: i, lineEnd: endLine });
+            }
+            i = endLine + 1;
+            continue;
+          }
+        }
         const m = /^(['`^])(.+)$/.exec(lines[i]);
         if (m && !lines[i].startsWith('```')) {
           const delim = m[1];
@@ -3024,7 +3040,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         // limitée aux changements structurels ; ici la simple suppression du fence ne l'est pas).
         const folderNode = inst.folderId ? this.findNode(inst.folderId, this.files) : null;
         const fileNode = folderNode?.children?.find(
-          c => c.type === 'file' && this.slugify(c.name.replace(/\.md$/, '')) === this.slugify(inst.name)
+          c => c.type === 'file' && this.slugify(c.name.replace(/\.md$/, '').replace(/^TL:\s*/i, '')) === this.slugify(inst.name)
         );
         if (fileNode && this.projectName) {
           this.svc.deleteFile(this.projectName, fileNode.id).catch(() => {});
@@ -3182,7 +3198,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Extraire les fences Trello (```TRELLO: NOM ... ```) comme fichiers additionnels système 'trello'
       const trelloFenceRe = /^```(?:## Trello:|TRELLO:) (.+)\n([\s\S]*?)```(?=\n|$)/gm;
       spacedContent = spacedContent.replace(trelloFenceRe, (match: string, title: string, content: string, offset: number) => {
-        const afName = title.trim();
+        // Le fichier/nœud sidebar est préfixé "TL: " (le fence code reste ```TRELLO: NOM)
+        const afName = 'TL: ' + title.trim();
         const af: AdditionalFile = { name: afName, content: (content || '').replace(/\n$/, '').trimEnd(), fileId: null, orderedChildIds: [] };
         const found = info?.files.find(f => this.slugify(f.name.replace(/\.md$/, '')) === this.slugify(af.name));
         if (found) {

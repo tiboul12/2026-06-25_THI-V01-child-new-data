@@ -1,6 +1,46 @@
 {
   "modifications": [
     {
+      "id": "mod-371",
+      "version": "B-0.269",
+      "date": "2026-06-13T15:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : clic sur le nœud/onglet → focus sur la seule section du trello",
+      "description": "Le bloc ```TRELLO: NOM est traité comme un élément à part entière : recomputeRanges crée une fileRange (mappée au fichier TL: NOM) pour le fence → un handle 'file' existe. Cliquer sur le nœud sidebar 'TL: NOM' met la zone 4 en mode focus sur le seul bloc Trello. selectMegaOutil (clic onglet MO) émet désormais l'id du fichier Trello (en mode édition) → même focus. Suppression de scrollToTrelloBlock (remplacé par le focus). Helper trelloFileId.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le trello est un element en lui même et lorsqu'on clique dessus dans le menu, dans la zone 4 edition on ne doit avoir que la section du trello selectionné, idem lorsqu'on clique sur le tag du trello",
+      "startedAt": "2026-06-13T15:25:00.000Z",
+      "completedAt": "2026-06-13T15:45:00.000Z"
+    },
+    {
+      "id": "mod-370",
+      "version": "B-0.269",
+      "date": "2026-06-13T15:15:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : nœud sidebar affiché sous la forme 'TL: NOM_DU_TRELLO'",
+      "description": "Le fichier/nœud sidebar d'un Trello est désormais nommé 'TL: NOM' (le fence code reste ```TRELLO: NOM). parseContent préfixe l'AdditionalFile par 'TL: ' ; buildDocSections retire le préfixe pour matcher l'instance et re-sérialiser le fence ; reconcileTrelloLifecycle retrouve le fichier en ignorant le préfixe à la suppression.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le nom de l'element TRELLO affiché dans le menu doit être sous la forme \"TL: NOM_DU_TRELLO\"",
+      "startedAt": "2026-06-13T15:05:00.000Z",
+      "completedAt": "2026-06-13T15:15:00.000Z"
+    },
+    {
       "id": "mod-369",
       "version": "B-0.268",
       "date": "2026-06-13T14:45:00.000Z",
