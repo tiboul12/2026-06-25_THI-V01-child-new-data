@@ -919,7 +919,14 @@
               @if (structNodeShowText(node)) {
                 <div class="struct-card__body">
                   @for (seg of getStructBodySegments(node.textContent); track $index) {
-                    @if (seg.type === 'mockup') {
+                    @if (seg.type === 'trello') {
+                      <div class="struct-body-mockup-line">
+                        <span class="ed-mockup-card" style="border-color:rgba(59,130,246,.35);color:#60a5fa">
+                          <span class="material-symbols-outlined ed-img-icon" style="color:#60a5fa">view_kanban</span>
+                          <span class="ed-mockup-card__label">TRELLO : {{ seg.trelloName }}</span>
+                        </span>
+                      </div>
+                    } @else if (seg.type === 'mockup') {
                       <div class="struct-body-mockup-line">
                         <span class="ed-mockup-card"
                               (click)="selectMockupFromMarker(seg.mockupId)">
@@ -1232,7 +1239,7 @@
     }
 
     <!-- Zone basse : tous les boards (Trello, Array, Mockup) dans un container scrollable -->
-    @if (contentTrelloIds.length > 0 || (contentArrayIds.length > 0 && mode !== 'edit') || (contentMockupIds.length > 0 && mode !== 'edit')) {
+    @if ((contentTrelloIds.length > 0 && mode !== 'edit') || (contentArrayIds.length > 0 && mode !== 'edit') || (contentMockupIds.length > 0 && mode !== 'edit')) {
       <div class="ed-panels-zone">
 
         @if (contentTrelloIds.length > 0) {
@@ -1264,7 +1271,7 @@
           </div>
         }
 
-        @if (contentArrayIds.length > 0 && mode !== 'edit') {
+        @if (contentArrayIds.length > 0) {
           <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="arrayPanelCollapsed()">
             <div class="ed-trello-panel__head">
               <span class="material-symbols-outlined" style="color:#a3e635;font-size:16px">table</span>
@@ -1293,7 +1300,7 @@
           </div>
         }
 
-        @if (contentMockupIds.length > 0 && mode !== 'edit') {
+        @if (contentMockupIds.length > 0) {
           <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="mockupPanelCollapsed()">
             <div class="ed-trello-panel__head">
               <span class="material-symbols-outlined" style="color:#a78bfa">design_services</span>

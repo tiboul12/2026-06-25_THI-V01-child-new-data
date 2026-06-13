@@ -1,6 +1,84 @@
 {
   "modifications": [
     {
+      "id": "mod-375",
+      "version": "B-0.270",
+      "date": "2026-06-13T18:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : en Structure, board affiché seulement pour la section/élément sélectionné",
+      "description": "Avant, en mode Structure tous les boards s'affichaient. Désormais recomputeContentTrelloIds scope à la section active dans TOUS les modes (résolution fichier→dossier parent via resolveActiveFolderId). Le board n'apparaît que quand on clique sur une section possédant un trello ou sur un élément trello dans le menu. Le changement d'activeNodeId hors mode Code recalcule contentTrelloIds (applyFocusByActiveNode ne s'exécute pas hors edit).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Un trello est lié à une section dans le menu, dans le mode structure on ne voi la vue trello que lorsqu'on clique sur une section qui possède un trello ou sur un element trello.",
+      "startedAt": "2026-06-13T17:45:00.000Z",
+      "completedAt": "2026-06-13T18:00:00.000Z"
+    },
+    {
+      "id": "mod-374",
+      "version": "B-0.270",
+      "date": "2026-06-13T17:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : description de la carte affichée dans le code (round-trip)",
+      "description": "La description d'une carte est désormais affichée dans le code sous la carte, en lignes indentées (2 espaces). trelloCardCodeText l'ajoute ; parseTrelloBodyCards capture les lignes de continuation comme description ; reconcileTrelloCardsFromCode met à jour/crée la description en base. Round-trip complet board ↔ code pour la description.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode code on voi bien la task mais il manque la description",
+      "startedAt": "2026-06-13T17:20:00.000Z",
+      "completedAt": "2026-06-13T17:30:00.000Z"
+    },
+    {
+      "id": "mod-373",
+      "version": "B-0.270",
+      "date": "2026-06-13T17:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : ajout de carte en mode Structure met bien à jour le code",
+      "description": "Bug : ajouter une carte dans le board en mode Structure ne mettait pas à jour le code. Causes : (1) syncTrelloInlineBlock met à jour unifiedContent mais structureNodes gardait l'ancien bloc vide ; au changement de mode, flushStructureNodes reconstruit unifiedContent depuis structureNodes et écrasait la MAJ ; (2) syncTrelloInlineBlock dépendait de contentTrelloIds (potentiellement obsolète/vide selon le mode). Fix : (1) en mode Structure, onTrelloCardsChanged flush puis re-parse structureNodes après syncTrelloInlineBlock ; (2) syncTrelloInlineBlock met désormais à jour toute instance dont le marqueur est présent dans unifiedContent ET dont les cartes sont chargées, indépendamment de contentTrelloIds.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Lorsque je rajoute une task dans le trello créé Le code doit automatiquement être mis à jour",
+      "startedAt": "2026-06-13T16:40:00.000Z",
+      "completedAt": "2026-06-13T17:00:00.000Z"
+    },
+    {
+      "id": "mod-372",
+      "version": "B-0.270",
+      "date": "2026-06-13T16:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : board masqué en Code, affiché en Structure avec tag graphique",
+      "description": "1) Le panneau board (app-trello-board) n'est plus affiché en mode Code (edit) — condition gated mode !== 'edit' comme array/mockup ; affiché en Structure/Preview. 2) recomputeContentTrelloIds dérive les ids de TOUT le contenu en mode non-edit (et de la section active en edit). 3) En mode Structure, le code brut du fence est remplacé par un tag graphique 'TRELLO : NOM' : getStructBodySegments émet un segment type 'trello' (bloc complet préservé dans value, non éditable), rendu en chip bleu. parseStructureNodes exclut les ### internes du fence de la détection de headings.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode Code l'affichage de la view ne doit pas être présente. Celui ci doit être présent dans le mode Structure. Dans le mode structure on ne doit pas avoir le code du trello qui doit être remplacer par un tag graphique TRELLO : NOM_TRELLO",
+      "startedAt": "2026-06-13T16:00:00.000Z",
+      "completedAt": "2026-06-13T16:30:00.000Z"
+    },
+    {
       "id": "mod-371",
       "version": "B-0.269",
       "date": "2026-06-13T15:45:00.000Z",

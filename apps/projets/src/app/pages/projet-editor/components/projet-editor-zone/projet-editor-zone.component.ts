@@ -598,6 +598,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (changes['activeNodeId']) {
       this.recomputeHighlights();
       this.applyFocusByActiveNode();
+      // Hors mode Code, le board suit la section active (applyFocusByActiveNode ne fait rien) :
+      // recalculer les ids selon la nouvelle sélection.
+      if (this.mode !== 'edit') {
+        this.recomputeContentTrelloIds();
+        this.recomputeContentMockupIds();
+        this.recomputeContentArrayIds();
+      }
       // En mode visu, la liste filteredVisuSections change → réinjecter le innerHTML
       // dans les nouveaux éléments (sinon ils restent vides après navigation menu)
       if (this.mode === 'visu') {
@@ -684,7 +691,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const cb: Record<TrelloStatus, string> = { 'todo': '[ ]', 'in-progress': '[~]', 'done': '[x]', 'blocked': '[!]' };
     const priority = TRELLO_PRIORITY_LABELS[card.priority] || card.priority;
     const date = new Date(card.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
-    return `- ${cb[card.status]} ${card.title} \`[${priority}]\` — ${card.creatorName || 'admin'} · ${date}`;
+    let line = `- ${cb[card.status]} ${card.title} \`[${priority}]\` — ${card.creatorName || 'admin'} · ${date}`;
+    // Description : lignes indentées (2 espaces) sous la carte
+    if (card.description?.trim()) {
+      line += '\n' + card.description.trim().split('\n').map(l => '  ' + l).join('\n');
+    }
+    return line;
   }
 
   /** Retourne du HTML safe (syntaxe surlignée) pour une ligne texte. */
@@ -698,12 +710,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
    * Gère aussi la migration de l'ancienne syntaxe ```## Trello: NAME vers ```TRELLO: NAME.
    */
   private syncTrelloInlineBlock() {
-    if (!this.contentTrelloIds.length) return;
     const cards = this.trelloCodeCards();
+    // Toute instance dont le marqueur est présent dans le contenu ET dont les cartes sont
+    // chargées (indépendant de contentTrelloIds / du mode courant).
+    const ids = this.trelloInstances
+      .filter(i => i.id in cards && this.contentHasTrelloMarker(this.unifiedContent, i.name))
+      .map(i => i.id);
+    if (!ids.length) return;
     let newContent = this.unifiedContent;
     let changed = false;
 
-    for (const id of this.contentTrelloIds) {
+    for (const id of ids) {
       const name = this.trelloInstanceName(id);
       const boardCards = cards[id] || [];
 
@@ -759,7 +776,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
     this.trelloCodeCards.set(merged);
     // Mise à jour auto du bloc inline uniquement si l'utilisateur l'a activée.
-    if (this.trelloAutoSync()) this.syncTrelloInlineBlock();
+    if (this.trelloAutoSync()) {
+      // En mode Structure : flush des éditions en cours vers unifiedContent, puis
+      // re-parse des nœuds pour que le bloc mis à jour ne soit pas écrasé au flush suivant.
+      if (this.mode === 'structure') { clearTimeout(this.structFlushTimeout); this.flushStructureNodes(); }
+      this.syncTrelloInlineBlock();
+      if (this.mode === 'structure') this.structureNodes = this.parseStructureNodes();
+    }
   }
 
   private async loadTrelloListCounts() {
@@ -1430,13 +1453,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.recomputeContentArrayIds();
   }
 
+  /** Résout le folderId de la section active (l'id actif peut être un dossier ou un fichier). */
+  private resolveActiveFolderId(id: string | null): string | null {
+    if (!id) return null;
+    if (this.sectionRanges.some(r => r.folderId === id)) return id;
+    return this.findParentFolder(id, this.files)?.id ?? null;
+  }
+
   /** Ids Trello dont le marqueur ```TRELLO: NOM est présent dans la section active (le code est la source de vérité). */
   private recomputeContentTrelloIds() {
-    const activeFolderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
+    const activeFolderId = this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null);
 
-    // Texte live de la section active
+    // Dans tous les modes : on ne considère que la section active (board affiché uniquement
+    // quand une section/élément Trello est sélectionné).
     let sectionText = '';
-    if (this.focusedHandle) {
+    if (this.focusedHandle && this.mode === 'edit') {
       sectionText = this.unifiedContent;
     } else if (activeFolderId) {
       const sr = this.sectionRanges.find(r => r.folderId === activeFolderId);
@@ -3071,22 +3102,32 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return 'medium';
   }
 
-  /** Parse le corps d'un bloc Trello en liste de cartes {status, title, priority}. */
-  private parseTrelloBodyCards(body: string): { status: TrelloStatus; title: string; priority: TrelloPriority }[] {
-    const out: { status: TrelloStatus; title: string; priority: TrelloPriority }[] = [];
+  /** Parse le corps d'un bloc Trello en liste de cartes {status, title, priority, description}. */
+  private parseTrelloBodyCards(body: string): { status: TrelloStatus; title: string; priority: TrelloPriority; description: string }[] {
+    const out: { status: TrelloStatus; title: string; priority: TrelloPriority; description: string }[] = [];
     let status: TrelloStatus = 'todo';
+    let current: { status: TrelloStatus; title: string; priority: TrelloPriority; description: string } | null = null;
+    const descBuf: string[] = [];
+    const flushDesc = () => { if (current) current.description = descBuf.join('\n').trim(); descBuf.length = 0; };
     for (const raw of body.split('\n')) {
       const line = raw.trim();
       const h = /^###\s+(.+)$/.exec(line);
-      if (h) { status = this.trelloLabelToStatus(h[1]) ?? status; continue; }
+      if (h) { flushDesc(); current = null; status = this.trelloLabelToStatus(h[1]) ?? status; continue; }
       const c = /^-\s*\[[ x~!]?\]\s*(.*)$/.exec(line);
-      if (!c) continue;
-      const rest = c[1];
-      const pm = /`\[([^\]]+)\]`/.exec(rest);
-      const priority = pm ? this.trelloLabelToPriority(pm[1]) : 'medium';
-      const title = rest.replace(/\s*`\[[^\]]+\]`.*$/, '').replace(/\s+—\s+.*$/, '').trim();
-      if (title) out.push({ status, title, priority });
+      if (c) {
+        flushDesc();
+        const rest = c[1];
+        const pm = /`\[([^\]]+)\]`/.exec(rest);
+        const priority = pm ? this.trelloLabelToPriority(pm[1]) : 'medium';
+        const title = rest.replace(/\s*`\[[^\]]+\]`.*$/, '').replace(/\s+—\s+.*$/, '').trim();
+        if (title) { current = { status, title, priority, description: '' }; out.push(current); }
+        else current = null;
+        continue;
+      }
+      // Ligne de continuation non vide → description de la carte courante
+      if (current && line) descBuf.push(line);
     }
+    flushDesc();
     return out;
   }
 
@@ -3108,11 +3149,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         const match = dbCards.find(d => !usedDb.has(d.id) && d.title.trim().toLowerCase() === p.title.toLowerCase());
         if (match) {
           usedDb.add(match.id);
-          if (match.status !== p.status || match.priority !== p.priority) {
-            this.megaOutilsSvc.updateTrelloCard(inst.id, match.id, { status: p.status, priority: p.priority }).catch(() => {});
+          if (match.status !== p.status || match.priority !== p.priority || (match.description || '').trim() !== p.description) {
+            this.megaOutilsSvc.updateTrelloCard(inst.id, match.id, { status: p.status, priority: p.priority, description: p.description || undefined }).catch(() => {});
           }
         } else {
-          this.megaOutilsSvc.createTrelloCard(inst.id, { title: p.title, status: p.status, priority: p.priority }).catch(() => {});
+          this.megaOutilsSvc.createTrelloCard(inst.id, { title: p.title, status: p.status, priority: p.priority, description: p.description || undefined }).catch(() => {});
         }
       }
       // Cartes en BDD absentes du code → supprimées
@@ -5536,6 +5577,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         bInBlock = false;
       }
     }
+    // Plages des fences Trello (```TRELLO: NOM ... ```) : exclure leurs ### internes de la détection de headings
+    for (let i = 0; i < lines.length; i++) {
+      if (/^```(?:## Trello:|TRELLO:) /.test(lines[i].trim())) {
+        for (let j = i + 1; j < lines.length; j++) {
+          if (lines[j].trim() === '```') { blockLineRanges.push([i, j]); i = j; break; }
+        }
+      }
+    }
     const isInsideBlock = (i: number) => blockLineRanges.some(([s, e]) => i > s && i < e);
 
     let currentLevel = 0;
@@ -5683,27 +5732,42 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return Math.max(2, Math.min(node.textContent.split('\n').length + 1, 25));
   }
 
-  getStructBodySegments(textContent: string): Array<{ type: 'text' | 'mockup' | 'image'; value: string; mockupId: string; imageId: string; imageName: string }> {
+  getStructBodySegments(textContent: string): Array<{ type: 'text' | 'mockup' | 'image' | 'trello'; value: string; mockupId: string; imageId: string; imageName: string; trelloName: string }> {
     const lines = textContent.split('\n');
-    const result: Array<{ type: 'text' | 'mockup' | 'image'; value: string; mockupId: string; imageId: string; imageName: string }> = [];
+    const result: Array<{ type: 'text' | 'mockup' | 'image' | 'trello'; value: string; mockupId: string; imageId: string; imageName: string; trelloName: string }> = [];
     const textBuf: string[] = [];
-    for (const line of lines) {
+    const flushText = () => {
+      const v = textBuf.join('\n');
+      // On ne pousse un segment texte que s'il a du contenu (évite les zones vides autour des tags)
+      if (v.trim()) result.push({ type: 'text', value: v, mockupId: '', imageId: '', imageName: '', trelloName: '' });
+      textBuf.length = 0;
+    };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Bloc Trello : ```TRELLO: NOM ... ``` → tag graphique (bloc complet préservé dans value)
+      const trelloM = /^```(?:## Trello:|TRELLO:) (.+)$/.exec(line.trim());
+      if (trelloM) {
+        let end = i;
+        for (let j = i + 1; j < lines.length; j++) { if (lines[j].trim() === '```') { end = j; break; } }
+        flushText();
+        result.push({ type: 'trello', value: lines.slice(i, end + 1).join('\n'), mockupId: '', imageId: '', imageName: '', trelloName: trelloM[1].trim() });
+        i = end;
+        continue;
+      }
       const mockupM = /^\{\{MOCKUP:([a-zA-Z0-9-]+)(?:\|[^}]*)?\}\}\s*$/.exec(line.trim());
       const imgM = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}\s*$/i.exec(line.trim());
       if (mockupM) {
-        result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '', imageId: '', imageName: '' });
-        textBuf.length = 0;
-        result.push({ type: 'mockup', value: line.trim(), mockupId: mockupM[1], imageId: '', imageName: '' });
+        flushText();
+        result.push({ type: 'mockup', value: line.trim(), mockupId: mockupM[1], imageId: '', imageName: '', trelloName: '' });
       } else if (imgM) {
-        result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '', imageId: '', imageName: '' });
-        textBuf.length = 0;
+        flushText();
         const img = this.allImages.find(im => im.id === imgM[1]);
-        result.push({ type: 'image', value: line.trim(), mockupId: '', imageId: imgM[1], imageName: img?.name || '' });
+        result.push({ type: 'image', value: line.trim(), mockupId: '', imageId: imgM[1], imageName: img?.name || '', trelloName: '' });
       } else {
         textBuf.push(line);
       }
     }
-    result.push({ type: 'text', value: textBuf.join('\n'), mockupId: '', imageId: '', imageName: '' });
+    flushText();
     return result;
   }
 
