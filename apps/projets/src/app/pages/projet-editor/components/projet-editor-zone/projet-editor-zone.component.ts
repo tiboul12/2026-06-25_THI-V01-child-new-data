@@ -291,6 +291,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // des instances legacy : on ne supprime une instance que si SON marqueur, présent auparavant,
   // a disparu/été corrompu).
   private seenTrelloMarkers = new Set<string>();
+  private seenArrayMarkers = new Set<string>();
 
   // Popup de configuration d'un nouveau Mockup
   showMockupPopup = signal(false);
@@ -609,8 +610,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Amorcer le suivi des marqueurs Trello présents au chargement (pour détecter
       // ensuite une suppression/corruption même sans sauvegarde intermédiaire).
       this.seedSeenTrelloMarkers(this.focusedHandle ? this.fullContentBackup : this.unifiedContent);
-      // Nettoyage des instances Trello orphelines (sans bloc/fichier correspondant)
-      if (!this.focusedHandle) this.cleanupOrphanTrelloInstances();
+      // Nettoyage des instances Trello/Array orphelines (sans bloc/fichier correspondant)
+      if (!this.focusedHandle) { this.cleanupOrphanTrelloInstances(); this.cleanupOrphanArrayInstances(); }
       // Nettoyer les marqueurs {{TRELLO:...}} du contenu (approche DB-only)
       const trelloStripped = !this.focusedHandle && this.stripTrelloMarkersFromUnifiedContent();
       // Supprimer les marqueurs {{MOCKUP:id}} dupliqués
@@ -630,8 +631,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (changes['activeNodeId']) {
       this.recomputeHighlights();
       this.applyFocusByActiveNode();
-      // Ouverture de section : synchroniser bloc Trello ↔ fichier trello-NOM.
-      setTimeout(() => this.healTrelloSectionOnOpen(), 60);
+      // Ouverture de section : synchroniser bloc Trello/Array ↔ fichier.
+      setTimeout(() => { this.healTrelloSectionOnOpen(); this.healArraySectionOnOpen(); }, 60);
       // Hors mode Code, le board suit la section active (applyFocusByActiveNode ne fait rien) :
       // recalculer les ids selon la nouvelle sélection.
       if (this.mode !== 'edit') {
@@ -914,6 +915,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (fid) this.trelloNavigate.emit(fid);
       return;
     }
+    if (inst.type === 'array') {
+      // En édition, focuser sur le fichier Array (sa seule section) ; sinon la section.
+      const folderId = inst.folderId ?? null;
+      if (this.mode === 'edit') {
+        const fileId = this.findArrayFileNode(folderId, inst.name)?.id;
+        if (fileId) { this.trelloNavigate.emit(fileId); return; }
+      }
+      if (folderId) this.trelloNavigate.emit(folderId);
+      return;
+    }
     // Trello : en mode édition, focuser sur le fichier Trello (sa seule section) ; sinon la section.
     const folderId = this.resolveTrelloFolderId(inst.id);
     if (this.mode === 'edit') {
@@ -1019,6 +1030,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
               textContent += body
                 ? `\n\`\`\`TRELLO: ${name}\n${body}\n\`\`\`\n`
                 : `\n\`\`\`TRELLO: ${name}\n\`\`\`\n`;
+            }
+          } else if (this.isArrayFileBase(childBase)) {
+            // Fichier Array (array-NOM / legacy "array") → injecter le bloc ```ARRAY: NOM
+            const raw = child.content || '';
+            if (/^\s*```ARRAY:/i.test(raw)) {
+              // Nouveau format : contenu = bloc complet → injecter tel quel
+              textContent += '\n' + raw.trim() + '\n';
+            } else {
+              // Legacy : contenu = grille sérialisée seule → résoudre le nom et envelopper en fence
+              let name = this.arrayNameFromBase(childBase);
+              if (!name) name = this.arrayInstances.find(a => a.folderId === node.id)?.name ?? 'Tableau';
+              const body = raw.trim();
+              textContent += body
+                ? `\n\`\`\`ARRAY: ${name}\n${body}\n\`\`\`\n`
+                : `\n\`\`\`ARRAY: ${name}\n\`\`\`\n`;
             }
           } else {
             // Document additionnel classique
@@ -1246,6 +1272,27 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
               const b = f.name.replace(/\.md$/, '');
               return this.isTrelloFileBase(b) &&
                 (this.slugify(this.trelloNameFromBase(b)) === this.slugify(tname) || this.slugify(b) === 'trello');
+            });
+            if (fileNode) {
+              this.fileRanges.push({ fileId: fileNode.id, lineStart: i, lineEnd: endLine });
+            }
+            i = endLine + 1;
+            continue;
+          }
+        }
+        // Bloc Array : ```ARRAY: NOM ... ``` → plage du fichier "array-NOM"
+        const am = /^```ARRAY: (.+)$/.exec(lines[i].trim());
+        if (am) {
+          const aname = am[1].trim();
+          let endLine = -1;
+          for (let j = i + 1; j <= r.lineEnd; j++) {
+            if (lines[j].trim() === '```') { endLine = j; break; }
+          }
+          if (endLine !== -1) {
+            const fileNode = additionalFiles.find(f => {
+              const b = f.name.replace(/\.md$/, '');
+              return this.isArrayFileBase(b) &&
+                (this.slugify(this.arrayNameFromBase(b)) === this.slugify(aname) || this.slugify(b) === 'array');
             });
             if (fileNode) {
               this.fileRanges.push({ fileId: fileNode.id, lineStart: i, lineEnd: endLine });
@@ -1568,12 +1615,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.contentMockupIds = ids;
   }
 
-  /** Ids Array dont le folderId correspond à la section active. */
+  /** Ids Array dont le marqueur ```ARRAY: NOM est présent dans la section active (le code est la source de vérité). */
   private recomputeContentArrayIds() {
-    const activeFolderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
-    this.contentArrayIds = this.arrayInstances
-      .filter(i => i.folderId === activeFolderId)
-      .map(i => i.id);
+    const activeFolderId = this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null);
+    let sectionText = '';
+    if (this.focusedHandle && this.mode === 'edit') {
+      sectionText = this.unifiedContent;
+    } else if (activeFolderId) {
+      const sr = this.sectionRanges.find(r => r.folderId === activeFolderId);
+      if (sr) sectionText = this.unifiedContent.split('\n').slice(sr.lineStart, sr.lineEnd + 1).join('\n');
+    }
+    const markerLines = sectionText.split('\n').map(l => l.trim());
+    const hasMarker = (name: string) => markerLines.some(l => l === '```ARRAY: ' + name);
+    this.contentArrayIds = this.arrayInstances.filter(i => hasMarker(i.name)).map(i => i.id);
     this.loadArrayGrid();
   }
 
@@ -1666,31 +1720,47 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return result;
   }
 
+  /** Sérialise la grille en table Markdown avec le contenu BRUT des cellules
+   *  (formules =5*2 / =B1+C2 affichées telles quelles, pas le résultat ; styles/dimensions non inclus). */
   private serializeArrayGrid(grid: ArrayGrid): string {
+    const rows = grid.cells || [];
+    const colCount = grid.colCount || (rows.length ? Math.max(...rows.map(r => r.length)) : 0);
+    if (!rows.length || !colCount) return '';
+    const esc = (v: string) => (v ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
     const lines: string[] = [];
-    if (grid.colWidths?.length) lines.push(`cols:${grid.colWidths.join(',')}`);
-    if (grid.rowHeights?.length) lines.push(`rows:${grid.rowHeights.join(',')}`);
-    for (let r = 0; r < grid.cells.length; r++) {
-      for (let c = 0; c < (grid.cells[r]?.length ?? 0); c++) {
-        const cell = grid.cells[r][c];
-        const v = cell?.value ?? '';
-        const s = cell?.style ?? {};
-        const hasStyle = s.bold || s.italic || s.bgColor || s.textColor || (s.align && s.align !== 'left');
-        if (!v && !hasStyle) continue;
-        const ref = this.arrayColLetter(c) + (r + 1);
-        let entry = `${ref}:${v}`;
-        if (s.bold) entry += '|bold';
-        if (s.italic) entry += '|italic';
-        if (s.align && s.align !== 'left') entry += `|${s.align}`;
-        if (s.bgColor) entry += `|bg=${s.bgColor}`;
-        if (s.textColor) entry += `|color=${s.textColor}`;
-        lines.push(entry);
-      }
+    for (let r = 0; r < rows.length; r++) {
+      const cells: string[] = [];
+      for (let c = 0; c < colCount; c++) cells.push(esc(rows[r][c]?.value ?? ''));
+      lines.push('| ' + cells.join(' | ') + ' |');
+      if (r === 0) lines.push('| ' + Array.from({ length: colCount }, () => '---').join(' | ') + ' |');
     }
     return lines.join('\n');
   }
 
+  /** Découpe une ligne de table Markdown "| a | b |" en valeurs (gère le \| échappé). */
+  private splitMarkdownRow(row: string): string[] {
+    const trimmed = row.trim().replace(/^\|/, '').replace(/\|$/, '');
+    return trimmed.split(/(?<!\\)\|/).map(c => c.trim().replace(/\\\|/g, '|'));
+  }
+
   private deserializeArrayGrid(code: string, fallback: ArrayGrid): Partial<ArrayGrid> | null {
+    // Nouveau format : table Markdown (contenu brut). Les styles/dimensions sont conservés depuis fallback.
+    if (code.split('\n').some(l => l.trim().startsWith('|'))) {
+      const rawRows = code.split('\n').filter(l => l.trim().startsWith('|'));
+      const dataRows = rawRows.filter(l => !/^\s*\|(?:\s*:?-{2,}:?\s*\|)+\s*$/.test(l));
+      if (!dataRows.length) return null;
+      const cells = dataRows.map((row, r) => {
+        const vals = this.splitMarkdownRow(row);
+        return vals.map((v, c) => {
+          const style = fallback.cells?.[r]?.[c]?.style;
+          return style ? { value: v, style } : { value: v };
+        });
+      });
+      if (!cells.some(row => row.some(c => c.value))) return null;
+      const colCount = Math.max(...cells.map(r => r.length));
+      const padded = cells.map(r => { while (r.length < colCount) r.push({ value: '' }); return r; });
+      return { cells: padded, colCount, rowCount: padded.length, colWidths: fallback.colWidths, rowHeights: fallback.rowHeights };
+    }
     const lines = code.split('\n');
     let colWidths: number[] | null = null;
     let rowHeights: number[] | null = null;
@@ -1756,29 +1826,28 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   private async saveArrayCsvFile(instanceId: string, grid: ArrayGrid, overrideFolderId?: string) {
     if (!this.projectName || !instanceId) return;
-    const inst = overrideFolderId ? null : this.arrayInstances.find(i => i.id === instanceId);
-    const activeFolderId = overrideFolderId ?? this.focusedHandle?.id ?? this.activeNodeId ?? inst?.folderId ?? null;
+    const inst = this.arrayInstances.find(i => i.id === instanceId);
+    const name = inst?.name ?? 'Tableau';
+    const activeFolderId = overrideFolderId ?? inst?.folderId ?? this.focusedHandle?.id ?? this.activeNodeId ?? null;
     if (!activeFolderId) return;
     const folderNode = this.findNode(activeFolderId, this.files);
     if (!folderNode) return;
 
-    const hasData = grid.cells.some(row => row.some(c => c.value?.trim()));
-    if (!hasData) return;
+    // Contenu du fichier = bloc complet ```ARRAY: NOM\n<grille>\n``` (jamais vide)
+    const gridCode = this.serializeArrayGrid(grid);
+    const fullBlock = gridCode.trim()
+      ? '```ARRAY: ' + name + '\n' + gridCode + '\n```'
+      : '```ARRAY: ' + name + '\n```';
 
-    const newContent = this.serializeArrayGrid(grid);
-    if (!newContent) return;
+    this.lastArrayCodeFromGrid.set(instanceId, fullBlock);
 
-    this.lastArrayCodeFromGrid.set(instanceId, newContent);
-
-    const existingFile = (folderNode.children || []).find(
-      c => c.type === 'file' && c.name === 'array'
-    );
+    const existingFile = this.findArrayFileNode(activeFolderId, name);
 
     try {
       if (existingFile) {
-        if ((existingFile.content ?? '').trim() !== newContent.trim()) {
-          await this.svc.updateFile(this.projectName, existingFile.id, newContent);
-          existingFile.content = newContent;
+        if ((existingFile.content ?? '').trim() !== fullBlock.trim()) {
+          await this.svc.updateFile(this.projectName, existingFile.id, fullBlock);
+          existingFile.content = fullBlock;
           this.docSections = this.buildDocSections(this.files, 1);
           const rebuilt = this.reconstructFromSections();
           if (rebuilt !== this.unifiedContent) {
@@ -1792,9 +1861,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         }
       } else {
         await this.svc.createFile(this.projectName, {
-          name: 'array',
+          name: 'array-' + name,
           parentId: activeFolderId,
-          content: newContent,
+          content: fullBlock,
         });
         this.refresh.emit();
       }
@@ -1807,20 +1876,26 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (this.mode !== 'edit') return;
     for (const sec of sections) {
       if (!sec.folderId) continue;
-      const af = sec.additionalFiles.find(f => f.name === 'array');
+      const af = sec.additionalFiles.find(f => this.isArrayFileBase(f.name.replace(/\.md$/, '')));
       if (!af) continue;
-      const inst = this.arrayInstances.find(i => i.folderId === sec.folderId);
+      const afName = this.arrayNameFromBase(af.name.replace(/\.md$/, ''));
+      const inst = afName
+        ? (this.arrayInstances.find(i => i.folderId === sec.folderId && this.slugify(i.name) === this.slugify(afName))
+           ?? this.arrayInstances.find(i => this.slugify(i.name) === this.slugify(afName)))
+        : this.arrayInstances.find(i => i.folderId === sec.folderId);
       if (!inst) continue;
       // N'agir que si loadArrayGrid() a déjà initialisé la map (évite d'écraser avec un ancien format)
       if (!this.lastArrayCodeFromGrid.has(inst.id)) continue;
-      const currentCode = af.content.trim();
+      const currentFull = af.content.trim();
       const lastKnown = this.lastArrayCodeFromGrid.get(inst.id)!.trim();
-      if (currentCode === lastKnown) continue;
-      // Valider que le contenu est bien au nouveau format (au moins une ligne A1:...)
-      const hasNewFormat = /^[A-Z]+\d+:/m.test(currentCode) || /^cols:/m.test(currentCode) || /^rows:/m.test(currentCode);
+      if (currentFull === lastKnown) continue;
+      // Extraire le corps (grille) du bloc ```ARRAY: NOM\n<grille>\n```
+      const bodyMatch = /```ARRAY: .+\n([\s\S]*?)```/.exec(currentFull);
+      const currentCode = (bodyMatch ? bodyMatch[1] : currentFull).trim();
+      const hasNewFormat = /^\s*\|/m.test(currentCode) || /^[A-Z]+\d+:/m.test(currentCode) || /^cols:/m.test(currentCode) || /^rows:/m.test(currentCode);
       if (!hasNewFormat) continue;
-      // L'utilisateur a modifié le bloc 'array en code → synchroniser vers la grille
-      this.lastArrayCodeFromGrid.set(inst.id, currentCode);
+      // L'utilisateur a modifié le bloc ARRAY en code → synchroniser vers la grille
+      this.lastArrayCodeFromGrid.set(inst.id, currentFull);
       const fallback = this.visuArrayGrids.get(inst.id) ?? { instanceId: inst.id, cells: [], colWidths: [], rowHeights: [], colCount: 3, rowCount: 5, updatedAt: '' };
       const partial = this.deserializeArrayGrid(currentCode, fallback as ArrayGrid);
       if (!partial) continue;
@@ -1832,8 +1907,34 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   async onArrayGridChanged(instanceId: string, grid: ArrayGrid) {
     this.visuArrayGrids.set(instanceId, grid);
-    await this.saveArrayCsvFile(instanceId, grid);
+    // Mettre à jour le bloc inline ```ARRAY: NOM dans le contenu (source de vérité), comme Trello.
+    if (this.mode === 'structure') { clearTimeout(this.structFlushTimeout); this.flushStructureNodes(); }
+    this.syncArrayInlineBlock(instanceId, grid);
+    if (this.mode === 'structure') this.structureNodes = this.parseStructureNodes();
     if (this.mode === 'visu') this.buildVisuSections();
+  }
+
+  /** Met à jour le bloc ```ARRAY: NOM inline dans le contenu à partir de la grille (table Markdown). */
+  private syncArrayInlineBlock(instanceId: string, grid: ArrayGrid) {
+    const inst = this.arrayInstances.find(i => i.id === instanceId);
+    if (!inst) return;
+    const name = inst.name;
+    const gridCode = this.serializeArrayGrid(grid);
+    const newBlock = gridCode.trim()
+      ? '```ARRAY: ' + name + '\n' + gridCode + '\n```'
+      : '```ARRAY: ' + name + '\n```';
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const blockRe = new RegExp('```ARRAY: ' + esc + '\n(?:[\\s\\S]*?\n)?```(?=\\n|$)', 'g');
+    if (!blockRe.test(this.unifiedContent)) return;
+    blockRe.lastIndex = 0;
+    const updated = this.unifiedContent.replace(blockRe, newBlock);
+    if (updated === this.unifiedContent) return;
+    this.unifiedContent = updated;
+    this.lastArrayCodeFromGrid.set(instanceId, newBlock);
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = updated;
+    this.recomputeAll();
+    this.scheduleSave();
   }
 
   async deleteArrayInstance(id: string) {
@@ -1865,6 +1966,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         outilId: this.activeOutilId || undefined,
         folderId,
       });
+      // Insérer le bloc fencé inline dans le contenu (source de vérité)
+      this.insertAt(`\n\n\`\`\`ARRAY: ${name}\n\`\`\`\n\n`, '');
       this.showArrayPopup.set(false);
       this.megaOutilCreated.emit(inst);
     } catch (e) {
@@ -2565,6 +2668,40 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
          ?? this.trelloInstances.find(i => this.slugify(i.name) === this.slugify(trelloName)))?.id ?? null;
   }
 
+  /** Instances Array d'une section (dossier) pour affichage en board dans le Preview. */
+  arrayInstancesForVisuSection(folderId: string): MegaOutilInstance[] {
+    const result: MegaOutilInstance[] = [];
+    for (const inst of this.arrayInstances) {
+      if (inst.folderId === folderId && !result.includes(inst)) result.push(inst);
+    }
+    const folder = this.findNode(folderId, this.files);
+    for (const c of folder?.children || []) {
+      if (c.type !== 'file') continue;
+      const base = c.name.replace(/\.md$/, '');
+      if (!this.isArrayFileBase(base)) continue;
+      const an = this.arrayNameFromBase(base);
+      const inst = an
+        ? this.arrayInstances.find(i => this.slugify(i.name) === this.slugify(an))
+        : this.arrayInstances.find(i => i.folderId === folderId);
+      if (inst && !result.includes(inst)) result.push(inst);
+    }
+    return result;
+  }
+
+  /** En Preview, si le nœud actif est un fichier Array, retourne l'id d'instance à afficher en board. */
+  get previewArrayInstanceId(): string | null {
+    if (this.mode !== 'visu' || !this.activeNodeId) return null;
+    const node = this.findNode(this.activeNodeId, this.files);
+    if (!node || node.type !== 'file') return null;
+    const base = node.name.replace(/\.md$/, '');
+    if (!this.isArrayFileBase(base)) return null;
+    const arrayName = this.arrayNameFromBase(base);
+    const parentId = this.findParentFolder(this.activeNodeId, this.files)?.id;
+    if (!arrayName) return this.arrayInstances.find(i => i.folderId === parentId)?.id ?? null;
+    return (this.arrayInstances.find(i => i.folderId === parentId && this.slugify(i.name) === this.slugify(arrayName))
+         ?? this.arrayInstances.find(i => this.slugify(i.name) === this.slugify(arrayName)))?.id ?? null;
+  }
+
   // Preview standalone d'un document texte (lecture seule)
   get singleFileVisuPreview(): { name: string; html: string } | null {
     if (!this.activeNodeId) return null;
@@ -2572,6 +2709,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (!node || node.type !== 'file') return null;
     if (this.isImageFile(node.name)) return null;
     if (node.name === 'contenu.md') return null;
+    // Fichier Array → rendu par app-array-board (previewArrayInstanceId), pas en markdown
+    if (this.isArrayFileBase(node.name.replace(/\.md$/, ''))) return null;
 
     // Fichier Trello → rendu par app-trello-board (voir previewTrelloInstanceId), pas en markdown
     if (this.isTrelloFileBase(node.name.replace(/\.md$/, ''))) return null;
@@ -3178,6 +3317,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // la modification aux cartes en base (le board se rafraîchit via SSE).
     if (this.trelloAutoSync()) this.reconcileTrelloCardsFromCode(contentToParse);
 
+    // Idem pour les MO Array : cycle de vie + création d'instance pour marqueurs collés.
+    this.reconcileArrayLifecycle(contentToParse);
+    this.ensureArrayInstancesFromContent(this.unifiedContent);
+
     // parseContent() opère sur this.unifiedContent — on substitue temporairement
     const saved = this.unifiedContent;
     this.unifiedContent = contentToParse;
@@ -3224,6 +3367,62 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (const inst of this.trelloInstances) {
       if (this.contentHasTrelloMarker(content, inst.name)) this.seenTrelloMarkers.add(inst.id);
     }
+    for (const inst of this.arrayInstances) {
+      if (content.split('\n').some(l => l.trim() === '```ARRAY: ' + inst.name)) this.seenArrayMarkers.add(inst.id);
+    }
+  }
+
+  /** Supprime les instances Array orphelines (sans bloc ```ARRAY: ni fichier array-NOM). */
+  private cleanupOrphanArrayInstances() {
+    if (!this.hasLoaded || !this.arrayInstances.length) return;
+    const represented = new Set<string>();
+    const re = /^```ARRAY: (.+)$/gim;
+    const scanContent = (content: string) => {
+      let m; re.lastIndex = 0;
+      while ((m = re.exec(content)) !== null) represented.add(this.slugify(m[1].trim()));
+    };
+    const walk = (nodes: FileNode[]) => {
+      for (const n of nodes) {
+        if (n.type === 'file') {
+          const an = this.arrayNameFromBase(n.name.replace(/\.md$/, ''));
+          if (an) represented.add(this.slugify(an));
+          if (n.content) scanContent(n.content);
+        }
+        if (n.children) walk(n.children);
+      }
+    };
+    walk(this.files);
+    scanContent(this.focusedHandle ? this.fullContentBackup : this.unifiedContent);
+    for (const inst of this.arrayInstances) {
+      if (!represented.has(this.slugify(inst.name))) {
+        this.megaOutilsSvc.deleteInstance(inst.id).catch(() => {});
+        this.megaOutilDeleted.emit(inst.id);
+      }
+    }
+  }
+
+  /** À l'ouverture d'une section : si un bloc ```ARRAY: NOM est présent sans fichier array-NOM, crée le fichier. */
+  private healArraySectionOnOpen() {
+    if (this.mode !== 'edit' || !this.hasLoaded) return;
+    const folderId = this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null);
+    if (!folderId) return;
+    let sectionText = '';
+    if (this.focusedHandle) sectionText = this.unifiedContent;
+    else {
+      const sr = this.sectionRanges.find(r => r.folderId === folderId);
+      if (sr) sectionText = this.unifiedContent.split('\n').slice(sr.lineStart, sr.lineEnd + 1).join('\n');
+    }
+    const blockNames = [...sectionText.matchAll(/^```ARRAY: (.+)$/gm)].map(m => m[1].trim());
+    if (!blockNames.length) return;
+    const folder = this.findNode(folderId, this.files);
+    const hasFile = (name: string) => (folder?.children || []).some(c =>
+      c.type === 'file' && this.isArrayFileBase(c.name.replace(/\.md$/, '')) &&
+      this.slugify(this.arrayNameFromBase(c.name.replace(/\.md$/, ''))) === this.slugify(name));
+    if (blockNames.some(n => !hasFile(n))) {
+      this.ensureArrayInstancesFromContent(this.unifiedContent);
+      this.lastSavedContent = '';
+      this.saveAll();
+    }
   }
 
   /** Crée une instance Trello pour chaque marqueur ```TRELLO: NOM du contenu sans instance existante. */
@@ -3249,6 +3448,47 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         this.seenTrelloMarkers.add(inst.id);
         this.megaOutilCreated.emit(inst);
       }).catch(() => {});
+    }
+  }
+
+  /** Crée une instance Array pour chaque marqueur ```ARRAY: NOM du contenu sans instance existante. */
+  private ensureArrayInstancesFromContent(content: string) {
+    if (!this.projectName) return;
+    const lines = content.split('\n');
+    const seen = new Set<string>();
+    for (let i = 0; i < lines.length; i++) {
+      const m = /^```ARRAY: (.+)$/.exec(lines[i].trim());
+      if (!m) continue;
+      const name = m[1].trim();
+      const slug = this.slugify(name);
+      if (seen.has(slug)) continue;
+      seen.add(slug);
+      if (this.arrayInstances.some(a => this.slugify(a.name) === slug)) continue;
+      const sr = this.sectionRanges.find(r => i >= r.lineStart && i <= r.lineEnd);
+      const folderId = sr?.folderId ?? this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null) ?? undefined;
+      this.megaOutilsSvc.createInstance({
+        type: 'array', name, projectId: this.projectName,
+        outilId: this.activeOutilId || undefined, folderId: folderId ?? undefined,
+      }).then(inst => {
+        this.seenArrayMarkers.add(inst.id);
+        this.megaOutilCreated.emit(inst);
+      }).catch(() => {});
+    }
+  }
+
+  /** Supprime les instances Array dont le marqueur, vu auparavant, a disparu/été corrompu. */
+  private reconcileArrayLifecycle(content: string) {
+    const has = (name: string) => content.split('\n').some(l => l.trim() === '```ARRAY: ' + name);
+    for (const inst of this.arrayInstances) {
+      if (has(inst.name)) {
+        this.seenArrayMarkers.add(inst.id);
+      } else if (this.seenArrayMarkers.has(inst.id)) {
+        this.seenArrayMarkers.delete(inst.id);
+        const fileNode = this.findArrayFileNode(inst.folderId ?? null, inst.name);
+        if (fileNode && this.projectName) this.svc.deleteFile(this.projectName, fileNode.id).catch(() => {});
+        this.megaOutilsSvc.deleteInstance(inst.id).catch(() => {});
+        this.megaOutilDeleted.emit(inst.id);
+      }
     }
   }
 
@@ -3499,6 +3739,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         return ' '.repeat(match.length);
       });
 
+      // Extraire les fences Array (```ARRAY: NOM ... ```) comme fichiers physiques "array-NOM"
+      const arrayFenceRe = /^```ARRAY: (.+)\n([\s\S]*?)```(?=\n|$)/gm;
+      spacedContent = spacedContent.replace(arrayFenceRe, (match: string, title: string, content: string, offset: number) => {
+        const name = title.trim();
+        const body = (content || '').replace(/\n+$/, '');
+        const fullBlock = body.trim() ? '```ARRAY: ' + name + '\n' + body + '\n```' : '```ARRAY: ' + name + '\n```';
+        const afName = 'array-' + name;
+        const af: AdditionalFile = { name: afName, content: fullBlock, fileId: null, orderedChildIds: [] };
+        const found = info?.files.find(f => this.slugify(f.name.replace(/\.md$/, '')) === this.slugify(af.name));
+        if (found) {
+          af.fileId = found.id;
+          elements.push({ id: found.id, index: offset });
+        }
+        additionalFiles.push(af);
+        return ' '.repeat(match.length);
+      });
+
       // Extraire les images autonomes
       const imageRegex = /\{\{IMG:([a-zA-Z0-9._-]+)(?:\|[^}]*)?\}\}/gi;
       let imgM: RegExpExecArray | null;
@@ -3511,7 +3768,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Le contenu principal est le rawContent sans les blocs
       // Les marqueurs {{IMG:id}} autonomes (hors blocs doc) sont conservés inline dans mainContent
       // pour préserver leur position exacte dans le texte (ex: entre deux paragraphes)
-      let mainContent = rawContent.replace(blockRegex, '').replace(trelloFenceRe, '').trim();
+      let mainContent = rawContent.replace(blockRegex, '').replace(trelloFenceRe, '').replace(arrayFenceRe, '').trim();
 
       // Déterminer la position du mainFile (contenu.md)
       if (mainFile) {
@@ -3629,6 +3886,31 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     if (/^trello-/i.test(base)) return base.replace(/^trello-/i, '').trim();
     if (/^TL:\s*/i.test(base)) return base.replace(/^TL:\s*/i, '').trim();
     return '';
+  }
+
+  /** True si un nom de fichier (sans .md) désigne un fichier Array : "array" ou "array-NOM". */
+  isArrayFileBase(base: string): boolean {
+    return /^array(-|$)/i.test(base);
+  }
+
+  /** Nom du tableau extrait d'un nom de fichier ("array-NOM" → NOM ; "array" legacy → ''). */
+  arrayNameFromBase(base: string): string {
+    if (/^array-/i.test(base)) return base.replace(/^array-/i, '').trim();
+    return '';
+  }
+
+  /** Nœud fichier Array ("array-NOM" / legacy "array") d'une instance dans un dossier. */
+  private findArrayFileNode(folderId: string | null, instName: string): FileNode | undefined {
+    if (!folderId) return undefined;
+    const folder = this.findNode(folderId, this.files);
+    if (!folder?.children) return undefined;
+    const byName = folder.children.find(c => {
+      if (c.type !== 'file') return false;
+      const b = c.name.replace(/\.md$/, '');
+      return this.isArrayFileBase(b) && this.slugify(this.arrayNameFromBase(b)) === this.slugify(instName);
+    });
+    if (byName) return byName;
+    return folder.children.find(c => c.type === 'file' && this.slugify(c.name.replace(/\.md$/, '')) === 'array');
   }
 
   mockupInstanceName(id: string): string {
@@ -4643,8 +4925,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return `\n\n${token}\n\n`;
     });
 
-    // Bloc Trello (fence) → retiré du HTML (rendu par app-trello-board dans le template)
+    // Blocs Trello / Array (fence) → retirés du HTML (rendus par les composants board dans le template)
     contentMd = contentMd.replace(/^```(?:## Trello:|TRELLO:) (.+)\n([\s\S]*?)```(?=\n|$)/gm, () => '');
+    contentMd = contentMd.replace(/^```ARRAY: (.+)\n([\s\S]*?)```(?=\n|$)/gm, () => '');
 
     // Remplacer les images (placeholders) — supporte {{IMG:id|caption|align|width}}
     const imgTokens: { token: string; html: string }[] = [];
@@ -6002,14 +6285,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     return Math.max(2, Math.min(node.textContent.split('\n').length + 1, 25));
   }
 
-  getStructBodySegments(textContent: string): Array<{ type: 'text' | 'mockup' | 'image' | 'trello'; value: string; mockupId: string; imageId: string; imageName: string; trelloName: string }> {
+  getStructBodySegments(textContent: string): Array<{ type: 'text' | 'mockup' | 'image' | 'trello' | 'array'; value: string; mockupId: string; imageId: string; imageName: string; trelloName: string; arrayName: string }> {
     const lines = textContent.split('\n');
-    const result: Array<{ type: 'text' | 'mockup' | 'image' | 'trello'; value: string; mockupId: string; imageId: string; imageName: string; trelloName: string }> = [];
+    const result: Array<{ type: 'text' | 'mockup' | 'image' | 'trello' | 'array'; value: string; mockupId: string; imageId: string; imageName: string; trelloName: string; arrayName: string }> = [];
     const textBuf: string[] = [];
     const flushText = () => {
       const v = textBuf.join('\n');
       // On ne pousse un segment texte que s'il a du contenu (évite les zones vides autour des tags)
-      if (v.trim()) result.push({ type: 'text', value: v, mockupId: '', imageId: '', imageName: '', trelloName: '' });
+      if (v.trim()) result.push({ type: 'text', value: v, mockupId: '', imageId: '', imageName: '', trelloName: '', arrayName: '' });
       textBuf.length = 0;
     };
     for (let i = 0; i < lines.length; i++) {
@@ -6020,7 +6303,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         let end = i;
         for (let j = i + 1; j < lines.length; j++) { if (lines[j].trim() === '```') { end = j; break; } }
         flushText();
-        result.push({ type: 'trello', value: lines.slice(i, end + 1).join('\n'), mockupId: '', imageId: '', imageName: '', trelloName: trelloM[1].trim() });
+        result.push({ type: 'trello', value: lines.slice(i, end + 1).join('\n'), mockupId: '', imageId: '', imageName: '', trelloName: trelloM[1].trim(), arrayName: '' });
+        i = end;
+        continue;
+      }
+      // Bloc Array : ```ARRAY: NOM ... ``` → tag graphique
+      const arrayM = /^```ARRAY: (.+)$/.exec(line.trim());
+      if (arrayM) {
+        let end = i;
+        for (let j = i + 1; j < lines.length; j++) { if (lines[j].trim() === '```') { end = j; break; } }
+        flushText();
+        result.push({ type: 'array', value: lines.slice(i, end + 1).join('\n'), mockupId: '', imageId: '', imageName: '', trelloName: '', arrayName: arrayM[1].trim() });
         i = end;
         continue;
       }
@@ -6028,11 +6321,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const imgM = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}\s*$/i.exec(line.trim());
       if (mockupM) {
         flushText();
-        result.push({ type: 'mockup', value: line.trim(), mockupId: mockupM[1], imageId: '', imageName: '', trelloName: '' });
+        result.push({ type: 'mockup', value: line.trim(), mockupId: mockupM[1], imageId: '', imageName: '', trelloName: '', arrayName: '' });
       } else if (imgM) {
         flushText();
         const img = this.allImages.find(im => im.id === imgM[1]);
-        result.push({ type: 'image', value: line.trim(), mockupId: '', imageId: imgM[1], imageName: img?.name || '', trelloName: '' });
+        result.push({ type: 'image', value: line.trim(), mockupId: '', imageId: imgM[1], imageName: img?.name || '', trelloName: '', arrayName: '' });
       } else {
         textBuf.push(line);
       }

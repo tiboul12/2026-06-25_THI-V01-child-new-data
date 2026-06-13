@@ -1,6 +1,65 @@
 {
   "modifications": [
     {
+      "id": "mod-393",
+      "version": "B-0.276",
+      "date": "2026-06-14T13:45:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|array-inline-block",
+      "title": "Array : un chiffre ajouté dans le tableau disparaissait après passage en Code",
+      "description": "Ajouter une valeur dans le board ne se reflétait pas dans le bloc ```ARRAY: en mode Code (onArrayGridChanged écrivait le fichier+rebuild sans mettre à jour le bloc inline), si bien que le code vide réécrasait la grille au retour. Fix : onArrayGridChanged met désormais à jour DIRECTEMENT le bloc inline ```ARRAY: NOM dans unifiedContent via syncArrayInlineBlock (mirror de syncTrelloInlineBlock), avec re-parse de structureNodes en mode Structure pour ne pas être écrasé au flush. Le round-trip grille↔code↔grille préserve les valeurs.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je rajoute un chiffre dans le tableau le chiffre s'affiche bien, en preview le chiffre est bien ajouté, mais en mode Code je ne vois pas le chiffre et en retournant dans structure/preview le chiffre a disparu",
+      "startedAt": "2026-06-14T13:15:00.000Z",
+      "completedAt": "2026-06-14T13:45:00.000Z"
+    },
+    {
+      "id": "mod-392",
+      "version": "B-0.276",
+      "date": "2026-06-14T13:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|array-inline-block",
+      "title": "Array : corps du bloc en table Markdown avec contenu brut des cellules (formules non évaluées)",
+      "description": "Le corps du bloc ```ARRAY: NOM est désormais une table Markdown (| A | B | ... | + séparateur + lignes) contenant le CONTENU BRUT des cellules : texte ou formule (=5*2, =B1+C2) affiché tel quel, jamais le résultat (le board garde cell.value brut + cell.computed pour l'affichage). serializeArrayGrid produit la table (cell.value, styles/dimensions exclus), deserializeArrayGrid parse la table (1ère ligne = en-tête, séparateur ignoré), splitMarkdownRow gère le \\| échappé. syncArrayCodeToGrid reconnaît le format table (^|). Les styles sont préservés depuis la grille en base lors de la sync code→grille.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "un array doit s'afficher au format markdown et uniquement avec le contenu d'une cellule (si le contenu est du texte ou une formule comme =5*2 ou =B1+C2 cela devra affiché le contenu et non le résultat)",
+      "startedAt": "2026-06-14T12:40:00.000Z",
+      "completedAt": "2026-06-14T13:00:00.000Z"
+    },
+    {
+      "id": "mod-391",
+      "version": "B-0.276",
+      "date": "2026-06-14T12:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|array-inline-block",
+      "title": "MO Array : mêmes fonctions générales que Trello (marqueur ```ARRAY:, fichier array-NOM, modes, cycle de vie, sync)",
+      "description": "Le MO Array adopte le pattern du MO Trello : (A) identifié par ```ARRAY: NOM (parseContent, recomputeRanges fileRange, exclusion des headings internes des fences générique) ; (B) fichier physique array-NOM.md contenant le bloc complet ```ARRAY: NOM\\n<grille>\\n``` (jamais vide), affiché 'AR: NOM' dans la sidebar (nodeDisplayName) ; (C) affichage par mode : Code = code brut, Structure = tag 'ARRAY : NOM' + board (panneau structure-only), Preview = app-array-board inline (lecture seule) que l'on sélectionne la section ou le fichier ; (E) cycle de vie : ensureArrayInstancesFromContent (création sur marqueur collé/Nouveau), reconcileArrayLifecycle (suppression instance+fichier sur marqueur disparu/corrompu), cleanupOrphanArrayInstances, healArraySectionOnOpen ; (F) sync bidirectionnelle grille↔code : saveArrayCsvFile écrit le bloc complet dans array-NOM, syncArrayCodeToGrid extrait la grille du bloc et met à jour la BDD ; (G) verrou section (isArrayInstanceLocked + readonly). Helpers isArrayFileBase/arrayNameFromBase/findArrayFileNode. confirmArrayPopup insère le fence. selectMegaOutil focus sur le fichier Array.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je voudrais que tu mettes exactement les mêmes functions général pour le MO tableau, le MO sera identifié par ```ARRAY: NOM_DU_TABLEAU, idem pour le fichier array-nom_du_tableau.md, la vue dans le mode structure et la view affiché dans le mode preview sera par celle du tableau actuellement déjà affiché",
+      "startedAt": "2026-06-14T11:30:00.000Z",
+      "completedAt": "2026-06-14T12:30:00.000Z"
+    },
+    {
       "id": "mod-390",
       "version": "B-0.275",
       "date": "2026-06-14T11:00:00.000Z",

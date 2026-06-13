@@ -919,6 +919,13 @@
                           <span class="ed-mockup-card__label">TRELLO : {{ seg.trelloName }}</span>
                         </span>
                       </div>
+                    } @else if (seg.type === 'array') {
+                      <div class="struct-body-mockup-line">
+                        <span class="ed-mockup-card" style="border-color:rgba(163,230,53,.35);color:#a3e635">
+                          <span class="material-symbols-outlined ed-img-icon" style="color:#a3e635">table</span>
+                          <span class="ed-mockup-card__label">ARRAY : {{ seg.arrayName }}</span>
+                        </span>
+                      </div>
                     } @else if (seg.type === 'mockup') {
                       <div class="struct-body-mockup-line">
                         <span class="ed-mockup-card"
@@ -982,15 +989,7 @@
                 }
               }
 
-              <!-- Tags Array liés à cette section -->
-              @for (arr of arrayInstancesForNode(node); track arr.id) {
-                <div class="struct-body-mockup-line">
-                  <span class="ed-mockup-card" style="border-color:rgba(163,230,53,.3);color:#a3e635">
-                    <span class="material-symbols-outlined ed-img-icon" style="color:#a3e635">table</span>
-                    <span class="ed-mockup-card__label">tableau:{{ arr.name }}</span>
-                  </span>
-                </div>
-              }
+              <!-- (Le tag Array s'affiche via le segment ```ARRAY: NOM, voir getStructBodySegments) -->
 
             </div>
           }
@@ -1065,6 +1064,17 @@
                 [deletable]="false"
                 [readonly]="isTrelloInstanceLocked(tid)"
                 (cardsChanged)="onTrelloCardsChanged(tid, $event)" />
+            </div>
+          }
+
+          @if (previewArrayInstanceId; as aid) {
+            <div class="visu-section-wrap visu-trello-board-wrap">
+              <app-array-board
+                [instanceId]="aid"
+                [boardName]="arrayInstanceName(aid)"
+                [deletable]="false"
+                [readonly]="true"
+                (gridChanged)="onArrayGridChanged(aid, $event)" />
             </div>
           }
 
@@ -1216,6 +1226,17 @@
                     (cardsChanged)="onTrelloCardsChanged(tinst.id, $event)" />
                 </div>
               }
+              <!-- Boards Array de la section -->
+              @for (ainst of arrayInstancesForVisuSection(sec.sectionId); track ainst.id) {
+                <div class="visu-trello-board-wrap">
+                  <app-array-board
+                    [instanceId]="ainst.id"
+                    [boardName]="arrayInstanceName(ainst.id)"
+                    [deletable]="false"
+                    [readonly]="true"
+                    (gridChanged)="onArrayGridChanged(ainst.id, $event)" />
+                </div>
+              }
 
               <!-- Ligne d'insertion (visible au hover) -->
               <div class="visu-insert-row">
@@ -1258,7 +1279,7 @@
     }
 
     <!-- Zone basse : tous les boards (Trello, Array, Mockup) dans un container scrollable -->
-    @if ((contentTrelloIds.length > 0 && mode === 'structure') || (contentArrayIds.length > 0 && mode !== 'edit') || (contentMockupIds.length > 0 && mode !== 'edit')) {
+    @if ((contentTrelloIds.length > 0 && mode === 'structure') || (contentArrayIds.length > 0 && mode === 'structure') || (contentMockupIds.length > 0 && mode !== 'edit')) {
       <div class="ed-panels-zone">
 
         @if (contentTrelloIds.length > 0 && mode === 'structure') {
@@ -1291,7 +1312,7 @@
           </div>
         }
 
-        @if (contentArrayIds.length > 0) {
+        @if (contentArrayIds.length > 0 && mode === 'structure') {
           <div class="ed-trello-panel" [class.ed-trello-panel--collapsed]="arrayPanelCollapsed()">
             <div class="ed-trello-panel__head">
               <span class="material-symbols-outlined" style="color:#a3e635;font-size:16px">table</span>
@@ -1311,7 +1332,7 @@
                     [instanceId]="aid"
                     [boardName]="arrayInstanceName(aid)"
                     [deletable]="!isArrayInstanceLocked(aid)"
-                    [readonly]="mode === 'visu' || isArrayInstanceLocked(aid)"
+                    [readonly]="isArrayInstanceLocked(aid)"
                     (deleteBoard)="deleteArrayInstance($event)"
                     (gridChanged)="onArrayGridChanged(aid, $event)" />
                 }

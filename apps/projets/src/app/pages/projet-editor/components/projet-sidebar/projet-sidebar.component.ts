@@ -82,6 +82,8 @@ export class ProjetSidebarComponent implements OnChanges {
     if (/^trello-/i.test(base)) return 'TL: ' + base.replace(/^trello-/i, '');
     if (/^trello$/i.test(base)) return 'TL: Trello';
     if (/^TL:\s*/i.test(base)) return base;
+    if (/^array-/i.test(base)) return 'AR: ' + base.replace(/^array-/i, '');
+    if (/^array$/i.test(base)) return 'AR: Tableau';
     return base;
   }
 
