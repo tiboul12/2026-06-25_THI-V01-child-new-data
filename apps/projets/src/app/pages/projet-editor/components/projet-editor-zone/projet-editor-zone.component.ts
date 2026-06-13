@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleCha
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService, MockupConnection, TrelloCard, TrelloStatus, TRELLO_STATUS_LABELS, TRELLO_PRIORITY_LABELS, ArrayGrid, ArrayCellStyle } from '@worganic/portail-core/data-access';
+import { FileNode, ProjectFilesService, MegaOutilInstance, MegaOutilType, MegaOutilsService, MockupConnection, TrelloCard, TrelloStatus, TrelloPriority, TRELLO_STATUS_LABELS, TRELLO_PRIORITY_LABELS, ArrayGrid, ArrayCellStyle } from '@worganic/portail-core/data-access';
 import { marked } from 'marked';
 import { WoActionHistoryService } from '@worganic/portail-core/data-access';
 import { ProjetCollabService } from '@worganic/portail-core/data-access';
@@ -254,8 +254,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   readonly trelloStatusOrder: TrelloStatus[] = ['todo', 'in-progress', 'done', 'blocked'];
   private lastTrelloCodeLoadKey = '';
   // Toggle : autorise ou non la mise à jour automatique du bloc TRELLO dans le code
-  // quand les cartes changent. Désactivé → le code n'est jamais modifié tout seul.
-  trelloAutoSync = signal(false);
+  // quand les cartes changent. Activé par défaut : ajouter une carte met à jour le code du bloc.
+  // (la corruption des blocs ``` classiques est corrigée par le parsing dédié du fence Trello)
+  trelloAutoSync = signal(true);
+  // Instances dont le marqueur ```TRELLO: NOM a déjà été vu dans le contenu (anti-suppression
+  // des instances legacy : on ne supprime une instance que si SON marqueur, présent auparavant,
+  // a disparu/été corrompu).
+  private seenTrelloMarkers = new Set<string>();
 
   // Popup de configuration d'un nouveau Mockup
   showMockupPopup = signal(false);
@@ -571,6 +576,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         // Si focusedHandle && !hasStructuralChange : on garde le contenu focusé intact
       }
       this.hasLoaded = true;
+      // Amorcer le suivi des marqueurs Trello présents au chargement (pour détecter
+      // ensuite une suppression/corruption même sans sauvegarde intermédiaire).
+      this.seedSeenTrelloMarkers(this.focusedHandle ? this.fullContentBackup : this.unifiedContent);
       // Nettoyer les marqueurs {{TRELLO:...}} du contenu (approche DB-only)
       const trelloStripped = !this.focusedHandle && this.stripTrelloMarkersFromUnifiedContent();
       // Supprimer les marqueurs {{MOCKUP:id}} dupliqués
@@ -715,8 +723,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
       const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       // Supporte l'ancienne syntaxe (## Trello:) et la nouvelle (TRELLO:).
+      // (?:[\s\S]*?\n)? rend le corps optionnel → matche aussi un bloc vide ```TRELLO: NOM\n```.
       // (?=\n|$) ancre la fermeture en fin de ligne pour ne pas matcher ```language.
-      const blockRe = new RegExp('```(?:## Trello:|TRELLO:) ' + esc + '\n[\\s\\S]*?\n```(?=\\n|$)', 'g');
+      const blockRe = new RegExp('```(?:## Trello:|TRELLO:) ' + esc + '\n(?:[\\s\\S]*?\n)?```(?=\\n|$)', 'g');
 
       if (blockRe.test(newContent)) {
         // Réinitialise lastIndex
@@ -932,8 +941,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
             textContent += child.content.trimEnd() + '\n';
           }
         } else {
-          // Document additionnel
-          textContent += `\n'${child.name.replace(/\.md$/, '')}\n${child.content || ''}\n'\n`;
+          // Fichier Trello (lié à une instance trello de cette section) → sérialiser en fence ```TRELLO: NOM
+          const childBase = child.name.replace(/\.md$/, '');
+          const trelloInst = this.trelloInstances.find(
+            t => t.folderId === node.id && this.slugify(t.name) === this.slugify(childBase)
+          );
+          if (trelloInst) {
+            const body = (child.content || '').trim();
+            textContent += body
+              ? `\n\`\`\`TRELLO: ${trelloInst.name}\n${body}\n\`\`\`\n`
+              : `\n\`\`\`TRELLO: ${trelloInst.name}\n\`\`\`\n`;
+          } else {
+            // Document additionnel classique
+            textContent += `\n'${childBase}\n${child.content || ''}\n'\n`;
+          }
         }
       }
 
@@ -1393,12 +1414,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.recomputeContentArrayIds();
   }
 
-  /** Ids Trello dont le folderId correspond à la section active (mode DB-only, sans marqueur dans le contenu). */
+  /** Ids Trello dont le marqueur ```TRELLO: NOM est présent dans la section active (le code est la source de vérité). */
   private recomputeContentTrelloIds() {
     const activeFolderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
-    this.contentTrelloIds = this.trelloInstances
-      .filter(i => i.folderId === activeFolderId)
-      .map(i => i.id);
+
+    // Texte live de la section active
+    let sectionText = '';
+    if (this.focusedHandle) {
+      sectionText = this.unifiedContent;
+    } else if (activeFolderId) {
+      const sr = this.sectionRanges.find(r => r.folderId === activeFolderId);
+      if (sr) sectionText = this.unifiedContent.split('\n').slice(sr.lineStart, sr.lineEnd + 1).join('\n');
+    }
+    const markerLines = sectionText.split('\n').map(l => l.trim());
+    const hasMarker = (name: string) =>
+      markerLines.some(l => l === '```TRELLO: ' + name || l === '```## Trello: ' + name);
+
+    // Source de vérité = présence du marqueur dans la section active
+    this.contentTrelloIds = this.trelloInstances.filter(i => hasMarker(i.name)).map(i => i.id);
+
     this.recomputeTrelloSections();
     this.loadTrelloCodeCards();
   }
@@ -2943,6 +2977,16 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       contentToParse = this.unifiedContent;
     }
 
+    // Cycle de vie Trello : si le marqueur ```TRELLO: NOM d'une instance, vu auparavant,
+    // a disparu (suppression) ou été corrompu (ex: ```TREO:), supprimer l'instance + son onglet.
+    // Le fichier trello.md orphelin est supprimé par la réconciliation parente ; le texte
+    // corrompu restant est intégré à contenu.md (il n'est plus reconnu comme fence Trello).
+    this.reconcileTrelloLifecycle(contentToParse);
+
+    // Sync inverse code → board/BDD : éditer/supprimer une task dans le code applique
+    // la modification aux cartes en base (le board se rafraîchit via SSE).
+    if (this.trelloAutoSync()) this.reconcileTrelloCardsFromCode(contentToParse);
+
     // parseContent() opère sur this.unifiedContent — on substitue temporairement
     const saved = this.unifiedContent;
     this.unifiedContent = contentToParse;
@@ -2950,6 +2994,116 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.unifiedContent = saved;
     this.syncArrayCodeToGrid(sections);
     this.sectionsChange.emit(sections);
+  }
+
+  /** Enregistre les instances dont le marqueur Trello est déjà présent dans le contenu fourni. */
+  private seedSeenTrelloMarkers(content: string) {
+    for (const inst of this.trelloInstances) {
+      if (this.contentHasTrelloMarker(content, inst.name)) this.seenTrelloMarkers.add(inst.id);
+    }
+  }
+
+  /** Vérifie la présence du marqueur d'ouverture Trello (ligne exacte) dans un contenu. */
+  private contentHasTrelloMarker(content: string, name: string): boolean {
+    return content.split('\n').some(l => {
+      const t = l.trim();
+      return t === '```TRELLO: ' + name || t === '```## Trello: ' + name;
+    });
+  }
+
+  /** Supprime les instances Trello dont le marqueur, présent auparavant, a disparu/été corrompu. */
+  private reconcileTrelloLifecycle(content: string) {
+    let fileDeleted = false;
+    for (const inst of this.trelloInstances) {
+      const present = this.contentHasTrelloMarker(content, inst.name);
+      if (present) {
+        this.seenTrelloMarkers.add(inst.id);
+      } else if (this.seenTrelloMarkers.has(inst.id)) {
+        this.seenTrelloMarkers.delete(inst.id);
+        // Supprimer le fichier trello.md correspondant (la suppression orpheline parente est
+        // limitée aux changements structurels ; ici la simple suppression du fence ne l'est pas).
+        const folderNode = inst.folderId ? this.findNode(inst.folderId, this.files) : null;
+        const fileNode = folderNode?.children?.find(
+          c => c.type === 'file' && this.slugify(c.name.replace(/\.md$/, '')) === this.slugify(inst.name)
+        );
+        if (fileNode && this.projectName) {
+          this.svc.deleteFile(this.projectName, fileNode.id).catch(() => {});
+          fileDeleted = true;
+        }
+        this.megaOutilsSvc.deleteInstance(inst.id).catch(() => {});
+        this.megaOutilDeleted.emit(inst.id);
+      }
+    }
+    if (fileDeleted) this.refresh.emit();
+  }
+
+  /** Label de colonne (### À faire) → statut Trello. */
+  private trelloLabelToStatus(label: string): TrelloStatus | null {
+    const l = label.trim().toLowerCase();
+    for (const s of this.trelloStatusOrder) {
+      if (TRELLO_STATUS_LABELS[s].toLowerCase() === l) return s;
+    }
+    return null;
+  }
+
+  /** Label de priorité (`[Normale]`) → clé priorité. */
+  private trelloLabelToPriority(label: string): TrelloPriority {
+    const l = label.trim().toLowerCase();
+    for (const p of ['low', 'medium', 'high', 'critical'] as TrelloPriority[]) {
+      if (TRELLO_PRIORITY_LABELS[p].toLowerCase() === l || p === l) return p;
+    }
+    return 'medium';
+  }
+
+  /** Parse le corps d'un bloc Trello en liste de cartes {status, title, priority}. */
+  private parseTrelloBodyCards(body: string): { status: TrelloStatus; title: string; priority: TrelloPriority }[] {
+    const out: { status: TrelloStatus; title: string; priority: TrelloPriority }[] = [];
+    let status: TrelloStatus = 'todo';
+    for (const raw of body.split('\n')) {
+      const line = raw.trim();
+      const h = /^###\s+(.+)$/.exec(line);
+      if (h) { status = this.trelloLabelToStatus(h[1]) ?? status; continue; }
+      const c = /^-\s*\[[ x~!]?\]\s*(.*)$/.exec(line);
+      if (!c) continue;
+      const rest = c[1];
+      const pm = /`\[([^\]]+)\]`/.exec(rest);
+      const priority = pm ? this.trelloLabelToPriority(pm[1]) : 'medium';
+      const title = rest.replace(/\s*`\[[^\]]+\]`.*$/, '').replace(/\s+—\s+.*$/, '').trim();
+      if (title) out.push({ status, title, priority });
+    }
+    return out;
+  }
+
+  /** Réconcilie les cartes en BDD à partir du code du bloc Trello (titre = clé de correspondance). */
+  private reconcileTrelloCardsFromCode(content: string) {
+    const loaded = this.trelloCodeCards();
+    for (const inst of this.trelloInstances) {
+      // Cartes non encore chargées → ne pas réconcilier (évite création de doublons au démarrage)
+      if (!(inst.id in loaded)) continue;
+      const esc = inst.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp('```(?:## Trello:|TRELLO:) ' + esc + '\n(?:([\\s\\S]*?)\n)?```(?=\\n|$)');
+      const mm = re.exec(content);
+      if (!mm) continue; // bloc absent → géré par le cycle de vie
+      const parsed = this.parseTrelloBodyCards(mm[1] || '');
+      const dbCards = loaded[inst.id] || [];
+      const usedDb = new Set<string>();
+
+      for (const p of parsed) {
+        const match = dbCards.find(d => !usedDb.has(d.id) && d.title.trim().toLowerCase() === p.title.toLowerCase());
+        if (match) {
+          usedDb.add(match.id);
+          if (match.status !== p.status || match.priority !== p.priority) {
+            this.megaOutilsSvc.updateTrelloCard(inst.id, match.id, { status: p.status, priority: p.priority }).catch(() => {});
+          }
+        } else {
+          this.megaOutilsSvc.createTrelloCard(inst.id, { title: p.title, status: p.status, priority: p.priority }).catch(() => {});
+        }
+      }
+      // Cartes en BDD absentes du code → supprimées
+      for (const d of dbCards) {
+        if (!usedDb.has(d.id)) this.megaOutilsSvc.deleteTrelloCard(inst.id, d.id).catch(() => {});
+      }
+    }
   }
 
   // ── Content parsing (compat existant) ──────────────────────
@@ -2964,6 +3118,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     let bp: RegExpExecArray | null;
     while ((bp = blockPreScan.exec(text)) !== null) {
       fileBlockCharRanges.push([bp.index, bp.index + bp[0].length - 1]);
+    }
+    // Pré-scan des fences Trello (```TRELLO: NOM ... ```) pour exclure leurs ### internes de la détection de sections
+    const trelloFencePreScan = /^```(?:## Trello:|TRELLO:) (.+)\n([\s\S]*?)```(?=\n|$)/gm;
+    let tp: RegExpExecArray | null;
+    while ((tp = trelloFencePreScan.exec(text)) !== null) {
+      fileBlockCharRanges.push([tp.index, tp.index + tp[0].length - 1]);
     }
     const isInsideFileBlock = (pos: number) => fileBlockCharRanges.some(([s, e]) => pos > s && pos <= e);
 
@@ -3019,6 +3179,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         return ' '.repeat(match.length);
       });
 
+      // Extraire les fences Trello (```TRELLO: NOM ... ```) comme fichiers additionnels système 'trello'
+      const trelloFenceRe = /^```(?:## Trello:|TRELLO:) (.+)\n([\s\S]*?)```(?=\n|$)/gm;
+      spacedContent = spacedContent.replace(trelloFenceRe, (match: string, title: string, content: string, offset: number) => {
+        const afName = title.trim();
+        const af: AdditionalFile = { name: afName, content: (content || '').replace(/\n$/, '').trimEnd(), fileId: null, orderedChildIds: [] };
+        const found = info?.files.find(f => this.slugify(f.name.replace(/\.md$/, '')) === this.slugify(af.name));
+        if (found) {
+          af.fileId = found.id;
+          elements.push({ id: found.id, index: offset });
+        }
+        additionalFiles.push(af);
+        return ' '.repeat(match.length);
+      });
+
       // Extraire les images autonomes
       const imageRegex = /\{\{IMG:([a-zA-Z0-9._-]+)(?:\|[^}]*)?\}\}/gi;
       let imgM: RegExpExecArray | null;
@@ -3031,7 +3205,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Le contenu principal est le rawContent sans les blocs
       // Les marqueurs {{IMG:id}} autonomes (hors blocs doc) sont conservés inline dans mainContent
       // pour préserver leur position exacte dans le texte (ex: entre deux paragraphes)
-      let mainContent = rawContent.replace(blockRegex, '').trim();
+      let mainContent = rawContent.replace(blockRegex, '').replace(trelloFenceRe, '').trim();
 
       // Déterminer la position du mainFile (contenu.md)
       if (mainFile) {
@@ -3301,7 +3475,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private removeTrelloBlockFromContent(id: string) {
     const name = this.trelloInstanceName(id);
     const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const blockRe = new RegExp('\n*```(?:## Trello:|TRELLO:) ' + esc + '\n[\\s\\S]*?\n```(?=\\n|$)\n*', 'g');
+    const blockRe = new RegExp('\n*```(?:## Trello:|TRELLO:) ' + esc + '\n(?:[\\s\\S]*?\n)?```(?=\\n|$)\n*', 'g');
     if (!blockRe.test(this.unifiedContent)) return;
     blockRe.lastIndex = 0;
     this.unifiedContent = this.unifiedContent.replace(blockRe, '\n').replace(/\n{3,}/g, '\n\n');

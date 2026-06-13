@@ -781,10 +781,8 @@
                   </span>
                 </span>
               } @else if (line.isTrelloBlock) {
-                <span class="ed-trello-block-header">
-                  <span class="material-symbols-outlined ed-trello-block-header__icon">view_kanban</span>
-                  <span class="ed-trello-block-header__name">{{ line.trelloName }}</span>
-                </span>
+                <!-- Ligne d'ouverture du bloc Trello : affichée comme code brut (pas de badge) -->
+                <span class="ed-text ed-trello-fence" [innerHTML]="line.safeHtml"></span>
               } @else {
                 <span class="ed-text" [innerHTML]="line.safeHtml"></span>
               }

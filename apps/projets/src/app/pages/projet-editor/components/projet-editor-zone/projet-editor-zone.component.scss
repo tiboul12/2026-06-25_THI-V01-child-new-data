@@ -265,6 +265,53 @@
   display: inline-block;
 }
 
+// Ligne d'ouverture d'un bloc Trello inline (```## Trello: NAME)
+.ed-trello-block-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 2px 0.75rem 2px 0.5rem;
+  background: rgba(59, 130, 246, 0.12);
+  color: rgb(29, 78, 216);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 6px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5em;
+  vertical-align: middle;
+  user-select: none;
+  pointer-events: none;
+}
+
+:host-context(.dark) .ed-trello-block-header {
+  color: rgb(147, 197, 253);
+  background: rgba(59, 130, 246, 0.10);
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+/* Ligne d'ouverture du bloc Trello affichée en code brut : léger accent bleu */
+.ed-trello-fence {
+  color: rgb(29, 78, 216);
+  font-weight: 600;
+}
+:host-context(.dark) .ed-trello-fence {
+  color: rgb(147, 197, 253);
+}
+
+.ed-trello-block-header__icon {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ed-trello-block-header__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
 .ed-mockup-thumb {
   display: block;
   width: 100%;

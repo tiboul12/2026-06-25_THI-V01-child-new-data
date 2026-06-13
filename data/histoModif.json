@@ -1,6 +1,68 @@
 {
   "modifications": [
     {
+      "id": "mod-369",
+      "version": "B-0.268",
+      "date": "2026-06-13T14:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : sync bidirectionnelle code ↔ board (éditer/supprimer une task dans le code)",
+      "description": "Ajout de la sync inverse code → board/BDD. reconcileTrelloCardsFromCode() (appelée dans saveAll, gated par trelloAutoSync) parse le corps de chaque bloc ```TRELLO: NOM (### colonnes + lignes - [x] Titre `[Prio]`), puis réconcilie les cartes en base par correspondance de titre : supprime les cartes absentes du code, crée les nouvelles, met à jour statut/priorité. Le board se rafraîchit via SSE (broadcastTrelloUpdate côté serveur). Helpers : parseTrelloBodyCards, trelloLabelToStatus, trelloLabelToPriority. Garde anti-doublon : on ne réconcilie que les instances dont les cartes sont déjà chargées.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Si je supprime une task dans un trello dans le code, cela doit supprimé la task dans la vue et dans le trello",
+      "startedAt": "2026-06-13T14:10:00.000Z",
+      "completedAt": "2026-06-13T14:45:00.000Z"
+    },
+    {
+      "id": "mod-368",
+      "version": "B-0.268",
+      "date": "2026-06-13T14:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : ajout d'une carte met à jour le code (bloc vide + sync auto par défaut)",
+      "description": "Deux corrections pour que l'ajout d'une task dans le board mette à jour automatiquement le code du fence. 1) Le regex de syncTrelloInlineBlock (et removeTrelloBlockFromContent) exigeait \\n[\\s\\S]*?\\n``` et ne matchait donc PAS un bloc vide ```TRELLO: NOM\\n``` (un seul \\n) : corps rendu optionnel via (?:[\\s\\S]*?\\n)?. 2) trelloAutoSync passe à true par défaut : onTrelloCardsChanged met à jour le bloc inline dès qu'une carte change (la corruption des blocs ``` classiques étant désormais évitée par le parsing dédié du fence Trello). Le toggle reste disponible pour désactiver.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "La création fonctionne bien mais lorsque je rajoute une task dans la view, il faut rajouté automatiquement le code dans la section du trello",
+      "startedAt": "2026-06-13T13:45:00.000Z",
+      "completedAt": "2026-06-13T14:00:00.000Z"
+    },
+    {
+      "id": "mod-367",
+      "version": "B-0.268",
+      "date": "2026-06-13T13:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello piloté par le code : fence ```TRELLO: NOM source de vérité",
+      "description": "Le marqueur ```TRELLO: NOM dans le code devient la source de vérité. 1) Affichage code brut (plus de badge) : la ligne d'ouverture est rendue comme texte/code (ed-trello-fence). 2) Le fence est parsé comme fichier additionnel système 'trello' (parseContent : pré-scan des ### internes + extraction en AdditionalFile) → crée le fichier trello.md (nœud sidebar) via la réconciliation parente. 3) buildDocSections re-sérialise un fichier lié à une instance trello (folderId+nom) en fence ```TRELLO: NOM au lieu du délimiteur '. 4) recomputeContentTrelloIds : la vue board s'affiche selon la présence du marqueur dans la section active (et non plus le folderId). 5) Cycle de vie : si un marqueur vu auparavant disparaît/est corrompu (ex: ```TREO:), reconcileTrelloLifecycle() supprime l'instance + l'onglet MO + le fichier trello.md ; le texte restant est intégré à contenu.md ; seedSeenTrelloMarkers amorce le suivi au chargement pour éviter de supprimer les instances legacy.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque tu crait un trello, dans le mode Code cela doit affiché le code du trello : ```TRELLO: NOM ... ``` et non le tag. Cela doit aussi créé l'élément TRELLO dans le menu. Si le code du trello est effacé, cela doit supprimé l'élément TRELLO du menu et la view trello. Si le code n'est plus reconnu (```TREO:), l'élément est effacé et le code restant intégré à contenu.md.",
+      "startedAt": "2026-06-13T12:30:00.000Z",
+      "completedAt": "2026-06-13T13:30:00.000Z"
+    },
+    {
       "id": "mod-366",
       "version": "B-0.267",
       "date": "2026-06-13T12:00:00.000Z",

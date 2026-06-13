@@ -129,10 +129,10 @@ Via les boutons de la toolbar (voir toolbar/fonctions.md) ou raccourcis :
 
 ## `2-5-2-4-15` — Panneau Trello en mode Code
 
-- **Affichage** : le panneau `app-trello-board` s'affiche dans les 3 modes (Code, Structure, Preview) dès qu'un Trello est associé à la section active
+- **Affichage** : le panneau `app-trello-board` s'affiche dès que le marqueur ` ```TRELLO: NOM ` est présent dans la section active (voir `2-5-2-4-14`)
 - **Synchronisation live** : le composant reste monté lors des changements de mode → les modifications (ajout/édition/déplacement de tâche) faites dans un mode sont immédiatement visibles dans les autres
 - **SSE** : les mises à jour de collaborateurs (`trelloUpdate$`) sont reçues dans tous les modes puisque le board n'est jamais détruit
-- **Propagation vers Code** : `@Output() cardsChanged` → `onTrelloCardsChanged` → `syncTrelloInlineBlock()` met à jour le bloc fencé inline dans `unifiedContent` et déclenche un `scheduleSave()`
+- **Propagation vers Code** : `@Output() cardsChanged` → `onTrelloCardsChanged` → `syncTrelloInlineBlock()` met à jour le bloc fencé inline **uniquement si le toggle Sync auto est activé** (voir `2-5-2-4-14`)
 
 ---
 
@@ -148,15 +148,20 @@ Via les boutons de la toolbar (voir toolbar/fonctions.md) ou raccourcis :
   - [~] Task 2
   ```
   ```
-- **Insertion** : création d'un Trello → `confirmTrelloPopup()` insère le bloc à la position du curseur
-- **Mise à jour** : `syncTrelloInlineBlock()` remplace le contenu du bloc existant via regex multiline ; gère aussi la migration de l'ancienne syntaxe ` ```## Trello: NAME ` → ` ```TRELLO: NAME ` ; si le bloc est absent, il n'est pas inséré automatiquement (la création est uniquement via `confirmTrelloPopup()`)
-- **Identification** : le `folderId` DB reste la source de vérité pour `recomputeContentTrelloIds()` ; `resolveTrelloFolderId()` scanne le contenu pour le bloc ` ```TRELLO: NAME ` (ou l'ancien ` ```## Trello: NAME `) afin de maintenir le `folderId` à jour si le bloc est déplacé manuellement
-- **Affichage miroir** : la ligne d'ouverture ` ```TRELLO: NAME ` est rendue comme un badge bleu `.ed-trello-block-header` ; les lignes de contenu du bloc s'affichent normalement
-- **Sélection depuis MO** : clic sur un onglet Trello dans la barre MO → `selectMegaOutil()` → `scrollToTrelloBlock()` → sélectionne le bloc dans la textarea et scrolle dessus (mode Code uniquement)
-- **Suppression** : `deleteTrelloInstance()` → `removeTrelloBlockFromContent()` retire le bloc du contenu et sauvegarde
-- **Colonnes vides** : non écrites dans le bloc
+- **Source de vérité = le code** : le marqueur ` ```TRELLO: NOM ` dans le contenu pilote l'existence du Trello (nœud sidebar, onglet MO, vue board). Le `folderId` DB n'est qu'un fallback de migration.
+- **Insertion** : création d'un Trello → `confirmTrelloPopup()` crée l'instance DB + insère le bloc à la position du curseur. À la sauvegarde, le fence est parsé comme **fichier additionnel système `trello`** → `trello.md` créé (nœud sidebar) via la réconciliation parente.
+- **Parsing** : `parseContent()` pré-scanne les fences Trello (exclut leurs `###` internes de la détection de sections) puis extrait chaque ` ```TRELLO: NOM … ``` ` en `AdditionalFile{name:NOM, content:body}` (retiré de `contenu.md`).
+- **Re-sérialisation** : `buildDocSections()` re-sérialise un fichier lié à une instance trello (match `folderId`+nom) en fence ` ```TRELLO: NOM … ``` ` (au lieu du délimiteur `'`).
+- **Affichage miroir** : la ligne d'ouverture ` ```TRELLO: NOM ` est affichée en **code brut** (classe `.ed-trello-fence`, plus de badge) ; le corps du bloc s'affiche normalement.
+- **Vue board** : `recomputeContentTrelloIds()` affiche le panneau `app-trello-board` uniquement si le marqueur est présent dans la **section active**.
+- **Suppression / corruption** : à la sauvegarde, `reconcileTrelloLifecycle()` détecte qu'un marqueur vu auparavant a disparu (bloc effacé) ou n'est plus reconnu (ex: ` ```TREO: `) → supprime l'instance DB, émet `megaOutilDeleted` (onglet MO retiré), supprime le fichier `trello.md` (+`refresh`). Le texte corrompu restant est intégré à `contenu.md`, l'affichage de la section ne change pas. `seedSeenTrelloMarkers()` amorce le suivi au chargement pour ne jamais supprimer une instance legacy sans marqueur.
+- **Migration** : l'ancienne syntaxe ` ```## Trello: NAME ` reste reconnue en lecture.
+- **Sélection depuis MO** : clic sur un onglet Trello dans la barre MO → `selectMegaOutil()` → `scrollToTrelloBlock()` → sélectionne le bloc dans la textarea (mode Code uniquement)
 - **Label MO** : les onglets Trello dans la barre instances affichent `[trello:NOM]`
-- **Toggle Sync auto** : bouton dans la barre des actions Trello (mode Code) → `trelloAutoSync` (signal, désactivé par défaut). Désactivé → `onTrelloCardsChanged()` n'appelle pas `syncTrelloInlineBlock()`, le contenu du code n'est jamais modifié automatiquement. Activé → le bloc inline se met à jour quand les cartes changent
+- **Sync bidirectionnelle code ↔ board** :
+  - **board → code** : ajouter/modifier une carte → `onTrelloCardsChanged()` → `syncTrelloInlineBlock()` régénère le corps du fence (### colonnes + cartes). Le regex gère le bloc vide ` ```TRELLO: NOM\n``` ` (corps optionnel `(?:[\s\S]*?\n)?`).
+  - **code → board/BDD** : à la sauvegarde, `reconcileTrelloCardsFromCode()` parse le corps du bloc et réconcilie les cartes en base (correspondance par **titre**) : ligne supprimée → carte supprimée, ligne ajoutée → carte créée, statut/priorité modifiés → carte mise à jour. Le board se rafraîchit via SSE. Helpers : `parseTrelloBodyCards`, `trelloLabelToStatus`, `trelloLabelToPriority`. Réconciliation limitée aux instances dont les cartes sont déjà chargées (anti-doublon au démarrage).
+- **Toggle Sync auto** : bouton dans la barre des actions Trello (mode Code) → `trelloAutoSync` (signal, **activé par défaut**). Désactivé → `onTrelloCardsChanged()` n'appelle pas `syncTrelloInlineBlock()`, le code n'est jamais modifié automatiquement. Activé → le bloc inline se met à jour quand les cartes changent
 
 ---
 
