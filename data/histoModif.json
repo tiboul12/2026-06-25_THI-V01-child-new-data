@@ -1,6 +1,25 @@
 {
   "modifications": [
     {
+      "id": "mod-390",
+      "version": "B-0.275",
+      "date": "2026-06-14T11:00:00.000Z",
+      "type": "config",
+      "commitType": "AMELIORATION",
+      "scope": ["system"],
+      "features": "system:commands",
+      "title": "Commande /nouveau-mega-outil : spécifications générales d'un MO (réf. Trello)",
+      "description": "Ajout d'une section 'Spécifications générales d'un méga-outil (comportement obligatoire)' à la commande .claude/commands/nouveau-mega-outil.md, extraite de l'implémentation du MO Trello (hors données métier) : A) marqueur ```TYPE: NOM source de vérité + exclusion des headings internes des fences ; B) fichier physique type-NOM au contenu = bloc complet, affiché XX: NOM ; C) affichage selon mode (Code brut / Structure tag+board scopé / Preview board inline) ; D) barre MO tous modes + vue Liste + focus ; E) cycle de vie create/delete/corruption/orphelins ; F) sync bidirectionnelle + à l'ouverture ; G) verrou section readonly + cadenas jaune/rouge ; H) popups sans fermeture au backdrop. Phase 5 mise à jour pour pointer vers ces specs.",
+      "files": [
+        ".claude/commands/nouveau-mega-outil.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Liste moi toutes les spécifications d'un mega outils à partir du MO TRELLO, le but est de mettre à jour la command claude .claude/commands/nouveau-mega-outil.md, ne pas inclure les spécifications de trello comme les tasks uniquement ce qui concerne le MO en général.",
+      "startedAt": "2026-06-14T10:40:00.000Z",
+      "completedAt": "2026-06-14T11:00:00.000Z"
+    },
+    {
       "id": "mod-389",
       "version": "B-0.274",
       "date": "2026-06-14T10:20:00.000Z",
