@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-361",
+      "version": "B-0.266",
+      "date": "2026-06-13T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|save-bar",
+      "title": "Éditeur : barre sauvegarde déplacée en bas de zone",
+      "description": "La barre d'info sauvegarde (statut Sauvegardé/Non sauvegardé/Erreur + badge FTP + zone Annuler/Partager) a été retirée du haut de la barre d'outils et repositionnée en pied de zone édition, avec une bordure top.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu projet dans l'edition on à une barre info sauvegarde je voudrais que tu passe cette barre d'infos en bas de la zone edition",
+      "startedAt": "2026-06-13T00:00:00.000Z",
+      "completedAt": "2026-06-13T00:05:00.000Z"
+    },
+    {
       "id": "mod-360",
       "version": "B-0.265",
       "date": "2026-06-12T19:15:00.000Z",

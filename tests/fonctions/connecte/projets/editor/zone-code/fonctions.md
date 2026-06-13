@@ -155,7 +155,7 @@ Via les boutons de la toolbar (voir toolbar/fonctions.md) ou raccourcis :
 |------|-------------|
 | Mode normal | Textarea pleine largeur |
 | Mode focus | Seule la section sélectionnée visible |
-| Dirty | Badge orange dans toolbar |
+| Dirty | Badge orange dans la barre d'info (bas de zone) |
 | Saving | Spinner |
 | Erreur upload image | Toast rouge |
 | Sections repliées | Indicateur `[...]` sur la ligne repliée |

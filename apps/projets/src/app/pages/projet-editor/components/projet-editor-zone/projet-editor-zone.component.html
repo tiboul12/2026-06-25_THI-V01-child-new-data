@@ -29,111 +29,8 @@
   <!-- Barre d'outils -->
   <div class="flex flex-col bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
 
-    <!-- Ligne 1 : Sauvegarde + badge FTP/sync + zone Modifications/Partager -->
-    <div class="flex items-center gap-3 px-3 pt-1.5 pb-1">
-
-      <!-- Statut sauvegarde -->
-      @if (saveStatus === 'saving') {
-        <span class="text-xs text-yellow-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Sauvegarde…</span>
-      } @else if (saveStatus === 'dirty') {
-        <button type="button"
-                (click)="forceSave()"
-                title="Cliquer pour sauvegarder maintenant"
-                class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 px-1 rounded hover:bg-orange-400/10 transition-colors cursor-pointer">
-          <span class="material-symbols-outlined text-sm">save</span> Non sauvegardé
-        </button>
-      } @else if (saveStatus === 'error') {
-        <span class="text-xs text-red-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span> Erreur</span>
-      } @else {
-        <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
-      }
-
-      <!-- Badge FTP / état sync -->
-      @if (backupType === 'ftp') {
-        @if (ftpSyncGlobalStatus === 'syncing') {
-          <span class="flex items-center gap-1.5 px-2 py-0.5 rounded border text-blue-400 border-blue-500/30 bg-blue-500/10">
-            <span class="material-symbols-outlined text-[11px] animate-spin flex-shrink-0">sync</span>
-            <span class="text-[10px] font-semibold whitespace-nowrap">Sync FTP
-              @if (ftpSyncProgress.total > 0) {
-                {{ ftpSyncProgress.checked }}/{{ ftpSyncProgress.total }}
-              }
-            </span>
-            @if (ftpSyncProgress.total > 0) {
-              <span class="block w-24 h-1.5 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
-                <span class="block h-full bg-blue-400 transition-all duration-500 ease-out"
-                      [style.width]="(ftpSyncProgress.total > 0 ? (ftpSyncProgress.checked / ftpSyncProgress.total * 100) : 0) + '%'"></span>
-              </span>
-            }
-          </span>
-        } @else if (ftpSyncGlobalStatus === 'done') {
-          <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
-            <span class="material-symbols-outlined text-[11px]">dns</span>
-            FTP à jour
-          </span>
-        } @else if (ftpSyncGlobalStatus === 'error') {
-          <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-red-400 border-red-500/30 bg-red-500/10">
-            <span class="material-symbols-outlined text-[11px]">dns</span>
-            FTP — erreur sync
-          </span>
-        } @else {
-          <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
-            <span class="material-symbols-outlined text-[11px]">dns</span>
-            FTP
-          </span>
-        }
-      } @else if (backupType && backupBadge[backupType]) {
-        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border"
-              [ngClass]="backupBadge[backupType].css">
-          <span class="material-symbols-outlined text-[11px]">{{ backupBadge[backupType].icon }}</span>
-          {{ backupBadge[backupType].label }}
-        </span>
-      }
-
-      <div class="flex-1"></div>
-
-      <!-- Zone Modifications / Annuler / Partager (intégrée dans la barre Sauvegarde) -->
-      @if (showCodePublishBar) {
-        <span class="code-publish-bar__info">
-          <span class="material-symbols-outlined">edit</span>
-          Modifications en cours
-        </span>
-        <div class="flex items-center gap-2">
-          <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
-          <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
-            <span class="material-symbols-outlined">share</span>
-            Partager mes modifications
-          </button>
-        </div>
-      } @else if (showCrossModePendingBar) {
-        <span class="code-publish-bar__info">
-          <span class="material-symbols-outlined">edit</span>
-          Modifications Code en attente
-        </span>
-        <div class="flex items-center gap-2">
-          <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
-          <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
-            <span class="material-symbols-outlined">share</span>
-            Partager mes modifications
-          </button>
-        </div>
-      } @else if (backupType && structureHasPending()) {
-        <span class="code-publish-bar__info">
-          <span class="material-symbols-outlined">edit</span>
-          Modifications en cours
-        </span>
-        <div class="flex items-center gap-2">
-          <button class="visu-publish-bar__cancel" (click)="cancelStructureEdit()">Annuler</button>
-          <button class="visu-publish-bar__publish" (click)="publishStructureEdit()" [disabled]="isPublishing()">
-            <span class="material-symbols-outlined">share</span>
-            Partager mes modifications
-          </button>
-        </div>
-      }
-
-    </div>
-
-    <!-- Ligne 2 : Tabs + boutons de formatage -->
-    <div class="flex flex-wrap items-center gap-1 px-2 pt-1 pb-2 border-t border-light-border/40 dark:border-white/5">
+    <!-- Tabs + boutons de formatage -->
+    <div class="flex flex-wrap items-center gap-1 px-2 py-1.5">
 
       <!-- Tabs Code / Structure / Preview -->
       <div class="ed-mode-tabs mr-2">
@@ -1414,5 +1311,108 @@
 
   }
   }
+
+  <!-- Barre d'infos sauvegarde (bas de zone) -->
+  <div class="flex items-center gap-3 px-3 py-1 bg-light-surface dark:bg-surface border-t border-light-border dark:border-white/10 flex-shrink-0">
+
+    <!-- Statut sauvegarde -->
+    @if (saveStatus === 'saving') {
+      <span class="text-xs text-yellow-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Sauvegarde…</span>
+    } @else if (saveStatus === 'dirty') {
+      <button type="button"
+              (click)="forceSave()"
+              title="Cliquer pour sauvegarder maintenant"
+              class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 px-1 rounded hover:bg-orange-400/10 transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-sm">save</span> Non sauvegardé
+      </button>
+    } @else if (saveStatus === 'error') {
+      <span class="text-xs text-red-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span> Erreur</span>
+    } @else {
+      <span class="text-xs text-green-500 flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Sauvegardé</span>
+    }
+
+    <!-- Badge FTP / état sync -->
+    @if (backupType === 'ftp') {
+      @if (ftpSyncGlobalStatus === 'syncing') {
+        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded border text-blue-400 border-blue-500/30 bg-blue-500/10">
+          <span class="material-symbols-outlined text-[11px] animate-spin flex-shrink-0">sync</span>
+          <span class="text-[10px] font-semibold whitespace-nowrap">Sync FTP
+            @if (ftpSyncProgress.total > 0) {
+              {{ ftpSyncProgress.checked }}/{{ ftpSyncProgress.total }}
+            }
+          </span>
+          @if (ftpSyncProgress.total > 0) {
+            <span class="block w-24 h-1.5 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
+              <span class="block h-full bg-blue-400 transition-all duration-500 ease-out"
+                    [style.width]="(ftpSyncProgress.total > 0 ? (ftpSyncProgress.checked / ftpSyncProgress.total * 100) : 0) + '%'"></span>
+            </span>
+          }
+        </span>
+      } @else if (ftpSyncGlobalStatus === 'done') {
+        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
+          <span class="material-symbols-outlined text-[11px]">dns</span>
+          FTP à jour
+        </span>
+      } @else if (ftpSyncGlobalStatus === 'error') {
+        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-red-400 border-red-500/30 bg-red-500/10">
+          <span class="material-symbols-outlined text-[11px]">dns</span>
+          FTP — erreur sync
+        </span>
+      } @else {
+        <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border text-cyan-400 border-cyan-500/30 bg-cyan-500/10">
+          <span class="material-symbols-outlined text-[11px]">dns</span>
+          FTP
+        </span>
+      }
+    } @else if (backupType && backupBadge[backupType]) {
+      <span class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border"
+            [ngClass]="backupBadge[backupType].css">
+        <span class="material-symbols-outlined text-[11px]">{{ backupBadge[backupType].icon }}</span>
+        {{ backupBadge[backupType].label }}
+      </span>
+    }
+
+    <div class="flex-1"></div>
+
+    <!-- Zone Modifications / Annuler / Partager -->
+    @if (showCodePublishBar) {
+      <span class="code-publish-bar__info">
+        <span class="material-symbols-outlined">edit</span>
+        Modifications en cours
+      </span>
+      <div class="flex items-center gap-2">
+        <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
+        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
+          <span class="material-symbols-outlined">share</span>
+          Partager mes modifications
+        </button>
+      </div>
+    } @else if (showCrossModePendingBar) {
+      <span class="code-publish-bar__info">
+        <span class="material-symbols-outlined">edit</span>
+        Modifications Code en attente
+      </span>
+      <div class="flex items-center gap-2">
+        <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
+        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
+          <span class="material-symbols-outlined">share</span>
+          Partager mes modifications
+        </button>
+      </div>
+    } @else if (backupType && structureHasPending()) {
+      <span class="code-publish-bar__info">
+        <span class="material-symbols-outlined">edit</span>
+        Modifications en cours
+      </span>
+      <div class="flex items-center gap-2">
+        <button class="visu-publish-bar__cancel" (click)="cancelStructureEdit()">Annuler</button>
+        <button class="visu-publish-bar__publish" (click)="publishStructureEdit()" [disabled]="isPublishing()">
+          <span class="material-symbols-outlined">share</span>
+          Partager mes modifications
+        </button>
+      </div>
+    }
+
+  </div>
 
 </div>
