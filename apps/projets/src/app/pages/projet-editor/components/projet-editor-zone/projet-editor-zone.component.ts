@@ -1652,6 +1652,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         if (isGridEmpty) {
           grid = await this.tryRecoverGridFromDocSections(id, grid) ?? grid;
         }
+        grid = await this.normalizeArrayGrid(id, grid);
         const instFolderId = this.arrayInstances.find(i => i.id === id)?.folderId;
         if (this.mode === 'edit') {
           await this.saveArrayCsvFile(id, grid, instFolderId ?? undefined);
@@ -1663,20 +1664,47 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
   }
 
+  /** Répare une grille dont colWidths/rowHeights ne correspondent pas à colCount/rowCount
+   *  (sinon le board n'affiche pas les lettres de colonnes). Persiste la correction en BDD. */
+  private async normalizeArrayGrid(id: string, grid: ArrayGrid): Promise<ArrayGrid> {
+    const colCount = grid.colCount || (grid.cells.length ? Math.max(...grid.cells.map(r => r.length)) : 0);
+    const rowCount = grid.rowCount || grid.cells.length;
+    if (!colCount || !rowCount) return grid;
+    const needCols = !grid.colWidths || grid.colWidths.length !== colCount;
+    const needRows = !grid.rowHeights || grid.rowHeights.length !== rowCount;
+    if (!needCols && !needRows) return grid;
+    const fixed: ArrayGrid = {
+      ...grid,
+      colCount, rowCount,
+      colWidths: needCols ? Array(colCount).fill(100) : grid.colWidths,
+      rowHeights: needRows ? Array(rowCount).fill(32) : grid.rowHeights,
+    };
+    try { return await this.megaOutilsSvc.updateArrayGrid(id, fixed); } catch { return fixed; }
+  }
+
   private async tryRecoverGridFromDocSections(id: string, emptyGrid: ArrayGrid): Promise<ArrayGrid | null> {
     const inst = this.arrayInstances.find(i => i.id === id);
-    if (!inst?.folderId) return null;
-    const sec = this.docSections.find(s => s.folderId === inst.folderId);
-    if (!sec) return null;
-    const blockMatch = sec.textContent.match(/'array\n([\s\S]*?)\n'/);
-    const oldContent = blockMatch?.[1]?.trim() ?? '';
-    if (!oldContent) return null;
-    // Seulement si ancien format markdown (pas déjà nouveau format)
-    if (oldContent.includes('cols:') || /^[A-Z]+\d+:/m.test(oldContent)) return null;
-    const recovered = this.recoverGridFromMarkdownTable(oldContent, emptyGrid);
+    if (!inst) return null;
+    // Chercher le bloc dans la section du trello/array (docSections) OU dans le contenu live.
+    const sec = inst.folderId ? this.docSections.find(s => s.folderId === inst.folderId) : null;
+    const haystacks = [sec?.textContent ?? '', this.unifiedContent, this.fullContentBackup];
+    let body = '';
+    const esc = inst.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const fenceRe = new RegExp('```ARRAY: ' + esc + '\n([\\s\\S]*?)```(?=\\n|$)');
+    for (const h of haystacks) {
+      const fm = fenceRe.exec(h);
+      if (fm && fm[1].trim()) { body = fm[1]; break; }
+    }
+    // Fallback ancien format délimiteur 'array
+    if (!body) {
+      const blockMatch = (sec?.textContent ?? '').match(/'array\n([\s\S]*?)\n'/);
+      body = (blockMatch?.[1] ?? '').trim();
+    }
+    if (!body.trim()) return null;
+    const recovered = this.deserializeArrayGrid(body, emptyGrid);
     if (!recovered) return null;
     try {
-      return await this.megaOutilsSvc.updateArrayGrid(id, recovered);
+      return await this.megaOutilsSvc.updateArrayGrid(id, { ...emptyGrid, ...recovered } as ArrayGrid);
     } catch { return null; }
   }
 
@@ -1701,7 +1729,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (const inst of this.arrayInstances) {
       if (!this.visuArrayGrids.has(inst.id)) {
         try {
-          const grid = await this.megaOutilsSvc.getArrayGrid(inst.id);
+          let grid = await this.megaOutilsSvc.getArrayGrid(inst.id);
+          grid = await this.normalizeArrayGrid(inst.id, grid);
           this.visuArrayGrids.set(inst.id, grid);
         } catch { /* ignore */ }
       }
@@ -1759,7 +1788,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (!cells.some(row => row.some(c => c.value))) return null;
       const colCount = Math.max(...cells.map(r => r.length));
       const padded = cells.map(r => { while (r.length < colCount) r.push({ value: '' }); return r; });
-      return { cells: padded, colCount, rowCount: padded.length, colWidths: fallback.colWidths, rowHeights: fallback.rowHeights };
+      // colWidths/rowHeights doivent avoir la bonne longueur (le board affiche les lettres de
+      // colonnes via colWidths) → générer des valeurs par défaut si le fallback ne correspond pas.
+      const colWidths = (fallback.colWidths?.length === colCount) ? fallback.colWidths : Array(colCount).fill(100);
+      const rowHeights = (fallback.rowHeights?.length === padded.length) ? fallback.rowHeights : Array(padded.length).fill(32);
+      return { cells: padded, colCount, rowCount: padded.length, colWidths, rowHeights };
     }
     const lines = code.split('\n');
     let colWidths: number[] | null = null;
@@ -3466,12 +3499,29 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (this.arrayInstances.some(a => this.slugify(a.name) === slug)) continue;
       const sr = this.sectionRanges.find(r => i >= r.lineStart && i <= r.lineEnd);
       const folderId = sr?.folderId ?? this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null) ?? undefined;
+      // Extraire le corps (table markdown) du bloc collé pour initialiser la grille en BDD
+      let body = '';
+      for (let j = i + 1; j < lines.length; j++) {
+        if (lines[j].trim() === '```') break;
+        body += (body ? '\n' : '') + lines[j];
+      }
       this.megaOutilsSvc.createInstance({
         type: 'array', name, projectId: this.projectName,
         outilId: this.activeOutilId || undefined, folderId: folderId ?? undefined,
       }).then(inst => {
         this.seenArrayMarkers.add(inst.id);
         this.megaOutilCreated.emit(inst);
+        // Initialiser la grille depuis la table collée (sinon loadArrayGrid charge une grille vide
+        // et saveArrayCsvFile écraserait le contenu collé).
+        if (body.trim()) {
+          const fallback = { instanceId: inst.id, cells: [], colWidths: [], rowHeights: [], colCount: 3, rowCount: 5, updatedAt: '' } as ArrayGrid;
+          const partial = this.deserializeArrayGrid(body, fallback);
+          if (partial) {
+            this.megaOutilsSvc.updateArrayGrid(inst.id, { ...fallback, ...partial } as ArrayGrid)
+              .then(g => { this.visuArrayGrids.set(inst.id, g); this.lastArrayCodeFromGrid.set(inst.id, '```ARRAY: ' + name + '\n' + body.trim() + '\n```'); })
+              .catch(() => {});
+          }
+        }
       }).catch(() => {});
     }
   }

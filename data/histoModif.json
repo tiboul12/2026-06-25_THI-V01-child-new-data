@@ -1,6 +1,44 @@
 {
   "modifications": [
     {
+      "id": "mod-395",
+      "version": "B-0.277",
+      "date": "2026-06-14T14:45:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|array-inline-block",
+      "title": "Array : lettres de colonnes manquantes après collage (colWidths vide)",
+      "description": "Après collage d'un tableau, les lettres de colonnes (A, B, C) n'étaient pas affichées dans le board (Structure/Preview) : le board itère colWidths pour l'en-tête, or deserializeArrayGrid laissait colWidths vide (fallback). Fix : deserializeArrayGrid génère colWidths/rowHeights de la bonne longueur (défaut 100/32) si le fallback ne correspond pas. Ajout de normalizeArrayGrid() appelée au chargement (loadArrayGrid + loadAllVisuArrayGrids) pour réparer et persister les grilles existantes dont colWidths/rowHeights ne correspondent pas à colCount/rowCount.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "à l'affichage dans la view structure et preview, les lettres des colonnes présentes ne sont pas affichées (après copie des données d'un tableau dans une autre section)",
+      "startedAt": "2026-06-14T14:30:00.000Z",
+      "completedAt": "2026-06-14T14:45:00.000Z"
+    },
+    {
+      "id": "mod-394",
+      "version": "B-0.277",
+      "date": "2026-06-14T14:15:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|array-inline-block",
+      "title": "Array : coller un bloc avec contenu dans une autre section conserve le contenu",
+      "description": "Coller un bloc ```ARRAY: NOM avec une table dans une autre section effaçait le contenu : l'instance créée avait une grille vide en BDD → loadArrayGrid chargeait le vide → saveArrayCsvFile écrasait la table collée. Fix : ensureArrayInstancesFromContent extrait la table du bloc collé et initialise la grille en BDD (deserializeArrayGrid → updateArrayGrid). De plus, tryRecoverGridFromDocSections récupère désormais la grille depuis le fence ```ARRAY: (section + contenu live) si la grille DB est vide, en filet anti-race.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je copie le code d'un tableau avec son contenu dans une autre section, cela doit garder le contenu collé et non l'effacer comme c'est le cas actuellement",
+      "startedAt": "2026-06-14T14:00:00.000Z",
+      "completedAt": "2026-06-14T14:15:00.000Z"
+    },
+    {
       "id": "mod-393",
       "version": "B-0.276",
       "date": "2026-06-14T13:45:00.000Z",
