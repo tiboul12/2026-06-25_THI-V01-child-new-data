@@ -178,7 +178,7 @@
                       : 'text-light-text-muted dark:text-white/50 border border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
                     (click)="inst.type === 'mockup' ? selectMockupFromMarker(inst.id) : selectMegaOutil(inst)">
               <span class="material-symbols-outlined text-[11px]">{{ inst.type === 'mockup' ? 'design_services' : inst.type === 'array' ? 'table' : 'view_kanban' }}</span>
-              {{ inst.name }}
+              {{ inst.type === 'trello' ? '[trello:' + inst.name + ']' : inst.name }}
             </button>
           }
           @if ((moActiveType() === 'trello' ? trelloInstances : moActiveType() === 'array' ? arrayInstances : mockupInstances).length === 0) {
@@ -198,6 +198,19 @@
 
         <!-- Actions Trello -->
         @if (moActiveType() === 'trello') {
+          <!-- Toggle : modification automatique du bloc Trello dans le code -->
+          <button type="button"
+                  class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 mr-1 rounded text-[11px] border transition-colors"
+                  [ngClass]="trelloAutoSync()
+                    ? 'text-blue-500 dark:text-blue-400 border-blue-500/30 bg-blue-500/10'
+                    : 'text-light-text-muted dark:text-white/40 border-transparent hover:bg-light-surface-hover dark:hover:bg-white/10'"
+                  [title]="trelloAutoSync()
+                    ? 'Sync auto activée : le bloc TRELLO du code se met à jour avec les cartes. Cliquer pour désactiver.'
+                    : 'Sync auto désactivée : le code n\'est jamais modifié automatiquement. Cliquer pour activer.'"
+                  (click)="trelloAutoSync.set(!trelloAutoSync())">
+            <span class="material-symbols-outlined text-[12px]">{{ trelloAutoSync() ? 'sync' : 'sync_disabled' }}</span>
+            Sync auto
+          </button>
           <button type="button"
                   class="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 mr-1 rounded text-[11px] text-blue-500 dark:text-blue-400 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 transition-colors"
                   title="Créer un nouveau Trello"
@@ -766,6 +779,11 @@
                           title="Supprimer la liaison (ne supprime pas le mockup)"
                           (click)="removeMockupMarker(line.mockupInstId); $event.stopPropagation()">close</span>
                   </span>
+                </span>
+              } @else if (line.isTrelloBlock) {
+                <span class="ed-trello-block-header">
+                  <span class="material-symbols-outlined ed-trello-block-header__icon">view_kanban</span>
+                  <span class="ed-trello-block-header__name">{{ line.trelloName }}</span>
                 </span>
               } @else {
                 <span class="ed-text" [innerHTML]="line.safeHtml"></span>

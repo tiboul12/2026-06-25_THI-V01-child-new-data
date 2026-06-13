@@ -1,6 +1,110 @@
 {
   "modifications": [
     {
+      "id": "mod-366",
+      "version": "B-0.267",
+      "date": "2026-06-13T12:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code",
+      "title": "Code : un bloc fencé ``` n'est plus reformaté en bloc-fichier à la sauvegarde",
+      "description": "Cause racine identifiée : le flux de parsing/sauvegarde (parseContent, reconstruction markdown, parseAdditionalBlocks, syntaxHighlight) traitait toute ligne commençant par ` comme un délimiteur de bloc-fichier additionnel. Une ligne ``` (fence code markdown) commence par ` → elle était interprétée comme un bloc-fichier, et à la re-sérialisation (auto-save 2s) le code était reformaté (perte d'un backtick, insertion du titre). Ajout d'un lookahead négatif (?!``` ` ` `) aux regex /^(['`^]).../ dans blockPreScan, blockRegex (parseContent), les deux .replace de reconstruction markdown, parseAdditionalBlocks, et garde !startsWith('```') sur les .exec/.test restants (recomputeRanges déjà OK, parseStructureNodes déjà OK). Désormais un bloc ``` reste intact à la sauvegarde.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "j'ai toujours le même soucis le code est automatiquement mise à jour dans un format qui ne me conviens pas, il faut empécher le code d'etre modifié automatiquement",
+      "startedAt": "2026-06-13T11:40:00.000Z",
+      "completedAt": "2026-06-13T12:00:00.000Z"
+    },
+    {
+      "id": "mod-365",
+      "version": "B-0.267",
+      "date": "2026-06-13T11:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello Code : bouton Sync auto pour autoriser/empêcher la modif auto du code",
+      "description": "Ajout d'un toggle 'Sync auto' dans la barre des actions Trello (mode Code). Signal trelloAutoSync (désactivé par défaut). Quand désactivé, onTrelloCardsChanged() n'appelle plus syncTrelloInlineBlock() : le contenu du code n'est jamais modifié automatiquement quand les cartes Trello changent. Quand activé, le bloc TRELLO inline se met à jour avec les cartes. Corrige définitivement la régression où un bloc ``` de code classique était transformé en bloc Trello tout seul.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "j'ai toujours le même soucis lorsque je met un Bloc code avec ``` ... au bout de quelques seconde le code est modifié. Le code ne doit pas ce modifié tous seul met une option (bouton) pour empéché ou non la modification automatique",
+      "startedAt": "2026-06-13T11:15:00.000Z",
+      "completedAt": "2026-06-13T11:30:00.000Z"
+    },
+    {
+      "id": "mod-364",
+      "version": "B-0.267",
+      "date": "2026-06-13T11:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello Code : suppression de l'insertion automatique du bloc inline",
+      "description": "syncTrelloInlineBlock() ne crée plus de bloc Trello automatiquement si le bloc n'existe pas dans le contenu. Suppression de la branche else qui appendait le bloc en fin de section (comportement legacy). La création du bloc reste uniquement via confirmTrelloPopup(). Corrige la regression : tout bloc ``` (code classique) dans une section Trello était transformé en bloc Trello inline au bout de quelques secondes.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Les ``` sont toujours modifiés/transformés — non des que je met le Bloc code cela m'inscrit dans la zone edition au bout de quelques seconde le code change",
+      "startedAt": "2026-06-13T10:55:00.000Z",
+      "completedAt": "2026-06-13T11:00:00.000Z"
+    },
+    {
+      "id": "mod-363",
+      "version": "B-0.267",
+      "date": "2026-06-13T10:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello Code : format TRELLO: + sélection bloc + label [trello:NOM]",
+      "description": "Correction du format des blocs Trello inline : syntaxe ```## Trello: NAME remplacée par ```TRELLO: NAME (compatibilité ascendante via regex (?:## Trello:|TRELLO:)). Ajout de scrollToTrelloBlock() : clic sur un onglet Trello en mode Code sélectionne le bloc dans la textarea et scrolle dessus. Label des onglets Trello dans la barre MO changé de 'NOM' à '[trello:NOM]'. Correction critique : le regex de fermeture \\n``` n'était pas ancré en fin de ligne et matchait ```language (ajout (?=\\n|$)). Correction dans recomputeInlineBlocks, recomputeRanges et parseStructureNodes : les lignes ``` étaient capturées comme file-blocks à délimiteur unique (` jamais fermé), bloquant tout le document ; ajout de !lines[i].startsWith('```') pour les exclure.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je clique sur un tag trello je ne devrais avoir selectionné que le code du trello... Dans le menu on à l'information trello mais il faut y rajouté le nom du trello [trello:NOM]... Un trello dans le code est indiqué par ```TRELLO: NOM DU TRELLO",
+      "startedAt": "2026-06-13T09:50:00.000Z",
+      "completedAt": "2026-06-13T10:10:00.000Z"
+    },
+    {
+      "id": "mod-362",
+      "version": "B-0.267",
+      "date": "2026-06-13T00:10:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|trello-inline-block",
+      "title": "Trello : bloc fencé inline ```## Trello: NAME en mode Code",
+      "description": "Le Trello MO est désormais représenté inline dans le contenu markdown par un bloc fencé ```## Trello: NOM_DU_TRELLO```  au lieu du fichier trello.md séparé. La ligne d'ouverture est rendue comme un badge bleu dans le miroir. syncTrelloInlineBlock() remplace saveTrelloMarkdownFile() pour mettre à jour le contenu inline. resolveTrelloFolderId() scanne le bloc dans le contenu pour maintenir le folderId DB cohérent. removeTrelloBlockFromContent() supprime le bloc à la suppression de l'instance.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans l'edition/mode code dans le principe le MO trello est affiché avec 'trello, mais je voudrais que le code l'affiche et l'identifi à partir du code spécifique suivant : debut : ```## Trello: NOM_DU_TRELLO ...",
+      "startedAt": "2026-06-13T00:05:00.000Z",
+      "completedAt": "2026-06-13T00:20:00.000Z"
+    },
+    {
       "id": "mod-361",
       "version": "B-0.266",
       "date": "2026-06-13T00:00:00.000Z",

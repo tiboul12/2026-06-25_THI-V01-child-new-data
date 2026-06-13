@@ -112,6 +112,7 @@ Via les boutons de la toolbar (voir toolbar/fonctions.md) ou raccourcis :
 - **Niveaux** : `#` = niveau 1, `##` = niveau 2, `###` = niveau 3, `####` = niveau 4
 - **SectionRanges** : `{ folderId, lineStart, lineEnd }` pour chaque section
 - **FileRanges** : `{ fileId, lineStart, lineEnd }` pour les blocs fichiers additionnels
+- **Blocs-fichiers additionnels** : délimités par une ligne commençant par `'`, `` ` `` ou `^`. Les fences de code markdown ` ``` ` sont explicitement exclues (lookahead `(?!` + 3 backticks + `)` / garde `!startsWith('```')`) → un bloc de code ` ``` … ``` ` n'est jamais interprété comme un bloc-fichier ni reformaté à la sauvegarde
 
 ---
 
@@ -131,21 +132,31 @@ Via les boutons de la toolbar (voir toolbar/fonctions.md) ou raccourcis :
 - **Affichage** : le panneau `app-trello-board` s'affiche dans les 3 modes (Code, Structure, Preview) dès qu'un Trello est associé à la section active
 - **Synchronisation live** : le composant reste monté lors des changements de mode → les modifications (ajout/édition/déplacement de tâche) faites dans un mode sont immédiatement visibles dans les autres
 - **SSE** : les mises à jour de collaborateurs (`trelloUpdate$`) sont reçues dans tous les modes puisque le board n'est jamais détruit
-- **Propagation vers Code/Preview** : `@Output() cardsChanged` émis après chaque mutation locale (ajout, édition, suppression, drag-drop) et après rechargement SSE → `onTrelloCardsChanged` met à jour `trelloCodeCards`, régénère `trello.md` sur le serveur ET en mémoire (`existingFile.content`), reconstruit `docSections` + `unifiedContent`, rafraîchit la textarea et le rendu Preview
+- **Propagation vers Code** : `@Output() cardsChanged` → `onTrelloCardsChanged` → `syncTrelloInlineBlock()` met à jour le bloc fencé inline dans `unifiedContent` et déclenche un `scheduleSave()`
 
 ---
 
-## `2-5-2-4-14` — Fichier trello.md persisté dans le dossier section (mode Code)
+## `2-5-2-4-14` — Bloc Trello inline dans le contenu (mode Code)
 
-- **Déclenchement** : quand la section active a un Trello associé (`folderId` correspondant), `loadTrelloCodeCards()` charge les cards puis appelle `saveTrelloMarkdownFile()`
-- **Création/mise à jour** : `ProjectFilesService.createFile()` ou `updateFile()` — le fichier `trello.md` est écrit sur le serveur dans le dossier de la section
-- **Format Markdown** :
-  - `## Trello: Nom du board`
-  - `### À FAIRE / EN COURS / TERMINÉ / BLOQUÉ`
-  - `- [ ] Titre task \`[Priorité]\` — auteur · date` (checkbox : `[ ]` todo, `[~]` in-progress, `[x]` done, `[!]` blocked)
-- **Refresh** : `refresh.emit()` après écriture → le parent recharge l'arbre de fichiers → `trello.md` apparaît dans la sidebar et dans l'éditeur comme tout autre fichier additionnel
-- **Cache** : recharge uniquement si `mode:ids` change (`lastTrelloCodeLoadKey`)
-- **Colonnes vides** : non écrites dans le fichier
+- **Format** : bloc fencé ` ```TRELLO: NOM_DU_TRELLO ` inséré directement dans le markdown de la section
+- **Structure** :
+  ```
+  ```TRELLO: Nom du board
+  ### À faire
+  - [ ] Titre task `[Haute]` — auteur · date
+  ### En cours
+  - [~] Task 2
+  ```
+  ```
+- **Insertion** : création d'un Trello → `confirmTrelloPopup()` insère le bloc à la position du curseur
+- **Mise à jour** : `syncTrelloInlineBlock()` remplace le contenu du bloc existant via regex multiline ; gère aussi la migration de l'ancienne syntaxe ` ```## Trello: NAME ` → ` ```TRELLO: NAME ` ; si le bloc est absent, il n'est pas inséré automatiquement (la création est uniquement via `confirmTrelloPopup()`)
+- **Identification** : le `folderId` DB reste la source de vérité pour `recomputeContentTrelloIds()` ; `resolveTrelloFolderId()` scanne le contenu pour le bloc ` ```TRELLO: NAME ` (ou l'ancien ` ```## Trello: NAME `) afin de maintenir le `folderId` à jour si le bloc est déplacé manuellement
+- **Affichage miroir** : la ligne d'ouverture ` ```TRELLO: NAME ` est rendue comme un badge bleu `.ed-trello-block-header` ; les lignes de contenu du bloc s'affichent normalement
+- **Sélection depuis MO** : clic sur un onglet Trello dans la barre MO → `selectMegaOutil()` → `scrollToTrelloBlock()` → sélectionne le bloc dans la textarea et scrolle dessus (mode Code uniquement)
+- **Suppression** : `deleteTrelloInstance()` → `removeTrelloBlockFromContent()` retire le bloc du contenu et sauvegarde
+- **Colonnes vides** : non écrites dans le bloc
+- **Label MO** : les onglets Trello dans la barre instances affichent `[trello:NOM]`
+- **Toggle Sync auto** : bouton dans la barre des actions Trello (mode Code) → `trelloAutoSync` (signal, désactivé par défaut). Désactivé → `onTrelloCardsChanged()` n'appelle pas `syncTrelloInlineBlock()`, le contenu du code n'est jamais modifié automatiquement. Activé → le bloc inline se met à jour quand les cartes changent
 
 ---
 

@@ -81,6 +81,8 @@ interface MirrorLine {
   inlineBlockKind: 'block-table' | 'block-quote' | 'block-fence' | 'block-list' | null;
   isMockupMarker: boolean;
   mockupInstId: string;
+  isTrelloBlock: boolean;
+  trelloName: string;
 }
 
 interface HoverPreview {
@@ -251,6 +253,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   trelloCodeCards = signal<Record<string, TrelloCard[]>>({});
   readonly trelloStatusOrder: TrelloStatus[] = ['todo', 'in-progress', 'done', 'blocked'];
   private lastTrelloCodeLoadKey = '';
+  // Toggle : autorise ou non la mise à jour automatique du bloc TRELLO dans le code
+  // quand les cartes changent. Désactivé → le code n'est jamais modifié tout seul.
+  trelloAutoSync = signal(false);
 
   // Popup de configuration d'un nouveau Mockup
   showMockupPopup = signal(false);
@@ -649,7 +654,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }));
     this.trelloCodeCards.set(result);
     this.cdr.markForCheck();
-    this.saveTrelloMarkdownFile();
+    // Ne pas appeler syncTrelloInlineBlock ici : l'appel async peut écraser
+    // ta.value en plein milieu d'une frappe utilisateur et déplacer le curseur.
+    // Le bloc est créé une fois par confirmTrelloPopup(), et mis à jour
+    // uniquement quand une carte change réellement (onTrelloCardsChanged).
   }
 
   /** Retourne les cards d'un board pour un statut donné, triées par orderIndex. */
@@ -677,79 +685,59 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   /**
-   * Crée ou met à jour le fichier trello.md dans le dossier de la section active.
-   * Le fichier contient toutes les cards du/des board(s) Trello au format Markdown.
-   * Déclenche un refresh du parent pour que le fichier apparaisse dans la sidebar
-   * et dans le contenu de l'éditeur.
+   * Met à jour le bloc fencé ```TRELLO: NAME inline dans le contenu.
+   * Si le bloc n'existe pas encore (instance créée avant cette version), l'insère à la fin du contenu.
+   * Gère aussi la migration de l'ancienne syntaxe ```## Trello: NAME vers ```TRELLO: NAME.
    */
-  private async saveTrelloMarkdownFile() {
-    if (!this.projectName || !this.contentTrelloIds.length) return;
+  private syncTrelloInlineBlock() {
+    if (!this.contentTrelloIds.length) return;
     const cards = this.trelloCodeCards();
-    const hasCards = this.contentTrelloIds.some(id => (cards[id] || []).length > 0);
-    if (!hasCards) return;
+    let newContent = this.unifiedContent;
+    let changed = false;
 
-    const activeFolderId = this.focusedHandle?.id ?? this.activeNodeId ?? null;
-    if (!activeFolderId) return;
-
-    const folderNode = this.findNode(activeFolderId, this.files);
-    if (!folderNode) return;
-
-    // Génère le contenu Markdown complet
-    const lines: string[] = [];
     for (const id of this.contentTrelloIds) {
+      const name = this.trelloInstanceName(id);
       const boardCards = cards[id] || [];
-      if (!boardCards.length) continue;
-      lines.push(`## Trello: ${this.trelloInstanceName(id)}`, '');
+
+      // Génère le contenu du bloc
+      const innerLines: string[] = [];
       for (const status of this.trelloStatusOrder) {
         const sc = boardCards.filter(c => c.status === status).sort((a, b) => a.orderIndex - b.orderIndex);
         if (!sc.length) continue;
-        lines.push(`### ${TRELLO_STATUS_LABELS[status]}`);
-        for (const card of sc) lines.push(this.trelloCardCodeText(card));
-        lines.push('');
+        innerLines.push(`### ${TRELLO_STATUS_LABELS[status]}`);
+        for (const card of sc) innerLines.push(this.trelloCardCodeText(card));
+        innerLines.push('');
       }
+      const inner = innerLines.join('\n').replace(/\n+$/, '');
+      const newBlock = inner
+        ? `\`\`\`TRELLO: ${name}\n${inner}\n\`\`\``
+        : `\`\`\`TRELLO: ${name}\n\`\`\``;
+
+      const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Supporte l'ancienne syntaxe (## Trello:) et la nouvelle (TRELLO:).
+      // (?=\n|$) ancre la fermeture en fin de ligne pour ne pas matcher ```language.
+      const blockRe = new RegExp('```(?:## Trello:|TRELLO:) ' + esc + '\n[\\s\\S]*?\n```(?=\\n|$)', 'g');
+
+      if (blockRe.test(newContent)) {
+        // Réinitialise lastIndex
+        blockRe.lastIndex = 0;
+        const updated = newContent.replace(blockRe, newBlock);
+        if (updated !== newContent) { newContent = updated; changed = true; }
+      }
+      // Bloc absent → on ne l'insère pas automatiquement.
+      // La création initiale se fait uniquement via confirmTrelloPopup().
     }
-    const content = lines.join('\n').trim();
-    if (!content) return;
 
-    // Cherche un trello.md existant dans le dossier
-    const existingFile = (folderNode.children || []).find(
-      c => c.type === 'file' && c.name === 'trello.md'
-    );
-
-    try {
-      if (existingFile) {
-        // Mise à jour silencieuse si le contenu a changé
-        if ((existingFile.content ?? '').trim() !== content.trim()) {
-          await this.svc.updateFile(this.projectName, existingFile.id, content);
-          // Propager en mémoire : mettre à jour le nœud, reconstruire docSections + unifiedContent + toutes les vues
-          existingFile.content = content;
-          this.docSections = this.buildDocSections(this.files, 1);
-          const newContent = this.reconstructFromSections();
-          if (newContent !== this.unifiedContent) {
-            this.unifiedContent = newContent;
-            this.lastSavedContent = newContent;
-            const ta = this.textareaRef?.nativeElement;
-            if (ta) ta.value = newContent;
-            // recomputeAll est sûr ici : loadTrelloCodeCards() est bloqué par le dedup key en mode Code
-            this.recomputeAll();
-            this.cdr.markForCheck();
-          }
-        }
-      } else {
-        // Première création → refresh pour faire apparaître le fichier dans la sidebar
-        await this.svc.createFile(this.projectName, {
-          name: 'trello.md',
-          parentId: activeFolderId,
-          content,
-        });
-        this.refresh.emit();
-      }
-    } catch (e) {
-      console.error('[EditorZone] saveTrelloMarkdownFile échoué :', e);
+    if (changed) {
+      this.unifiedContent = newContent;
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = newContent;
+      this.recomputeAll();
+      this.scheduleSave();
     }
   }
 
-  /** Reçoit les cards mises à jour depuis app-trello-board, régénère trello.md. */
+  /** Reçoit les cards mises à jour depuis app-trello-board, met à jour le bloc inline. */
   async onTrelloCardsChanged(instanceId: string, updatedCards: TrelloCard[]) {
     const merged: Record<string, TrelloCard[]> = { ...this.trelloCodeCards(), [instanceId]: updatedCards };
     // Récupère les boards manquants (mode non-Code : trelloCodeCards peut être vide)
@@ -761,7 +749,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       }));
     }
     this.trelloCodeCards.set(merged);
-    await this.saveTrelloMarkdownFile();
+    // Mise à jour auto du bloc inline uniquement si l'utilisateur l'a activée.
+    if (this.trelloAutoSync()) this.syncTrelloInlineBlock();
   }
 
   private async loadTrelloListCounts() {
@@ -790,12 +779,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
    */
   /**
    * Résout le folderId de la section d'un trello : prioritairement via la position
-   * du marqueur {{TRELLO:id}} dans docSections (indépendant du mode focus), fallback inst.folderId.
+   * du bloc ```TRELLO: NAME dans docSections, fallback sur inst.folderId.
+   * Supporte aussi l'ancienne syntaxe ```## Trello: NAME.
    */
   private resolveTrelloFolderId(instId: string): string | null {
-    const marker = `{{TRELLO:${instId}}}`;
-    const sec = this.docSections.find(s => s.textContent.includes(marker));
+    const name = this.trelloInstanceName(instId);
+    const blockOpen = `\`\`\`TRELLO: ${name}`;
+    const blockOpenLegacy = `\`\`\`## Trello: ${name}`;
+    const sec = this.docSections.find(s => s.textContent.includes(blockOpen) || s.textContent.includes(blockOpenLegacy));
     if (sec) return sec.folderId;
+    // Fallback : chercher aussi dans le contenu unifié (pour le mode focus)
+    const marker = this.unifiedContent.includes(blockOpen) ? blockOpen : this.unifiedContent.includes(blockOpenLegacy) ? blockOpenLegacy : null;
+    if (marker) {
+      const lineIdx = this.unifiedContent.substring(0, this.unifiedContent.indexOf(marker)).split('\n').length - 1;
+      const sr = this.sectionRanges.find(r => r.lineStart <= lineIdx && lineIdx <= r.lineEnd);
+      if (sr) return sr.folderId;
+    }
     return this.megaOutilInstances.find(i => i.id === instId)?.folderId ?? null;
   }
 
@@ -828,6 +827,28 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       ? this.resolveMockupFolderId(inst.id)
       : this.resolveTrelloFolderId(inst.id);
     if (folderId) this.trelloNavigate.emit(folderId);
+    if (inst.type === 'trello' && this.mode === 'edit') {
+      setTimeout(() => this.scrollToTrelloBlock(inst.id), 50);
+    }
+  }
+
+  /** En mode Code, sélectionne le bloc ```TRELLO: NAME dans la textarea et scrolle dessus. */
+  private scrollToTrelloBlock(instId: string) {
+    const name = this.trelloInstanceName(instId);
+    const openMarker = `\`\`\`TRELLO: ${name}`;
+    const content = this.unifiedContent;
+    const start = content.indexOf(openMarker);
+    if (start < 0) return;
+    const afterOpen = content.indexOf('\n', start);
+    const closeIdx = afterOpen >= 0 ? content.indexOf('\n```', afterOpen) : -1;
+    const blockEnd = closeIdx >= 0 ? closeIdx + 4 : content.length;
+    const ta = this.textareaRef?.nativeElement;
+    if (!ta) return;
+    const linesBefore = content.substring(0, start).split('\n').length - 1;
+    const totalLines = content.split('\n').length;
+    ta.scrollTop = (linesBefore / totalLines) * ta.scrollHeight;
+    ta.focus();
+    ta.setSelectionRange(start, blockEnd);
   }
 
   private resolveMockupFolderId(instId: string): string | null {
@@ -1048,6 +1069,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const flatHeads: { lineIdx: number; level: number; name: string }[] = [];
 
     // Détecter les plages de lignes à l'intérieur des blocs fichier pour les exclure du scan de headings
+    // Note : exclure les ``` (3 backticks) qui ne sont pas des file-blocks à délimiteur unique
     const blockLineRanges: [number, number][] = [];
     let bInBlock = false;
     let bDelim = '';
@@ -1055,7 +1077,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     for (let i = 0; i < lines.length; i++) {
       if (!bInBlock) {
         const bm = /^(['`^])(.+)$/.exec(lines[i]);
-        if (bm) { bInBlock = true; bDelim = bm[1]; bStart = i; }
+        if (bm && !lines[i].startsWith('```')) { bInBlock = true; bDelim = bm[1]; bStart = i; }
       } else if (lines[i].trim() === bDelim) {
         blockLineRanges.push([bStart, i]);
         bInBlock = false;
@@ -1114,7 +1136,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       let i = r.lineStart + 1;
       while (i <= r.lineEnd) {
         const m = /^(['`^])(.+)$/.exec(lines[i]);
-        if (m) {
+        if (m && !lines[i].startsWith('```')) {
           const delim = m[1];
           const name = m[2].trim();
           let endLine = -1;
@@ -1146,7 +1168,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const skipRanges: [number, number][] = [];
     for (let i = 0; i < lines.length; i++) {
       const t = lines[i].trim();
-      if (/^(['`^]).+$/.test(t)) {
+      // Exclure les ``` (3 backticks) : pas des file-blocks à délimiteur unique
+      if (/^(['`^]).+$/.test(t) && !t.startsWith('```')) {
         const delim = t[0];
         const s = i; i++;
         while (i < lines.length && lines[i].trim() !== delim) i++;
@@ -1327,6 +1350,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           isFold: false, foldSectionId: '', foldLineCount: 0,
           inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
           isMockupMarker: false, mockupInstId: '',
+          isTrelloBlock: false, trelloName: '',
         };
       }
       const fm = /^\{\{FOLD:([a-zA-Z0-9-]+):(\d+)\}\}$/.exec(line.trim());
@@ -1338,6 +1362,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
           isFold: true, foldSectionId: fm[1], foldLineCount: parseInt(fm[2], 10),
           inlineBlockId: null, inlineBlockKind: null,
           isMockupMarker: false, mockupInstId: '',
+          isTrelloBlock: false, trelloName: '',
+        };
+      }
+      const tm = /^```(?:## Trello:|TRELLO:) (.+)$/.exec(line.trim());
+      if (tm) {
+        return {
+          text: line, safeHtml: this.syntaxHighlight(line), isImage: false,
+          imageId: '', imageName: '', imagePath: '',
+          highlightKind: kind, lineIndex: i,
+          isFold: false, foldSectionId: '', foldLineCount: 0,
+          inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
+          isMockupMarker: false, mockupInstId: '',
+          isTrelloBlock: true, trelloName: tm[1].trim(),
         };
       }
       return {
@@ -1347,6 +1384,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         isFold: false, foldSectionId: '', foldLineCount: 0,
         inlineBlockId: ib?.id || null, inlineBlockKind: ib?.kind || null,
         isMockupMarker: false, mockupInstId: '',
+        isTrelloBlock: false, trelloName: '',
       };
     });
 
@@ -1706,7 +1744,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     // Extraire les blocs de fichiers, les rendre séparément, remplacer par un placeholder
     const placeholders: { token: string; html: string }[] = [];
-    md = md.replace(/^(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_match, _delim, name, content) => {
+    md = md.replace(/^(?!```)(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_match, _delim, name, content) => {
       const trimmed = (name as string).trim();
       const fileNode = this.findFileBySlug(trimmed);
       const fileId = fileNode?.id || '';
@@ -1894,7 +1932,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     }
 
     // Délimiteur de fichier additionnel (' ou ` ou ^) seul sur la ligne ou suivi d'un nom
-    if (/^(['`^])(.*)$/.test(trimmed)) {
+    // Exclut les fences ``` (bloc de code markdown classique)
+    if (/^(['`^])(.*)$/.test(trimmed) && !trimmed.startsWith('```')) {
       return `<span class="syn-file-delim">${esc(text)}</span>`;
     }
 
@@ -2921,7 +2960,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     // Pré-scan des blocs fichier pour exclure leurs headings internes (ex: ## Trello: ...) de la détection de sections
     const fileBlockCharRanges: [number, number][] = [];
-    const blockPreScan = /^(['`^])([^\n]+)(?:\n([\s\S]*?))?\n?\1/gm;
+    const blockPreScan = /^(?!```)(['`^])([^\n]+)(?:\n([\s\S]*?))?\n?\1/gm;
     let bp: RegExpExecArray | null;
     while ((bp = blockPreScan.exec(text)) !== null) {
       fileBlockCharRanges.push([bp.index, bp.index + bp[0].length - 1]);
@@ -2956,7 +2995,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const elements: { id: string; index: number }[] = [];
       const nestedImageIds = new Set<string>();
       
-      const blockRegex = /^(['`^])([^\n]+)(?:\n([\s\S]*?))?\n?\1/gm;
+      const blockRegex = /^(?!```)(['`^])([^\n]+)(?:\n([\s\S]*?))?\n?\1/gm;
       
       // On remplace les blocs par des espaces pour conserver les offsets des images autonomes
       let spacedContent = rawContent.replace(blockRegex, (match, _delimiter, title, content, offset) => {
@@ -3070,6 +3109,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         outilId: this.activeOutilId || undefined,
         folderId
       });
+      // Insérer le bloc fencé inline dans le contenu
+      this.insertAt(`\n\n\`\`\`TRELLO: ${name}\n\`\`\`\n\n`, '');
       this.showTrelloPopup.set(false);
       this.megaOutilCreated.emit(inst);
     } catch (e) {
@@ -3082,7 +3123,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   async deleteTrelloInstance(id: string) {
     try {
       await this.megaOutilsSvc.deleteInstance(id);
-      this.removeTrelloMarkerFromContent(id);
+      this.removeTrelloBlockFromContent(id);
       this.megaOutilDeleted.emit(id);
     } catch (e) {
       console.error('[EditorZone] suppression Trello échouée:', e);
@@ -3248,6 +3289,22 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const re = new RegExp('\\n*\\{\\{TRELLO:' + id + '\\}\\}\\n*', 'g');
     if (!re.test(this.unifiedContent)) return;
     this.unifiedContent = this.unifiedContent.replace(re, '\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeRanges();
+    this.recomputeMirrorLines();
+    if (this.mode === 'visu') this.buildVisuSections();
+    this.scheduleSave();
+  }
+
+  /** Supprime le bloc fencé ```TRELLO: NAME d'une instance du contenu et sauvegarde. */
+  private removeTrelloBlockFromContent(id: string) {
+    const name = this.trelloInstanceName(id);
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const blockRe = new RegExp('\n*```(?:## Trello:|TRELLO:) ' + esc + '\n[\\s\\S]*?\n```(?=\\n|$)\n*', 'g');
+    if (!blockRe.test(this.unifiedContent)) return;
+    blockRe.lastIndex = 0;
+    this.unifiedContent = this.unifiedContent.replace(blockRe, '\n').replace(/\n{3,}/g, '\n\n');
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = this.unifiedContent;
     this.recomputeRanges();
@@ -4052,7 +4109,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     // Extraire les blocs fichier avant marked (placeholders)
     const fileBlocks: { token: string; html: string; md: string }[] = [];
-    contentMd = contentMd.replace(/^(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_m, _d, name, content) => {
+    contentMd = contentMd.replace(/^(?!```)(['`^])([^\n]+)\n([\s\S]*?)\n\1\s*$/gm, (_m, _d, name, content) => {
       const trimmed = (name as string).trim();
       const rawContent = (content as string) || '';
       const mdSource = `'${trimmed}\n${rawContent.trimEnd()}\n'`;
@@ -5259,7 +5316,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   private parseAdditionalBlocks(raw: string): { textContent: string; blocks: StructureAdditionalBlock[] } {
-    const blockRe = /^(['`^])([^\n]+)\n([\s\S]*?)\n\1$/gm;
+    const blockRe = /^(?!```)(['`^])([^\n]+)\n([\s\S]*?)\n\1$/gm;
     const blocks: StructureAdditionalBlock[] = [];
     let idx = 0;
     const textContent = raw.replace(blockRe, (_match, delim, title, content) => {
@@ -5276,12 +5333,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     // Pré-calcul des plages à l'intérieur des blocs fichiers ('...' `...` ^...^)
     // pour ne pas traiter les headings internes comme de vrais headings de section
+    // Note : exclure les ``` (3 backticks) qui ne sont pas des file-blocks à délimiteur unique
     const blockLineRanges: [number, number][] = [];
     let bInBlock = false, bDelim = '', bStart = -1;
     for (let i = 0; i < lines.length; i++) {
       if (!bInBlock) {
         const bm = /^(['`^])(.+)$/.exec(lines[i]);
-        if (bm) { bInBlock = true; bDelim = bm[1]; bStart = i; }
+        if (bm && !lines[i].startsWith('```')) { bInBlock = true; bDelim = bm[1]; bStart = i; }
       } else if (lines[i].trim() === bDelim) {
         blockLineRanges.push([bStart, i]);
         bInBlock = false;
