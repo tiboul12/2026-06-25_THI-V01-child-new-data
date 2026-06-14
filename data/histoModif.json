@@ -8494,6 +8494,28 @@
       "prompt": "Ajoute dans le menu section, une partie ajout MO TRELLO, cela fonctionnera comme le bouton TRELLO/Nouveau et un bouton ADD Tableau de la même façon",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-304",
+      "version": "B-0.281",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Nouveau Trello : carte de démarrage « Task test 1 » par défaut",
+      "description": "À la création d'un Trello vierge, une carte de démarrage est ajoutée automatiquement. confirmTrelloPopup() crée la carte en BDD (createTrelloCard : Task test 1, statut À faire, priorité Normale, description « Description Task test 1 ») et insère le fence avec le corps généré par buildDefaultTrelloBody() (### À faire + ligne de carte avec user/date du jour + description indentée). La réconciliation par titre évite les doublons entre la carte BDD et celle du code.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lors de l'ajout d'un trello vierge je voudrais que tu rajoute automatiquement une task test de base ; - [ ] Task test 1 `[Normale]` — admin · 14/06/26\\n  Description Task test 1",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }

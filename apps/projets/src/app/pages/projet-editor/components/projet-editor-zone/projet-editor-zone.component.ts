@@ -3935,6 +3935,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.pendingMoFolderId = null;
   }
 
+  /** Corps par défaut d'un nouveau Trello : une carte de démarrage « À faire ». */
+  private buildDefaultTrelloBody(): string {
+    const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    const author = this.authSvc.currentUser()?.username || 'admin';
+    return [
+      `### ${TRELLO_STATUS_LABELS['todo']}`,
+      `- [ ] Task test 1 \`[${TRELLO_PRIORITY_LABELS['medium']}]\` — ${author} · ${date}`,
+      `  Description Task test 1`,
+    ].join('\n');
+  }
+
   async confirmTrelloPopup() {
     const name = (this.trelloName || '').trim() || 'Mon Trello';
     if (!this.projectName) return;
@@ -3948,11 +3959,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         outilId: this.activeOutilId || undefined,
         folderId
       });
+      // Carte de démarrage : créée en BDD + reflétée dans le fence (réconciliation par titre, pas de doublon)
+      await this.megaOutilsSvc.createTrelloCard(inst.id, {
+        title: 'Task test 1',
+        status: 'todo',
+        priority: 'medium',
+        description: 'Description Task test 1'
+      }).catch(() => {});
+      const body = this.buildDefaultTrelloBody();
       // Création via le menu section : insérer en fin de la section focalisée (après son contenu)
       const ta = this.textareaRef?.nativeElement;
       if (this.pendingMoFolderId && ta) ta.selectionStart = ta.selectionEnd = ta.value.length;
       // Insérer le bloc fencé inline dans le contenu
-      this.insertAt(`\n\n\`\`\`TRELLO: ${name}\n\`\`\`\n\n`, '');
+      this.insertAt(`\n\n\`\`\`TRELLO: ${name}\n${body}\n\`\`\`\n\n`, '');
       this.showTrelloPopup.set(false);
       this.megaOutilCreated.emit(inst);
     } catch (e) {
