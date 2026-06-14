@@ -1,6 +1,30 @@
 {
   "modifications": [
     {
+      "id": "mod-312",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code,projets:editor|zone-preview",
+      "title": "Double fichier : styles markdown-compatibles toujours en Markdown (gras/italique/barré)",
+      "description": "Les styles compatibles Markdown (gras, italique, barré) doivent rester en Markdown (**, *, ~~) dans le fichier propre ET dans le jumeau -css.md ; seuls les styles sans équivalent Markdown (couleur, surlignage, taille, soulignage, alignement) restent en HTML. Ajout de normalizeStyledMarkdown (convertit <b>/<strong>/<i>/<em>/<s>/<del> en Markdown en hissant les espaces) appliqué au chargement (buildDocSections) et à l'écriture du jumeau (saveCssTwin via la boucle parent, writeSectionStyled côté zone). Exemple résultat -css : <span style=\"color:purple\">**gras**</span>.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/content-style.util.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Attention si on utilise un style compatible avec le markdown, celui ci doit être indiqué dans le code au format markdown et pas css (gras **...**, barré ~~...~~, italique *...*). Doit s'afficher en markdown dans la version Code simple mais aussi version css (avec en plus le code css).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-311",
       "version": "B-0.283",
       "date": "2026-06-14T00:00:00.000Z",

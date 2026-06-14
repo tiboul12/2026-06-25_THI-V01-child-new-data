@@ -17,7 +17,7 @@ import { ProjetToolbarComponent } from './components/projet-toolbar/projet-toolb
 import { ProjetSidebarComponent, DragDropEvent } from './components/projet-sidebar/projet-sidebar.component';
 import { ProjetEditorZoneComponent, FileSaveEvent, SectionInfo } from './components/projet-editor-zone/projet-editor-zone.component';
 import { EditionOutilComponent } from './outils/edition/edition-outil.component';
-import { stripStyleMarkdown, cssTwinName, isCssTwinName } from './content-style.util';
+import { stripStyleMarkdown, normalizeStyledMarkdown, cssTwinName, isCssTwinName } from './content-style.util';
 import { TestsOutilComponent } from './outils/tests/tests-outil.component';
 import { AgendaOutilComponent } from './outils/agenda/agenda-outil.component';
 import { ProjetConversationComponent } from './components/projet-conversation/projet-conversation.component';
@@ -1152,8 +1152,9 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       // to ensure the server has the latest text when ngOnChanges rebuilds the document.
       for (const s of resolved) {
         if (s.fileId) {
-          // Système double fichier : contenu.md = Markdown propre (strip), contenu-css.md = stylisé.
-          const styled = s.content;
+          // Système double fichier : contenu.md = Markdown propre (strip), contenu-css.md = stylisé
+          // (styles markdown-compatibles en markdown, seuls couleur/taille/etc. en HTML).
+          const styled = normalizeStyledMarkdown(s.content);
           const clean = stripStyleMarkdown(styled);
           const oldContent = oldContentMap.get(s.fileId) ?? '';
           if (oldContent !== clean) {

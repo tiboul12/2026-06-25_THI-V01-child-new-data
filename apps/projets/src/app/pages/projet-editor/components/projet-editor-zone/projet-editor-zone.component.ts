@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, AfterViewChecked, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { stripStyleMarkdown, mergeCleanIntoStyled, cssTwinName, isCssTwinName } from '../../content-style.util';
+import { stripStyleMarkdown, mergeCleanIntoStyled, normalizeStyledMarkdown, cssTwinName, isCssTwinName } from '../../content-style.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -1067,7 +1067,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         : undefined;
       let mainStyledContent: string | undefined;
       if (cssTwin && mainFile) {
-        const twinStyled = cssTwin.content ?? '';
+        const twinStyled = normalizeStyledMarkdown(cssTwin.content ?? '');
         const cleanFromTwin = stripStyleMarkdown(twinStyled);
         const cleanActual = mainFile.content ?? '';
         // Si contenu.md (propre) a été édité hors app (IA) → réconcilier dans le master stylé.
@@ -1075,7 +1075,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
           ? twinStyled
           : mergeCleanIntoStyled(cleanActual, cleanFromTwin, twinStyled);
       } else {
-        mainStyledContent = mainFile?.content;
+        mainStyledContent = normalizeStyledMarkdown(mainFile?.content ?? '');
       }
 
       // 1. Identifier toutes les images déjà référencées dans n'importe quel fichier texte
@@ -5813,7 +5813,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   // Écrit une section en double fichier lors d'un « Partager » : clean → fichier principal,
   // styled → jumeau *-css.md (créé si absent). Conserve l'invariant contenu.md propre.
-  private async writeSectionStyled(fileId: string, folderId: string | null | undefined, styled: string, publish: boolean): Promise<void> {
+  private async writeSectionStyled(fileId: string, folderId: string | null | undefined, styledRaw: string, publish: boolean): Promise<void> {
+    const styled = normalizeStyledMarkdown(styledRaw);
     const clean = stripStyleMarkdown(styled);
     await this.svc.updateFile(this.projectName, fileId, clean, folderId ?? undefined, publish);
     const folder = folderId ? this.findNode(folderId, this.files) : null;

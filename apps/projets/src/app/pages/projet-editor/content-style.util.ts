@@ -15,6 +15,27 @@ export function isCssTwinName(name: string): boolean {
   return /-css\.md$/i.test(name);
 }
 
+/** Enrobe un contenu inline avec un marqueur Markdown en hissant les espaces hors des marqueurs. */
+function wrapMd(marker: string, content: string): string {
+  const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(content);
+  if (!m || !m[2]) return content;
+  return `${m[1]}${marker}${m[2]}${marker}${m[3]}`;
+}
+
+/**
+ * Normalise un contenu STYLISÉ : les styles compatibles Markdown (gras/italique/barré)
+ * sont exprimés en Markdown (`**`, `*`, `~~`) même dans le fichier `-css.md`. Seuls les
+ * styles SANS équivalent Markdown (couleur, surlignage, taille, soulignage, alignement)
+ * restent en HTML inline (`<span style=…>`, `<u>`, blocs alignés).
+ */
+export function normalizeStyledMarkdown(md: string): string {
+  if (!md) return md;
+  return md
+    .replace(/<(strong|b)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _t, inner) => wrapMd('**', inner))
+    .replace(/<(em|i)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _t, inner) => wrapMd('*', inner))
+    .replace(/<(del|s)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _t, inner) => wrapMd('~~', inner));
+}
+
 /** Retire les balises de style inline (span/font/u) en convertissant le gras/italique/barré en Markdown. */
 function stripInlineHtml(s: string): string {
   return s
