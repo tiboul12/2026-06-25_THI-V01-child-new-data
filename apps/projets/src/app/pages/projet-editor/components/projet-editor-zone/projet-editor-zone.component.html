@@ -297,6 +297,35 @@
     </div>
   }
 
+  <!-- Popup modification d'un lien (mode Edition) -->
+  @if (showLinkEditPopup()) {
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+      <div class="w-96 rounded-2xl border border-light-border dark:border-white/10 bg-white dark:bg-[#1a1a2e] shadow-2xl p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-blue-400 text-base">link</span>
+          </div>
+          <h3 class="text-sm font-semibold text-light-text dark:text-white">Modifier le lien</h3>
+        </div>
+        <label class="block text-[11px] font-medium text-light-text-muted dark:text-white/50 mb-1">URL du lien</label>
+        <input class="w-full text-sm bg-light-background dark:bg-background border border-light-border dark:border-white/20 rounded-lg px-3 py-2 text-light-text dark:text-white outline-none focus:border-blue-500 dark:focus:border-blue-400"
+               [(ngModel)]="linkEditUrl"
+               (keydown.enter)="confirmLinkEdit()"
+               (keydown.escape)="cancelLinkEdit()"
+               placeholder="https://exemple.com"
+               autofocus />
+        <div class="mb-4"></div>
+        <div class="flex gap-2">
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                  [disabled]="!linkEditUrl.trim()"
+                  (click)="confirmLinkEdit()">Valider</button>
+          <button class="flex-1 text-xs px-3 py-2 rounded-lg border border-light-border dark:border-white/20 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-colors"
+                  (click)="cancelLinkEdit()">Annuler</button>
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- Popup configuration nouveau Mockup -->
   @if (showMockupPopup()) {
     <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px]">

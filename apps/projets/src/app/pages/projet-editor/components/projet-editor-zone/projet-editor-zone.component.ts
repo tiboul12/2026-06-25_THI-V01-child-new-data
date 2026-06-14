@@ -461,6 +461,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // Menu d'actions sur un lien cliqué (suivre / modifier / supprimer) en mode Edition
   visuLinkMenu: { x: number; y: number; href: string } | null = null;
   private visuLinkEl: HTMLAnchorElement | null = null;
+  // Popup stylisé de modification d'URL du lien
+  showLinkEditPopup = signal(false);
+  linkEditUrl = '';
   // Force le re-render complet des sections visu au prochain initVisuSectionHtml
   // (utilisé après création d'un titre qui scinde la section → retirer le titre déplacé)
   private forceVisuReinject = false;
@@ -6361,16 +6364,29 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.closeVisuLinkMenu();
   }
 
-  // Modifier l'URL du lien
+  // Modifier l'URL du lien via un popup stylisé (garde visuLinkEl pour la validation)
   visuLinkEdit() {
     const el = this.visuLinkEl;
     if (!el) { this.closeVisuLinkMenu(); return; }
-    const url = window.prompt('URL du lien :', el.getAttribute('href') || 'https://');
-    if (url) {
+    this.linkEditUrl = el.getAttribute('href') || 'https://';
+    this.visuLinkMenu = null; // masque le menu, conserve visuLinkEl
+    this.showLinkEditPopup.set(true);
+  }
+
+  confirmLinkEdit() {
+    const el = this.visuLinkEl;
+    const url = (this.linkEditUrl || '').trim();
+    if (el && url) {
       el.setAttribute('href', url);
       this.persistVisuLinkChange(el);
     }
-    this.closeVisuLinkMenu();
+    this.showLinkEditPopup.set(false);
+    this.visuLinkEl = null;
+  }
+
+  cancelLinkEdit() {
+    this.showLinkEditPopup.set(false);
+    this.visuLinkEl = null;
   }
 
   // Supprimer le lien (conserver le texte)

@@ -1,6 +1,29 @@
 {
   "modifications": [
     {
+      "id": "mod-322",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : modification d'un lien via popup stylisé",
+      "description": "La modification d'URL d'un lien utilisait window.prompt. Remplacé par un popup modal stylisé cohérent avec les autres popups projet (showLinkEditPopup / linkEditUrl, input URL, boutons Valider/Annuler). visuLinkEdit ouvre le popup (conserve visuLinkEl), confirmLinkEdit applique le href + persiste, cancelLinkEdit ferme.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la modification d'un lien doit se faire dans un popup stylisé comme les autres modifications de projet.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-321",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

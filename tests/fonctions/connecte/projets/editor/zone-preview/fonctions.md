@@ -46,7 +46,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
   - Inline : Gras, Italique, **Souligné** (`underline`), Barré
   - Titres / blocs : H1, H2, H3, Paragraphe (`formatBlock`), Citation (`BLOCKQUOTE`)
   - Listes : à puces, numérotée, **case à cocher** (`insertVisuChecklist`)
-  - **Code** inline (`insertVisuInlineCode`), **Lien** (`insertVisuLink` → `createLink`) ; un **clic sur un lien** ouvre un **menu d'actions** (`visuLinkMenu`) : *Suivre le lien* (`visuLinkFollow` → `window.open(_blank)`), *Modifier le lien* (`visuLinkEdit` → prompt URL → `href`), *Supprimer le lien* (`visuLinkRemove` → déballe le `<a>`, conserve le texte). Toute modif persiste la section (`persistVisuLinkChange` → commit + saveAll). (vB-0.284)
+  - **Code** inline (`insertVisuInlineCode`), **Lien** (`insertVisuLink` → `createLink`) ; un **clic sur un lien** ouvre un **menu d'actions** (`visuLinkMenu`) : *Suivre le lien* (`visuLinkFollow` → `window.open(_blank)`), *Modifier le lien* (`visuLinkEdit` → **popup stylisé** `showLinkEditPopup`/`linkEditUrl` → `confirmLinkEdit` met à jour `href`), *Supprimer le lien* (`visuLinkRemove` → déballe le `<a>`, conserve le texte). Toute modif persiste la section (`persistVisuLinkChange` → commit + saveAll). (vB-0.284)
   - **Alignement** : gauche / centre / droite (`justifyLeft/Center/Right`)
   - **Taille** : Petit / Grand (`fontSize`)
   - **Couleur du texte** (`foreColor`) et **Surlignage** (`hiliteColor`) via pastilles (`visuTextColors`, `visuHighlightColors`) — `styleWithCSS` activé pour produire des `<span style>`
