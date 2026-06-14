@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-329",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview,projets:editor|zone-code",
+      "title": "Suppression d'image : effacement du fichier quand plus référencé (Code/Edition)",
+      "description": "Supprimer une image efface désormais le fichier physique quand elle n'est plus référencée. Edition : deleteVisuImage retire toutes les figures du DOM + marqueurs (corrige le « image manquante » persistant) puis supprime le fichier (svc.deleteFile) si aucun {{IMG:id}} ne subsiste dans unifiedContent/fullContentBackup. Code : ajout de reconcileImageLifecycle (appelé dans saveAll, comme les cycles de vie Trello/Array) qui supprime les fichiers image non référencés par le contenu, avec garde-fous (recentlyAddedImageIds, pendingLocalImages). Plus de mise en attente (pendingVisuDeletions) pour la suppression.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on supprime une image (mode Code ou Edition) si l'image n'existe qu'une seule fois dans la section, celle-ci doit être effacée du dossier.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-328",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

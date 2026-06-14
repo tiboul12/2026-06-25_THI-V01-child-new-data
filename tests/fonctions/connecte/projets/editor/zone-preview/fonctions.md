@@ -66,6 +66,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 
 - **Déclenchement** : icône **image de la barre de style** → `insertVisuImageActive()` → `triggerVisuImageUpload(sectionId actif)` (vB-0.284) ; aussi via le slash `/image`. La section cible = section active (`getActiveVisuSectionId`).
 - **Sélection fichier** : input file → POST `/api/file-projects/{name}/files` (multipart) → l'image est téléchargée dans le dossier de la section
+- **Suppression → effacement du fichier** (vB-0.284) : supprimer une image (Edition ou Code) efface le **fichier physique** dès qu'elle n'est plus référencée. Edition : `deleteVisuImage` retire la/les figure(s) du DOM + marqueur, et appelle `svc.deleteFile` si plus aucun `{{IMG:id}}` ne subsiste. Code (marqueur retiré du texte) : `reconcileImageLifecycle` (au save) supprime les fichiers image non référencés (garde-fous : images récemment ajoutées exclues).
 - **Résultat** :
   - Marqueur `{{IMG:uuid}}` inséré dans `unifiedContent` à la fin de la section
   - Image rendue dans le HTML

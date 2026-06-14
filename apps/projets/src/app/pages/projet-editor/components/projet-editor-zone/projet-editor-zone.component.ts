@@ -3471,6 +3471,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.reconcileArrayLifecycle(contentToParse);
     this.ensureArrayInstancesFromContent(this.unifiedContent);
 
+    // Cycle de vie des images : un fichier image plus référencé nulle part (marqueur retiré
+    // en mode Code ou Edition) est supprimé du dossier de la section.
+    this.reconcileImageLifecycle(contentToParse);
+
     // parseContent() opère sur this.unifiedContent — on substitue temporairement
     const saved = this.unifiedContent;
     this.unifiedContent = contentToParse;
@@ -6781,46 +6785,54 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
   }
 
+  // Supprime physiquement les images du document plus référencées par aucun marqueur {{IMG:id}}
+  // (mode Code : marqueur retiré du texte ; mode Edition : figure supprimée). Garde-fous :
+  // images récemment ajoutées (marqueur pas encore propagé) exclues.
+  private reconcileImageLifecycle(content: string) {
+    if (!this.hasLoaded || !this.projectName) return;
+    const referenced = new Set<string>();
+    const re = /\{\{IMG:([a-z0-9-]+)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(content))) referenced.add(m[1]);
+    for (const img of this.collectAllImages(this.files)) {
+      if (referenced.has(img.id)) continue;
+      if (this.recentlyAddedImageIds.has(img.id)) continue;
+      if (this.pendingLocalImages.some(n => n.id === img.id)) continue;
+      this.svc.deleteFile(this.projectName, img.id).then(() => this.refresh.emit()).catch(() => {});
+    }
+  }
+
   private deleteVisuImage(imgId: string) {
-    // Capturer le dossier parent AVANT le refresh (files encore à jour)
     const parentFolder = this.findParentFolder(imgId, this.files);
     const sectionId = parentFolder?.id ?? null;
 
-    // Stocker la suppression en attente — exécutée au Partager, annulable via Annuler
-    const imgNode = this.allImages.find(im => im.id === imgId);
-    if (imgNode) {
-      this.pendingVisuDeletions.set(imgId, { node: imgNode, sectionId: sectionId ?? '' });
-    }
-
-    // Retrait local de allImages pour éviter affichage "manquante"
-    this.allImages = this.allImages.filter(im => im.id !== imgId);
-
-    // La section éditée est "dirty" → le DOM fait foi. On retire la figure directement
-    // du DOM, puis on commit (DOM → markdown). Surtout PAS de re-render depuis docSections
-    // (fichiers pas encore à jour → réafficherait le marqueur en "image manquante").
+    // 1. Retirer toutes les figures de l'image du DOM + commit des sections touchées
+    //    (la section dirty fait foi ; on ne re-render PAS depuis docSections, stale)
     clearTimeout(this.visuLiveSaveTimeout);
     const container = this.visuRef?.nativeElement;
-    const fig = container?.querySelector(`[data-img-id="${imgId}"]`) as HTMLElement | null;
-    const secEl = fig?.closest('.visu-sec-content') as HTMLElement | null;
-    const targetSectionId = secEl?.getAttribute('data-section-id') || sectionId;
-    if (fig) {
+    const figs = container ? (Array.from(container.querySelectorAll(`[data-img-id="${imgId}"]`)) as HTMLElement[]) : [];
+    const affected = new Set<string>();
+    for (const fig of figs) {
+      const sid = (fig.closest('.visu-sec-content') as HTMLElement | null)?.getAttribute('data-section-id');
+      if (sid) affected.add(sid);
       fig.remove();
-      if (targetSectionId) this.commitVisuSection(targetSectionId);
-    } else {
-      // Section non rendue (filtrée) : retirer le marqueur directement du markdown
-      const lines = this.unifiedContent.split('\n');
-      const imgRe = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'i');
-      for (let i = 0; i < lines.length; i++) {
-        if (imgRe.test(lines[i])) lines[i] = lines[i].replace(imgRe, '').trim();
-      }
-      this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
+    }
+    for (const sid of affected) this.commitVisuSection(sid);
+
+    // 2. Retirer tout marqueur restant dans le markdown (sections non rendues / mode focus)
+    const imgRe = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'gi');
+    if (imgRe.test(this.unifiedContent)) {
+      this.unifiedContent = this.unifiedContent.replace(imgRe, '').replace(/\n{3,}/g, '\n\n');
       const ta = this.textareaRef?.nativeElement;
       if (ta) ta.value = this.unifiedContent;
       this.recomputeAll();
     }
+
+    // 3. Retrait local de allImages (évite l'affichage "image manquante")
+    this.allImages = this.allImages.filter(im => im.id !== imgId);
+
+    // 4. Persister
     this.saveAll();
-    // saveAll() remet localDirty à false — on le remet à true car la suppression
-    // n'est pas encore effective : l'utilisateur doit cliquer "Partager".
     if (sectionId) {
       this.dirtyVisuSectionIds.add(sectionId);
       this.localDirty = true;
@@ -6835,6 +6847,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
       }
     }
+
+    // 5. Suppression physique du fichier si l'image n'est plus référencée nulle part
+    const refRe = new RegExp('\\{\\{IMG:' + imgId + '\\b', 'i');
+    const stillUsed = refRe.test(this.unifiedContent) || (!!this.fullContentBackup && refRe.test(this.fullContentBackup));
+    if (!stillUsed && this.projectName) {
+      this.svc.deleteFile(this.projectName, imgId).then(() => this.refresh.emit()).catch(() => {});
+    }
+
     setTimeout(() => this.initVisuSectionHtml(), 80);
   }
 
