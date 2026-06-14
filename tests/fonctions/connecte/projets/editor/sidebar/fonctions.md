@@ -94,7 +94,7 @@ Options selon le type de nœud :
 
 | Type | Options disponibles |
 |------|-------------------|
-| Dossier | Nouveau dossier, Nouveau fichier, Renommer, Supprimer |
+| Dossier | Nouveau dossier, Nouveau fichier, Renommer, Supprimer, Ajout MO Trello, Ajout MO Tableau |
 | Fichier `.md` | Renommer, Supprimer |
 | Image | Renommer, Supprimer |
 | Nœud verrouillé par moi **et modifié** | Partager mes modifications, Annuler les modifications |
@@ -102,6 +102,7 @@ Options selon le type de nœud :
 | Nœud verrouillé par autre | Afficher info verrou |
 
 - **Fermeture** (vB-0.277) : clic en dehors du menu (n'importe où, y compris ailleurs dans la sidebar) → `document:click` teste `contextMenuRef` → `closeContextMenu()`
+- **Ajout MO Trello / Tableau** (vB-0.280) : pour un nœud dossier (section), le menu propose **« Ajout MO Trello »** et **« Ajout MO Tableau »** (`addMegaOutil(node, type)`). Fonctionne comme les boutons « Nouveau » de la barre MO : navigue vers la section (`fileSelect.emit(node)`) puis demande à la zone d'ouvrir le popup de création via `collab.requestCreateMegaOutil(type, node.id)` → `createMegaOutilRequest$`. La zone crée l'instance (`createInstance` avec `folderId` = la section) et insère le bloc fencé ` ```TRELLO: NOM ` / ` ```ARRAY: NOM ` en fin de section (voir `2-5-2-4-9`).
 - **Partager / Annuler une section** (vB-0.279) : le menu propose **« Partager mes modifications »** et **« Annuler les modifications »** (priorité sur « Déverrouiller ») uniquement si la section est **verrouillée par moi ET modifiée** (`isLockedByMe(node.id) && isLocalPending(node.id)`). Bien que la condition d'affichage porte sur la section elle-même, l'**action** traite la section **et ses sous-sections modifiées**. Déléguée à la zone d'édition via le bus du service collab (`requestPublishSection` / `requestCancelSection` → `publishSectionRequest$` / `cancelSectionRequest$`). Remplace les boutons Annuler/Partager qui étaient en bas de la zone Code (voir `2-5-2-4-9`).
 
 ---

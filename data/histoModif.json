@@ -8467,6 +8467,33 @@
       "prompt": "l'option Partager les modifications dans le menu section ne doit être visible que si la section est verouillé et modifié",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-303",
+      "version": "B-0.280",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets",
+        "libs"
+      ],
+      "features": "projets:editor|sidebar,projets:editor|zone-code,libs:collab",
+      "title": "Menu section : Ajout MO Trello et Ajout MO Tableau",
+      "description": "Le menu contextuel d'une section (sidebar) propose désormais « Ajout MO Trello » et « Ajout MO Tableau » (dossiers uniquement), qui fonctionnent comme les boutons « Nouveau » de la barre MO. addMegaOutil(node, type) navigue vers la section (fileSelect) puis demande la création via le bus collab (createMegaOutilRequest$ / requestCreateMegaOutil). La zone mémorise pendingMoFolderId, ouvre openTrelloPopup()/openArrayPopup() ; confirmTrelloPopup/confirmArrayPopup utilisent ce folderId pour l'instance (createInstance) et insèrent le fence ```TRELLO:/```ARRAY: en fin de section focalisée (curseur en fin de textarea) pour garantir l'appartenance à la bonne section. pendingMoFolderId réinitialisé à la confirmation/annulation.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Ajoute dans le menu section, une partie ajout MO TRELLO, cela fonctionnera comme le bouton TRELLO/Nouveau et un bouton ADD Tableau de la même façon",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }

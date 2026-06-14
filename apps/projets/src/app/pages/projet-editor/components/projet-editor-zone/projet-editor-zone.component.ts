@@ -326,6 +326,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   showArrayPopup = signal(false);
   arrayName = '';
   arrayCreating = signal(false);
+
+  // Section ciblée pour la création d'un MO depuis le menu contextuel sidebar (sinon null = section active)
+  private pendingMoFolderId: string | null = null;
   // Zone basse : boards Array incrustés dans le contenu courant (tous les modes)
   contentArrayIds: string[] = [];
   arrayPanelCollapsed = signal(false);
@@ -500,6 +503,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Partager / Annuler une section déclenchés depuis le menu contextuel de la sidebar
     this.collab.publishSectionRequest$.pipe(takeUntilDestroyed()).subscribe(id => this.publishSection(id));
     this.collab.cancelSectionRequest$.pipe(takeUntilDestroyed()).subscribe(id => this.cancelSection(id));
+    // Ajout d'un méga-outil (Trello / Tableau) dans une section depuis le menu contextuel
+    this.collab.createMegaOutilRequest$.pipe(takeUntilDestroyed()).subscribe(({ type, folderId }) => {
+      this.pendingMoFolderId = folderId;
+      if (type === 'trello') this.openTrelloPopup();
+      else this.openArrayPopup();
+    });
   }
 
   // ── Lifecycle ──────────────────────────────────────────────
@@ -2015,12 +2024,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     this.showArrayPopup.set(true);
   }
 
-  cancelArrayPopup() { this.showArrayPopup.set(false); }
+  cancelArrayPopup() { this.showArrayPopup.set(false); this.pendingMoFolderId = null; }
 
   async confirmArrayPopup() {
     const name = (this.arrayName || '').trim() || 'Mon Tableau';
     if (!this.projectName) return;
-    const folderId = this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
+    const folderId = this.pendingMoFolderId || this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
     this.arrayCreating.set(true);
     try {
       const inst = await this.megaOutilsSvc.createInstance({
@@ -2030,6 +2039,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         outilId: this.activeOutilId || undefined,
         folderId,
       });
+      // Création via le menu section : insérer en fin de la section focalisée (après son contenu)
+      const ta = this.textareaRef?.nativeElement;
+      if (this.pendingMoFolderId && ta) ta.selectionStart = ta.selectionEnd = ta.value.length;
       // Insérer le bloc fencé inline dans le contenu (source de vérité)
       this.insertAt(`\n\n\`\`\`ARRAY: ${name}\n\`\`\`\n\n`, '');
       this.showArrayPopup.set(false);
@@ -2038,6 +2050,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       console.error('[EditorZone] confirmArrayPopup échoué :', e);
     } finally {
       this.arrayCreating.set(false);
+      this.pendingMoFolderId = null;
     }
   }
 
@@ -3919,12 +3932,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
   cancelTrelloPopup() {
     this.showTrelloPopup.set(false);
+    this.pendingMoFolderId = null;
   }
 
   async confirmTrelloPopup() {
     const name = (this.trelloName || '').trim() || 'Mon Trello';
     if (!this.projectName) return;
-    const folderId = this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
+    const folderId = this.pendingMoFolderId || this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
     this.trelloCreating.set(true);
     try {
       const inst = await this.megaOutilsSvc.createInstance({
@@ -3934,6 +3948,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         outilId: this.activeOutilId || undefined,
         folderId
       });
+      // Création via le menu section : insérer en fin de la section focalisée (après son contenu)
+      const ta = this.textareaRef?.nativeElement;
+      if (this.pendingMoFolderId && ta) ta.selectionStart = ta.selectionEnd = ta.value.length;
       // Insérer le bloc fencé inline dans le contenu
       this.insertAt(`\n\n\`\`\`TRELLO: ${name}\n\`\`\`\n\n`, '');
       this.showTrelloPopup.set(false);
@@ -3942,6 +3959,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       console.error('[EditorZone] création Trello échouée:', e);
     } finally {
       this.trelloCreating.set(false);
+      this.pendingMoFolderId = null;
     }
   }
 

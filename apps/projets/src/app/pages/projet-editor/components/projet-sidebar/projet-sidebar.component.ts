@@ -106,6 +106,14 @@ export class ProjetSidebarComponent implements OnChanges {
     this.closeContextMenu();
     this.collab.requestCancelSection(node.id);
   }
+
+  // Ajout d'un méga-outil (Trello / Tableau) dans une section depuis le menu contextuel.
+  // Navigue vers la section (focus) puis demande à la zone d'ouvrir le popup de création.
+  addMegaOutil(node: FileNode, type: 'trello' | 'array') {
+    this.closeContextMenu();
+    this.fileSelect.emit(node);
+    this.collab.requestCreateMegaOutil(type, node.id);
+  }
   getLockInfo(nodeId: string): LockInfo | undefined { return this.collab.getLock(nodeId); }
 
   getLockTooltip(nodeId: string): string {

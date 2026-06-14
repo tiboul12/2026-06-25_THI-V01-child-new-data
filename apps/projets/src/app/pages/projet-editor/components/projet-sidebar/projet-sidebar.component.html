@@ -322,6 +322,19 @@
         <span class="material-symbols-outlined text-sm">delete</span> Supprimer
       </button>
 
+      <!-- Ajout méga-outil (sections uniquement) -->
+      @if (contextMenu()!.node!.type === 'folder') {
+        <div class="border-t border-light-border dark:border-white/10 my-1"></div>
+        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-blue-500 dark:text-blue-400 transition-colors text-left"
+                (click)="addMegaOutil(contextMenu()!.node!, 'trello')">
+          <span class="material-symbols-outlined text-sm">view_kanban</span> Ajout MO Trello
+        </button>
+        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-lime-50 dark:hover:bg-lime-500/10 text-lime-600 dark:text-lime-400 transition-colors text-left"
+                (click)="addMegaOutil(contextMenu()!.node!, 'array')">
+          <span class="material-symbols-outlined text-sm">table</span> Ajout MO Tableau
+        </button>
+      }
+
       <!-- Verrou collaboration -->
       <div class="border-t border-light-border dark:border-white/10 my-1"></div>
       @if (isLockedByOther(contextMenu()!.node!.id)) {

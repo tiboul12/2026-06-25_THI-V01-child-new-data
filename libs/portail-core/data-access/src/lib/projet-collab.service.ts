@@ -146,6 +146,14 @@ export class ProjetCollabService {
     this.cancelSectionRequest$.next(sectionId);
   }
 
+  // Demande de création d'un méga-outil (Trello / Tableau) dans une section,
+  // depuis le menu contextuel de la sidebar. La zone d'édition crée l'instance.
+  readonly createMegaOutilRequest$ = new Subject<{ type: 'trello' | 'array'; folderId: string }>();
+
+  requestCreateMegaOutil(type: 'trello' | 'array', folderId: string): void {
+    this.createMegaOutilRequest$.next({ type, folderId });
+  }
+
   private eventSource: EventSource | null = null;
   private currentProjetId: string | null = null;
 
