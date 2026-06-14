@@ -6562,7 +6562,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     const delBtn = target.closest('.visu-img-del') as HTMLElement | null;
     if (delBtn) {
       const imgId = delBtn.getAttribute('data-img-id');
-      if (imgId) this.deleteVisuImage(imgId);
+      if (imgId) this.deleteImageUnified(imgId);
       return;
     }
     // F5 — clic sur une figure image : ouvrir le panneau de propriétés
@@ -6645,7 +6645,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (kind === 'mockup') {
       this.removeVisuMockupMarker(id);
     } else {
-      this.deleteVisuImage(id);
+      this.deleteImageUnified(id);
     }
   }
 
@@ -6800,60 +6800,67 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
   }
 
-  private deleteVisuImage(imgId: string) {
+  // Suppression d'image UNIFIÉE pour tous les modes (Code / Edition / Structure) :
+  // retire le marqueur partout, met à jour la vue du mode courant, puis supprime le
+  // fichier physique si l'image n'est plus référencée nulle part.
+  private deleteImageUnified(imgId: string) {
     const parentFolder = this.findParentFolder(imgId, this.files);
     const sectionId = parentFolder?.id ?? null;
-
-    // 1. Retirer toutes les figures de l'image du DOM + commit des sections touchées
-    //    (la section dirty fait foi ; on ne re-render PAS depuis docSections, stale)
     clearTimeout(this.visuLiveSaveTimeout);
-    const container = this.visuRef?.nativeElement;
-    const figs = container ? (Array.from(container.querySelectorAll(`[data-img-id="${imgId}"]`)) as HTMLElement[]) : [];
-    const affected = new Set<string>();
-    for (const fig of figs) {
-      const sid = (fig.closest('.visu-sec-content') as HTMLElement | null)?.getAttribute('data-section-id');
-      if (sid) affected.add(sid);
-      fig.remove();
-    }
-    for (const sid of affected) this.commitVisuSection(sid);
 
-    // 2. Retirer tout marqueur restant dans le markdown (sections non rendues / mode focus)
-    const imgRe = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'gi');
-    if (imgRe.test(this.unifiedContent)) {
-      this.unifiedContent = this.unifiedContent.replace(imgRe, '').replace(/\n{3,}/g, '\n\n');
-      const ta = this.textareaRef?.nativeElement;
-      if (ta) ta.value = this.unifiedContent;
-      this.recomputeAll();
-    }
-
-    // 3. Retrait local de allImages (évite l'affichage "image manquante")
-    this.allImages = this.allImages.filter(im => im.id !== imgId);
-
-    // 4. Persister
-    this.saveAll();
-    if (sectionId) {
-      this.dirtyVisuSectionIds.add(sectionId);
-      this.localDirty = true;
-      this.dirtyChange.emit(true);
-      if (this.backupType) {
-        if (!this.visuSectionLockSnapshot.has(sectionId)) {
-          const vs = this.visuSections.find(v => v.sectionId === sectionId);
-          if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
-        }
-        if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
-        this.collab.addLocalPending(sectionId);
-        if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+    if (this.mode === 'structure') {
+      // Source de vérité en Structure = structureNodes
+      const reG = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'gi');
+      for (const n of this.structureNodes) {
+        if (n.textContent) n.textContent = n.textContent.replace(reG, '').replace(/\n{3,}/g, '\n\n').trim();
       }
+      this.allImages = this.allImages.filter(im => im.id !== imgId);
+      clearTimeout(this.structFlushTimeout);
+      this.flushStructureNodes();                 // reconstruit unifiedContent + sauvegarde
+      this.structureNodes = this.parseStructureNodes(); // rafraîchit les tags
+    } else {
+      // Edition / Code : retirer les figures du DOM (section dirty fait foi) + le marqueur markdown
+      const container = this.visuRef?.nativeElement;
+      const figs = container ? (Array.from(container.querySelectorAll(`[data-img-id="${imgId}"]`)) as HTMLElement[]) : [];
+      const affected = new Set<string>();
+      for (const fig of figs) {
+        const sid = (fig.closest('.visu-sec-content') as HTMLElement | null)?.getAttribute('data-section-id');
+        if (sid) affected.add(sid);
+        fig.remove();
+      }
+      for (const sid of affected) this.commitVisuSection(sid);
+      const reG = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'gi');
+      if (reG.test(this.unifiedContent)) {
+        this.unifiedContent = this.unifiedContent.replace(reG, '').replace(/\n{3,}/g, '\n\n');
+        const ta = this.textareaRef?.nativeElement;
+        if (ta) ta.value = this.unifiedContent;
+        this.recomputeAll();
+      }
+      this.allImages = this.allImages.filter(im => im.id !== imgId);
+      this.saveAll();
+      if (sectionId) {
+        this.dirtyVisuSectionIds.add(sectionId);
+        this.localDirty = true;
+        this.dirtyChange.emit(true);
+        if (this.backupType) {
+          if (!this.visuSectionLockSnapshot.has(sectionId)) {
+            const vs = this.visuSections.find(v => v.sectionId === sectionId);
+            if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+          }
+          if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
+          this.collab.addLocalPending(sectionId);
+          if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+        }
+      }
+      setTimeout(() => this.initVisuSectionHtml(), 80);
     }
 
-    // 5. Suppression physique du fichier si l'image n'est plus référencée nulle part
+    // Suppression physique du fichier si l'image n'est plus référencée nulle part
     const refRe = new RegExp('\\{\\{IMG:' + imgId + '\\b', 'i');
     const stillUsed = refRe.test(this.unifiedContent) || (!!this.fullContentBackup && refRe.test(this.fullContentBackup));
     if (!stillUsed && this.projectName) {
       this.svc.deleteFile(this.projectName, imgId).then(() => this.refresh.emit()).catch(() => {});
     }
-
-    setTimeout(() => this.initVisuSectionHtml(), 80);
   }
 
   // ── Mode Structure ──────────────────────────────────────────
@@ -7436,18 +7443,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
   }
 
-  /** Supprime le marqueur {{IMG:id...}} du contenu (ne supprime pas le fichier image). */
+  /** Supprime une image (marqueur dans tous les modes + fichier si plus référencé). */
   removeImageMarker(imageId: string): void {
-    const re = new RegExp(`\\{\\{IMG:${imageId}(?:\\|[^}]*)?\\}\\}`);
-    const lines = this.unifiedContent.split('\n');
-    const idx = lines.findIndex(l => re.test(l.trim()));
-    if (idx === -1) return;
-    lines.splice(idx, 1);
-    this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
-    const ta = this.textareaRef?.nativeElement;
-    if (ta) ta.value = this.unifiedContent;
-    this.recomputeAll();
-    this.scheduleSave();
+    this.deleteImageUnified(imageId);
   }
 
   /** Supprime le marqueur {{MOCKUP:id}} du contenu et efface le folderId de l'instance. */

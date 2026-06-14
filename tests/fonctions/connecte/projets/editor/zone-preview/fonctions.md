@@ -66,7 +66,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 
 - **Déclenchement** : icône **image de la barre de style** → `insertVisuImageActive()` → `triggerVisuImageUpload(sectionId actif)` (vB-0.284) ; aussi via le slash `/image`. La section cible = section active (`getActiveVisuSectionId`).
 - **Sélection fichier** : input file → POST `/api/file-projects/{name}/files` (multipart) → l'image est téléchargée dans le dossier de la section
-- **Suppression → effacement du fichier** (vB-0.284) : supprimer une image (Edition ou Code) efface le **fichier physique** dès qu'elle n'est plus référencée. Edition : `deleteVisuImage` retire la/les figure(s) du DOM + marqueur, et appelle `svc.deleteFile` si plus aucun `{{IMG:id}}` ne subsiste. Code (marqueur retiré du texte) : `reconcileImageLifecycle` (au save) supprime les fichiers image non référencés (garde-fous : images récemment ajoutées exclues).
+- **Suppression unifiée (tous modes) → effacement du fichier** (vB-0.284) : une seule fonction `deleteImageUnified(imgId)` gère Code / Edition / Structure. Elle retire le marqueur de la vue du mode courant (Structure : `structureNodes` + `flushStructureNodes` + re-parse des tags ; Edition : figures du DOM ; markdown dans tous les cas), met à jour `allImages`, sauvegarde, puis **supprime le fichier physique** si plus aucun `{{IMG:id}}` ne subsiste. Les points d'entrée (icône/figure Edition, panneau F5, tag × Structure via `removeImageMarker`) délèguent tous à cette fonction. `reconcileImageLifecycle` (au save) reste le filet pour les marqueurs retirés au clavier en Code.
 - **Résultat** :
   - Marqueur `{{IMG:uuid}}` inséré dans `unifiedContent` à la fin de la section
   - Image rendue dans le HTML

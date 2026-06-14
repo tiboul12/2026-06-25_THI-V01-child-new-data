@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-331",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-structure,projets:editor|zone-preview",
+      "title": "Suppression d'image unifiée dans tous les modes (Structure incluse)",
+      "description": "En Structure, supprimer une image (tag ×) retirait le nom mais pas le tag et n'effaçait pas le fichier. Unification : deleteImageUnified(imgId) gère Code/Edition/Structure — en Structure il retire le marqueur des structureNodes, flushe et re-parse les tags ; en Edition retire les figures du DOM ; markdown dans tous les cas ; puis supprime le fichier physique si plus référencé. removeImageMarker (tag × Structure) et les deletes Edition (icône/figure, panneau F5) délèguent tous à deleteImageUnified.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "si je supprime une image depuis le mode Structure, cela supprime le nom mais pas le tag, supprime le code en Code et l'image en Edition, mais le fichier n'est pas supprimé. Utiliser la même fonction et uniformiser la suppression d'image dans tous les modes.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-330",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",
