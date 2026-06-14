@@ -8563,6 +8563,29 @@
       "prompt": "je veux changer le nom du mode Preview en mode Edition, crait une branche 2026-06-14_mode_edition et lance toutes les modifications bypass permissions dans cette nouvelle branche (plan MVP éditeur type Google Docs)",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-307",
+      "version": "B-0.282",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : barre de mise en forme permanente en haut (non flottante)",
+      "description": "La toolbar de mise en forme du mode Edition n'apparaît plus au survol/sélection près du curseur : elle est désormais affichée en permanence, ancrée en haut de la zone (position sticky, sous la barre des méga-outils). Ajout de la variante .visu-format-toolbar--docked ; la barre est rendue sans condition (plus de @if visuToolbar). La sélection reste préservée au clic via mousedown preventDefault.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la bar de style doit être toujours affiché en haut et non sur la sourie",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }

@@ -34,9 +34,10 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 
 ---
 
-## `2-5-2-5-4` — Toolbar de formatage flottante
+## `2-5-2-5-4` — Barre de formatage permanente (haut de zone)
 
-- **Déclenchement** : sélection de texte dans une section → `visuToolbar` affiché au-dessus de la sélection
+- **Affichage** : barre **toujours visible** en haut de la zone Edition (`.visu-format-toolbar--docked`, `position: sticky; top: 0`), sous la barre des méga-outils — plus de toolbar flottante au curseur (vB-0.282)
+- La sélection est préservée au clic via `(mousedown)="$event.preventDefault()"` sur chaque bouton
 - **Boutons (mise en forme riche, vB-0.282)** : `applyVisuFormat(command, value?)`
   - Inline : Gras, Italique, **Souligné** (`underline`), Barré
   - Titres / blocs : H1, H2, H3, Paragraphe (`formatBlock`), Citation (`BLOCKQUOTE`)

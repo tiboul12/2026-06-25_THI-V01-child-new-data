@@ -1409,6 +1409,22 @@
     font-weight: 600;
     color: rgba(255, 255, 255, 0.6) !important;
   }
+
+  // Variante ancrée : barre permanente en haut de la zone Edition (non flottante)
+  &--docked {
+    position: sticky;
+    top: 0;
+    left: auto;
+    z-index: 30;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(4px);
+  }
 }
 
 // Menu d'insertion (popover, fixed viewport)

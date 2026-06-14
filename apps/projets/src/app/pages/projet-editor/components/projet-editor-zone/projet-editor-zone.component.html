@@ -998,11 +998,8 @@
            (click)="onVisuContainerClick($event)"
            (keydown)="onVisuSectionKeydown($event)">
 
-        <!-- Toolbar de formatage flottante (apparaît sur sélection de texte) -->
-        @if (visuToolbar) {
-          <div class="visu-format-toolbar"
-               [style.top.px]="visuToolbar.top"
-               [style.left.px]="visuToolbar.left">
+        <!-- Barre de formatage permanente (haut de zone, mode Edition) -->
+        <div class="visu-format-toolbar visu-format-toolbar--docked">
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
@@ -1049,8 +1046,7 @@
                     title="Effacer la mise en forme">
               <span class="material-symbols-outlined" style="font-size:13px;line-height:1">format_clear</span>
             </button>
-          </div>
-        }
+        </div>
 
         <!-- Slash command menu (« / ») en mode Edition -->
         <app-slash-command-menu #visuSlashMenu
