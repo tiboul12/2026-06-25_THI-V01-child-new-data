@@ -8278,6 +8278,52 @@
       "prompt": "si il y a de la place le tag doit rester à droite du titre et passer en dessous si la taille est réduite ; si la taille le permet les 3 boutons doivent être sur la même ligne et passer les uns en dessous des autres si la taille est réduite",
       "startedAt": "2026-06-07T00:00:00.000Z",
       "completedAt": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "mod-295",
+      "version": "B-0.278",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|sidebar",
+      "title": "Sidebar : popup \"Ajouter un outil\" se ferme au clic en dehors",
+      "description": "Le popup d'ajout d'outil (ouvert via clic sur le nom du projet en zone 3) ne se fermait que si on cliquait hors de toute la sidebar. Ajout d'une référence #addOutilPopup et adaptation du document:click pour fermer le popup dès qu'on clique en dehors de lui (y compris ailleurs dans la sidebar).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le menu projet dans la zone 3 du menu lorsque je clique bouton de gauche sur le nom du projet, j'ai un popin qui s'ouvre, le popin doit ce fermé si je clique avec la sourie en dehors de ce popin",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-296",
+      "version": "B-0.278",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|sidebar",
+      "title": "Sidebar : menu contextuel (clic droit) se ferme au clic en dehors",
+      "description": "Le menu contextuel (Nouvelle section / Nouveau fichier / Renommer / Supprimer / Verrouiller) ne se fermait que si on cliquait hors de toute la sidebar. Ajout d'une référence #contextMenuEl et adaptation du document:click pour fermer le menu dès qu'on clique en dehors de lui (y compris ailleurs dans la sidebar).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "fait la même chose avec ce popin pour créé un nouveau fichier ou section",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }

@@ -27,7 +27,7 @@
 
       <!-- Popup ajout outil -->
       @if (showAddOutilPopup()) {
-        <div class="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-lg shadow-xl z-50 py-1"
+        <div #addOutilPopup class="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-lg shadow-xl z-50 py-1"
              (click)="$event.stopPropagation()">
           <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-light-text-muted dark:text-white/30">Ajouter un outil</div>
           <button class="w-full text-left px-3 py-1.5 text-[11px] text-light-text dark:text-white/70 hover:bg-light-surface dark:hover:bg-white/5 flex items-center gap-2 transition-colors"
@@ -293,7 +293,7 @@
 
 <!-- Menu contextuel -->
 @if (contextMenu()) {
-  <div class="fixed z-50 min-w-40 bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-lg shadow-xl py-1 text-[12px]"
+  <div #contextMenuEl class="fixed z-50 min-w-40 bg-white dark:bg-[#1a1a2e] border border-light-border dark:border-white/10 rounded-lg shadow-xl py-1 text-[12px]"
        [style.left.px]="contextMenu()!.x"
        [style.top.px]="contextMenu()!.y"
        (click)="$event.stopPropagation()">

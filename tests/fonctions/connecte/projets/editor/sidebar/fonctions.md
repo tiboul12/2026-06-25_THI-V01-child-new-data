@@ -100,7 +100,7 @@ Options selon le type de nœud :
 | Nœud verrouillé par moi | Déverrouiller |
 | Nœud verrouillé par autre | Afficher info verrou |
 
-- **Fermeture** : clic ailleurs ou Escape
+- **Fermeture** (vB-0.277) : clic en dehors du menu (n'importe où, y compris ailleurs dans la sidebar) → `document:click` teste `contextMenuRef` → `closeContextMenu()`
 
 ---
 
@@ -118,6 +118,7 @@ Options selon le type de nœud :
 
 - **Titre projet cliquable** : clic → popup flottant "Ajouter un outil"
 - **Popup** : options Edition (actif), Tests et Code (grisés/bientôt)
+- **Fermeture du popup** (vB-0.277) : clic en dehors du popup (n'importe où, y compris ailleurs dans la sidebar) → fermeture via `document:click` qui teste `addOutilPopupRef`
 - **Liste outils** : chaque outil apparaît sous le titre projet avec icône + nom
 - **Expand/Collapse outil** : chevron → `toggleOutil(id)`
 - **Sélection outil** : clic sur le nom → `outilSelect.emit(id)` → Zone 4 bascule vers cet outil

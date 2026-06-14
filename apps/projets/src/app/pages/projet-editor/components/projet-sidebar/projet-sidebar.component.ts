@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal, OnChanges, SimpleChanges, HostListener, ElementRef, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, OnChanges, SimpleChanges, HostListener, ElementRef, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -51,6 +51,8 @@ export class ProjetSidebarComponent implements OnChanges {
   expanded = signal<Set<string>>(new Set(['root']));
   outilExpanded = signal<Set<string>>(new Set());
   showAddOutilPopup = signal(false);
+  @ViewChild('addOutilPopup') addOutilPopupRef?: ElementRef<HTMLElement>;
+  @ViewChild('contextMenuEl') contextMenuRef?: ElementRef<HTMLElement>;
   contextMenu = signal<ContextMenu | null>(null);
   inlineInput = signal<InlineInput | null>(null);
   inlineValue = '';
@@ -517,8 +519,14 @@ export class ProjetSidebarComponent implements OnChanges {
 
   @HostListener('document:click', ['$event'])
   onDocClick(e: MouseEvent) {
-    if (!this.elRef.nativeElement.contains(e.target)) {
+    const target = e.target as Node;
+    // Ferme le menu contextuel dès qu'on clique en dehors de lui
+    if (this.contextMenu() && !this.contextMenuRef?.nativeElement.contains(target)) {
       this.closeContextMenu();
+    }
+    // Ferme le popup "Ajouter un outil" dès qu'on clique en dehors de lui
+    // (le bouton d'ouverture et le contenu du popup stoppent la propagation)
+    if (this.showAddOutilPopup() && !this.addOutilPopupRef?.nativeElement.contains(target)) {
       this.showAddOutilPopup.set(false);
     }
   }
