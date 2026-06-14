@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-324",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : l'image insérée s'affiche immédiatement",
+      "description": "Après upload via la barre de style, le marqueur {{IMG:id}} était inséré dans unifiedContent mais la section (dirty) n'était pas rafraîchie → image invisible jusqu'au changement de mode. Ajout de commitVisuSection (flush de la saisie en cours) puis forceVisuReinject avant recomputeAll → la section se re-render avec l'image.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je fais insérer une image, je sélectionne une image mais celle-ci ne s'affiche pas dans le mode Edition.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-323",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

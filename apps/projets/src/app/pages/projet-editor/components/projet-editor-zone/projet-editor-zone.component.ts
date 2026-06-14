@@ -6725,6 +6725,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         this.pendingLocalImages = this.pendingLocalImages.filter(n => n.id !== node.id);
         this.recentlyAddedImageIds.delete(node.id);
       }, 10000);
+      // Flusher la saisie en cours du DOM dans le markdown avant d'insérer (évite la perte)
+      clearTimeout(this.visuLiveSaveTimeout);
+      this.commitVisuSection(sectionId);
       // Insérer le marqueur image dans unifiedContent après la section
       const range = this.sectionRanges.find(r => r.folderId === sectionId);
       if (range) {
@@ -6733,6 +6736,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         this.unifiedContent = lines.join('\n');
         const ta = this.textareaRef?.nativeElement;
         if (ta) ta.value = this.unifiedContent;
+        // Forcer le re-render : l'image a été insérée dans le markdown, pas dans le DOM
+        this.forceVisuReinject = true;
         this.recomputeAll();
         // Save immédiat pour que onRefresh attende la fin du save (évite race avec loadFiles)
         this.saveAll();
