@@ -32,7 +32,7 @@
     <!-- Tabs + boutons de formatage -->
     <div class="flex flex-wrap items-center gap-1 px-2 py-1.5">
 
-      <!-- Tabs Code / Structure / Preview -->
+      <!-- Tabs Code / Structure / Edition -->
       <div class="ed-mode-tabs mr-2">
         <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'edit'" (click)="setMode('edit')">
           <span class="material-symbols-outlined">code</span>
@@ -43,8 +43,8 @@
           Structure
         </button>
         <button type="button" class="ed-mode-tab" [class.ed-mode-tab--active]="mode === 'visu'" (click)="setMode('visu')">
-          <span class="material-symbols-outlined">visibility</span>
-          Preview
+          <span class="material-symbols-outlined">edit_note</span>
+          Edition
         </button>
       </div>
 
@@ -393,27 +393,7 @@
   }
 
 
-  <!-- Barre Annuler/Partager mode Preview (projets avec sauvegarde externe uniquement) -->
-  @if (backupType && mode === 'visu' && editingVisuSectionId()) {
-    <div class="code-publish-bar">
-      <span class="code-publish-bar__info">
-        <span class="material-symbols-outlined">edit</span>
-        Modifications en cours
-      </span>
-      <div class="code-publish-bar__actions">
-        <button class="visu-publish-bar__cancel"
-                (mousedown)="$event.preventDefault(); cancelVisuEdit(editingVisuSectionId()!)">
-          Annuler
-        </button>
-        <button class="visu-publish-bar__publish"
-                (mousedown)="$event.preventDefault(); publishVisuSection(editingVisuSectionId()!)"
-                [disabled]="isPublishing()">
-          <span class="material-symbols-outlined">share</span>
-          Partager mes modifications
-        </button>
-      </div>
-    </div>
-  }
+  <!-- Barre Annuler/Partager mode Preview supprimée : partage/annulation via le menu contextuel de la section -->
 
   <!-- Bannière lecture seule sync FTP -->
   @if (isActiveSectionUnsynced) {
@@ -952,13 +932,14 @@
                         </span>
                       </div>
                     } @else {
-                      <textarea class="struct-card__content"
-                                [value]="seg.value"
-                                [readonly]="isStructNodeLocked(node)"
-                                [rows]="getStructSegmentRows(seg.value)"
-                                (input)="onStructSegmentInput(node, $index, $event)"
-                                placeholder="Contenu de la section…"
-                                spellcheck="false"></textarea>
+                      <div #structSeg
+                           class="struct-card__content struct-card__content--rich"
+                           [attr.contenteditable]="isStructNodeLocked(node) ? 'false' : 'true'"
+                           [attr.data-seg-raw]="seg.value"
+                           (input)="onStructSegmentHtmlInput(node, $index, $event)"
+                           (focus)="onStructSegmentFocus(node)"
+                           spellcheck="false"
+                           data-placeholder="Contenu de la section…"></div>
                     }
                   }
                 </div>
@@ -1018,22 +999,65 @@
            (click)="onVisuContainerClick($event)"
            (keydown)="onVisuSectionKeydown($event)">
 
-        <!-- Toolbar de formatage flottante (apparaît sur sélection de texte) -->
-        @if (visuToolbar) {
-          <div class="visu-format-toolbar"
-               [style.top.px]="visuToolbar.top"
-               [style.left.px]="visuToolbar.left">
+        <!-- Barre de formatage permanente (haut de zone, mode Edition) -->
+        <div class="visu-format-toolbar visu-format-toolbar--docked">
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S</s></button>
+            <div class="visu-format-toolbar__sep"></div>
+            <!-- Titres / blocs -->
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H1')" title="Titre 1">H1</button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H2')" title="Titre 2">H2</button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H3')" title="Titre 3">H3</button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'P')" title="Paragraphe">¶</button>
+            <div class="visu-format-toolbar__sep"></div>
+            <!-- Listes -->
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('insertUnorderedList')" title="Liste à puces"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_bulleted</span></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('insertOrderedList')" title="Liste numérotée"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_numbered</span></button>
+            <button (mousedown)="$event.preventDefault(); insertVisuChecklist()" title="Case à cocher"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">checklist</span></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'BLOCKQUOTE')" title="Citation"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_quote</span></button>
+            <button (mousedown)="$event.preventDefault(); insertVisuInlineCode()" title="Code"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">code</span></button>
+            <button (mousedown)="$event.preventDefault(); insertVisuLink()" title="Lien"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">link</span></button>
+            <div class="visu-format-toolbar__sep"></div>
+            <!-- Alignement -->
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('justifyLeft')" title="Aligner à gauche"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_left</span></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('justifyCenter')" title="Centrer"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_center</span></button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('justifyRight')" title="Aligner à droite"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_right</span></button>
+            <div class="visu-format-toolbar__sep"></div>
+            <!-- Taille -->
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('fontSize', '2')" title="Petit" style="font-size:10px">A</button>
+            <button (mousedown)="$event.preventDefault(); applyVisuFormat('fontSize', '4')" title="Grand" style="font-size:15px">A</button>
+            <div class="visu-format-toolbar__sep"></div>
+            <!-- Couleur du texte -->
+            @for (c of visuTextColors; track c) {
+              <button class="visu-color-swatch" [style.background]="c"
+                      (mousedown)="$event.preventDefault(); applyVisuFormat('foreColor', c)"
+                      [title]="'Couleur ' + c"></button>
+            }
+            <!-- Surlignage -->
+            @for (c of visuHighlightColors; track c) {
+              <button class="visu-color-swatch visu-color-swatch--hl" [style.background]="c"
+                      (mousedown)="$event.preventDefault(); applyVisuFormat('hiliteColor', c)"
+                      [title]="'Surlignage ' + c"></button>
+            }
             <div class="visu-format-toolbar__sep"></div>
             <button class="visu-format-toolbar__clear"
                     (mousedown)="$event.preventDefault(); applyVisuFormat('removeFormat')"
                     title="Effacer la mise en forme">
               <span class="material-symbols-outlined" style="font-size:13px;line-height:1">format_clear</span>
             </button>
-          </div>
-        }
+        </div>
+
+        <!-- Slash command menu (« / ») en mode Edition -->
+        <app-slash-command-menu #visuSlashMenu
+          [visible]="visuSlash.visible"
+          [positionFixed]="true"
+          [top]="visuSlash.top"
+          [left]="visuSlash.left"
+          [query]="visuSlash.query"
+          [commands]="visuSlashCommands"
+          (commandSelect)="onVisuSlashSelect($event)" />
 
         <!-- Menu d'insertion de bloc -->
         @if (visuInsertMenu) {
@@ -1233,7 +1257,7 @@
                     [instanceId]="ainst.id"
                     [boardName]="arrayInstanceName(ainst.id)"
                     [deletable]="false"
-                    [readonly]="true"
+                    [readonly]="isArrayInstanceLocked(ainst.id)"
                     (gridChanged)="onArrayGridChanged(ainst.id, $event)" />
                 </div>
               }

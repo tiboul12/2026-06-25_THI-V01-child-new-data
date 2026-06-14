@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, AfterViewChecked, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -179,7 +179,7 @@ interface MockupDiagDragState {
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
 })
-export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
+export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterViewChecked {
   @Input() files: FileNode[] = [];
   @Input() restoreToken = 0;
   @Input() scrollToNodeId: string | null = null;
@@ -358,8 +358,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @ViewChild('overlay') overlayRef?: ElementRef<HTMLDivElement>;
   @ViewChild('visu') visuRef?: ElementRef<HTMLDivElement>;
   @ViewChildren('visuSectionEl') visuSectionEls!: QueryList<ElementRef<HTMLElement>>;
+  @ViewChildren('structSeg') structSegEls!: QueryList<ElementRef<HTMLElement>>;
   @ViewChild('visuImgInput') visuImgInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('slashMenu') slashMenuRef?: SlashCommandMenuComponent;
+  @ViewChild('visuSlashMenu') visuSlashMenuRef?: SlashCommandMenuComponent;
 
   private sanitizer = inject(DomSanitizer);
   private zone = inject(NgZone);
@@ -411,6 +413,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   // ── Visu edit mode ─────────────────────────────────────────
   visuSections: VisuSectionState[] = [];
   visuToolbar: { top: number; left: number } | null = null;
+  // Palettes de la toolbar de mise en forme (mode Edition)
+  readonly visuTextColors = ['#111827', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
+  readonly visuHighlightColors = ['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca'];
   visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
   activeVisuSectionId: string | null = null;
   editingVisuSectionId = signal<string | null>(null);
@@ -440,6 +445,29 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   slashMenuState: { visible: boolean; top: number; left: number; query: string; anchorPos: number } = {
     visible: false, top: 0, left: 0, query: '', anchorPos: -1
   };
+  // Slash command menu (mode Edition / visu) — insertion par section
+  visuSlash: { visible: boolean; top: number; left: number; query: string; sectionId: string } = {
+    visible: false, top: 0, left: 0, query: '', sectionId: ''
+  };
+  // Ancre DOM du "/" tapé (pour retirer "/query" à la sélection)
+  private visuSlashAnchor: { node: Node; offset: number } | null = null;
+  // Liste enrichie de commandes pour le menu slash en mode Edition (titres, listes, blocs, MO)
+  readonly visuSlashCommands: SlashCommand[] = [
+    { id: 'heading-1',       label: 'Titre 1',          description: 'Grand titre de section',      icon: 'title',                keywords: ['titre', 'heading', 'h1'] },
+    { id: 'heading-2',       label: 'Titre 2',          description: 'Sous-titre',                  icon: 'title',                keywords: ['titre', 'heading', 'h2'] },
+    { id: 'heading-3',       label: 'Titre 3',          description: 'Sous-sous-titre',             icon: 'title',                keywords: ['titre', 'heading', 'h3'] },
+    { id: 'list',            label: 'Liste à puces',    description: 'Liste non ordonnée',          icon: 'format_list_bulleted', keywords: ['list', 'liste', 'puces'] },
+    { id: 'numbered',        label: 'Liste numérotée',  description: 'Liste ordonnée',              icon: 'format_list_numbered', keywords: ['list', 'liste', 'numero'] },
+    { id: 'checklist',       label: 'Case à cocher',    description: 'Liste de tâches',             icon: 'checklist',            keywords: ['check', 'tache', 'todo', 'case'] },
+    { id: 'quote',           label: 'Citation',         description: 'Bloc citation',               icon: 'format_quote',         keywords: ['quote', 'citation'] },
+    { id: 'code',            label: 'Bloc de code',     description: 'Bloc de code',                icon: 'code',                 keywords: ['code', 'snippet'] },
+    { id: 'divider',         label: 'Séparateur',       description: 'Ligne horizontale',           icon: 'horizontal_rule',      keywords: ['divider', 'separateur', 'hr', 'ligne'] },
+    { id: 'callout-info',    label: 'Note Info',        description: 'Bloc d\'information',          icon: 'info',                 keywords: ['callout', 'info', 'note'] },
+    { id: 'table',           label: 'Tableau Markdown', description: 'Tableau simple 2×2',          icon: 'table_chart',          keywords: ['table', 'tableau'] },
+    { id: 'image',           label: 'Image',            description: 'Téléverser une image',        icon: 'image',                keywords: ['image', 'photo'] },
+    { id: 'mo-trello',       label: 'Trello',           description: 'Insérer un tableau Trello',   icon: 'view_kanban',          keywords: ['trello', 'kanban', 'mo'] },
+    { id: 'mo-array',        label: 'Tableau (MO)',     description: 'Insérer un tableur',          icon: 'table',                keywords: ['tableur', 'array', 'tableau', 'mo'] },
+  ];
   mirrorLines: MirrorLine[] = [];
   renderedHtml: SafeHtml = '';
   // Fold/collapse par section (mode Code)
@@ -509,6 +537,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (type === 'trello') this.openTrelloPopup();
       else this.openArrayPopup();
     });
+  }
+
+  ngAfterViewChecked() {
+    // Rendu formaté des segments texte en mode Structure (sans écraser la frappe)
+    if (this.mode === 'structure') this.initStructSegments();
   }
 
   // ── Lifecycle ──────────────────────────────────────────────
@@ -5793,11 +5826,162 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       this.localDirty = true;
       this.dirtyChange.emit(true);
     }
+    // Détection du slash menu « / »
+    this.detectVisuSlash(sectionId);
   }
 
   onVisuSectionKeydown(ev: KeyboardEvent) {
+    // Navigation du slash menu si ouvert
+    if (this.visuSlash.visible) {
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); this.visuSlashMenuRef?.moveNext(); return; }
+      if (ev.key === 'ArrowUp')   { ev.preventDefault(); this.visuSlashMenuRef?.movePrev(); return; }
+      if (ev.key === 'Enter')     { ev.preventDefault(); this.visuSlashMenuRef?.selectActive(); return; }
+      if (ev.key === 'Escape')    { ev.preventDefault(); this.hideVisuSlash(); return; }
+    }
     // Fermer le menu d'insertion sur Escape
     if (ev.key === 'Escape') this.visuInsertMenu = null;
+  }
+
+  // ── Slash menu « / » en mode Edition (contenteditable) ──────
+  private detectVisuSlash(sectionId: string) {
+    const sel = window.getSelection();
+    if (!sel || !sel.isCollapsed || sel.rangeCount === 0) { this.hideVisuSlash(); return; }
+    const node = sel.anchorNode;
+    if (!node || node.nodeType !== Node.TEXT_NODE) { this.hideVisuSlash(); return; }
+    const text = node.textContent || '';
+    const caret = sel.anchorOffset;
+    // Remonter jusqu'au "/" sans franchir d'espace
+    let slashIdx = -1;
+    for (let i = caret - 1; i >= 0; i--) {
+      const ch = text[i];
+      if (ch === '/') { slashIdx = i; break; }
+      if (/\s/.test(ch)) break;
+    }
+    if (slashIdx === -1) { this.hideVisuSlash(); return; }
+    // Le "/" doit être en début de texte ou précédé d'un espace
+    const prev = slashIdx > 0 ? text[slashIdx - 1] : ' ';
+    if (prev !== ' ' && prev !== ' ' && !/\s/.test(prev)) { this.hideVisuSlash(); return; }
+    const query = text.substring(slashIdx + 1, caret);
+    if (query.length > 20) { this.hideVisuSlash(); return; }
+    this.visuSlashAnchor = { node, offset: slashIdx };
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    this.visuSlash = {
+      visible: true,
+      top: rect.bottom + 6,
+      left: rect.left,
+      query,
+      sectionId,
+    };
+    this.cdr.detectChanges();
+  }
+
+  hideVisuSlash() {
+    if (this.visuSlash.visible) {
+      this.visuSlash = { ...this.visuSlash, visible: false, query: '' };
+      this.visuSlashAnchor = null;
+    }
+  }
+
+  // Retire le "/query" tapé dans le DOM avant insertion du bloc
+  private removeVisuSlashText() {
+    const anchor = this.visuSlashAnchor;
+    const sel = window.getSelection();
+    if (!anchor || !sel || sel.rangeCount === 0) return;
+    try {
+      const r = document.createRange();
+      r.setStart(anchor.node, anchor.offset);
+      r.setEnd(sel.anchorNode!, sel.anchorOffset);
+      r.deleteContents();
+    } catch { /* ignore */ }
+  }
+
+  async onVisuSlashSelect(cmd: SlashCommand) {
+    const sectionId = this.visuSlash.sectionId;
+    this.removeVisuSlashText();
+    this.hideVisuSlash();
+    if (!sectionId) return;
+    // Persister l'état courant du DOM (sans le "/query") dans le markdown de la section
+    this.commitVisuSection(sectionId);
+    if (cmd.id === 'image') { this.triggerVisuImageUpload(sectionId); return; }
+    if (cmd.id === 'mo-trello') { this.pendingMoFolderId = sectionId; await this.createMoInVisuSection('trello', sectionId); return; }
+    if (cmd.id === 'mo-array')  { this.pendingMoFolderId = sectionId; await this.createMoInVisuSection('array', sectionId); return; }
+    this.insertVisuMarkdownBlock(sectionId, this.slashSnippet(cmd.id));
+  }
+
+  private slashSnippet(id: string): string {
+    switch (id) {
+      case 'heading-1':    return '\n# Titre\n';
+      case 'heading-2':    return '\n## Titre\n';
+      case 'heading-3':    return '\n### Titre\n';
+      case 'list':         return '\n- Élément 1\n- Élément 2\n';
+      case 'numbered':     return '\n1. Élément 1\n2. Élément 2\n';
+      case 'checklist':    return '\n- [ ] Tâche 1\n- [ ] Tâche 2\n';
+      case 'quote':        return '\n> Citation\n';
+      case 'code':         return '\n```\ncode ici\n```\n';
+      case 'divider':      return '\n\n---\n\n';
+      case 'callout-info': return '\n> [!INFO] Titre\n> Contenu\n';
+      case 'table':        return '\n| Col 1 | Col 2 |\n|-------|-------|\n|       |       |\n';
+      default:             return '';
+    }
+  }
+
+  // Persiste l'état courant du DOM contenteditable d'une section dans le markdown.
+  private commitVisuSection(sectionId: string) {
+    const list = this.filteredVisuSections;
+    const idx = list.findIndex(vs => vs.sectionId === sectionId);
+    const el = idx >= 0 ? this.visuSectionEls.get(idx)?.nativeElement : null;
+    if (!el) return;
+    const md = this.htmlSectionToMarkdown(el);
+    const sec = this.visuSections.find(v => v.sectionId === sectionId);
+    this.saveVisuSection(sectionId, md, sec?.markdownBefore ?? '');
+  }
+
+  // Insère un bloc markdown dans le contenu DIRECT d'une section, puis re-rend.
+  private insertVisuMarkdownBlock(sectionId: string, snippet: string) {
+    if (!snippet) return;
+    const range = this.sectionRanges.find(r => r.folderId === sectionId);
+    if (!range) return;
+    const lines = this.unifiedContent.split('\n');
+    let directEnd = range.lineEnd;
+    for (let j = range.lineStart + 1; j <= range.lineEnd; j++) {
+      if (/^#{1,4} /.test(lines[j])) { directEnd = j - 1; break; }
+    }
+    lines.splice(directEnd + 1, 0, ...snippet.split('\n'));
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    if (this.backupType) this.onVisuSectionInput(sectionId);
+    this.recomputeAll();
+    this.scheduleSave();
+    setTimeout(() => this.initVisuSectionHtml(), 50);
+  }
+
+  // Crée un méga-outil (Trello / Tableau) dans une section depuis le mode Edition,
+  // insère le fence correspondant dans le markdown de la section et re-rend.
+  private async createMoInVisuSection(type: 'trello' | 'array', sectionId: string) {
+    if (!this.projectName) return;
+    try {
+      const name = type === 'trello' ? 'Mon Trello' : 'Mon Tableau';
+      const inst = await this.megaOutilsSvc.createInstance({
+        type, name, projectId: this.projectName,
+        outilId: this.activeOutilId || undefined, folderId: sectionId,
+      });
+      let snippet: string;
+      if (type === 'trello') {
+        await this.megaOutilsSvc.createTrelloCard(inst.id, {
+          title: 'Task test 1', status: 'todo', priority: 'medium', description: 'Description Task test 1'
+        }).catch(() => {});
+        snippet = `\n\n\`\`\`TRELLO: ${name}\n${this.buildDefaultTrelloBody()}\n\`\`\`\n\n`;
+      } else {
+        snippet = `\n\n\`\`\`ARRAY: ${name}\n\`\`\`\n\n`;
+      }
+      this.insertVisuMarkdownBlock(sectionId, snippet);
+      this.megaOutilCreated.emit(inst);
+    } catch (e) {
+      console.error('[EditorZone] createMoInVisuSection échoué :', e);
+    } finally {
+      this.pendingMoFolderId = null;
+    }
   }
 
   // ── Visu edit : sauvegarde d'une section ────────────────────
@@ -5929,17 +6113,45 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
 
     const inner = () => this.nodesToMd(Array.from(el.childNodes));
 
+    // Bloc avec alignement (center/right/justify) → conservé en HTML (round-trip fidèle)
+    if ((tag === 'p' || tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4')) {
+      const align = (el.style.textAlign || '').toLowerCase();
+      if (align === 'center' || align === 'right' || align === 'justify') {
+        // Bloc HTML autonome (marked le laisse tel quel) : on conserve l'HTML inline du navigateur
+        return `\n\n<${tag} style="text-align:${align}">${el.innerHTML.trim()}</${tag}>\n\n`;
+      }
+    }
+
     switch (tag) {
       case 'h1': return `\n# ${inner().trim()}\n`;
       case 'h2': return `\n## ${inner().trim()}\n`;
       case 'h3': return `\n### ${inner().trim()}\n`;
       case 'h4': return `\n#### ${inner().trim()}\n`;
-      case 'p': { const t = inner(); return t.trim() ? `\n${t.trim()}\n` : ''; }
+      case 'p': case 'div': { const t = inner(); return t.trim() ? `\n${t.trim()}\n` : '\n'; }
       case 'br': return '\n';
-      case 'strong': case 'b': return `**${inner()}**`;
-      case 'em': case 'i': return `*${inner()}*`;
-      case 'del': case 's': return `~~${inner()}~~`;
-      case 'u': return `<u>${inner()}</u>`;
+      case 'strong': case 'b': return this.wrapInlineMd('**', inner());
+      case 'em': case 'i': return this.wrapInlineMd('*', inner());
+      case 'del': case 's': return this.wrapInlineMd('~~', inner());
+      case 'u': return this.wrapInlineMd('', inner(), 'u');
+      case 'a': {
+        const href = el.getAttribute('href') || '';
+        return href ? `[${inner()}](${href})` : inner();
+      }
+      case 'span': case 'font': {
+        // Styles portés par un span (cas styleWithCSS) → repasser en Markdown quand possible
+        let content = inner();
+        const st = el.style;
+        const fw = (st.fontWeight || '').toLowerCase();
+        const fsStyle = (st.fontStyle || '').toLowerCase();
+        const deco = (st.textDecorationLine || st.textDecoration || '').toLowerCase();
+        if (deco.includes('line-through')) content = this.wrapInlineMd('~~', content);
+        if (deco.includes('underline')) content = this.wrapInlineMd('', content, 'u');
+        if (fsStyle === 'italic') content = this.wrapInlineMd('*', content);
+        if (fw === 'bold' || (parseInt(fw, 10) >= 600)) content = this.wrapInlineMd('**', content);
+        // Styles non exprimables en Markdown (couleur, surlignage, taille) → span HTML conservé
+        const css = this.preservedInlineStyle(el);
+        return css ? `<span style="${css}">${content}</span>` : content;
+      }
       case 'code': {
         if (el.parentElement?.tagName.toLowerCase() === 'pre') return el.textContent || '';
         return `\`${inner()}\``;
@@ -5964,6 +6176,30 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       case 'img': return '';
       default: return inner();
     }
+  }
+
+  // Enrobe un contenu inline avec des marqueurs Markdown (ou une balise HTML), en hissant
+  // les espaces de début/fin HORS des marqueurs (sinon "**mot **" est du Markdown invalide,
+  // affiché tel quel). Ex: wrapInlineMd('**', 'mot ') → '**mot** '.
+  private wrapInlineMd(marker: string, content: string, htmlTag?: string): string {
+    const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(content);
+    if (!m || !m[2]) return content;
+    const [, lead, core, trail] = m;
+    return htmlTag
+      ? `${lead}<${htmlTag}>${core}</${htmlTag}>${trail}`
+      : `${lead}${marker}${core}${marker}${trail}`;
+  }
+
+  // Extrait les styles inline à préserver (couleur, surlignage, taille) d'un <span>/<font>.
+  private preservedInlineStyle(el: HTMLElement): string {
+    const parts: string[] = [];
+    const color = el.style.color || el.getAttribute('color') || '';
+    const bg = el.style.backgroundColor || '';
+    const size = el.style.fontSize || '';
+    if (color) parts.push(`color:${color}`);
+    if (bg) parts.push(`background-color:${bg}`);
+    if (size) parts.push(`font-size:${size}`);
+    return parts.join(';');
   }
 
   // ── Visu edit : toolbar formatage ───────────────────────────
@@ -5995,20 +6231,61 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       return;
     }
     const rect = range.getBoundingClientRect();
-    const toolbarW = 220;
+    const toolbarW = 520;
     const left = Math.max(4, Math.min(
       rect.left + rect.width / 2 - toolbarW / 2,
       window.innerWidth - toolbarW - 4
     ));
-    this.visuToolbar = { top: rect.top - 48, left };
+    this.visuToolbar = { top: Math.max(4, rect.top - 56), left };
     this.cdr.detectChanges();
   }
 
-  applyVisuFormat(command: string) {
-    document.execCommand(command, false);
-    const activeId = this.getActiveVisuSectionId();
-    if (activeId) this.dirtyVisuSectionIds.add(activeId);
+  applyVisuFormat(command: string, value?: string) {
+    // Couleur / surlignage / taille → styles CSS inline (<span style>) ; le reste → balises
+    // sémantiques (<b>, <i>, <u>, <s>) pour une conversion Markdown fidèle (**…**, *…*, …).
+    const useCss = command === 'foreColor' || command === 'hiliteColor' || command === 'fontSize';
+    try { document.execCommand('styleWithCSS', false, useCss ? 'true' : 'false'); } catch { /* ignore */ }
+    // formatBlock attend un nom de balise entre chevrons sur certains navigateurs
+    const arg = command === 'formatBlock' && value ? `<${value}>` : value;
+    try { document.execCommand(command, false, arg); } catch { /* ignore */ }
+    this.markActiveVisuDirty();
+    // Garder la toolbar ouverte pour enchaîner couleur/taille ; fermer sur les actions de bloc
+    if (command !== 'foreColor' && command !== 'hiliteColor' && command !== 'fontSize') {
+      this.visuToolbar = null;
+    }
+  }
+
+  // Insère une liste de cases à cocher (markdown - [ ]) au point d'insertion
+  insertVisuChecklist() {
+    try { document.execCommand('insertHTML', false, '<ul><li>[ ] Tâche</li></ul>'); } catch { /* ignore */ }
+    this.markActiveVisuDirty();
     this.visuToolbar = null;
+  }
+
+  // Enrobe la sélection dans du code inline
+  insertVisuInlineCode() {
+    const sel = window.getSelection();
+    const text = sel?.toString() || 'code';
+    try { document.execCommand('insertHTML', false, `<code>${this.escapeHtml(text)}</code>`); } catch { /* ignore */ }
+    this.markActiveVisuDirty();
+    this.visuToolbar = null;
+  }
+
+  // Crée un lien sur la sélection
+  insertVisuLink() {
+    const url = window.prompt('URL du lien :', 'https://');
+    if (!url) return;
+    try { document.execCommand('createLink', false, url); } catch { /* ignore */ }
+    this.markActiveVisuDirty();
+    this.visuToolbar = null;
+  }
+
+  private markActiveVisuDirty() {
+    const activeId = this.getActiveVisuSectionId();
+    if (activeId) {
+      this.dirtyVisuSectionIds.add(activeId);
+      if (this.backupType) this.onVisuSectionInput(activeId);
+    }
   }
 
   private getActiveVisuSectionId(): string | null {
@@ -6084,6 +6361,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // Fermer le menu d'insertion si clic en dehors
     if (this.visuInsertMenu && !target.closest('.visu-insert-menu') && !target.closest('.visu-insert-btn')) {
       this.visuInsertMenu = null;
+    }
+    // Fermer le slash menu si clic en dehors
+    if (this.visuSlash.visible && !target.closest('.slash-menu')) {
+      this.hideVisuSlash();
     }
     // F6 — Bouton bulle commentaires
     const commentBtn = target.closest('.visu-comment-btn') as HTMLElement | null;
@@ -6647,6 +6928,44 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const segs = this.getStructBodySegments(node.textContent);
     if (segIdx < segs.length) segs[segIdx].value = ta.value;
     node.textContent = segs.map(s => s.value).join('\n').replace(/^\n+|\n+$/g, '').replace(/\n{3,}/g, '\n\n');
+    this.scheduleStructFlush();
+  }
+
+  // ── Mode Structure : segment texte rendu formaté (WYSIWYG, comme Edition) ──
+  // HTML rendu d'un segment markdown pour l'affichage initial du contenteditable.
+  structSegHtml(value: string): string {
+    try { return (marked.parse(value || '') as string); } catch { return this.escapeHtml(value || ''); }
+  }
+
+  // Injecte le HTML rendu dans les contenteditable Structure (hors édition en cours).
+  private initStructSegments(): void {
+    if (this.mode !== 'structure' || !this.structSegEls) return;
+    this.structSegEls.forEach(ref => {
+      const el = ref.nativeElement;
+      const raw = el.getAttribute('data-seg-raw') ?? '';
+      // Ne pas écraser pendant la frappe (élément focus) ni si déjà à jour
+      if (document.activeElement === el) return;
+      if (el.getAttribute('data-seg-rendered') === raw) return;
+      el.innerHTML = this.structSegHtml(raw);
+      el.setAttribute('data-seg-rendered', raw);
+    });
+  }
+
+  onStructSegmentFocus(node: StructureNode): void {
+    this.applyStructLock(node.folderId ?? '');
+  }
+
+  // Saisie dans un segment texte Structure rendu : reconvertir HTML → markdown.
+  onStructSegmentHtmlInput(node: StructureNode, segIdx: number, event: Event): void {
+    this.applyStructLock(node.folderId ?? '');
+    const el = event.target as HTMLElement;
+    const md = this.htmlSectionToMarkdown(el);
+    const segs = this.getStructBodySegments(node.textContent);
+    if (segIdx < segs.length) segs[segIdx].value = md;
+    node.textContent = segs.map(s => s.value).join('\n').replace(/^\n+|\n+$/g, '').replace(/\n{3,}/g, '\n\n');
+    // Marquer comme rendu courant pour éviter un re-render qui déplacerait le curseur
+    el.setAttribute('data-seg-rendered', md);
+    el.setAttribute('data-seg-raw', md);
     this.scheduleStructFlush();
   }
 

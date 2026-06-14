@@ -8516,6 +8516,123 @@
       "prompt": "lors de l'ajout d'un trello vierge je voudrais que tu rajoute automatiquement une task test de base ; - [ ] Task test 1 `[Normale]` — admin · 14/06/26\\n  Description Task test 1",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-305",
+      "version": "B-0.282",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Mode Preview : suppression de la barre Partager/Annuler",
+      "description": "La barre « Modifications en cours / Annuler / Partager mes modifications » du mode Preview (visu) est supprimée. Le partage et l'annulation des modifications d'une section se font désormais uniquement via le menu contextuel de la section (sidebar). Cohérent avec la suppression des barres équivalentes en mode Code.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans la section preniew supprime la barre Partage des modifications",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-306",
+      "version": "B-0.282",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition (ex-Preview) type Google Docs : slash menu, mise en forme riche, MO éditables",
+      "description": "Renommage de l'onglet Preview en Edition (mode interne visu inchangé). MVP éditeur type Google Docs : (1) Tableau (Array) éditable inline en Edition (readonly conditionnel sur isArrayInstanceLocked, sync live via syncArrayInlineBlock). (2) Slash menu « / » dans les sections contenteditable : SlashCommandMenuComponent enrichi (nouveaux @Input commands et positionFixed), commandes titres/listes/case à cocher/citation/code/séparateur/note/tableau/image/Trello/Tableau MO ; detectVisuSlash + onVisuSlashSelect + insertVisuMarkdownBlock + createMoInVisuSection ; navigation clavier. (3) Toolbar flottante enrichie : souligné, titres, listes, case à cocher, citation, code inline, lien, alignement, taille, couleur de texte et surlignage (pastilles), via applyVisuFormat(command, value?) avec styleWithCSS. (4) nodeToMd étendu pour préserver en HTML inline les liens, spans stylés (couleur/surlignage/taille via preservedInlineStyle), u et l'alignement de bloc. Branche feature 2026-06-14_mode_edition.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "apps/projets/src/app/pages/projet-editor/components/slash-command-menu/slash-command-menu.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je veux changer le nom du mode Preview en mode Edition, crait une branche 2026-06-14_mode_edition et lance toutes les modifications bypass permissions dans cette nouvelle branche (plan MVP éditeur type Google Docs)",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-307",
+      "version": "B-0.282",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : barre de mise en forme permanente en haut (non flottante)",
+      "description": "La toolbar de mise en forme du mode Edition n'apparaît plus au survol/sélection près du curseur : elle est désormais affichée en permanence, ancrée en haut de la zone (position sticky, sous la barre des méga-outils). Ajout de la variante .visu-format-toolbar--docked ; la barre est rendue sans condition (plus de @if visuToolbar). La sélection reste préservée au clic via mousedown preventDefault.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la bar de style doit être toujours affiché en haut et non sur la sourie",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-308",
+      "version": "B-0.282",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : styles correctement convertis en Markdown/HTML (gras, etc.)",
+      "description": "Le gras (et autres styles) appliqué en mode Edition n'était pas reflété en mode Code : selon l'état de styleWithCSS, execCommand('bold') produisait un <span style=\"font-weight:bold\"> ignoré par nodeToMd. Correctif : applyVisuFormat force styleWithCSS=false pour bold/italic/underline/strikeThrough (balises sémantiques <b>/<i>/<u>/<s> → **,*,~~) et true pour foreColor/hiliteColor/fontSize (span style). En secours, le handler span/font de nodeToMd reconvertit font-weight/font-style/text-decoration en Markdown. Les styles non Markdown (couleur, surlignage, taille, alignement) restent en HTML inline (ex: <span style=\"color:purple\">).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque dans le mode Edition je met un texte en gras, il ce met bien en gras dans ce mode mais si je vais ensuite dans le mode Code le texte n'est pas indiqué en gras (format markdown : **en gras**) verifi aussi les autres style, si le style n'est pas compatible au format markdown, il faut le mettre dans le type html, exemple : <span style=\"color:purple\">",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-309",
+      "version": "B-0.282",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview,projets:editor|zone-structure",
+      "title": "Edition & Structure : afficher le texte formaté, jamais le code (markdown/HTML)",
+      "description": "(1) Mode Edition : les marqueurs Markdown étaient parfois visibles (ex: '**mise **') car les espaces collés aux ** rendaient le Markdown invalide → non rendu. Ajout de wrapInlineMd qui hisse les espaces hors des marqueurs (strong/em/del/u + spans stylés). (2) Mode Structure : le corps texte des blocs s'affichait en code brut (textarea). Remplacé par un contenteditable rendu formaté (.struct-card__content--rich) comme en Edition : structSegHtml (marked) injecté par initStructSegments (ngAfterViewChecked, sans clobber du curseur), saisie reconvertie via onStructSegmentHtmlInput/htmlSectionToMarkdown. Ajout du cas 'div' dans nodeToMd pour préserver les sauts de ligne.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-structure/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le mode Edition ne doit pas faire apparaitre le code de mise en forme (html ni markdown), on voit le ** en gras. Dans le mode Structure pour l'affichage dans les blocs, c'est la même chose que le mode Edition : on ne doit pas voir le code mais le texte formaté",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }

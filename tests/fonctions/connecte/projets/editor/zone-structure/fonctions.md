@@ -24,8 +24,9 @@ Vue : arborescence éditable des sections du document
 - **Focus sur le nom** : clic sur le titre d'une section → input inline
   - `applyStructLock(entityId)` → verrou si projet backup
   - Snapshot du contenu avant modification → `structEntitySnapshots`
-- **Focus sur le contenu texte** : clic sur le corps → textarea inline
-  - Lock de la même entité
+- **Focus sur le contenu texte** : clic sur le corps → bloc **rendu formaté éditable** (contenteditable, `.struct-card__content--rich`) — identique au mode Edition : on voit le texte mis en forme, **pas le code Markdown** (vB-0.282)
+  - Rendu via `structSegHtml` (marked) injecté par `initStructSegments` (ngAfterViewChecked, sans écraser la frappe) ; saisie reconvertie en Markdown par `onStructSegmentHtmlInput` (`htmlSectionToMarkdown`)
+  - Lock de la même entité (`onStructSegmentFocus`)
 - **Focus sur un bloc additionnel** : clic → textarea du bloc
   - Lock sur l'entité bloc (`fileId` ou `blockId`)
 - **Modifications** : mises à jour dans `unifiedContent` via `structureNodes`
