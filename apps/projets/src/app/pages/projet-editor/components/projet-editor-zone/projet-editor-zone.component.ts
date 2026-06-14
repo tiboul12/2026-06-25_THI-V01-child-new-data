@@ -6742,43 +6742,41 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         this.pendingLocalImages = this.pendingLocalImages.filter(n => n.id !== node.id);
         this.recentlyAddedImageIds.delete(node.id);
       }, 10000);
-      // Flusher la saisie en cours du DOM dans le markdown avant d'insérer (évite la perte)
+      // Insérer la figure DIRECTEMENT dans le DOM de la section (la section dirty fait foi ;
+      // re-render depuis docSections impossible car les fichiers n'ont pas encore le marqueur).
       clearTimeout(this.visuLiveSaveTimeout);
-      this.commitVisuSection(sectionId);
-      // Insérer le marqueur image dans unifiedContent après la section
-      const range = this.sectionRanges.find(r => r.folderId === sectionId);
-      if (range) {
-        const lines = this.unifiedContent.split('\n');
-        lines.splice(range.lineEnd + 1, 0, '', `{{IMG:${node.id}}}`, '');
-        this.unifiedContent = lines.join('\n');
-        const ta = this.textareaRef?.nativeElement;
-        if (ta) ta.value = this.unifiedContent;
-        // Forcer le re-render : l'image a été insérée dans le markdown, pas dans le DOM
-        this.forceVisuReinject = true;
-        this.recomputeAll();
-        // Save immédiat pour que onRefresh attende la fin du save (évite race avec loadFiles)
-        this.saveAll();
-        // saveAll() reset localDirty à false — on le remet à true car l'image n'est pas
-        // encore pushée : l'utilisateur doit cliquer "Partager" pour que les autres la reçoivent.
-        this.dirtyVisuSectionIds.add(sectionId);
-        this.localDirty = true;
-        this.dirtyChange.emit(true);
-        // Activer la barre "Modifications en cours" (mode visu) — projets backup uniquement
-        if (this.backupType) {
-          if (!this.visuSectionLockSnapshot.has(sectionId)) {
-            const vs = this.visuSections.find(v => v.sectionId === sectionId);
-            if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
-          }
-          if (!this.editingVisuSectionId()) {
-            this.editingVisuSectionId.set(sectionId);
-          }
-          this.collab.addLocalPending(sectionId);
-          if (this.projectName) {
-            this.collab.lockNode(this.projectName, sectionId).catch(() => {});
-          }
+      const container = this.visuRef?.nativeElement;
+      const secEl = container?.querySelector(`.visu-sec-content[data-section-id="${sectionId}"]`) as HTMLElement | null;
+      if (secEl) {
+        const figHtml = this.renderImageMarkerHtml(node.id, '', '', '', { withDeleteBar: true });
+        secEl.insertAdjacentHTML('beforeend', figHtml);
+        this.commitVisuSection(sectionId); // DOM → markdown (ajoute le marqueur)
+      } else {
+        // Section non rendue (filtrée) : insérer le marqueur dans le markdown
+        const range = this.sectionRanges.find(r => r.folderId === sectionId);
+        if (range) {
+          const lines = this.unifiedContent.split('\n');
+          lines.splice(range.lineEnd + 1, 0, '', `{{IMG:${node.id}}}`, '');
+          this.unifiedContent = lines.join('\n');
+          const ta = this.textareaRef?.nativeElement;
+          if (ta) ta.value = this.unifiedContent;
+          this.recomputeAll();
         }
-        this.refresh.emit();
-        setTimeout(() => this.initVisuSectionHtml(), 80);
+      }
+      // Save immédiat
+      this.saveAll();
+      // saveAll() reset localDirty à false — l'image n'est pas encore publiée (Partager)
+      this.dirtyVisuSectionIds.add(sectionId);
+      this.localDirty = true;
+      this.dirtyChange.emit(true);
+      if (this.backupType) {
+        if (!this.visuSectionLockSnapshot.has(sectionId)) {
+          const vs = this.visuSections.find(v => v.sectionId === sectionId);
+          if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+        }
+        if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
+        this.collab.addLocalPending(sectionId);
+        if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
       }
     } catch (e: any) {
       this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';

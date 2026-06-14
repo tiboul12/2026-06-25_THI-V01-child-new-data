@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-330",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : image insérée affichée immédiatement (sans changer de mode)",
+      "description": "À l'upload, le marqueur était inséré dans unifiedContent mais buildVisuSections re-render depuis docSections (fichiers sans le marqueur) → image invisible jusqu'au reload (changement de mode). Correctif : la figure image est insérée directement dans le DOM de la section (renderImageMarkerHtml) puis commit (DOM → markdown), comme pour la suppression. Plus de forceVisuReinject (qui re-render depuis les fichiers stale). Fallback markdown si la section n'est pas rendue.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque j'insère une image dans le mode Edition, je suis obligé de changer de mode et revenir pour voir l'image.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-329",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",
