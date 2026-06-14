@@ -21,6 +21,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
   - Projets backup : snapshot du contenu → `visuSectionLockSnapshot`, `editingVisuSectionId.set(sectionId)`, `collab.lockNode()`
   - Projets locaux : pas de verrou, édition directe
 - **Saisie** : input direct dans le HTML rendu → `onVisuSectionInput(sectionId)` → `dirtyVisuSectionIds.add(sectionId)`
+- **Auto-save « live »** (vB-0.283) : à la frappe, `scheduleVisuLiveSave(sectionId)` (débounce 900 ms) convertit la section en Markdown (`commitVisuSection`) et persiste immédiatement (`saveAll` → écriture des fichiers). La section reste `dirty` et le DOM n'est pas réinitialisé (curseur préservé : `initVisuSectionHtml` ne ré-injecte pas une section dirty non vide ; le `@for` track par `sectionId` réutilise le DOM). Les fichiers se mettent donc à jour en permanence, sans changer de mode.
 - **Blur** : `onVisuSectionBlur(sectionId)` → sauvegarde locale sans publier (section reste "dirty")
 - **Keyboard** : Escape → ferme le menu d'insertion (si ouvert)
 
@@ -209,7 +210,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 
 ## `2-5-2-5-19` — Édition des méga-outils en direct (vB-0.282)
 
-- **Trello** : `app-trello-board` éditable (readonly uniquement si verrouillé par un autre user) ; `cardsChanged` → `onTrelloCardsChanged` → maj du fence ` ```TRELLO: ` + `recomputeAll`
+- **Trello** : `app-trello-board` éditable (readonly uniquement si verrouillé par un autre user) ; `cardsChanged` → `onTrelloCardsChanged` → maj du fence ` ```TRELLO: ` + `recomputeAll`. **Hauteur dynamique** (vB-0.283) : `[autoHeight]="true"` → le board se dimensionne à la hauteur des tasks (pas d'étirement) et grandit/rétrécit à l'ajout/suppression (wrapper `.visu-trello-board-wrap--auto`, racine du board sans `h-full`, colonnes sans `flex-1`, zone cartes au contenu)
 - **Tableau (Array)** : `app-array-board` désormais **éditable inline** (`[readonly]="isArrayInstanceLocked(ainst.id)"`, auparavant `true`) ; `gridChanged` → `onArrayGridChanged` → `syncArrayInlineBlock` met à jour le fence ` ```ARRAY: ` et `recomputeAll`
 - **Mockup** : aperçu cliquable (ouvre l'éditeur), édition complète inline en backlog
 - **Sync live multi-mode** : toute modification écrit dans `unifiedContent` → bascule Code/Structure reflète immédiatement le changement ; inter-utilisateurs via SSE `trello_update` / `array_update` + publication par le menu de section

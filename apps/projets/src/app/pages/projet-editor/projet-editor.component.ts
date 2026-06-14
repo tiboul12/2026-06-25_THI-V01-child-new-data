@@ -17,6 +17,7 @@ import { ProjetToolbarComponent } from './components/projet-toolbar/projet-toolb
 import { ProjetSidebarComponent, DragDropEvent } from './components/projet-sidebar/projet-sidebar.component';
 import { ProjetEditorZoneComponent, FileSaveEvent, SectionInfo } from './components/projet-editor-zone/projet-editor-zone.component';
 import { EditionOutilComponent } from './outils/edition/edition-outil.component';
+import { stripStyleMarkdown, normalizeStyledMarkdown, cssTwinName, isCssTwinName } from './content-style.util';
 import { TestsOutilComponent } from './outils/tests/tests-outil.component';
 import { AgendaOutilComponent } from './outils/agenda/agenda-outil.component';
 import { ProjetConversationComponent } from './components/projet-conversation/projet-conversation.component';
@@ -213,6 +214,34 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     };
     const result = patch(this.files());
     if (result.changed) this.files.set(result.nodes);
+  }
+
+  /**
+   * Écrit/crée le jumeau stylisé `<main>-css.md` d'une section avec le contenu stylisé,
+   * dans le même dossier que le fichier principal. Réutilisé par le système double fichier.
+   */
+  private async saveCssTwin(folderId: string | null, mainFileId: string, styled: string): Promise<void> {
+    if (!folderId || !this.projectFolderName) return;
+    const folder = this.findFolderById(folderId, this.files());
+    if (!folder) return;
+    const children = folder.children || [];
+    const mainNode = children.find(c => c.id === mainFileId);
+    const twinName = cssTwinName(mainNode?.name ?? 'contenu.md');
+    const twin = children.find(c => c.type === 'file' && c.name === twinName);
+    try {
+      if (twin) {
+        if ((twin.content ?? '') !== styled) {
+          await this.projectFilesService.updateFile(this.projectFolderName, twin.id, styled, folderId);
+          this.patchFileContent(twin.id, styled);
+        }
+      } else {
+        const baseName = twinName.replace(/\.md$/i, '');
+        const created = await this.projectFilesService.createFile(this.projectFolderName, { name: baseName, parentId: folderId, content: styled });
+        this.patchFileContent(created.id, styled);
+      }
+    } catch (e) {
+      console.warn('[ProjetEditor] saveCssTwin échoué :', e);
+    }
   }
 
   private findFileById(id: string, nodes: FileNode[]): FileNode | null {
@@ -942,7 +971,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     const allExistingAdditionalFileIds = new Set<string>();
     for (const folder of allFolderPaths.values()) {
       folder.children?.forEach(c => {
-        if (c.type === 'file' && c.name !== 'contenu.md' && !this.projectFilesService.isImageFile(c.name)) {
+        if (c.type === 'file' && c.name !== 'contenu.md' && !isCssTwinName(c.name) && !this.projectFilesService.isImageFile(c.name)) {
           allExistingAdditionalFileIds.add(c.id);
         }
       });
@@ -1123,13 +1152,19 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       // to ensure the server has the latest text when ngOnChanges rebuilds the document.
       for (const s of resolved) {
         if (s.fileId) {
+          // Système double fichier : contenu.md = Markdown propre (strip), contenu-css.md = stylisé
+          // (styles markdown-compatibles en markdown, seuls couleur/taille/etc. en HTML).
+          const styled = normalizeStyledMarkdown(s.content);
+          const clean = stripStyleMarkdown(styled);
           const oldContent = oldContentMap.get(s.fileId) ?? '';
-          if (oldContent !== s.content) {
-            await this.projectFilesService.updateFile(this.projectFolderName, s.fileId, s.content, s.folderId ?? undefined);
-            this.patchFileContent(s.fileId, s.content);
+          if (oldContent !== clean) {
+            await this.projectFilesService.updateFile(this.projectFolderName, s.fileId, clean, s.folderId ?? undefined);
+            this.patchFileContent(s.fileId, clean);
             const fileNode = { id: s.fileId, name: 'contenu.md', type: 'file' as const, path: '', order: 0 };
-            this.trackContentUpdate(fileNode, s.folderName, oldContent, s.content);
+            this.trackContentUpdate(fileNode, s.folderName, oldContent, clean);
           }
+          // Jumeau stylisé
+          await this.saveCssTwin(s.folderId ?? null, s.fileId, styled);
         }
 
         // Save additional files
@@ -1190,6 +1225,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
           const existingFiles = freshFolder.children.filter(c => c.type === 'file');
           for (const ef of existingFiles) {
             if (ef.name === 'contenu.md') continue;
+            if (isCssTwinName(ef.name)) continue;
             if (this.projectFilesService.isImageFile(ef.name)) continue;
             const stillExists = s.additionalFiles.some(af => this.slugify(af.name) === this.slugify(ef.name.replace(/\.md$/, '')));
             if (!stillExists) {

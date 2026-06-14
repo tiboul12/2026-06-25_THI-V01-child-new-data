@@ -151,7 +151,7 @@
 <!-- Template récursif -->
 <ng-template #treeNodes let-nodes="nodes" let-depth="depth" let-parentId="parentId">
   @for (node of nodes; track node.id) {
-    @if (!(node.type === 'file' && node.name === 'contenu.md')) {
+    @if (!(node.type === 'file' && (node.name === 'contenu.md' || node.name.endsWith('-css.md')))) {
 
     <!-- Indicateur avant -->
     @if (isDragOver(node.id) && dragPos() === 'before') {

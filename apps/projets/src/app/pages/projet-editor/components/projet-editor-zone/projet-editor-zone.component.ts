@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, AfterViewChecked, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { stripStyleMarkdown, mergeCleanIntoStyled, normalizeStyledMarkdown, cssTwinName, isCssTwinName } from '../../content-style.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -445,12 +446,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   slashMenuState: { visible: boolean; top: number; left: number; query: string; anchorPos: number } = {
     visible: false, top: 0, left: 0, query: '', anchorPos: -1
   };
+  // Mode Code : afficher le style (jumeau -css.md) ou le Markdown propre (défaut). Voir système double fichier.
+  showCssInCode = signal(false);
+  get codeCleanView(): string { return stripStyleMarkdown(this.unifiedContent); }
+
   // Slash command menu (mode Edition / visu) — insertion par section
   visuSlash: { visible: boolean; top: number; left: number; query: string; sectionId: string } = {
     visible: false, top: 0, left: 0, query: '', sectionId: ''
   };
   // Ancre DOM du "/" tapé (pour retirer "/query" à la sélection)
   private visuSlashAnchor: { node: Node; offset: number } | null = null;
+  // Auto-save « live » du mode Edition (débounce pendant la frappe)
+  private visuLiveSaveTimeout: any = null;
   // Liste enrichie de commandes pour le menu slash en mode Edition (titres, listes, blocs, MO)
   readonly visuSlashCommands: SlashCommand[] = [
     { id: 'heading-1',       label: 'Titre 1',          description: 'Grand titre de section',      icon: 'title',                keywords: ['titre', 'heading', 'h1'] },
@@ -1053,7 +1060,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       const nodeChildren = [...(node.children || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
 
       const mainFile = nodeChildren.find(c => c.type === 'file' && c.name === 'contenu.md')
-                    || nodeChildren.find(c => c.type === 'file' && !this.isImageFile(c.name));
+                    || nodeChildren.find(c => c.type === 'file' && !this.isImageFile(c.name) && !isCssTwinName(c.name));
+      // Jumeau stylisé (*-css.md) : sa version sert de buffer (Markdown + styles HTML).
+      const cssTwin = mainFile
+        ? nodeChildren.find(c => c.type === 'file' && c.name === cssTwinName(mainFile.name))
+        : undefined;
+      let mainStyledContent: string | undefined;
+      if (cssTwin && mainFile) {
+        const twinStyled = normalizeStyledMarkdown(cssTwin.content ?? '');
+        const cleanFromTwin = stripStyleMarkdown(twinStyled);
+        const cleanActual = mainFile.content ?? '';
+        // Si contenu.md (propre) a été édité hors app (IA) → réconcilier dans le master stylé.
+        mainStyledContent = cleanActual.trim() === cleanFromTwin.trim()
+          ? twinStyled
+          : mergeCleanIntoStyled(cleanActual, cleanFromTwin, twinStyled);
+      } else {
+        mainStyledContent = normalizeStyledMarkdown(mainFile?.content ?? '');
+      }
 
       // 1. Identifier toutes les images déjà référencées dans n'importe quel fichier texte
       //    de cette section (contenu.md inclus) pour ne pas créer de doublon.
@@ -1073,6 +1096,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       // 2. Parcourir les enfants dans l'ordre de leur propriété 'order'
       for (const child of nodeChildren) {
         if (child.type !== 'file') continue;
+        // Le jumeau stylisé n'est pas un fichier additionnel : il alimente le buffer (voir mainStyledContent)
+        if (isCssTwinName(child.name)) continue;
 
         if (this.isImageFile(child.name)) {
           images.push(child);
@@ -1082,8 +1107,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
             textContent += `\n{{IMG:${child.id}}}\n`;
           }
         } else if (child === mainFile) {
-          if (child.content?.trim()) {
-            textContent += child.content.trimEnd() + '\n';
+          if (mainStyledContent?.trim()) {
+            textContent += mainStyledContent.trimEnd() + '\n';
           }
         } else {
           // Fichier Trello (trello-NOM / trello / legacy "TL: NOM") → injecter le bloc ```TRELLO: NOM
@@ -5191,6 +5216,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   private flushVisuSections() {
     if (this.mode !== 'visu') return;
+    clearTimeout(this.visuLiveSaveTimeout);
     this.visuSectionEls.forEach((ref) => {
       const el = ref.nativeElement;
       const sectionId = el.getAttribute('data-section-id');
@@ -5262,10 +5288,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     clearTimeout(this.saveTimeout);
     this.lastSavedContent = this.unifiedContent;
 
-    // Publier : POST avec publish=true → SSE broadcast + unlock côté serveur
+    // Publier : POST avec publish=true → SSE broadcast + unlock côté serveur (double fichier)
     if (snapshot?.fileId && this.projectName) {
       try {
-        await this.svc.updateFile(this.projectName, snapshot.fileId, newMd, sectionId, true);
+        await this.writeSectionStyled(snapshot.fileId, sectionId, newMd, true);
       } catch (e: any) {
         console.warn('[Publish] erreur lors de la publication:', e);
         const msg = e?.error?.pushFailed
@@ -5506,7 +5532,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         await Promise.all(
           sections
             .filter(s => s.fileId && s.folderId && ids.includes(s.folderId))
-            .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+            .map(s => this.writeSectionStyled(s.fileId!, s.folderId, s.content, true))
         );
         this.lastSavedContent = this.unifiedContent;
         this.localDirty = false;
@@ -5578,7 +5604,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
             (s.folderId != null && publishFolderIds.has(s.folderId)) ||
             publishFolderIds.has(s.fileId!)
           ))
-          .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+          .map(s => this.writeSectionStyled(s.fileId!, s.folderId, s.content, true))
       );
       this.lastSavedContent = this.unifiedContent;
       this.localDirty = false;
@@ -5674,7 +5700,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
             (s.folderId != null && publishFolderIds.has(s.folderId)) ||
             publishFolderIds.has(s.fileId!)
           ))
-          .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+          .map(s => this.writeSectionStyled(s.fileId!, s.folderId, s.content, true))
       );
       this.lastSavedContent = this.unifiedContent;
       // Suppressions d'images différées pour les sections concernées
@@ -5785,6 +5811,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.cursorEntityId.set(null);
   }
 
+  // Écrit une section en double fichier lors d'un « Partager » : clean → fichier principal,
+  // styled → jumeau *-css.md (créé si absent). Conserve l'invariant contenu.md propre.
+  private async writeSectionStyled(fileId: string, folderId: string | null | undefined, styledRaw: string, publish: boolean): Promise<void> {
+    const styled = normalizeStyledMarkdown(styledRaw);
+    const clean = stripStyleMarkdown(styled);
+    await this.svc.updateFile(this.projectName, fileId, clean, folderId ?? undefined, publish);
+    const folder = folderId ? this.findNode(folderId, this.files) : null;
+    const children = folder?.children || [];
+    const mainNode = children.find(c => c.id === fileId);
+    const twinName = cssTwinName(mainNode?.name ?? 'contenu.md');
+    const twin = children.find(c => c.type === 'file' && c.name === twinName);
+    if (twin) {
+      await this.svc.updateFile(this.projectName, twin.id, styled, folderId ?? undefined, publish);
+    } else if (folderId) {
+      const base = twinName.replace(/\.md$/i, '');
+      await this.svc.createFile(this.projectName, { name: base, parentId: folderId, content: styled }).catch(() => {});
+    }
+  }
+
   private showPublishToast(): void {
     this.publishToastVisible.set(true);
     setTimeout(() => this.publishToastVisible.set(false), 3000);
@@ -5828,6 +5873,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
     // Détection du slash menu « / »
     this.detectVisuSlash(sectionId);
+    // Sauvegarde « live » : mettre à jour les fichiers en permanence pendant la frappe
+    this.scheduleVisuLiveSave(sectionId);
+  }
+
+  // Auto-save débounce du mode Edition : convertit la section éditée en Markdown et persiste,
+  // sans réinitialiser le DOM (la section reste « dirty » → curseur préservé, voir initVisuSectionHtml).
+  private scheduleVisuLiveSave(sectionId: string) {
+    clearTimeout(this.visuLiveSaveTimeout);
+    this.visuLiveSaveTimeout = setTimeout(() => {
+      this.commitVisuSection(sectionId);
+      this.saveAll();
+    }, 900);
   }
 
   onVisuSectionKeydown(ev: KeyboardEvent) {
@@ -6131,7 +6188,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       case 'br': return '\n';
       case 'strong': case 'b': return this.wrapInlineMd('**', inner());
       case 'em': case 'i': return this.wrapInlineMd('*', inner());
-      case 'del': case 's': return this.wrapInlineMd('~~', inner());
+      case 'del': case 's': case 'strike': return this.wrapInlineMd('~~', inner());
       case 'u': return this.wrapInlineMd('', inner(), 'u');
       case 'a': {
         const href = el.getAttribute('href') || '';
@@ -7064,7 +7121,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       await Promise.all(
         sections
           .filter(s => s.fileId)
-          .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+          .map(s => this.writeSectionStyled(s.fileId!, s.folderId, s.content, true))
       );
       // Déverrouiller toutes les entités structure
       for (const entityId of this.structEntityLocks) {

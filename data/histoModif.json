@@ -1,6 +1,148 @@
 {
   "modifications": [
     {
+      "id": "mod-315",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets",
+        "libs"
+      ],
+      "features": "projets:editor|zone-preview,libs:mega-outils",
+      "title": "Mode Edition : Trello à hauteur dynamique (au contenu des tasks)",
+      "description": "En mode Edition, le board Trello s'étirait sur toute la hauteur de la zone. Ajout de @Input autoHeight au composant app-trello-board : quand true, la racine n'a plus h-full, le conteneur colonnes n'a plus flex-1, et la zone cartes n'a plus flex-1/overflow (hauteur au contenu, min-height 48px pour colonnes vides). Le Trello de section en mode Edition passe [autoHeight]=true et utilise un wrapper .visu-trello-board-wrap--auto (height auto) ; le wrapper partagé (72vh) reste inchangé pour les previews standalone et le board Array. Le board grandit/rétrécit dynamiquement à l'ajout/suppression de cartes.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le mode Edition, l'affichage d'un trello est trop grand en hauteur, il ne doit avoir que la taille des tasks et s'agrandir si d'autres tasks sont créées, dynamique avec les tasks (add/del).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-314",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Toggle Markdown/CSS déplacé à droite de la barre de style (mode Code)",
+      "description": "Le bouton « Markdown propre / Avec style » du mode Code, auparavant flottant en haut à droite de l'éditeur, est déplacé dans la barre de formatage (B/I/S/H1…), poussé à droite via ml-auto. CSS .ed-css-toggle passé d'absolute à inline-flex.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le toggle pour changer le type de fichier dans le mode Code doit être placé à droite de la bar de style",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-313",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code,projets:editor|zone-preview",
+      "title": "Barré : prise en charge de la balise <strike> (execCommand) → Markdown ~~",
+      "description": "Le texte barré n'était pas converti en Markdown : execCommand('strikeThrough') produit <strike> (déprécié), non géré par nodeToMd ni la normalisation (qui ne couvraient que <del>/<s>). Ajout de 'strike' dans nodeToMd, normalizeStyledMarkdown et stripInlineHtml → le barré sort bien en ~~texte~~ dans les deux fichiers.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/content-style.util.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "il manque les style en markdown pour les textes barré : ~~Ce texte est barré~~",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-312",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code,projets:editor|zone-preview",
+      "title": "Double fichier : styles markdown-compatibles toujours en Markdown (gras/italique/barré)",
+      "description": "Les styles compatibles Markdown (gras, italique, barré) doivent rester en Markdown (**, *, ~~) dans le fichier propre ET dans le jumeau -css.md ; seuls les styles sans équivalent Markdown (couleur, surlignage, taille, soulignage, alignement) restent en HTML. Ajout de normalizeStyledMarkdown (convertit <b>/<strong>/<i>/<em>/<s>/<del> en Markdown en hissant les espaces) appliqué au chargement (buildDocSections) et à l'écriture du jumeau (saveCssTwin via la boucle parent, writeSectionStyled côté zone). Exemple résultat -css : <span style=\"color:purple\">**gras**</span>.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/content-style.util.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Attention si on utilise un style compatible avec le markdown, celui ci doit être indiqué dans le code au format markdown et pas css (gras **...**, barré ~~...~~, italique *...*). Doit s'afficher en markdown dans la version Code simple mais aussi version css (avec en plus le code css).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-311",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : auto-save live (mise à jour des fichiers pendant la frappe)",
+      "description": "En mode Edition, la saisie ne mettait à jour les fichiers qu'au blur ou au changement de mode (onVisuSectionInput ne marquait que dirty). Ajout de scheduleVisuLiveSave (débounce 900 ms) appelé à chaque input : commitVisuSection convertit la section en Markdown (saveVisuSection met à jour unifiedContent sans réinitialiser le DOM) puis saveAll persiste immédiatement. La section reste dirty et le DOM est réutilisé (track sectionId + initVisuSectionHtml ignore les sections dirty non vides) → curseur préservé. Timer nettoyé dans flushVisuSections.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "j'ai ajouter du texte dans le mode Edition et les fichiers de la section ne ce sont pas mise à jour, il a fallu changer de mode. Les fichiers doivent se mettre à jour en permanence (live).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-310",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code,projets:editor|zone-preview",
+      "title": "Système double fichier : contenu.md propre (IA) + jumeau contenu-css.md stylisé",
+      "description": "Pour réduire le bruit dans le fichier lu par l'IA, chaque section a deux fichiers jumeaux au texte identique : contenu.md (Markdown propre, sans HTML de style) et contenu-css.md (Markdown + styles HTML couleur/surlignage/taille/soulignage/alignement). Utilitaires content-style.util.ts (stripStyleMarkdown, mergeCleanIntoStyled, cssTwinName, isCssTwinName). buildDocSections lit le jumeau stylisé comme master et réconcilie les éditions externes de contenu.md (IA) par fusion ligne-à-ligne. À la sauvegarde, écriture des deux fichiers : auto-save côté parent (processSectionsChange + saveCssTwin), Partager côté zone (writeSectionStyled). Jumeaux exclus des fichiers additionnels/orphelins et masqués dans la sidebar. Toggle « Markdown propre / Avec style » en mode Code (showCssInCode) : vue lecture seule du Markdown propre par défaut, bascule vers l'édition du contenu stylisé. Tableaux stylés restent en MO Array. Branche feature 2026-06-14_newcodeformat.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/content-style.util.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "2 fichiers avec textes identiques, l'un uniquement Markdown, l'autre avec style (...-css.md). Toute modif met à jour les 2 en vérifiant le texte identique. Toggle en mode Code pour afficher ou non le style. Fonctionne pour textes et éléments (tableaux via MO Array).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-395",
       "version": "B-0.277",
       "date": "2026-06-14T14:45:00.000Z",

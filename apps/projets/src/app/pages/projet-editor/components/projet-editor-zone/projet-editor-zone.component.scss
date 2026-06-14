@@ -11,6 +11,48 @@
   overflow: hidden;
 }
 
+// Toggle « Markdown propre / Avec style » (mode Code) — intégré à droite de la barre de style
+.ed-css-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.06);
+  color: #374151;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+
+  .material-symbols-outlined { font-size: 14px; line-height: 1; }
+  &--on { background: rgba(59, 130, 246, 0.15); color: #2563eb; border-color: rgba(59, 130, 246, 0.35); }
+
+  :host-context(.dark) & { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.7); border-color: rgba(255, 255, 255, 0.12); }
+  :host-context(.dark) &--on { background: rgba(59, 130, 246, 0.22); color: #93c5fd; }
+}
+
+// Vue lecture seule du Markdown propre (ce que voit l'IA)
+.ed-clean-view {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 1rem 1.5rem 1rem 1.5rem;
+  box-sizing: border-box;
+  font-family: 'Fira Code', 'Consolas', 'Menlo', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  overflow-y: auto;
+  z-index: 5;
+  background: #faf9f7;
+  color: #374151;
+
+  :host-context(.dark) & { background: #0f0f17; color: rgba(255, 255, 255, 0.85); }
+}
+
 .ed-mirror,
 .ed-textarea {
   position: absolute;
@@ -2610,5 +2652,11 @@ $struct-colors: (
   display: flex;
   flex-direction: column;
   min-height: 0;
+
+  // Trello incrusté dans une section (mode Edition) : hauteur au contenu des tasks
+  &--auto {
+    height: auto;
+    min-height: 0;
+  }
 }
 
