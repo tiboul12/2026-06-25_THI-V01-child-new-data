@@ -845,6 +845,14 @@
   transition: background-color 0.15s;
   position: relative;
 
+  // Sous-sections : liseré gauche pour matérialiser le niveau (en plus du décalage margin-left)
+  &--nested {
+    padding-left: 0.85rem;
+    border-left: 2px solid rgba(0, 0, 0, 0.12);
+
+    :host-context(.dark) & { border-left-color: rgba(255, 255, 255, 0.14); }
+  }
+
   // F6 — Bouton bulle commentaire (visible au hover, sticky si commentaires existent)
   .visu-comment-btn {
     position: absolute;

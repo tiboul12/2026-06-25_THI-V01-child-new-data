@@ -1,6 +1,29 @@
 {
   "modifications": [
     {
+      "id": "mod-316",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : décalage visuel des sections selon leur niveau",
+      "description": "En mode Edition (zone 4), les niveaux de sections n'étaient pas distinguables visuellement. Ajout d'un décalage à gauche proportionnel au niveau (margin-left = (level - 1) * 32px) sur .visu-section-wrap, et d'un liseré gauche pour les sous-sections (classe --nested, level > 1). La hiérarchie des sections est désormais clairement visible.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le mode Edition zone 4 on peut afficher les titres des sections et les contenus, mais on ne voit pas la différence entre les niveaux des sections, il faudrait rajouter des décalages plus importants pour bien voir la différence entre les niveaux.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-315",
       "version": "B-0.283",
       "date": "2026-06-14T00:00:00.000Z",

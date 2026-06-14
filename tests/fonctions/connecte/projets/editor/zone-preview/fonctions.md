@@ -12,6 +12,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 - **Corps** : contenu Markdown rendu en HTML, éditable via `contenteditable="true"`
 - **Images** : affichées dans leur contexte de section
 - **Filtre** : `filteredVisuSections` — si un dossier est actif dans la sidebar → seule la section sélectionnée + enfants sont affichés
+- **Décalage par niveau** (vB-0.284) : chaque section est décalée à gauche selon son niveau (`margin-left = (level - 1) * 32px`) ; les sous-sections (`level > 1`, classe `--nested`) ont un liseré gauche → la hiérarchie des niveaux est visible
 
 ---
 
