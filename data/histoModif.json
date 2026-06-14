@@ -1,6 +1,33 @@
 {
   "modifications": [
     {
+      "id": "mod-310",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code,projets:editor|zone-preview",
+      "title": "Système double fichier : contenu.md propre (IA) + jumeau contenu-css.md stylisé",
+      "description": "Pour réduire le bruit dans le fichier lu par l'IA, chaque section a deux fichiers jumeaux au texte identique : contenu.md (Markdown propre, sans HTML de style) et contenu-css.md (Markdown + styles HTML couleur/surlignage/taille/soulignage/alignement). Utilitaires content-style.util.ts (stripStyleMarkdown, mergeCleanIntoStyled, cssTwinName, isCssTwinName). buildDocSections lit le jumeau stylisé comme master et réconcilie les éditions externes de contenu.md (IA) par fusion ligne-à-ligne. À la sauvegarde, écriture des deux fichiers : auto-save côté parent (processSectionsChange + saveCssTwin), Partager côté zone (writeSectionStyled). Jumeaux exclus des fichiers additionnels/orphelins et masqués dans la sidebar. Toggle « Markdown propre / Avec style » en mode Code (showCssInCode) : vue lecture seule du Markdown propre par défaut, bascule vers l'édition du contenu stylisé. Tableaux stylés restent en MO Array. Branche feature 2026-06-14_newcodeformat.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/content-style.util.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "2 fichiers avec textes identiques, l'un uniquement Markdown, l'autre avec style (...-css.md). Toute modif met à jour les 2 en vérifiant le texte identique. Toggle en mode Code pour afficher ou non le style. Fonctionne pour textes et éléments (tableaux via MO Array).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-395",
       "version": "B-0.277",
       "date": "2026-06-14T14:45:00.000Z",
