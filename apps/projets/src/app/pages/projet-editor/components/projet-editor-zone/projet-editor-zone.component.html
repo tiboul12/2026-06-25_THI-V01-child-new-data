@@ -80,6 +80,14 @@
           <span class="material-symbols-outlined text-sm leading-none">image</span>
         </button>
         <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
+        <!-- Toggle : Markdown propre (contenu.md, défaut) vs avec style (contenu-css.md) -->
+        <button type="button" class="ed-css-toggle ml-auto"
+                [class.ed-css-toggle--on]="showCssInCode()"
+                (click)="showCssInCode.set(!showCssInCode())"
+                [title]="showCssInCode() ? 'Afficher le Markdown propre (sans style)' : 'Afficher le contenu stylisé'">
+          <span class="material-symbols-outlined">{{ showCssInCode() ? 'palette' : 'code_off' }}</span>
+          {{ showCssInCode() ? 'Avec style' : 'Markdown propre' }}
+        </button>
       }
     </div>
 
@@ -671,14 +679,6 @@
       <div class="ed-wrap flex-1 min-h-0 relative"
            (mousemove)="onWrapMouseMove($event)"
            (mouseleave)="onWrapMouseLeave()">
-        <!-- Toggle style : Markdown propre (contenu.md, défaut) vs avec style (contenu-css.md) -->
-        <button type="button" class="ed-css-toggle"
-                [class.ed-css-toggle--on]="showCssInCode()"
-                (click)="showCssInCode.set(!showCssInCode())"
-                [title]="showCssInCode() ? 'Afficher le Markdown propre (sans style)' : 'Afficher le contenu stylisé'">
-          <span class="material-symbols-outlined">{{ showCssInCode() ? 'palette' : 'code_off' }}</span>
-          {{ showCssInCode() ? 'Avec style' : 'Markdown propre' }}
-        </button>
         <!-- Vue lecture seule du Markdown propre (ce que voit l'IA) -->
         @if (!showCssInCode()) {
           <pre class="ed-clean-view">{{ codeCleanView }}</pre>

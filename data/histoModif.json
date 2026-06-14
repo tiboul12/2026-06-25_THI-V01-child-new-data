@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-314",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Toggle Markdown/CSS déplacé à droite de la barre de style (mode Code)",
+      "description": "Le bouton « Markdown propre / Avec style » du mode Code, auparavant flottant en haut à droite de l'éditeur, est déplacé dans la barre de formatage (B/I/S/H1…), poussé à droite via ml-auto. CSS .ed-css-toggle passé d'absolute à inline-flex.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le toggle pour changer le type de fichier dans le mode Code doit être placé à droite de la bar de style",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-313",
       "version": "B-0.283",
       "date": "2026-06-14T00:00:00.000Z",

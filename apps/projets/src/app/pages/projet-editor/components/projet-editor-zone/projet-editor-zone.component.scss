@@ -11,18 +11,15 @@
   overflow: hidden;
 }
 
-// Toggle « Markdown propre / Avec style » (mode Code)
+// Toggle « Markdown propre / Avec style » (mode Code) — intégré à droite de la barre de style
 .ed-css-toggle {
-  position: absolute;
-  top: 6px;
-  right: 12px;
-  z-index: 10;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 11px;
+  white-space: nowrap;
   cursor: pointer;
   background: rgba(0, 0, 0, 0.06);
   color: #374151;
