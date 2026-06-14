@@ -6188,7 +6188,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       case 'br': return '\n';
       case 'strong': case 'b': return this.wrapInlineMd('**', inner());
       case 'em': case 'i': return this.wrapInlineMd('*', inner());
-      case 'del': case 's': return this.wrapInlineMd('~~', inner());
+      case 'del': case 's': case 'strike': return this.wrapInlineMd('~~', inner());
       case 'u': return this.wrapInlineMd('', inner(), 'u');
       case 'a': {
         const href = el.getAttribute('href') || '';

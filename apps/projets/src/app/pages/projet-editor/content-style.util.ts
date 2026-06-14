@@ -33,7 +33,7 @@ export function normalizeStyledMarkdown(md: string): string {
   return md
     .replace(/<(strong|b)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _t, inner) => wrapMd('**', inner))
     .replace(/<(em|i)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _t, inner) => wrapMd('*', inner))
-    .replace(/<(del|s)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _t, inner) => wrapMd('~~', inner));
+    .replace(/<(del|s|strike)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_m, _t, inner) => wrapMd('~~', inner));
 }
 
 /** Retire les balises de style inline (span/font/u) en convertissant le gras/italique/barré en Markdown. */
@@ -42,7 +42,7 @@ function stripInlineHtml(s: string): string {
     // Gras / italique / barré portés par des balises HTML → Markdown
     .replace(/<(strong|b)\b[^>]*>([\s\S]*?)<\/\1>/gi, '**$2**')
     .replace(/<(em|i)\b[^>]*>([\s\S]*?)<\/\1>/gi, '*$2*')
-    .replace(/<(del|s)\b[^>]*>([\s\S]*?)<\/\1>/gi, '~~$2~~')
+    .replace(/<(del|s|strike)\b[^>]*>([\s\S]*?)<\/\1>/gi, '~~$2~~')
     // Soulignage : pas d'équivalent Markdown → on garde le texte
     .replace(/<\/?u\b[^>]*>/gi, '')
     // Couleur / surlignage / taille (span, font) → on garde le texte

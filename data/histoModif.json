@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-313",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code,projets:editor|zone-preview",
+      "title": "Barré : prise en charge de la balise <strike> (execCommand) → Markdown ~~",
+      "description": "Le texte barré n'était pas converti en Markdown : execCommand('strikeThrough') produit <strike> (déprécié), non géré par nodeToMd ni la normalisation (qui ne couvraient que <del>/<s>). Ajout de 'strike' dans nodeToMd, normalizeStyledMarkdown et stripInlineHtml → le barré sort bien en ~~texte~~ dans les deux fichiers.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/content-style.util.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "il manque les style en markdown pour les textes barré : ~~Ce texte est barré~~",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-312",
       "version": "B-0.283",
       "date": "2026-06-14T00:00:00.000Z",
