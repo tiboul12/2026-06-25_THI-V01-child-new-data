@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-319",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : retirer le titre déplacé de la section parente à la création d'une sous-section",
+      "description": "Quand on créait un titre (H1-H4) dans une section, la nouvelle section était bien créée mais le titre restait aussi en doublon dans la section parente (le DOM contenteditable, dirty, n'était pas rafraîchi). Ajout d'un drapeau forceVisuReinject : applyVisuFormat (formatBlock H1-H4) sauvegarde immédiatement (commit + saveAll) et arme forceVisuReinject ; initVisuSectionHtml réinjecte alors toutes les sections (y compris dirty) une fois → la section parente se rafraîchit sans le titre déplacé. Même drapeau armé dans insertVisuMarkdownBlock (slash menu).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on rajoute une sous section (ex: titre H4) cela crée bien la nouvelle section, mais cela n'efface pas le texte dans la section où le titre a été créé.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-318",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

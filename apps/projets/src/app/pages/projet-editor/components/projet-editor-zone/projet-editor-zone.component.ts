@@ -458,6 +458,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   private visuSlashAnchor: { node: Node; offset: number } | null = null;
   // Auto-save « live » du mode Edition (débounce pendant la frappe)
   private visuLiveSaveTimeout: any = null;
+  // Force le re-render complet des sections visu au prochain initVisuSectionHtml
+  // (utilisé après création d'un titre qui scinde la section → retirer le titre déplacé)
+  private forceVisuReinject = false;
   // Liste enrichie de commandes pour le menu slash en mode Edition (titres, listes, blocs, MO)
   readonly visuSlashCommands: SlashCommand[] = [
     { id: 'heading-1',       label: 'Titre 1',          description: 'Grand titre de section',      icon: 'title',                keywords: ['titre', 'heading', 'h1'] },
@@ -5196,13 +5199,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   initVisuSectionHtml() {
     // Lookup par data-section-id pour gérer correctement les sections filtrées
     const sections = this.filteredVisuSections;
+    // force = re-render complet (ex: après création d'un titre qui scinde la section)
+    const force = this.forceVisuReinject;
     this.visuSectionEls.forEach((ref) => {
       const el = ref.nativeElement;
       const sectionId = el.getAttribute('data-section-id');
       if (!sectionId) return;
       const sec = sections.find(s => s.sectionId === sectionId);
       if (!sec) return;
-      if (this.dirtyVisuSectionIds.has(sec.sectionId)) {
+      if (!force && this.dirtyVisuSectionIds.has(sec.sectionId)) {
         // Section avec modifs en attente : réinjecter uniquement si vide (nouvelle instance DOM)
         // pour ne pas écraser le contenu en cours de frappe
         if (!el.innerHTML.trim()) {
@@ -5212,6 +5217,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         el.innerHTML = this.stripTrelloMarkers(sec.contentHtml);
       }
     });
+    this.forceVisuReinject = false;
   }
 
   private flushVisuSections() {
@@ -6010,6 +6016,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (this.backupType) this.onVisuSectionInput(sectionId);
     this.recomputeAll();
     this.scheduleSave();
+    // Forcer le re-render (le bloc a été inséré dans le markdown, pas dans le DOM)
+    this.forceVisuReinject = true;
     setTimeout(() => this.initVisuSectionHtml(), 50);
   }
 
@@ -6309,6 +6317,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     // Garder la toolbar ouverte pour enchaîner couleur/taille ; fermer sur les actions de bloc
     if (command !== 'foreColor' && command !== 'hiliteColor' && command !== 'fontSize') {
       this.visuToolbar = null;
+    }
+    // Création d'un titre (H1-H4) : la section est scindée au save → forcer la sauvegarde
+    // immédiate et le re-render pour retirer le titre déplacé de la section parente.
+    if (command === 'formatBlock' && /^H[1-4]$/i.test(value || '')) {
+      const id = this.getActiveVisuSectionId();
+      clearTimeout(this.visuLiveSaveTimeout);
+      this.forceVisuReinject = true;
+      if (id) this.commitVisuSection(id);
+      this.saveAll();
     }
   }
 
