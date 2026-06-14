@@ -12,8 +12,8 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 - **Corps** : contenu Markdown rendu en HTML, éditable via `contenteditable="true"`
 - **Images** : affichées dans leur contexte de section
 - **Filtre** : `filteredVisuSections` — si un dossier est actif dans la sidebar → seule la section sélectionnée + enfants sont affichés
-- **Décalage par niveau** (vB-0.284) : chaque section est décalée à gauche selon son niveau (`margin-left = (level - 1) * 32px`) ; les sous-sections (`level > 1`, classe `--nested`) ont un liseré gauche → la hiérarchie des niveaux est visible
-- **Badge de niveau** (vB-0.284) : un badge `H1`/`H2`/`H3`/`H4` est affiché dans la gouttière gauche, en face de chaque titre (`.visu-sec-level`, positionné pour s'aligner à gauche quel que soit le décalage)
+- **Zone de texte continue** (vB-0.284) : les sections ne sont plus présentées comme des cartes/zones séparées. Le rendu est une **zone de texte continue** (sections sans bordure/fond/encadré : `.visu-sec-content` borderless, `--active` transparent) ; seuls les **méga-outils incrustés** (Trello/Array/Mockup) créent une rupture visuelle. Pas de décalage par niveau (indentation supprimée). Un titre ajouté via le format H crée bien la section dans le menu/les fichiers/les autres modes (pipeline de parsing), tout en restant une seule zone affichée en Edition.
+- **Badge de niveau** (vB-0.284) : un badge `H1`/`H2`/`H3`/`H4` reste affiché dans la gouttière gauche, en face de chaque titre (`.visu-sec-level`, `left: -3.2rem` dans la colonne centrée `.visu-content-wrap`)
 - **Création de sous-section uniquement** (vB-0.284) : quand une section de niveau N est active, on ne peut créer qu'une section de niveau > N. Les boutons titres de la barre (H1-H4) sont **grisés** pour les niveaux ≤ N (`[disabled]="activeVisuSectionLevel >= n"`) et le slash menu masque ces niveaux (`visuSlashCommandsFiltered`). `activeVisuSectionLevel` = niveau de la section active.
 
 ---

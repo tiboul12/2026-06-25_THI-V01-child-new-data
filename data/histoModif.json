@@ -1,6 +1,29 @@
 {
   "modifications": [
     {
+      "id": "mod-318",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : zone de texte continue (plus de découpage par section)",
+      "description": "Le mode Edition n'affiche plus chaque section comme une carte/zone séparée mais une zone de texte continue ; seuls les méga-outils incrustés créent une rupture. Aplatissement visuel : .visu-sec-content sans bordure/encadré (hover/focus), --active transparent, suppression du décalage par niveau (margin-left) et du liseré --nested, marges de section réduites. Le badge de niveau H1-H4 reste dans la gouttière gauche (left -3.2rem). Le filtrage menu (section + enfants) et la création de sections via titres H (pipeline de parsing) restent inchangés.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la zone edition ne me convient pas, il ne faut pas que chaque section soit découpée en zone mais une seule zone de texte avec découpe uniquement quand un MO est incrusté. Le clic menu affiche toujours la section sélectionnée (+ enfants). Garder les infos de niveau H à gauche, retirer les décalages de niveau. Ajouter un titre via le format H crée les sections (menu/fichiers/autres modes) mais laisse une seule zone affichée en Edition.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-317",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

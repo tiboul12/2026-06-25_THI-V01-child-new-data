@@ -1195,12 +1195,10 @@
           @for (sec of filteredVisuSections; track sec.sectionId) {
             <div class="visu-section-wrap"
                  [class.visu-section-wrap--active]="activeVisuSectionId === sec.sectionId"
-                 [class.visu-section-wrap--locked]="collab.isLockedByOther(sec.sectionId)"
-                 [class.visu-section-wrap--nested]="sec.level > 1"
-                 [style.margin-left.px]="(sec.level - 1) * 32">
+                 [class.visu-section-wrap--locked]="collab.isLockedByOther(sec.sectionId)">
 
               <!-- Badge niveau (gouttière gauche, aligné en face du titre) -->
-              <span class="visu-sec-level" [style.left.px]="-((sec.level - 1) * 32) - 44">H{{ sec.level }}</span>
+              <span class="visu-sec-level">H{{ sec.level }}</span>
 
               <!-- F6 — Bouton commentaires (apparaît au hover de la section) -->
               <button type="button"
