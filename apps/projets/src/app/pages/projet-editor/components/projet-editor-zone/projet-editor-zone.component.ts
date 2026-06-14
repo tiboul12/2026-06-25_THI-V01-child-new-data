@@ -6685,6 +6685,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.visuImgInputRef?.nativeElement.click();
   }
 
+  // Bouton image de la barre de style : insérer une image dans la section active
+  insertVisuImageActive() {
+    const id = this.getActiveVisuSectionId() || this.docSections[0]?.folderId;
+    if (id) this.triggerVisuImageUpload(id);
+  }
+
   async onVisuImageSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];

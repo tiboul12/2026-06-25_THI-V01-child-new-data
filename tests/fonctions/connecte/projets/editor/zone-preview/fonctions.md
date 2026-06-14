@@ -56,21 +56,16 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 
 ---
 
-## `2-5-2-5-5` — Menu d'insertion de bloc (`+`)
+## `2-5-2-5-5` — Insertion de blocs
 
-- **Déclenchement** : clic bouton "Ajouter un bloc" (ligne du bas de chaque section) → `showVisuInsertMenu(sectionId)`
-- **Options** :
-  - **Nouveau titre** → `insertVisuBlock('menu', sectionId)` → insère `## Nouveau titre`
-  - **Nouveau document** → `insertVisuBlock('doc', sectionId)` → insère bloc document
-  - **Bloc de code** → `insertVisuBlock('code', sectionId)` → insère ` ```code``` `
-- **Fermeture** : clic ailleurs ou Escape
+- Les boutons « Ajouter un bloc » et « Insérer une image » en bas de section ont été **supprimés** (vB-0.284). L'insertion se fait via le **slash menu `/`** (voir `2-5-2-5-18`) et la **barre de style** (image, voir `2-5-2-5-6`).
 
 ---
 
 ## `2-5-2-5-6` — Upload d'image dans une section
 
-- **Déclenchement** : clic bouton 📷 de la ligne d'ajout → `triggerVisuImageUpload(sectionId)`
-- **Sélection fichier** : input file → POST `/api/file-projects/{name}/files` (multipart)
+- **Déclenchement** : icône **image de la barre de style** → `insertVisuImageActive()` → `triggerVisuImageUpload(sectionId actif)` (vB-0.284) ; aussi via le slash `/image`. La section cible = section active (`getActiveVisuSectionId`).
+- **Sélection fichier** : input file → POST `/api/file-projects/{name}/files` (multipart) → l'image est téléchargée dans le dossier de la section
 - **Résultat** :
   - Marqueur `{{IMG:uuid}}` inséré dans `unifiedContent` à la fin de la section
   - Image rendue dans le HTML

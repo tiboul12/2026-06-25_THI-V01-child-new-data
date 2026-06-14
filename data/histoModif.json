@@ -1,6 +1,29 @@
 {
   "modifications": [
     {
+      "id": "mod-323",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : image via la barre de style, suppression des boutons d'insertion bas",
+      "description": "Suppression de la ligne d'insertion en bas de chaque section (boutons « Ajouter un bloc » et « Insérer une image »). Ajout d'une icône image dans la barre de style : insertVisuImageActive() déclenche triggerVisuImageUpload sur la section active → sélection + upload de l'image dans le dossier de la section. L'insertion de blocs reste possible via le slash menu /.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode Edition supprime les boutons ajouter un bloc et insérer une image. Rajoute dans la barre des styles un icône pour rajouter une image, cela doit permettre de sélectionner une image et la télécharger dans le dossier de la section.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-322",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",
