@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -340,6 +341,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private liaisonCursorPos = -1;
 
   private localDirty = false;
+  // Vrai depuis l'émission d'un save local en mode Code (vue document) jusqu'à la fin
+  // effective du cycle de save parent (`saveStatus` revient à 'idle'/'error'). Tant qu'il
+  // est vrai, le buffer texte est préservé tel quel : aucune reconstruction ne l'écrase,
+  // même si le parent réémet `files` plusieurs fois (loadFiles()) sur un cycle > qq secondes.
+  // Les changements hors cycle (sidebar, collaboration) reconstruisent normalement.
+  private localCodeSavePending = false;
 
   @ViewChild('imageInput') imageInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('textarea') textareaRef?: ElementRef<HTMLTextAreaElement>;
@@ -489,7 +496,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   private currentDropTarget: { handle?: DragHandle; targetLine?: number; position: 'before' | 'after' | 'inside' } | null = null;
   suppressScrollOnNextActiveChange = false;
 
-  constructor(private svc: ProjectFilesService) {}
+  constructor(private svc: ProjectFilesService) {
+    // Partager / Annuler une section déclenchés depuis le menu contextuel de la sidebar
+    this.collab.publishSectionRequest$.pipe(takeUntilDestroyed()).subscribe(id => this.publishSection(id));
+    this.collab.cancelSectionRequest$.pipe(takeUntilDestroyed()).subscribe(id => this.cancelSection(id));
+  }
 
   // ── Lifecycle ──────────────────────────────────────────────
   ngOnChanges(changes: SimpleChanges) {
@@ -557,7 +568,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       // Corriger les marqueurs d'images mal positionnés (déplacés via sidebar)
       const markersFixed = this.fixImageMarkersInSections();
 
-      if (!this.hasLoaded || hasStructuralChange || markersFixed) {
+      // Préservation du texte exact en mode Code : tant que le save local est en cours
+      // (localCodeSavePending, levé à la fin du cycle quand saveStatus repasse 'idle'/'error'),
+      // on garde le buffer de l'utilisateur intact au lieu de le reconstruire (et donc le
+      // normaliser/réordonner). Couvre tout le cycle de save du parent, même > qq secondes
+      // (plusieurs émissions de `files` via loadFiles()). La restructuration en dossiers a déjà
+      // été appliquée côté parent ; seul le texte affiché est préservé. recomputeAll() remappe
+      // les ranges. Les changements hors cycle (sidebar, collab) reconstruisent normalement.
+      const preserveCodeBuffer = this.mode === 'edit' && !this.focusedHandle
+        && this.hasLoaded && hasStructuralChange && !markersFixed
+        && this.localCodeSavePending;
+
+      if ((!this.hasLoaded || hasStructuralChange || markersFixed) && !preserveCodeBuffer) {
         const newFullContent = this.reconstructFromSections();
 
         if (hasStructuralChange && this.focusedHandle) {
@@ -622,6 +644,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if ((markersFixed || trelloStripped || mockupDeduped) && !this.focusedHandle) {
         setTimeout(() => this.saveAll(), 0);
       }
+    }
+
+    // Fin du cycle de save parent → libérer la garde du buffer Code. Le save passe
+    // 'saving' → 'saved' → (2s) 'idle' ; toutes les émissions `files` du cycle (réordonnancement
+    // inclus) surviennent pendant 'saving', donc on ne libère qu'au retour 'idle'/'error'.
+    if (changes['saveStatus'] && (this.saveStatus === 'idle' || this.saveStatus === 'error')) {
+      this.localCodeSavePending = false;
     }
 
     if (changes['highlightNodeId']) {
@@ -1214,23 +1243,25 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       const m = /^(#{1,4}) (.+)$/.exec(lines[i]);
       if (m) flatHeads.push({ lineIdx: i, level: m[1].length, name: m[2].trim() });
     }
-    // Map docSections to flatHeads in order (by level + name)
+    // Associer chaque titre du buffer (flatHeads, dans l'ordre du texte affiché) à son
+    // dossier (docSection, par level + name). On itère dans l'ordre du BUFFER — et non dans
+    // l'ordre des fichiers — pour rester correct même quand les deux ordres divergent
+    // (préservation du texte en mode Code : le buffer peut différer de l'ordre stocké).
     this.sectionRanges = [];
-    let cursor = 0;
-    for (const sec of this.docSections) {
-      let found = -1;
-      for (let j = cursor; j < flatHeads.length; j++) {
-        if (flatHeads[j].level === sec.level && flatHeads[j].name === sec.folderName) {
-          found = j;
-          break;
-        }
+    const usedDocSections = new Set<number>();
+    for (const head of flatHeads) {
+      let di = -1;
+      for (let k = 0; k < this.docSections.length; k++) {
+        if (usedDocSections.has(k)) continue;
+        const sec = this.docSections[k];
+        if (sec.level === head.level && sec.folderName === head.name) { di = k; break; }
       }
-      if (found === -1) continue;
-      cursor = found + 1;
+      if (di === -1) continue;
+      usedDocSections.add(di);
       this.sectionRanges.push({
-        folderId: sec.folderId,
-        level: sec.level,
-        lineStart: flatHeads[found].lineIdx,
+        folderId: this.docSections[di].folderId,
+        level: head.level,
+        lineStart: head.lineIdx,
         lineEnd: lines.length - 1, // patched below
       });
     }
@@ -3360,6 +3391,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const sections = this.parseContent();
     this.unifiedContent = saved;
     this.syncArrayCodeToGrid(sections);
+    // Édition au niveau document en mode Code : le buffer porte déjà le texte exact de
+    // l'utilisateur. On arme la garde pour tout le cycle de save du parent (plusieurs
+    // émissions de `files`) → ngOnChanges ne réécrira pas le buffer. Libérée quand
+    // saveStatus repasse à 'idle'/'error' (cycle terminé).
+    if (this.mode === 'edit' && !this.focusedHandle) {
+      this.localCodeSavePending = true;
+    }
     this.sectionsChange.emit(sections);
   }
 
@@ -5433,6 +5471,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     // En vue document (pas de focus), sectionId vide → flushContentModifications traite TOUTES
     // les entités modifiées (le filtre falsy est ignoré).
     const sectionId = this.focusedHandle?.id ?? '';
+    // Ensemble des sections à publier = uniquement les entités réellement éditées
+    // (mappées vers leur folderId via modifiedEntities), sinon la section ciblée.
+    // Capturé AVANT le flush qui vide modifiedEntities. Sans ce filtre, parseContent
+    // renvoie TOUT le document reconstruit et chaque fichier serait écrit avec
+    // publish=true → toutes les sous-sections enfants seraient partagées et
+    // déverrouillées côté serveur, même non modifiées.
+    const publishFolderIds = this.activeEntityLocks.size > 0
+      ? new Set([...this.activeEntityLocks].map(eid => this.modifiedEntities.get(eid) ?? eid))
+      : new Set<string>([sectionId]);
     clearTimeout(this.saveTimeout);
     // Flusher l'historique de CETTE section AVANT unfoldAll (ranges encore valides en mode focus)
     this.flushContentModifications(sectionId);
@@ -5457,7 +5504,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     try {
       await Promise.all(
         sections
-          .filter(s => s.fileId)
+          .filter(s => s.fileId && (
+            (s.folderId != null && publishFolderIds.has(s.folderId)) ||
+            publishFolderIds.has(s.fileId!)
+          ))
           .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
       );
       this.lastSavedContent = this.unifiedContent;
@@ -5499,6 +5549,170 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     } finally {
       this.isPublishing.set(false);
     }
+  }
+
+  // ── Partager / Annuler une section ciblée (menu contextuel sidebar) ──
+  // Portée = la section demandée ET ses sous-sections modifiées (descendants pending).
+  // Les sous-sections non modifiées ne sont pas touchées (pas de publish=true superflu).
+
+  // Calcule l'ensemble des folderId à traiter : la section + ses descendants modifiés.
+  private collectSectionPublishIds(sectionId: string): Set<string> {
+    const descendantIds = this.getDescendantFolderIds(sectionId, this.files);
+    const ids = new Set<string>([sectionId]);
+    for (const id of descendantIds) {
+      if (this.collab.isLocalPending(id)) ids.add(id);
+    }
+    // Entités granulaires (blocs/fichiers) dont le dossier est dans le sous-arbre
+    for (const eid of this.activeEntityLocks) {
+      const fid = this.modifiedEntities.get(eid) ?? eid;
+      if (descendantIds.has(fid)) ids.add(fid);
+    }
+    return ids;
+  }
+
+  async publishSection(sectionId: string): Promise<void> {
+    if (!this.projectName || !sectionId) return;
+    this.isPublishing.set(true);
+    // Sous-arbre + entités verrouillées capturés AVANT le flush (qui vide modifiedEntities)
+    const publishFolderIds = this.collectSectionPublishIds(sectionId);
+    const lockedEntityIds = [...this.activeEntityLocks].filter(eid => {
+      const fid = this.modifiedEntities.get(eid) ?? eid;
+      return publishFolderIds.has(fid) || publishFolderIds.has(eid);
+    });
+    clearTimeout(this.saveTimeout);
+    this.flushContentModifications();
+    // Reconstruire le document complet si on est en mode focus (résolution des folderId)
+    let contentToParse: string;
+    if (this.focusedHandle) {
+      const focusedLines = this.unifiedContent.split('\n');
+      const fullLines = this.fullContentBackup.split('\n');
+      fullLines.splice(this.focusedLineStart, this.focusedOriginalLineCount, ...focusedLines);
+      this.focusedOriginalLineCount = focusedLines.length;
+      this.fullContentBackup = fullLines.join('\n');
+      contentToParse = this.fullContentBackup;
+    } else {
+      contentToParse = this.unifiedContent;
+    }
+    const savedContent = this.unifiedContent;
+    this.unifiedContent = contentToParse;
+    const sections = this.parseContent();
+    this.unifiedContent = savedContent;
+    try {
+      await Promise.all(
+        sections
+          .filter(s => s.fileId && (
+            (s.folderId != null && publishFolderIds.has(s.folderId)) ||
+            publishFolderIds.has(s.fileId!)
+          ))
+          .map(s => this.svc.updateFile(this.projectName, s.fileId!, s.content, s.folderId ?? undefined, true))
+      );
+      this.lastSavedContent = this.unifiedContent;
+      // Suppressions d'images différées pour les sections concernées
+      const pendingDelIds = [...this.pendingVisuDeletions.entries()]
+        .filter(([, v]) => publishFolderIds.has(v.sectionId))
+        .map(([id]) => id);
+      await Promise.all(pendingDelIds.map(id =>
+        this.svc.deleteFile(this.projectName, id).catch(() => {})
+      ));
+      pendingDelIds.forEach(id => this.pendingVisuDeletions.delete(id));
+      this.releaseSectionsPending(publishFolderIds, lockedEntityIds);
+      await Promise.all([...publishFolderIds].map(id =>
+        this.collab.unlockNode(this.projectName, id).catch(() => {})
+      ));
+      this.localDirty = this.collab.localPendingSections().size > 0;
+      this.dirtyChange.emit(this.localDirty);
+      this.showPublishToast();
+      this.woHistory.track({
+        section: 'projets/fichiers',
+        actionType: 'update',
+        label: `Publication section «${this.findNode(sectionId, this.files)?.name || sectionId}»`,
+        entityType: 'section',
+        entityId: sectionId,
+        context: { projectId: this.projectName },
+        undoable: false
+      }).catch(() => {});
+    } catch (e: any) {
+      console.warn('[PublishSection] erreur:', e);
+      this.showPublishErrorToast(this.buildPublishErrorMsg(e));
+    } finally {
+      this.isPublishing.set(false);
+    }
+  }
+
+  async cancelSection(sectionId: string): Promise<void> {
+    if (!this.projectName || !sectionId) return;
+    const cancelFolderIds = this.collectSectionPublishIds(sectionId);
+    const lockedEntityIds = [...this.activeEntityLocks].filter(eid => {
+      const fid = this.modifiedEntities.get(eid) ?? eid;
+      return cancelFolderIds.has(fid) || cancelFolderIds.has(eid);
+    });
+    // Restaurer chaque section depuis son snapshot, du bas vers le haut pour que les
+    // indices de ligne des sections au-dessus restent valides après remplacement.
+    const toRestore = [...cancelFolderIds]
+      .map(fid => ({ fid, range: this.sectionRanges.find(r => r.folderId === fid), snap: this.codeSectionSnapshots.get(fid) }))
+      .filter(x => x.range && x.snap != null)
+      .sort((a, b) => b.range!.lineStart - a.range!.lineStart);
+    let restored = this.unifiedContent;
+    let changed = false;
+    for (const { range, snap } of toRestore) {
+      const lines = restored.split('\n');
+      const headingLine = lines[range!.lineStart];
+      let directEnd = range!.lineEnd;
+      for (let j = range!.lineStart + 1; j <= range!.lineEnd; j++) {
+        if (/^#{1,4} /.test(lines[j])) { directEnd = j - 1; break; }
+      }
+      const origLines = snap!.split('\n').slice(1); // ignorer le heading
+      restored = [
+        ...lines.slice(0, range!.lineStart),
+        headingLine,
+        ...origLines,
+        ...lines.slice(directEnd + 1)
+      ].join('\n');
+      changed = true;
+    }
+    if (changed) {
+      this.unifiedContent = restored;
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = restored;
+      clearTimeout(this.saveTimeout);
+      this.lastSavedContent = restored;
+      // Restaurer les images dont la suppression est annulée
+      const imgRestore = [...this.pendingVisuDeletions.entries()]
+        .filter(([, v]) => cancelFolderIds.has(v.sectionId));
+      imgRestore.forEach(([imgId, { node }]) => {
+        this.allImages = [...this.allImages, node];
+        this.pendingVisuDeletions.delete(imgId);
+      });
+      this.recomputeAll();
+      this.saveAll();
+    }
+    this.releaseSectionsPending(cancelFolderIds, lockedEntityIds);
+    await Promise.all([...cancelFolderIds].map(id =>
+      this.collab.unlockNode(this.projectName, id).catch(() => {})
+    ));
+    this.localDirty = this.collab.localPendingSections().size > 0;
+    this.dirtyChange.emit(this.localDirty);
+  }
+
+  // Libère verrous + état pending d'un ensemble de sections et de leurs entités granulaires.
+  private releaseSectionsPending(folderIds: Set<string>, lockedEntityIds: string[]): void {
+    for (const eid of lockedEntityIds) {
+      this.activeEntityLocks.delete(eid);
+      this.collab.clearPending(eid);
+      this.collab.removeLocalPending(eid);
+      if (!folderIds.has(eid) && this.projectName) this.collab.unlockNode(this.projectName, eid).catch(() => {});
+      this.modifiedEntities.delete(eid);
+    }
+    for (const fid of folderIds) {
+      this.activeEntityLocks.delete(fid);
+      this.collab.clearPending(fid);
+      this.collab.removeLocalPending(fid);
+      this.codeSectionSnapshots.delete(fid);
+      this.dirtyVisuSectionIds.delete(fid);
+      this.visuSectionLockSnapshot.delete(fid);
+      if (this.editingVisuSectionId() === fid) this.editingVisuSectionId.set(null);
+    }
+    this.cursorEntityId.set(null);
   }
 
   private showPublishToast(): void {

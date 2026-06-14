@@ -8324,6 +8324,149 @@
       "prompt": "fait la même chose avec ce popin pour créé un nouveau fichier ou section",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-297",
+      "version": "B-0.279",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Mode Code : préservation du texte exact (plus de réécriture auto)",
+      "description": "En mode Code, la saisie n'est plus reformatée ni réordonnée par la reconstruction (lignes vides, espaces, # seul, indentation et ordre des sections conservés). Un drapeau localCodeSavePending est armé dans saveAll() et libéré à la fin du cycle quand saveStatus repasse 'idle'/'error' ; ngOnChanges détecte preserveCodeBuffer et n'écrase plus le buffer avec reconstructFromSections(). Lier la garde à saveStatus (au lieu d'un drapeau one-shot ou d'une fenêtre temporelle fixe de 6s) couvre tout le cycle de save du parent quelle que soit sa durée (plusieurs loadFiles() → plusieurs émissions de files pendant 'saving'), évitant qu'une émission tardive réordonne les sections. La restructuration en sections (dossiers, méga-outils TRELLO/array) reste appliquée ; les changements hors cycle (sidebar, collab) déclenchent la reconstruction normale. recomputeRanges associe désormais les titres aux dossiers dans l'ordre du buffer (et non l'ordre des fichiers) pour que la navigation (clic section → focus zone Code) reste correcte malgré la divergence d'ordre.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode, je voudrais que tu arrète totalement le système qui modifi automatiquement le code lorsque je change ou rajoute du code. Lorsque je crait/modifi/supprime du code celui ci ne doit pas ce modifié automatiquement, il peut être restructuré (section) comme lorsque je rajoute via le code un mega outil comme TRELLO ou array, mais le code en lui même ne doit pas être modifié",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-298",
+      "version": "B-0.279",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Réordonner une section dans le code → réordonne le menu et les dossiers physiques",
+      "description": "Quand on change l'ordre des sections directement dans le code (mode Code), le texte n'est pas modifié (garde de préservation) mais l'ordre des dossiers de section suit désormais l'ordre du document. Ajout du helper applySectionFolderOrder() qui regroupe les folderId par parent dans l'ordre d'apparition des ### et met à jour folder.order (clé de tri du menu sidebar et de la reconstruction). Intégré à l'étape 7 de processSectionsChange (à côté de la synchro d'ordre des fichiers), persisté via updateStructure + loadFiles. Le menu et les dossiers physiques suivent le code ; l'ordre fichiers == ordre buffer garde la navigation cohérente.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md",
+        "server/clear-section-locks.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on modifi directement dans le code l'ordre des sections, cela ne doit pas modifié le code (c'est le cas) mais doit modifié l'ordre ou le titre des sections dans le menu et si besoin le nom ou l'ordre des fichiers dans le dossier du projet (physique) [+ déblocage : nettoyage de 33 verrous projet_section_lock périmés (admin/Thibault) du projet 10838b62 via server/clear-section-locks.js]",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-299",
+      "version": "B-0.279",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Partage d'une section : ne plus partager/déverrouiller les sous-sections enfants",
+      "description": "Bug : en mode focus, publishCodeEdit() reconstruisait le document complet puis écrivait TOUS les fichiers (sections.filter(s => s.fileId)) avec publish=true. Côté serveur, chaque écriture publish=true déverrouille (DELETE projet_section_lock) et broadcaste section_published → toutes les sous-sections enfants étaient partagées et déverrouillées, même non modifiées. Correctif : on calcule publishFolderIds depuis activeEntityLocks (mappés vers leur folderId via modifiedEntities), sinon la section ciblée, AVANT le flush qui vide modifiedEntities. La boucle d'écriture ne publie plus que les sections réellement éditées. La reconstruction du document reste nécessaire pour résoudre les folderId des sous-sections lors du parse.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on partage les modifications d'une section toutes les sections enfants sont aussi Partagé et donc les sections deverrouillé.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-300",
+      "version": "B-0.279",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets",
+        "libs"
+      ],
+      "features": "projets:editor|sidebar,projets:editor|zone-code,libs:collab",
+      "title": "Partager/Annuler les modifications d'une section depuis son menu contextuel",
+      "description": "Le menu contextuel d'une section (sidebar) propose désormais « Partager mes modifications » et « Annuler les modifications » lorsque la section est verrouillée par moi ET a des modifications locales en attente (isLocalPending) — à la place de « Déverrouiller ». Les boutons Annuler/Partager qui étaient en bas de la zone Code (showCodePublishBar / showCrossModePendingBar) sont supprimés (remplacés par un simple libellé). Bus d'événements ajouté dans ProjetCollabService (publishSectionRequest$ / cancelSectionRequest$, requestPublishSection / requestCancelSection) ; la zone d'édition s'y abonne (takeUntilDestroyed) et expose publishSection(id) / cancelSection(id) + le helper releaseSectionPending(). publishSection écrit avec publish=true uniquement les fichiers de la section ciblée et libère ses verrous granulaires ; cancelSection restaure depuis codeSectionSnapshots via sectionRanges.",
+      "files": [
+        "libs/portail-core/data-access/src/lib/projet-collab.service.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Ajoute dans le menu section si la section à été modifié et donc verouillé, un bouton Partagé mes modifications et le bouton annule les modification et supprime les 2 boutons en bas qui font la même chose.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-301",
+      "version": "B-0.279",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|sidebar,projets:editor|zone-code",
+      "title": "Partager/Annuler une section inclut ses sous-sections modifiées (sous-arbre)",
+      "description": "Partager (ou annuler) les modifications d'une section traite désormais la section ET ses sous-sections modifiées. Ajout de collectSectionPublishIds(sectionId) = sectionId + descendants pending (getDescendantFolderIds + isLocalPending) + dossiers des entités granulaires verrouillées du sous-arbre. publishSection écrit avec publish=true tous les fichiers du sous-arbre concernés et libère leurs verrous ; cancelSection restaure chaque section depuis codeSectionSnapshots du bas vers le haut (indices de ligne préservés). releaseSectionPending devient releaseSectionsPending (ensemble de dossiers). Côté sidebar, le menu affiche Partager/Annuler dès que sectionHasPending(node) est vrai (le nœud OU une sous-section a des modifs), pas seulement quand le nœud lui-même est pending. Les sous-sections non modifiées ne sont jamais republiées.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je clique sur le bouton partager mes modifications cela doit enregistré et partagé les modifs de la section en cours mais aussi les sous section",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-302",
+      "version": "B-0.279",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|sidebar",
+      "title": "Menu section : Partager visible seulement si section verrouillée ET modifiée",
+      "description": "L'option « Partager mes modifications » (et « Annuler ») n'apparaît dans le menu contextuel que si la section est verrouillée par moi ET modifiée (isLockedByMe(node.id) && isLocalPending(node.id)), et non plus dès qu'un descendant est modifié. La portée de l'action reste le sous-arbre (la section + ses sous-sections modifiées). Suppression du helper sectionHasPending devenu inutile.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "l'option Partager les modifications dans le menu section ne doit être visible que si la section est verouillé et modifié",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }

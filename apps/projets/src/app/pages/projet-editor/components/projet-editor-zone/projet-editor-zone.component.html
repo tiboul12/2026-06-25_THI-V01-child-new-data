@@ -1439,30 +1439,12 @@
     <div class="flex-1"></div>
 
     <!-- Zone Modifications / Annuler / Partager -->
-    @if (showCodePublishBar) {
+    <!-- Les modifications Code en attente se partagent/annulent via le menu contextuel de la section (sidebar) -->
+    @if (showCodePublishBar || showCrossModePendingBar) {
       <span class="code-publish-bar__info">
         <span class="material-symbols-outlined">edit</span>
-        Modifications en cours
+        Modifications en cours — partager via le menu de la section
       </span>
-      <div class="flex items-center gap-2">
-        <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
-        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
-          <span class="material-symbols-outlined">share</span>
-          Partager mes modifications
-        </button>
-      </div>
-    } @else if (showCrossModePendingBar) {
-      <span class="code-publish-bar__info">
-        <span class="material-symbols-outlined">edit</span>
-        Modifications Code en attente
-      </span>
-      <div class="flex items-center gap-2">
-        <button class="visu-publish-bar__cancel" (click)="cancelCodeEdit()">Annuler</button>
-        <button class="visu-publish-bar__publish" (click)="publishCodeEdit()" [disabled]="isPublishing()">
-          <span class="material-symbols-outlined">share</span>
-          Partager mes modifications
-        </button>
-      </div>
     } @else if (backupType && structureHasPending()) {
       <span class="code-publish-bar__info">
         <span class="material-symbols-outlined">edit</span>

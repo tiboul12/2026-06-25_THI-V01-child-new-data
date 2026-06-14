@@ -133,6 +133,19 @@ export class ProjetCollabService {
   // Mega-outils Array : mutation d'une grille par un autre user
   readonly arrayUpdate$ = new Subject<{ instanceId: string | null; projectId: string; action: string }>();
 
+  // Demandes Partager / Annuler d'une section depuis le menu contextuel de la sidebar.
+  // La zone d'édition (seule à connaître le contenu/les snapshots) écoute ces flux.
+  readonly publishSectionRequest$ = new Subject<string>();
+  readonly cancelSectionRequest$ = new Subject<string>();
+
+  requestPublishSection(sectionId: string): void {
+    this.publishSectionRequest$.next(sectionId);
+  }
+
+  requestCancelSection(sectionId: string): void {
+    this.cancelSectionRequest$.next(sectionId);
+  }
+
   private eventSource: EventSource | null = null;
   private currentProjetId: string | null = null;
 

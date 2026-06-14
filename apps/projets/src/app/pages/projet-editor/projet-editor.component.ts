@@ -1228,21 +1228,24 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         }
       }
 
-      // 7. Sync file order within each folder to match text content order (orderedFileIds)
+      // 7. Sync ordre des dossiers de section (suit l'ordre du document) ET ordre des
+      // fichiers dans chaque dossier (orderedFileIds). Réordonner une section directement
+      // dans le code doit réordonner le menu + les dossiers physiques sans toucher au texte.
       let structureSnapshot = JSON.parse(JSON.stringify(this.files())) as FileNode[];
-      let orderNeedsUpdate = false;
-      for (const s of resolved) {
-        if (!s.folderId || !s.orderedFileIds || s.orderedFileIds.length < 2) continue;
-        const folder = this.findFolderById(s.folderId, structureSnapshot);
-        if (!folder || !folder.children) continue;
-        for (let i = 0; i < s.orderedFileIds.length; i++) {
-          const child = folder.children.find(c => c.id === s.orderedFileIds[i]);
-          if (child && child.order !== i + 1) {
-            child.order = i + 1;
-            orderNeedsUpdate = true;
+      const applyOrder = (snapshot: FileNode[]): boolean => {
+        let changed = this.applySectionFolderOrder(snapshot, resolved);
+        for (const s of resolved) {
+          if (!s.folderId || !s.orderedFileIds || s.orderedFileIds.length < 2) continue;
+          const folder = this.findFolderById(s.folderId, snapshot);
+          if (!folder || !folder.children) continue;
+          for (let i = 0; i < s.orderedFileIds.length; i++) {
+            const child = folder.children.find(c => c.id === s.orderedFileIds[i]);
+            if (child && child.order !== i + 1) { child.order = i + 1; changed = true; }
           }
         }
-      }
+        return changed;
+      };
+      let orderNeedsUpdate = applyOrder(structureSnapshot);
       if (orderNeedsUpdate) {
         // Si aucun loadFiles() n'a eu lieu dans ce cycle de save (pas de changement structurel),
         // on recharge avant d'envoyer le snapshot — évite d'écraser config.json avec une structure
@@ -1251,15 +1254,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
         if (!hasStructural && !anyAdditionalFileCreated && !additionalFileOrphanDeleted) {
           await this.loadFiles().catch(() => {});
           structureSnapshot = JSON.parse(JSON.stringify(this.files())) as FileNode[];
-          for (const s of resolved) {
-            if (!s.folderId || !s.orderedFileIds || s.orderedFileIds.length < 2) continue;
-            const folder = this.findFolderById(s.folderId, structureSnapshot);
-            if (!folder || !folder.children) continue;
-            for (let i = 0; i < s.orderedFileIds.length; i++) {
-              const child = folder.children.find(c => c.id === s.orderedFileIds[i]);
-              if (child) child.order = i + 1;
-            }
-          }
+          applyOrder(structureSnapshot);
         }
         await this.projectFilesService.updateStructure(this.projectFolderName, structureSnapshot).catch(e => console.error('[EDITOR] Order sync failed:', e));
         await this.loadFiles().catch(() => {});
@@ -1485,6 +1480,30 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       }
     }
     return null;
+  }
+
+  /** Réordonne les dossiers de section (dans `snapshot`) pour suivre l'ordre du document :
+   *  pour chaque parent, les dossiers enfants prennent l'ordre où leurs `###` apparaissent
+   *  dans le texte. Met à jour `folder.order` (clé de tri du menu et de la reconstruction).
+   *  Retourne true si au moins un `order` a changé. */
+  private applySectionFolderOrder(snapshot: FileNode[], resolved: SectionInfo[]): boolean {
+    // Regrouper les folderId par parent, dans l'ordre d'apparition dans le document
+    const parentToChildren = new Map<string | null, string[]>();
+    for (const s of resolved) {
+      if (!s.folderId) continue;
+      const pid = s.parentFolderId ?? null;
+      let arr = parentToChildren.get(pid);
+      if (!arr) { arr = []; parentToChildren.set(pid, arr); }
+      if (!arr.includes(s.folderId)) arr.push(s.folderId);
+    }
+    let changed = false;
+    for (const orderedIds of parentToChildren.values()) {
+      for (let i = 0; i < orderedIds.length; i++) {
+        const folder = this.findFolderById(orderedIds[i], snapshot);
+        if (folder && folder.order !== i + 1) { folder.order = i + 1; changed = true; }
+      }
+    }
+    return changed;
   }
 
   private findOutilForNode(nodeId: string): string | null {

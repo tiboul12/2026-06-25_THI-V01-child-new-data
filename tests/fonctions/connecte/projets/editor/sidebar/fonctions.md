@@ -97,10 +97,12 @@ Options selon le type de nœud :
 | Dossier | Nouveau dossier, Nouveau fichier, Renommer, Supprimer |
 | Fichier `.md` | Renommer, Supprimer |
 | Image | Renommer, Supprimer |
-| Nœud verrouillé par moi | Déverrouiller |
+| Nœud verrouillé par moi **et modifié** | Partager mes modifications, Annuler les modifications |
+| Nœud verrouillé par moi **sans modification** | Déverrouiller |
 | Nœud verrouillé par autre | Afficher info verrou |
 
 - **Fermeture** (vB-0.277) : clic en dehors du menu (n'importe où, y compris ailleurs dans la sidebar) → `document:click` teste `contextMenuRef` → `closeContextMenu()`
+- **Partager / Annuler une section** (vB-0.279) : le menu propose **« Partager mes modifications »** et **« Annuler les modifications »** (priorité sur « Déverrouiller ») uniquement si la section est **verrouillée par moi ET modifiée** (`isLockedByMe(node.id) && isLocalPending(node.id)`). Bien que la condition d'affichage porte sur la section elle-même, l'**action** traite la section **et ses sous-sections modifiées**. Déléguée à la zone d'édition via le bus du service collab (`requestPublishSection` / `requestCancelSection` → `publishSectionRequest$` / `cancelSectionRequest$`). Remplace les boutons Annuler/Partager qui étaient en bas de la zone Code (voir `2-5-2-4-9`).
 
 ---
 

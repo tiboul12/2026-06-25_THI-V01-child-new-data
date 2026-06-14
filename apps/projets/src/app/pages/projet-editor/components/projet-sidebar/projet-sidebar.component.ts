@@ -93,6 +93,19 @@ export class ProjetSidebarComponent implements OnChanges {
 
   isLockedByMe(nodeId: string): boolean { return this.collab.isLockedByMe(nodeId); }
   isLockedByOther(nodeId: string): boolean { return this.collab.isLockedByOther(nodeId); }
+  isLocalPending(nodeId: string): boolean { return this.collab.isLocalPending(nodeId); }
+
+  // Partager / Annuler les modifications d'une section depuis le menu contextuel.
+  // Déléguée à la zone d'édition via le bus du service collab.
+  publishSection(node: FileNode) {
+    this.closeContextMenu();
+    this.collab.requestPublishSection(node.id);
+  }
+
+  cancelSection(node: FileNode) {
+    this.closeContextMenu();
+    this.collab.requestCancelSection(node.id);
+  }
   getLockInfo(nodeId: string): LockInfo | undefined { return this.collab.getLock(nodeId); }
 
   getLockTooltip(nodeId: string): string {
