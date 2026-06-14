@@ -17,6 +17,7 @@ export interface SlashCommand {
   template: `
     @if (visible && filtered.length > 0) {
       <div class="slash-menu"
+           [class.slash-menu--fixed]="positionFixed"
            [style.top.px]="top"
            [style.left.px]="left"
            (mousedown)="$event.preventDefault()">
@@ -59,6 +60,7 @@ export interface SlashCommand {
       padding: 0;
       font-size: 13px;
     }
+    .slash-menu--fixed { position: fixed; }
 
     .slash-menu__header {
       padding: 0.5rem 0.75rem 0.35rem;
@@ -130,9 +132,15 @@ export class SlashCommandMenuComponent implements OnChanges {
   @Input() top = 0;
   @Input() left = 0;
   @Input() query = '';
+  /** Liste de commandes personnalisée (sinon `defaults`). Permet d'enrichir le menu en mode Edition. */
+  @Input() commands?: SlashCommand[];
+  /** Positionnement fixed (coordonnées viewport) au lieu d'absolute. */
+  @Input() positionFixed = false;
   @Output() commandSelect = new EventEmitter<SlashCommand>();
 
-  readonly all: SlashCommand[] = [
+  get all(): SlashCommand[] { return this.commands ?? this.defaults; }
+
+  readonly defaults: SlashCommand[] = [
     { id: 'image',           label: 'Image',           description: 'Téléverser une image',                 icon: 'image',          keywords: ['image', 'photo', 'img', 'picture'] },
     { id: 'callout-info',    label: 'Note Info',       description: 'Bloc d\'information bleu',             icon: 'info',           keywords: ['callout', 'info', 'note', 'information'] },
     { id: 'callout-warning', label: 'Note Attention',  description: 'Bloc d\'avertissement orange',         icon: 'warning',        keywords: ['callout', 'warning', 'attention', 'avertissement'] },
@@ -149,7 +157,7 @@ export class SlashCommandMenuComponent implements OnChanges {
   activeIndex = 0;
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['query'] || changes['visible']) {
+    if (changes['query'] || changes['visible'] || changes['commands']) {
       this.refilter();
     }
   }

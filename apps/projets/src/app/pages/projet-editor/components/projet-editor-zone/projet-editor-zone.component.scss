@@ -1350,6 +1350,8 @@
   z-index: 200;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: min(640px, 96vw);
   gap: 2px;
   padding: 4px 6px;
   background: rgba(15, 15, 23, 0.96);
@@ -1358,6 +1360,18 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   pointer-events: auto;
   backdrop-filter: blur(8px);
+
+  .visu-color-swatch {
+    min-width: 18px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+
+    &--hl { border-radius: 4px; }
+  }
 
   button {
     display: inline-flex;

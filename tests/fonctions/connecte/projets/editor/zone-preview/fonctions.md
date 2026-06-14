@@ -1,7 +1,7 @@
-# Éditeur › Zone 4 — Mode Preview — Fonctions métier
+# Éditeur › Zone 4 — Mode Edition — Fonctions métier
 
-Composant : `ProjetEditorZoneComponent` — onglet "Preview"  
-Vue : rendu HTML des sections, éditables directement par clic (contenteditable)
+Composant : `ProjetEditorZoneComponent` — onglet "Edition" (anciennement "Preview", renommé vB-0.282 ; mode interne `'visu'`)
+Vue : éditeur type Google Docs — rendu HTML des sections éditables (contenteditable), mise en forme riche, slash menu `/`, insertion et édition de méga-outils en direct
 
 ---
 
@@ -37,12 +37,17 @@ Vue : rendu HTML des sections, éditables directement par clic (contenteditable)
 ## `2-5-2-5-4` — Toolbar de formatage flottante
 
 - **Déclenchement** : sélection de texte dans une section → `visuToolbar` affiché au-dessus de la sélection
-- **Boutons** :
-  - **Gras** : `applyVisuFormat('bold')` → `document.execCommand('bold')`
-  - **Italique** : `applyVisuFormat('italic')`
-  - **Barré** : `applyVisuFormat('strikeThrough')`
-  - **Effacer formatage** : `applyVisuFormat('removeFormat')`
-- **Fermeture** : click ailleurs ou désélection
+- **Boutons (mise en forme riche, vB-0.282)** : `applyVisuFormat(command, value?)`
+  - Inline : Gras, Italique, **Souligné** (`underline`), Barré
+  - Titres / blocs : H1, H2, H3, Paragraphe (`formatBlock`), Citation (`BLOCKQUOTE`)
+  - Listes : à puces, numérotée, **case à cocher** (`insertVisuChecklist`)
+  - **Code** inline (`insertVisuInlineCode`), **Lien** (`insertVisuLink` → `createLink`)
+  - **Alignement** : gauche / centre / droite (`justifyLeft/Center/Right`)
+  - **Taille** : Petit / Grand (`fontSize`)
+  - **Couleur du texte** (`foreColor`) et **Surlignage** (`hiliteColor`) via pastilles (`visuTextColors`, `visuHighlightColors`) — `styleWithCSS` activé pour produire des `<span style>`
+  - Effacer formatage (`removeFormat`)
+- **Bouton « + »** : (ligne d'ajout par section) ouvre le menu d'insertion / slash
+- **Fermeture** : click ailleurs ou désélection (la toolbar reste ouverte après couleur/taille pour enchaîner)
 
 ---
 
@@ -185,3 +190,33 @@ Vue : rendu HTML des sections, éditables directement par clic (contenteditable)
 - Bouton "Aller à la section" : navigue vers la section d'origine (`inst.folderId`) via l'output `trelloNavigate` (sélection réelle + fermeture) ; désactivé si aucune section associée
 - Section résolue par `recomputeTrelloSections()` via la position du marqueur `{{TRELLO:id}}` dans `docSections` (source de vérité, indépendante du mode focus), fallback sur `inst.folderId` ; stockée dans le signal `trelloSections`
 - Bouton de fermeture (`closeTrelloList`) ; la liste se ferme aussi à toute sélection dans la sidebar
+
+---
+
+## `2-5-2-5-18` — Slash menu « / » en mode Edition (vB-0.282)
+
+- **Déclenchement** : taper `/` (en début de mot) dans une section contenteditable → `onVisuSectionInput` appelle `detectVisuSlash(sectionId)` qui ouvre `app-slash-command-menu` (`#visuSlashMenu`, `positionFixed`) positionné au caret (rect de la sélection)
+- **Filtrage** : le texte tapé après `/` alimente `visuSlash.query` ; commandes enrichies via `[commands]="visuSlashCommands"`
+- **Navigation clavier** : `onVisuSectionKeydown` → ↑/↓/Entrée/Échap délèguent à `moveNext/movePrev/selectActive`
+- **Commandes** : Titre 1-3, Liste à puces/numérotée, Case à cocher, Citation, Bloc de code, Séparateur, Note Info, Tableau Markdown, Image, **Trello (MO)**, **Tableau (MO)**
+- **Sélection** : `onVisuSlashSelect(cmd)` retire le `/query` du DOM (`removeVisuSlashText`), persiste la section (`commitVisuSection`), puis :
+  - blocs texte → `insertVisuMarkdownBlock(sectionId, snippet)` (insertion dans le contenu direct de la section + re-rendu)
+  - image → `triggerVisuImageUpload(sectionId)`
+  - MO → `createMoInVisuSection('trello'|'array', sectionId)` : `createInstance` (folderId = section) + carte de démarrage Trello + insertion du fence ` ```TRELLO: ` / ` ```ARRAY: `
+
+---
+
+## `2-5-2-5-19` — Édition des méga-outils en direct (vB-0.282)
+
+- **Trello** : `app-trello-board` éditable (readonly uniquement si verrouillé par un autre user) ; `cardsChanged` → `onTrelloCardsChanged` → maj du fence ` ```TRELLO: ` + `recomputeAll`
+- **Tableau (Array)** : `app-array-board` désormais **éditable inline** (`[readonly]="isArrayInstanceLocked(ainst.id)"`, auparavant `true`) ; `gridChanged` → `onArrayGridChanged` → `syncArrayInlineBlock` met à jour le fence ` ```ARRAY: ` et `recomputeAll`
+- **Mockup** : aperçu cliquable (ouvre l'éditeur), édition complète inline en backlog
+- **Sync live multi-mode** : toute modification écrit dans `unifiedContent` → bascule Code/Structure reflète immédiatement le changement ; inter-utilisateurs via SSE `trello_update` / `array_update` + publication par le menu de section
+
+---
+
+## `2-5-2-5-20` — Styles avancés préservés en Markdown (vB-0.282)
+
+- Le Markdown reste la source de vérité ; les styles non exprimables en Markdown sont conservés en **HTML inline** (rendu par `marked`)
+- `nodeToMd` étendu : `<a href>` → `[texte](url)` ; `<span>`/`<font>` avec couleur/surlignage/taille → `<span style="…">` (via `preservedInlineStyle`) ; `<u>` conservé ; **alignement** de bloc (`p`/`h1-4` avec `text-align` center/right/justify) → bloc HTML autonome conservant l'`innerHTML`
+- Round-trip Edition ↔ Code stable (le HTML inline est visible en Code et re-rendu à l'identique)
