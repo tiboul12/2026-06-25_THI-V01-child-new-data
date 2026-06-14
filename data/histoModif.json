@@ -1,6 +1,29 @@
 {
   "modifications": [
     {
+      "id": "mod-320",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : clic sur un lien ouvre dans une nouvelle fenêtre",
+      "description": "En mode Edition, cliquer sur un lien place le curseur (contenteditable) au lieu d'ouvrir le lien. onVisuContainerClick détecte un a[href] cliqué, fait preventDefault/stopPropagation et ouvre l'URL via window.open(href, '_blank', 'noopener,noreferrer'). Style des liens en bleu souligné + curseur pointeur.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le mode Edition si je met un lien sur un texte, je dois pouvoir cliquer dessus pour ouvrir le lien dans une autre fenêtre.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-319",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

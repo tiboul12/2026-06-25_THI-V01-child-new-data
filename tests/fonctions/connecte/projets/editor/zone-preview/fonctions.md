@@ -46,7 +46,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
   - Inline : Gras, Italique, **Souligné** (`underline`), Barré
   - Titres / blocs : H1, H2, H3, Paragraphe (`formatBlock`), Citation (`BLOCKQUOTE`)
   - Listes : à puces, numérotée, **case à cocher** (`insertVisuChecklist`)
-  - **Code** inline (`insertVisuInlineCode`), **Lien** (`insertVisuLink` → `createLink`)
+  - **Code** inline (`insertVisuInlineCode`), **Lien** (`insertVisuLink` → `createLink`) ; un **clic sur un lien** l'ouvre dans une nouvelle fenêtre (`onVisuContainerClick` → `window.open(href, '_blank', 'noopener')`) au lieu de placer le curseur (vB-0.284)
   - **Alignement** : gauche / centre / droite (`justifyLeft/Center/Right`)
   - **Taille** : Petit / Grand (`fontSize`)
   - **Couleur du texte** (`foreColor`) et **Surlignage** (`hiliteColor`) via pastilles (`visuTextColors`, `visuHighlightColors`) — `styleWithCSS` activé pour produire des `<span style>`

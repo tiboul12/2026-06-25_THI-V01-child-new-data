@@ -6450,6 +6450,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   onVisuContainerClick(ev: MouseEvent) {
     const target = ev.target as HTMLElement;
+    // Lien cliqué : ouvrir dans une nouvelle fenêtre (au lieu de placer le curseur)
+    const link = target.closest('a[href]') as HTMLAnchorElement | null;
+    if (link) {
+      const href = link.getAttribute('href') || '';
+      if (href) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        window.open(href, '_blank', 'noopener,noreferrer');
+        return;
+      }
+    }
     // Fermer le menu d'insertion si clic en dehors
     if (this.visuInsertMenu && !target.closest('.visu-insert-menu') && !target.closest('.visu-insert-btn')) {
       this.visuInsertMenu = null;

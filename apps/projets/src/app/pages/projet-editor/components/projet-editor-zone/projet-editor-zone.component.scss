@@ -1029,6 +1029,8 @@
     strong, b { font-weight: 600; }
     u { text-decoration: underline; text-underline-offset: 2px; }
     s, del { text-decoration: line-through; }
+    a { color: #2563eb; text-decoration: underline; cursor: pointer; }
+    :host-context(.dark) & a { color: #60a5fa; }
 
     ul, ol { margin: 0.5em 0; padding-left: 1.5em; }
     li { margin: 0.15em 0; }
