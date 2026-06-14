@@ -458,6 +458,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   private visuSlashAnchor: { node: Node; offset: number } | null = null;
   // Auto-save « live » du mode Edition (débounce pendant la frappe)
   private visuLiveSaveTimeout: any = null;
+  // Menu d'actions sur un lien cliqué (suivre / modifier / supprimer) en mode Edition
+  visuLinkMenu: { x: number; y: number; href: string } | null = null;
+  private visuLinkEl: HTMLAnchorElement | null = null;
   // Force le re-render complet des sections visu au prochain initVisuSectionHtml
   // (utilisé après création d'un titre qui scinde la section → retirer le titre déplacé)
   private forceVisuReinject = false;
@@ -6345,6 +6348,54 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.visuToolbar = null;
   }
 
+  // ── Menu d'actions sur un lien (mode Edition) ──────────────
+  closeVisuLinkMenu() {
+    this.visuLinkMenu = null;
+    this.visuLinkEl = null;
+  }
+
+  // Suivre le lien dans une nouvelle fenêtre
+  visuLinkFollow() {
+    const href = this.visuLinkMenu?.href;
+    if (href) window.open(href, '_blank', 'noopener,noreferrer');
+    this.closeVisuLinkMenu();
+  }
+
+  // Modifier l'URL du lien
+  visuLinkEdit() {
+    const el = this.visuLinkEl;
+    if (!el) { this.closeVisuLinkMenu(); return; }
+    const url = window.prompt('URL du lien :', el.getAttribute('href') || 'https://');
+    if (url) {
+      el.setAttribute('href', url);
+      this.persistVisuLinkChange(el);
+    }
+    this.closeVisuLinkMenu();
+  }
+
+  // Supprimer le lien (conserver le texte)
+  visuLinkRemove() {
+    const el = this.visuLinkEl;
+    if (!el) { this.closeVisuLinkMenu(); return; }
+    const parent = el.parentNode;
+    if (parent) {
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+      this.persistVisuLinkChange(parent as HTMLElement);
+    }
+    this.closeVisuLinkMenu();
+  }
+
+  // Persiste la modification d'un lien : commit + save de la section contenant le lien
+  private persistVisuLinkChange(node: HTMLElement) {
+    const content = node.closest('.visu-sec-content') as HTMLElement | null;
+    const sectionId = content?.getAttribute('data-section-id');
+    if (!sectionId) return;
+    if (this.backupType) this.onVisuSectionInput(sectionId);
+    this.commitVisuSection(sectionId);
+    this.saveAll();
+  }
+
   // Crée un lien sur la sélection
   insertVisuLink() {
     const url = window.prompt('URL du lien :', 'https://');
@@ -6450,16 +6501,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   onVisuContainerClick(ev: MouseEvent) {
     const target = ev.target as HTMLElement;
-    // Lien cliqué : ouvrir dans une nouvelle fenêtre (au lieu de placer le curseur)
+    // Lien cliqué : ouvrir le menu d'actions (suivre / modifier / supprimer)
     const link = target.closest('a[href]') as HTMLAnchorElement | null;
     if (link) {
-      const href = link.getAttribute('href') || '';
-      if (href) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        window.open(href, '_blank', 'noopener,noreferrer');
-        return;
-      }
+      ev.preventDefault();
+      ev.stopPropagation();
+      const rect = link.getBoundingClientRect();
+      this.visuLinkEl = link;
+      this.visuLinkMenu = { x: rect.left, y: rect.bottom + 4, href: link.getAttribute('href') || '' };
+      return;
+    }
+    // Fermer le menu de lien si clic en dehors
+    if (this.visuLinkMenu && !target.closest('.visu-link-menu')) {
+      this.closeVisuLinkMenu();
     }
     // Fermer le menu d'insertion si clic en dehors
     if (this.visuInsertMenu && !target.closest('.visu-insert-menu') && !target.closest('.visu-insert-btn')) {

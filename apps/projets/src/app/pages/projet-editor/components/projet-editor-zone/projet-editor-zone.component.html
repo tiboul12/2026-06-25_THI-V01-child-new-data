@@ -1080,6 +1080,21 @@
           [commands]="visuSlashCommandsFiltered"
           (commandSelect)="onVisuSlashSelect($event)" />
 
+        <!-- Menu d'actions sur un lien (suivre / modifier / supprimer) -->
+        @if (visuLinkMenu) {
+          <div class="visu-link-menu" [style.left.px]="visuLinkMenu.x" [style.top.px]="visuLinkMenu.y">
+            <button type="button" (mousedown)="$event.preventDefault(); visuLinkFollow()">
+              <span class="material-symbols-outlined">open_in_new</span> Suivre le lien
+            </button>
+            <button type="button" (mousedown)="$event.preventDefault(); visuLinkEdit()">
+              <span class="material-symbols-outlined">edit</span> Modifier le lien
+            </button>
+            <button type="button" class="visu-link-menu__del" (mousedown)="$event.preventDefault(); visuLinkRemove()">
+              <span class="material-symbols-outlined">link_off</span> Supprimer le lien
+            </button>
+          </div>
+        }
+
         <!-- Menu d'insertion de bloc -->
         @if (visuInsertMenu) {
           <div class="visu-insert-menu"

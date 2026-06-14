@@ -1,6 +1,30 @@
 {
   "modifications": [
     {
+      "id": "mod-321",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : menu d'actions sur un lien (suivre / modifier / supprimer)",
+      "description": "Remplace l'ouverture directe au clic d'un lien par un menu d'actions. onVisuContainerClick ouvre visuLinkMenu (position du lien). Actions : visuLinkFollow (window.open _blank), visuLinkEdit (prompt URL → met à jour href), visuLinkRemove (déballe le <a> en conservant le texte). persistVisuLinkChange retrouve la section (.visu-sec-content data-section-id) et commit + saveAll. Menu fermé au clic extérieur. Styles .visu-link-menu.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "il faut pouvoir modifier le lien, change le système : au clic sur un lien on doit avoir un menu : suivre le lien, supprimer le lien, modifier le lien.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-320",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",
