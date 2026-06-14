@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-325",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : panneau propriétés d'image affiché au point de clic",
+      "description": "Le panneau de propriétés d'image (F5) s'ouvrait sous l'image (rect.bottom), peu ergonomique pour les grandes images. openImagePropsPanel reçoit désormais l'événement de clic et positionne le panneau aux coordonnées du clic (relatif au conteneur scrollable). Fallback rect.bottom si pas d'événement.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "pour la modification d'image, le popup s'affiche sous l'image (peu ergonomique), il faut l'afficher là où on clique sur l'image.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-324",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

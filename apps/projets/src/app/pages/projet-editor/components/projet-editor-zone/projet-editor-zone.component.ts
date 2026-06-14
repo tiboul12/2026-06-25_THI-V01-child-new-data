@@ -6559,7 +6559,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     const fig = target.closest('.visu-figure') as HTMLElement | null;
     if (fig && fig.hasAttribute('data-img-id')) {
       ev.stopPropagation();
-      this.openImagePropsPanel(fig);
+      this.openImagePropsPanel(fig, ev);
       return;
     }
     // Bouton "Modifier le mockup" (lien vers l'édition du mockup)
@@ -6582,17 +6582,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
   }
 
-  // F5 — Panneau de propriétés d'image
-  openImagePropsPanel(figEl: HTMLElement) {
+  // F5 — Panneau de propriétés d'image (positionné à l'endroit du clic)
+  openImagePropsPanel(figEl: HTMLElement, ev?: MouseEvent) {
     const id = figEl.getAttribute('data-img-id') || '';
     const caption = figEl.getAttribute('data-img-caption') || '';
     const alignment = (figEl.getAttribute('data-img-align') || '') as '' | 'left' | 'center' | 'right';
     const width = figEl.getAttribute('data-img-width') || '';
-    const rect = figEl.getBoundingClientRect();
     const container = this.visuRef?.nativeElement;
     const containerRect = container?.getBoundingClientRect();
-    const top = (containerRect ? rect.bottom - containerRect.top : rect.bottom) + (container?.scrollTop || 0) + 8;
-    const left = (containerRect ? rect.left - containerRect.left : rect.left) + 12;
+    let top: number, left: number;
+    if (ev) {
+      // À l'endroit du clic (relatif au conteneur scrollable)
+      top = (containerRect ? ev.clientY - containerRect.top : ev.clientY) + (container?.scrollTop || 0) + 6;
+      left = (containerRect ? ev.clientX - containerRect.left : ev.clientX) + 6;
+    } else {
+      const rect = figEl.getBoundingClientRect();
+      top = (containerRect ? rect.bottom - containerRect.top : rect.bottom) + (container?.scrollTop || 0) + 8;
+      left = (containerRect ? rect.left - containerRect.left : rect.left) + 12;
+    }
     this.imagePropsPanel = { visible: true, imageId: id, kind: 'image', caption, alignment, width, top, left };
   }
 
