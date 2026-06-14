@@ -8586,6 +8586,28 @@
       "prompt": "la bar de style doit être toujours affiché en haut et non sur la sourie",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-308",
+      "version": "B-0.282",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : styles correctement convertis en Markdown/HTML (gras, etc.)",
+      "description": "Le gras (et autres styles) appliqué en mode Edition n'était pas reflété en mode Code : selon l'état de styleWithCSS, execCommand('bold') produisait un <span style=\"font-weight:bold\"> ignoré par nodeToMd. Correctif : applyVisuFormat force styleWithCSS=false pour bold/italic/underline/strikeThrough (balises sémantiques <b>/<i>/<u>/<s> → **,*,~~) et true pour foreColor/hiliteColor/fontSize (span style). En secours, le handler span/font de nodeToMd reconvertit font-weight/font-style/text-decoration en Markdown. Les styles non Markdown (couleur, surlignage, taille, alignement) restent en HTML inline (ex: <span style=\"color:purple\">).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque dans le mode Edition je met un texte en gras, il ce met bien en gras dans ce mode mais si je vais ensuite dans le mode Code le texte n'est pas indiqué en gras (format markdown : **en gras**) verifi aussi les autres style, si le style n'est pas compatible au format markdown, il faut le mettre dans le type html, exemple : <span style=\"color:purple\">",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }

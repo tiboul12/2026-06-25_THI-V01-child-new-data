@@ -220,4 +220,5 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 
 - Le Markdown reste la source de vérité ; les styles non exprimables en Markdown sont conservés en **HTML inline** (rendu par `marked`)
 - `nodeToMd` étendu : `<a href>` → `[texte](url)` ; `<span>`/`<font>` avec couleur/surlignage/taille → `<span style="…">` (via `preservedInlineStyle`) ; `<u>` conservé ; **alignement** de bloc (`p`/`h1-4` avec `text-align` center/right/justify) → bloc HTML autonome conservant l'`innerHTML`
-- Round-trip Edition ↔ Code stable (le HTML inline est visible en Code et re-rendu à l'identique)
+- **Balises sémantiques garanties** (vB-0.282) : `applyVisuFormat` force `styleWithCSS=false` pour Gras/Italique/Souligné/Barré (→ `<b>/<i>/<u>/<s>`) et `true` pour couleur/surlignage/taille. En secours, si un `<span>` porte `font-weight`/`font-style`/`text-decoration` (cas styleWithCSS), `nodeToMd` le reconvertit en Markdown (`**`, `*`, `~~`, `<u>`). Le gras sort donc bien en `**gras**` en mode Code.
+- Round-trip Edition ↔ Code stable (les styles Markdown-compatibles en `**`/`*`/`~~`/`#`/listes/liens, les autres en HTML inline `<span style>` / `<u>`)

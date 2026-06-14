@@ -6132,8 +6132,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         return href ? `[${inner()}](${href})` : inner();
       }
       case 'span': case 'font': {
+        // Styles portés par un span (cas styleWithCSS) → repasser en Markdown quand possible
+        let content = inner();
+        const st = el.style;
+        const fw = (st.fontWeight || '').toLowerCase();
+        const fsStyle = (st.fontStyle || '').toLowerCase();
+        const deco = (st.textDecorationLine || st.textDecoration || '').toLowerCase();
+        if (deco.includes('line-through')) content = `~~${content}~~`;
+        if (deco.includes('underline')) content = `<u>${content}</u>`;
+        if (fsStyle === 'italic') content = `*${content}*`;
+        if (fw === 'bold' || (parseInt(fw, 10) >= 600)) content = `**${content}**`;
+        // Styles non exprimables en Markdown (couleur, surlignage, taille) → span HTML conservé
         const css = this.preservedInlineStyle(el);
-        return css ? `<span style="${css}">${inner()}</span>` : inner();
+        return css ? `<span style="${css}">${content}</span>` : content;
       }
       case 'code': {
         if (el.parentElement?.tagName.toLowerCase() === 'pre') return el.textContent || '';
@@ -6212,10 +6223,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   }
 
   applyVisuFormat(command: string, value?: string) {
-    // Styles CSS inline (couleur, surlignage, taille) plutôt que balises <font>
-    if (command === 'foreColor' || command === 'hiliteColor' || command === 'fontSize') {
-      try { document.execCommand('styleWithCSS', false, 'true'); } catch { /* ignore */ }
-    }
+    // Couleur / surlignage / taille → styles CSS inline (<span style>) ; le reste → balises
+    // sémantiques (<b>, <i>, <u>, <s>) pour une conversion Markdown fidèle (**…**, *…*, …).
+    const useCss = command === 'foreColor' || command === 'hiliteColor' || command === 'fontSize';
+    try { document.execCommand('styleWithCSS', false, useCss ? 'true' : 'false'); } catch { /* ignore */ }
     // formatBlock attend un nom de balise entre chevrons sur certains navigateurs
     const arg = command === 'formatBlock' && value ? `<${value}>` : value;
     try { document.execCommand(command, false, arg); } catch { /* ignore */ }
