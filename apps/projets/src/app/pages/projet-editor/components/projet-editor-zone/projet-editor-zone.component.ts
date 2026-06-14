@@ -448,7 +448,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   };
   // Mode Code : afficher le style (jumeau -css.md) ou le Markdown propre (défaut). Voir système double fichier.
   showCssInCode = signal(false);
-  get codeCleanView(): string { return stripStyleMarkdown(this.unifiedContent); }
+  get codeCleanView(): string { return stripStyleMarkdown(this.unifiedContent, this.cleanImgResolver); }
+  // Résout {{IMG:id}} → ![alt](nom-fichier) pour le Markdown propre (image dans le dossier de la section)
+  private cleanImgResolver = (id: string): { alt: string; path: string } | null => {
+    const n = this.allImages.find(im => im.id === id);
+    if (!n) return null;
+    return { alt: n.name.replace(/\.[^.]+$/, ''), path: n.name };
+  };
 
   // Slash command menu (mode Edition / visu) — insertion par section
   visuSlash: { visible: boolean; top: number; left: number; query: string; sectionId: string } = {
@@ -1077,7 +1083,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       let mainStyledContent: string | undefined;
       if (cssTwin && mainFile) {
         const twinStyled = normalizeStyledMarkdown(cssTwin.content ?? '');
-        const cleanFromTwin = stripStyleMarkdown(twinStyled);
+        const cleanFromTwin = stripStyleMarkdown(twinStyled, this.cleanImgResolver);
         const cleanActual = mainFile.content ?? '';
         // Si contenu.md (propre) a été édité hors app (IA) → réconcilier dans le master stylé.
         mainStyledContent = cleanActual.trim() === cleanFromTwin.trim()
@@ -5827,7 +5833,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // styled → jumeau *-css.md (créé si absent). Conserve l'invariant contenu.md propre.
   private async writeSectionStyled(fileId: string, folderId: string | null | undefined, styledRaw: string, publish: boolean): Promise<void> {
     const styled = normalizeStyledMarkdown(styledRaw);
-    const clean = stripStyleMarkdown(styled);
+    const clean = stripStyleMarkdown(styled, this.cleanImgResolver);
     await this.svc.updateFile(this.projectName, fileId, clean, folderId ?? undefined, publish);
     const folder = folderId ? this.findNode(folderId, this.files) : null;
     const children = folder?.children || [];

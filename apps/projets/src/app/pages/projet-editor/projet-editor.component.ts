@@ -216,6 +216,20 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     if (result.changed) this.files.set(result.nodes);
   }
 
+  // Résout {{IMG:id}} → ![alt](nom-fichier) pour le Markdown propre (contenu.md)
+  private cleanImgResolver = (id: string): { alt: string; path: string } | null => {
+    const find = (nodes: FileNode[]): FileNode | null => {
+      for (const n of nodes) {
+        if (n.id === id && n.type === 'file') return n;
+        if (n.children) { const f = find(n.children); if (f) return f; }
+      }
+      return null;
+    };
+    const n = find(this.files());
+    if (!n) return null;
+    return { alt: n.name.replace(/\.[^.]+$/, ''), path: n.name };
+  };
+
   /**
    * Écrit/crée le jumeau stylisé `<main>-css.md` d'une section avec le contenu stylisé,
    * dans le même dossier que le fichier principal. Réutilisé par le système double fichier.
@@ -1155,7 +1169,7 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
           // Système double fichier : contenu.md = Markdown propre (strip), contenu-css.md = stylisé
           // (styles markdown-compatibles en markdown, seuls couleur/taille/etc. en HTML).
           const styled = normalizeStyledMarkdown(s.content);
-          const clean = stripStyleMarkdown(styled);
+          const clean = stripStyleMarkdown(styled, this.cleanImgResolver);
           const oldContent = oldContentMap.get(s.fileId) ?? '';
           if (oldContent !== clean) {
             await this.projectFilesService.updateFile(this.projectFolderName, s.fileId, clean, s.folderId ?? undefined);

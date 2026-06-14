@@ -1,6 +1,30 @@
 {
   "modifications": [
     {
+      "id": "mod-328",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Mode Code : images en Markdown standard ![alt](fichier) au lieu de {{IMG:id}}",
+      "description": "Dans le fichier propre (contenu.md, vu par l'IA), les marqueurs {{IMG:id}} sont convertis en image Markdown standard ![alt](nom-fichier) (chemin = nom du fichier image dans le dossier de la section, alt = légende ou nom sans extension). stripStyleMarkdown accepte un ImgMarkerResolver optionnel ; cleanImgResolver implémenté côté zone (allImages) et parent (arbre de fichiers), appliqué au codeCleanView, à l'écriture de contenu.md (zone writeSectionStyled + parent processSectionsChange) et à la comparaison IA→app (buildDocSections). Le jumeau -css.md conserve {{IMG:id}} ; round-trip via mergeCleanIntoStyled.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/content-style.util.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode Code quand une image est ajoutée le code type markdown doit être de type : ![image](assets/mon-image.jpg).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-327",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",
