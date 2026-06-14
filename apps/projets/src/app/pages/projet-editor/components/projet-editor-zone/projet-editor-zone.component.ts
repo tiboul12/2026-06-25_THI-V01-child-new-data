@@ -6788,17 +6788,23 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
     // Retrait local de allImages pour éviter affichage "manquante"
     this.allImages = this.allImages.filter(im => im.id !== imgId);
-    // Retirer le marqueur de unifiedContent
+    // Flusher le DOM de la section dans le markdown AVANT (sinon la figure du DOM
+    // ré-ajoute le marqueur au prochain commit et la suppression est annulée)
+    if (sectionId) { clearTimeout(this.visuLiveSaveTimeout); this.commitVisuSection(sectionId); }
+    // Retirer le marqueur de unifiedContent (sur sa propre ligne OU inline)
     const lines = this.unifiedContent.split('\n');
-    const idx = lines.findIndex(l => {
-      const t = l.trim();
-      const m = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}$/i.exec(t);
-      return !!m && m[1] === imgId;
-    });
-    if (idx !== -1) lines.splice(idx, 1);
-    this.unifiedContent = lines.join('\n');
+    const imgRe = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'i');
+    for (let i = 0; i < lines.length; i++) {
+      if (imgRe.test(lines[i])) {
+        lines[i] = lines[i].replace(imgRe, '').trim();
+      }
+    }
+    // Supprimer les lignes devenues vides issues du retrait
+    this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = this.unifiedContent;
+    // Forcer le re-render pour retirer la figure du DOM de la section (dirty)
+    this.forceVisuReinject = true;
     this.recomputeAll();
     this.saveAll();
     // saveAll() remet localDirty à false — on le remet à true car la suppression

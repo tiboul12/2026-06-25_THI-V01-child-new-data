@@ -1,6 +1,27 @@
 {
   "modifications": [
     {
+      "id": "mod-326",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : suppression d'image fonctionnelle",
+      "description": "Supprimer une image (bouton du panneau ou icône) ne fonctionnait pas : la section dirty n'était pas rafraîchie (la figure restait dans le DOM) et un commit ultérieur ré-ajoutait le marqueur depuis le DOM. deleteVisuImage flushe d'abord le DOM (commitVisuSection), retire le marqueur {{IMG:id}} (ligne propre ou inline) puis force le re-render (forceVisuReinject) → la figure disparaît et la suppression persiste.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le bouton supprimer une image (icône ou menu) ne fonctionne pas.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-325",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",
