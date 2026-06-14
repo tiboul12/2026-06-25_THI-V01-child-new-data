@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-311",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : auto-save live (mise à jour des fichiers pendant la frappe)",
+      "description": "En mode Edition, la saisie ne mettait à jour les fichiers qu'au blur ou au changement de mode (onVisuSectionInput ne marquait que dirty). Ajout de scheduleVisuLiveSave (débounce 900 ms) appelé à chaque input : commitVisuSection convertit la section en Markdown (saveVisuSection met à jour unifiedContent sans réinitialiser le DOM) puis saveAll persiste immédiatement. La section reste dirty et le DOM est réutilisé (track sectionId + initVisuSectionHtml ignore les sections dirty non vides) → curseur préservé. Timer nettoyé dans flushVisuSections.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "j'ai ajouter du texte dans le mode Edition et les fichiers de la section ne ce sont pas mise à jour, il a fallu changer de mode. Les fichiers doivent se mettre à jour en permanence (live).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-310",
       "version": "B-0.283",
       "date": "2026-06-14T00:00:00.000Z",

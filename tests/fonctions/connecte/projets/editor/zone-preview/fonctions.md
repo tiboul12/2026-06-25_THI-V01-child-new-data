@@ -21,6 +21,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
   - Projets backup : snapshot du contenu → `visuSectionLockSnapshot`, `editingVisuSectionId.set(sectionId)`, `collab.lockNode()`
   - Projets locaux : pas de verrou, édition directe
 - **Saisie** : input direct dans le HTML rendu → `onVisuSectionInput(sectionId)` → `dirtyVisuSectionIds.add(sectionId)`
+- **Auto-save « live »** (vB-0.283) : à la frappe, `scheduleVisuLiveSave(sectionId)` (débounce 900 ms) convertit la section en Markdown (`commitVisuSection`) et persiste immédiatement (`saveAll` → écriture des fichiers). La section reste `dirty` et le DOM n'est pas réinitialisé (curseur préservé : `initVisuSectionHtml` ne ré-injecte pas une section dirty non vide ; le `@for` track par `sectionId` réutilise le DOM). Les fichiers se mettent donc à jour en permanence, sans changer de mode.
 - **Blur** : `onVisuSectionBlur(sectionId)` → sauvegarde locale sans publier (section reste "dirty")
 - **Keyboard** : Escape → ferme le menu d'insertion (si ouvert)
 

@@ -456,6 +456,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   };
   // Ancre DOM du "/" tapé (pour retirer "/query" à la sélection)
   private visuSlashAnchor: { node: Node; offset: number } | null = null;
+  // Auto-save « live » du mode Edition (débounce pendant la frappe)
+  private visuLiveSaveTimeout: any = null;
   // Liste enrichie de commandes pour le menu slash en mode Edition (titres, listes, blocs, MO)
   readonly visuSlashCommands: SlashCommand[] = [
     { id: 'heading-1',       label: 'Titre 1',          description: 'Grand titre de section',      icon: 'title',                keywords: ['titre', 'heading', 'h1'] },
@@ -5214,6 +5216,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   private flushVisuSections() {
     if (this.mode !== 'visu') return;
+    clearTimeout(this.visuLiveSaveTimeout);
     this.visuSectionEls.forEach((ref) => {
       const el = ref.nativeElement;
       const sectionId = el.getAttribute('data-section-id');
@@ -5869,6 +5872,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
     // Détection du slash menu « / »
     this.detectVisuSlash(sectionId);
+    // Sauvegarde « live » : mettre à jour les fichiers en permanence pendant la frappe
+    this.scheduleVisuLiveSave(sectionId);
+  }
+
+  // Auto-save débounce du mode Edition : convertit la section éditée en Markdown et persiste,
+  // sans réinitialiser le DOM (la section reste « dirty » → curseur préservé, voir initVisuSectionHtml).
+  private scheduleVisuLiveSave(sectionId: string) {
+    clearTimeout(this.visuLiveSaveTimeout);
+    this.visuLiveSaveTimeout = setTimeout(() => {
+      this.commitVisuSection(sectionId);
+      this.saveAll();
+    }, 900);
   }
 
   onVisuSectionKeydown(ev: KeyboardEvent) {
