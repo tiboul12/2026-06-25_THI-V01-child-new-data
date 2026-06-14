@@ -6788,24 +6788,30 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
     // Retrait local de allImages pour éviter affichage "manquante"
     this.allImages = this.allImages.filter(im => im.id !== imgId);
-    // Flusher le DOM de la section dans le markdown AVANT (sinon la figure du DOM
-    // ré-ajoute le marqueur au prochain commit et la suppression est annulée)
-    if (sectionId) { clearTimeout(this.visuLiveSaveTimeout); this.commitVisuSection(sectionId); }
-    // Retirer le marqueur de unifiedContent (sur sa propre ligne OU inline)
-    const lines = this.unifiedContent.split('\n');
-    const imgRe = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'i');
-    for (let i = 0; i < lines.length; i++) {
-      if (imgRe.test(lines[i])) {
-        lines[i] = lines[i].replace(imgRe, '').trim();
+
+    // La section éditée est "dirty" → le DOM fait foi. On retire la figure directement
+    // du DOM, puis on commit (DOM → markdown). Surtout PAS de re-render depuis docSections
+    // (fichiers pas encore à jour → réafficherait le marqueur en "image manquante").
+    clearTimeout(this.visuLiveSaveTimeout);
+    const container = this.visuRef?.nativeElement;
+    const fig = container?.querySelector(`[data-img-id="${imgId}"]`) as HTMLElement | null;
+    const secEl = fig?.closest('.visu-sec-content') as HTMLElement | null;
+    const targetSectionId = secEl?.getAttribute('data-section-id') || sectionId;
+    if (fig) {
+      fig.remove();
+      if (targetSectionId) this.commitVisuSection(targetSectionId);
+    } else {
+      // Section non rendue (filtrée) : retirer le marqueur directement du markdown
+      const lines = this.unifiedContent.split('\n');
+      const imgRe = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'i');
+      for (let i = 0; i < lines.length; i++) {
+        if (imgRe.test(lines[i])) lines[i] = lines[i].replace(imgRe, '').trim();
       }
+      this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
+      const ta = this.textareaRef?.nativeElement;
+      if (ta) ta.value = this.unifiedContent;
+      this.recomputeAll();
     }
-    // Supprimer les lignes devenues vides issues du retrait
-    this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
-    const ta = this.textareaRef?.nativeElement;
-    if (ta) ta.value = this.unifiedContent;
-    // Forcer le re-render pour retirer la figure du DOM de la section (dirty)
-    this.forceVisuReinject = true;
-    this.recomputeAll();
     this.saveAll();
     // saveAll() remet localDirty à false — on le remet à true car la suppression
     // n'est pas encore effective : l'utilisateur doit cliquer "Partager".
