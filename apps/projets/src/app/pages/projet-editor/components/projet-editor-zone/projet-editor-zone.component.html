@@ -1018,10 +1018,19 @@
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S</s></button>
             <div class="visu-format-toolbar__sep"></div>
-            <!-- Titres / blocs -->
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H1')" title="Titre 1">H1</button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H2')" title="Titre 2">H2</button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H3')" title="Titre 3">H3</button>
+            <!-- Titres / blocs (niveaux ≤ section active grisés : on ne peut créer qu'une sous-section) -->
+            <button [disabled]="activeVisuSectionLevel >= 1"
+                    (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H1')"
+                    [title]="activeVisuSectionLevel >= 1 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 1'">H1</button>
+            <button [disabled]="activeVisuSectionLevel >= 2"
+                    (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H2')"
+                    [title]="activeVisuSectionLevel >= 2 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 2'">H2</button>
+            <button [disabled]="activeVisuSectionLevel >= 3"
+                    (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H3')"
+                    [title]="activeVisuSectionLevel >= 3 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 3'">H3</button>
+            <button [disabled]="activeVisuSectionLevel >= 4"
+                    (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H4')"
+                    [title]="activeVisuSectionLevel >= 4 ? 'Niveau indisponible' : 'Titre 4'">H4</button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'P')" title="Paragraphe">¶</button>
             <div class="visu-format-toolbar__sep"></div>
             <!-- Listes -->
@@ -1068,7 +1077,7 @@
           [top]="visuSlash.top"
           [left]="visuSlash.left"
           [query]="visuSlash.query"
-          [commands]="visuSlashCommands"
+          [commands]="visuSlashCommandsFiltered"
           (commandSelect)="onVisuSlashSelect($event)" />
 
         <!-- Menu d'insertion de bloc -->
@@ -1189,6 +1198,9 @@
                  [class.visu-section-wrap--locked]="collab.isLockedByOther(sec.sectionId)"
                  [class.visu-section-wrap--nested]="sec.level > 1"
                  [style.margin-left.px]="(sec.level - 1) * 32">
+
+              <!-- Badge niveau (gouttière gauche, aligné en face du titre) -->
+              <span class="visu-sec-level" [style.left.px]="-((sec.level - 1) * 32) - 44">H{{ sec.level }}</span>
 
               <!-- F6 — Bouton commentaires (apparaît au hover de la section) -->
               <button type="button"

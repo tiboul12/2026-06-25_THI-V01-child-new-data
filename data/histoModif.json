@@ -1,6 +1,30 @@
 {
   "modifications": [
     {
+      "id": "mod-317",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : badge de niveau + restriction de création aux sous-sections",
+      "description": "(1) Badge H1/H2/H3/H4 affiché dans la gouttière gauche en face de chaque titre de section (.visu-sec-level, offset inline pour s'aligner quel que soit le décalage). (2) Restriction : quand une section de niveau N est active, on ne peut créer qu'une section de niveau > N. Les boutons titres de la barre de style (H1-H4, ajout de H4) sont grisés via [disabled]=activeVisuSectionLevel>=n ; le slash menu masque ces niveaux (getter visuSlashCommandsFiltered). Nouveau getter activeVisuSectionLevel = niveau de la section active. Style :disabled (opacity .3) sur la toolbar.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Lorsqu'on sélectionne une section d'un certain niveau, on ne doit pas pouvoir créer une section de niveau identique ou supérieur, la barre des styles doit griser les niveaux indisponibles. Complètement à gauche de la zone 4, en face des titres, indiquer le niveau (H1 H2 H3 ou H4).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-316",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

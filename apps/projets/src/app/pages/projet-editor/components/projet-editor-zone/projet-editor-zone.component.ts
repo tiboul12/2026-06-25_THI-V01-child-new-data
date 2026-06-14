@@ -6345,6 +6345,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
   }
 
+  // Niveau de la section active en mode Edition (0 si aucune). Sert à interdire la création
+  // d'une section de niveau identique ou supérieur (seules les sous-sections sont permises).
+  get activeVisuSectionLevel(): number {
+    const id = this.getActiveVisuSectionId();
+    if (!id) return 0;
+    return this.visuSections.find(v => v.sectionId === id)?.level ?? 0;
+  }
+
+  // Slash menu filtré : retire les niveaux de titre ≤ section active (création de sous-sections seulement)
+  get visuSlashCommandsFiltered(): SlashCommand[] {
+    const lvl = this.activeVisuSectionLevel;
+    if (lvl <= 0) return this.visuSlashCommands;
+    return this.visuSlashCommands.filter(c => {
+      const m = /^heading-(\d)$/.exec(c.id);
+      return !m || Number(m[1]) > lvl;
+    });
+  }
+
   private getActiveVisuSectionId(): string | null {
     const sel = window.getSelection();
     if (sel?.focusNode) {

@@ -13,6 +13,8 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 - **Images** : affichées dans leur contexte de section
 - **Filtre** : `filteredVisuSections` — si un dossier est actif dans la sidebar → seule la section sélectionnée + enfants sont affichés
 - **Décalage par niveau** (vB-0.284) : chaque section est décalée à gauche selon son niveau (`margin-left = (level - 1) * 32px`) ; les sous-sections (`level > 1`, classe `--nested`) ont un liseré gauche → la hiérarchie des niveaux est visible
+- **Badge de niveau** (vB-0.284) : un badge `H1`/`H2`/`H3`/`H4` est affiché dans la gouttière gauche, en face de chaque titre (`.visu-sec-level`, positionné pour s'aligner à gauche quel que soit le décalage)
+- **Création de sous-section uniquement** (vB-0.284) : quand une section de niveau N est active, on ne peut créer qu'une section de niveau > N. Les boutons titres de la barre (H1-H4) sont **grisés** pour les niveaux ≤ N (`[disabled]="activeVisuSectionLevel >= n"`) et le slash menu masque ces niveaux (`visuSlashCommandsFiltered`). `activeVisuSectionLevel` = niveau de la section active.
 
 ---
 

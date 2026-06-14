@@ -853,6 +853,30 @@
     :host-context(.dark) & { border-left-color: rgba(255, 255, 255, 0.14); }
   }
 
+  // Badge de niveau (H1..H4) dans la gouttière gauche, aligné en face du titre
+  .visu-sec-level {
+    position: absolute;
+    top: 0.35em;
+    width: 30px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 1px 0;
+    border-radius: 4px;
+    color: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    user-select: none;
+    pointer-events: none;
+
+    :host-context(.dark) & {
+      color: rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+
   // F6 — Bouton bulle commentaire (visible au hover, sticky si commentaires existent)
   .visu-comment-btn {
     position: absolute;
@@ -1439,7 +1463,8 @@
     cursor: pointer;
     transition: background-color 0.1s;
 
-    &:hover { background: rgba(255, 255, 255, 0.12); }
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+    &:disabled { opacity: 0.3; cursor: not-allowed; }
 
     b { font-weight: 700; }
     i { font-style: italic; }
