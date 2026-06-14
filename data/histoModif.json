@@ -8608,6 +8608,31 @@
       "prompt": "lorsque dans le mode Edition je met un texte en gras, il ce met bien en gras dans ce mode mais si je vais ensuite dans le mode Code le texte n'est pas indiqué en gras (format markdown : **en gras**) verifi aussi les autres style, si le style n'est pas compatible au format markdown, il faut le mettre dans le type html, exemple : <span style=\"color:purple\">",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-309",
+      "version": "B-0.282",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview,projets:editor|zone-structure",
+      "title": "Edition & Structure : afficher le texte formaté, jamais le code (markdown/HTML)",
+      "description": "(1) Mode Edition : les marqueurs Markdown étaient parfois visibles (ex: '**mise **') car les espaces collés aux ** rendaient le Markdown invalide → non rendu. Ajout de wrapInlineMd qui hisse les espaces hors des marqueurs (strong/em/del/u + spans stylés). (2) Mode Structure : le corps texte des blocs s'affichait en code brut (textarea). Remplacé par un contenteditable rendu formaté (.struct-card__content--rich) comme en Edition : structSegHtml (marked) injecté par initStructSegments (ngAfterViewChecked, sans clobber du curseur), saisie reconvertie via onStructSegmentHtmlInput/htmlSectionToMarkdown. Ajout du cas 'div' dans nodeToMd pour préserver les sauts de ligne.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-structure/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le mode Edition ne doit pas faire apparaitre le code de mise en forme (html ni markdown), on voit le ** en gras. Dans le mode Structure pour l'affichage dans les blocs, c'est la même chose que le mode Edition : on ne doit pas voir le code mais le texte formaté",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }

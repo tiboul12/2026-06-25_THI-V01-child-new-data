@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, AfterViewChecked, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -179,7 +179,7 @@ interface MockupDiagDragState {
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
 })
-export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
+export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterViewChecked {
   @Input() files: FileNode[] = [];
   @Input() restoreToken = 0;
   @Input() scrollToNodeId: string | null = null;
@@ -358,6 +358,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
   @ViewChild('overlay') overlayRef?: ElementRef<HTMLDivElement>;
   @ViewChild('visu') visuRef?: ElementRef<HTMLDivElement>;
   @ViewChildren('visuSectionEl') visuSectionEls!: QueryList<ElementRef<HTMLElement>>;
+  @ViewChildren('structSeg') structSegEls!: QueryList<ElementRef<HTMLElement>>;
   @ViewChild('visuImgInput') visuImgInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('slashMenu') slashMenuRef?: SlashCommandMenuComponent;
   @ViewChild('visuSlashMenu') visuSlashMenuRef?: SlashCommandMenuComponent;
@@ -536,6 +537,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       if (type === 'trello') this.openTrelloPopup();
       else this.openArrayPopup();
     });
+  }
+
+  ngAfterViewChecked() {
+    // Rendu formaté des segments texte en mode Structure (sans écraser la frappe)
+    if (this.mode === 'structure') this.initStructSegments();
   }
 
   // ── Lifecycle ──────────────────────────────────────────────
@@ -6121,12 +6127,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       case 'h2': return `\n## ${inner().trim()}\n`;
       case 'h3': return `\n### ${inner().trim()}\n`;
       case 'h4': return `\n#### ${inner().trim()}\n`;
-      case 'p': { const t = inner(); return t.trim() ? `\n${t.trim()}\n` : ''; }
+      case 'p': case 'div': { const t = inner(); return t.trim() ? `\n${t.trim()}\n` : '\n'; }
       case 'br': return '\n';
-      case 'strong': case 'b': return `**${inner()}**`;
-      case 'em': case 'i': return `*${inner()}*`;
-      case 'del': case 's': return `~~${inner()}~~`;
-      case 'u': return `<u>${inner()}</u>`;
+      case 'strong': case 'b': return this.wrapInlineMd('**', inner());
+      case 'em': case 'i': return this.wrapInlineMd('*', inner());
+      case 'del': case 's': return this.wrapInlineMd('~~', inner());
+      case 'u': return this.wrapInlineMd('', inner(), 'u');
       case 'a': {
         const href = el.getAttribute('href') || '';
         return href ? `[${inner()}](${href})` : inner();
@@ -6138,10 +6144,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
         const fw = (st.fontWeight || '').toLowerCase();
         const fsStyle = (st.fontStyle || '').toLowerCase();
         const deco = (st.textDecorationLine || st.textDecoration || '').toLowerCase();
-        if (deco.includes('line-through')) content = `~~${content}~~`;
-        if (deco.includes('underline')) content = `<u>${content}</u>`;
-        if (fsStyle === 'italic') content = `*${content}*`;
-        if (fw === 'bold' || (parseInt(fw, 10) >= 600)) content = `**${content}**`;
+        if (deco.includes('line-through')) content = this.wrapInlineMd('~~', content);
+        if (deco.includes('underline')) content = this.wrapInlineMd('', content, 'u');
+        if (fsStyle === 'italic') content = this.wrapInlineMd('*', content);
+        if (fw === 'bold' || (parseInt(fw, 10) >= 600)) content = this.wrapInlineMd('**', content);
         // Styles non exprimables en Markdown (couleur, surlignage, taille) → span HTML conservé
         const css = this.preservedInlineStyle(el);
         return css ? `<span style="${css}">${content}</span>` : content;
@@ -6170,6 +6176,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
       case 'img': return '';
       default: return inner();
     }
+  }
+
+  // Enrobe un contenu inline avec des marqueurs Markdown (ou une balise HTML), en hissant
+  // les espaces de début/fin HORS des marqueurs (sinon "**mot **" est du Markdown invalide,
+  // affiché tel quel). Ex: wrapInlineMd('**', 'mot ') → '**mot** '.
+  private wrapInlineMd(marker: string, content: string, htmlTag?: string): string {
+    const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(content);
+    if (!m || !m[2]) return content;
+    const [, lead, core, trail] = m;
+    return htmlTag
+      ? `${lead}<${htmlTag}>${core}</${htmlTag}>${trail}`
+      : `${lead}${marker}${core}${marker}${trail}`;
   }
 
   // Extrait les styles inline à préserver (couleur, surlignage, taille) d'un <span>/<font>.
@@ -6910,6 +6928,44 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy {
     const segs = this.getStructBodySegments(node.textContent);
     if (segIdx < segs.length) segs[segIdx].value = ta.value;
     node.textContent = segs.map(s => s.value).join('\n').replace(/^\n+|\n+$/g, '').replace(/\n{3,}/g, '\n\n');
+    this.scheduleStructFlush();
+  }
+
+  // ── Mode Structure : segment texte rendu formaté (WYSIWYG, comme Edition) ──
+  // HTML rendu d'un segment markdown pour l'affichage initial du contenteditable.
+  structSegHtml(value: string): string {
+    try { return (marked.parse(value || '') as string); } catch { return this.escapeHtml(value || ''); }
+  }
+
+  // Injecte le HTML rendu dans les contenteditable Structure (hors édition en cours).
+  private initStructSegments(): void {
+    if (this.mode !== 'structure' || !this.structSegEls) return;
+    this.structSegEls.forEach(ref => {
+      const el = ref.nativeElement;
+      const raw = el.getAttribute('data-seg-raw') ?? '';
+      // Ne pas écraser pendant la frappe (élément focus) ni si déjà à jour
+      if (document.activeElement === el) return;
+      if (el.getAttribute('data-seg-rendered') === raw) return;
+      el.innerHTML = this.structSegHtml(raw);
+      el.setAttribute('data-seg-rendered', raw);
+    });
+  }
+
+  onStructSegmentFocus(node: StructureNode): void {
+    this.applyStructLock(node.folderId ?? '');
+  }
+
+  // Saisie dans un segment texte Structure rendu : reconvertir HTML → markdown.
+  onStructSegmentHtmlInput(node: StructureNode, segIdx: number, event: Event): void {
+    this.applyStructLock(node.folderId ?? '');
+    const el = event.target as HTMLElement;
+    const md = this.htmlSectionToMarkdown(el);
+    const segs = this.getStructBodySegments(node.textContent);
+    if (segIdx < segs.length) segs[segIdx].value = md;
+    node.textContent = segs.map(s => s.value).join('\n').replace(/^\n+|\n+$/g, '').replace(/\n{3,}/g, '\n\n');
+    // Marquer comme rendu courant pour éviter un re-render qui déplacerait le curseur
+    el.setAttribute('data-seg-rendered', md);
+    el.setAttribute('data-seg-raw', md);
     this.scheduleStructFlush();
   }
 

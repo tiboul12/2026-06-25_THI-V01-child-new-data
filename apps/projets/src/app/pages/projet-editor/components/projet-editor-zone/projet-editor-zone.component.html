@@ -932,13 +932,14 @@
                         </span>
                       </div>
                     } @else {
-                      <textarea class="struct-card__content"
-                                [value]="seg.value"
-                                [readonly]="isStructNodeLocked(node)"
-                                [rows]="getStructSegmentRows(seg.value)"
-                                (input)="onStructSegmentInput(node, $index, $event)"
-                                placeholder="Contenu de la section…"
-                                spellcheck="false"></textarea>
+                      <div #structSeg
+                           class="struct-card__content struct-card__content--rich"
+                           [attr.contenteditable]="isStructNodeLocked(node) ? 'false' : 'true'"
+                           [attr.data-seg-raw]="seg.value"
+                           (input)="onStructSegmentHtmlInput(node, $index, $event)"
+                           (focus)="onStructSegmentFocus(node)"
+                           spellcheck="false"
+                           data-placeholder="Contenu de la section…"></div>
                     }
                   }
                 </div>
