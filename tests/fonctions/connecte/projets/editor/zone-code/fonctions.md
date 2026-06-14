@@ -225,3 +225,15 @@ Objectif : garder un `contenu.md` **propre** (Markdown standard uniquement) pour
 | Barre cross-mode | Barre persistante si switch de mode avec pending |
 | Lecture seule FTP | `[readonly]` sur textarea si section en cours de sync |
 | Section verrouillée (autre user) | Lecture seule **totale** : textarea code, inputs Structure, board Trello (`readonly`), board Array, insertions toolbar/slash. Getters `isActiveSectionLockedByOther` / `isTrelloInstanceLocked` / `isArrayInstanceLocked` / `isStructNodeLocked` |
+
+---
+
+## `2-5-2-4-18` — Suppression d'image par effacement de la ligne {{IMG:id}}
+
+- **Déclenchement** : l'utilisateur efface manuellement la ligne `{{IMG:id}}` dans la textarea Code → `onTextareaInput` → `scheduleSave` → `saveAll` → `reconcileImageLifecycle(content)`
+- **Détection** : toute image de `this.files` non référencée par un `{{IMG:id}}` dans le contenu (et hors `recentlyAddedImageIds` / `pendingLocalImages`) est candidate à la suppression
+- **Suppression physique** (cohérente avec `deleteImageUnified`) :
+  - Projet **backup** : différée au Partager via `pendingVisuDeletions` (le contenu publié référence encore l'image — un `deleteFile` immédiat échouerait) + garde `recentlyDeletedImageIds`
+  - Projet **local** : `svc.deleteFile` immédiat
+- **Réconciliation inverse** : une image redevenue référencée (couper/coller, undo, ré-ajout) est retirée de `recentlyDeletedImageIds` / `pendingVisuDeletions` et restaurée dans `allImages`
+- **Garde anti-réapparition** : `recentlyDeletedImageIds` (durable) empêche `buildDocSections` de ré-injecter l'image tant que son nœud subsiste dans `this.files`

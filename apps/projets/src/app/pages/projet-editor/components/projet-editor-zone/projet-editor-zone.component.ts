@@ -513,6 +513,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // pour éviter que patchFileContent → ngOnChanges → recomputeMirrorLines ne supprime
   // un marqueur fraîchement inséré dont l'image est en cours de propagation.
   private recentlyAddedImageIds = new Set<string>();
+  // Garde transitoire : images qu'on vient de supprimer. Empêche buildDocSections de
+  // les ré-injecter ({{IMG:id}} autonome) tant que le fichier n'est pas réellement
+  // effacé (suppression différée au Partager pour les projets backup).
+  private recentlyDeletedImageIds = new Set<string>();
   // Nœuds complets des images uploadées localement — pour conserver name/path dans allImages
   // même quand ngOnChanges réécrit allImages depuis this.files (avant que loadFiles ne propage).
   private pendingLocalImages: FileNode[] = [];
@@ -572,7 +576,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     // les fichiers déjà patchés par le parent, en préservant le mode focus si actif.
     if (changes['restoreToken'] && !changes['restoreToken'].firstChange) {
       this.docSections = this.buildDocSections(this.files, 1);
-      this.allImages = this.collectAllImages(this.files).filter(im => !this.pendingVisuDeletions.has(im.id));
+      this.allImages = this.collectAllImages(this.files).filter(im => !this.pendingVisuDeletions.has(im.id) && !this.recentlyDeletedImageIds.has(im.id));
       const newFullContent = this.reconstructFromSections();
 
       if (this.focusedHandle) {
@@ -622,7 +626,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
       this.docSections = this.buildDocSections(this.files, 1);
       this.allImages = this.collectAllImages(this.files)
-        .filter(im => !this.pendingVisuDeletions.has(im.id));
+        .filter(im => !this.pendingVisuDeletions.has(im.id) && !this.recentlyDeletedImageIds.has(im.id));
       // Conserver les nœuds uploadés localement non encore propagés dans this.files
       for (const local of this.pendingLocalImages) {
         if (!this.allImages.find(im => im.id === local.id)) {
@@ -1115,6 +1119,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         if (isCssTwinName(child.name)) continue;
 
         if (this.isImageFile(child.name)) {
+          // Image en cours de suppression (différée ou en vol) → ne pas la ré-injecter
+          if (this.pendingVisuDeletions.has(child.id) || this.recentlyDeletedImageIds.has(child.id)) continue;
           images.push(child);
           // On insère l'image comme un bloc autonome UNIQUEMENT si elle n'est pas déjà
           // référencée dans un fichier texte de cette section (évite les doublons).
@@ -5388,6 +5394,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     toRestore.forEach(([imgId, { node }]) => {
       this.allImages = [...this.allImages, node];
       this.pendingVisuDeletions.delete(imgId);
+      this.recentlyDeletedImageIds.delete(imgId);
     });
 
     this.dirtyVisuSectionIds.delete(sectionId);
@@ -5511,6 +5518,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     toRestore.forEach(([imgId, { node }]) => {
       this.allImages = [...this.allImages, node];
       this.pendingVisuDeletions.delete(imgId);
+      this.recentlyDeletedImageIds.delete(imgId);
     });
 
     this.unifiedContent = newContent;
@@ -5800,6 +5808,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       imgRestore.forEach(([imgId, { node }]) => {
         this.allImages = [...this.allImages, node];
         this.pendingVisuDeletions.delete(imgId);
+        this.recentlyDeletedImageIds.delete(imgId);
       });
       this.recomputeAll();
       this.saveAll();
@@ -6792,11 +6801,32 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     const re = /\{\{IMG:([a-z0-9-]+)/gi;
     let m: RegExpExecArray | null;
     while ((m = re.exec(content))) referenced.add(m[1]);
+    // Réconciliation inverse : une image redevenue référencée (couper/coller, undo,
+    // ré-ajout) est dé-programmée et restaurée — sinon le garde durable l'exclurait.
+    for (const id of referenced) {
+      this.recentlyDeletedImageIds.delete(id);
+      const pending = this.pendingVisuDeletions.get(id);
+      if (pending) {
+        if (!this.allImages.find(im => im.id === id)) this.allImages = [...this.allImages, pending.node];
+        this.pendingVisuDeletions.delete(id);
+      }
+    }
     for (const img of this.collectAllImages(this.files)) {
       if (referenced.has(img.id)) continue;
       if (this.recentlyAddedImageIds.has(img.id)) continue;
       if (this.pendingLocalImages.some(n => n.id === img.id)) continue;
-      this.svc.deleteFile(this.projectName, img.id).then(() => this.refresh.emit()).catch(() => {});
+      // Déjà programmée / en cours de suppression → ne pas retraiter
+      if (this.recentlyDeletedImageIds.has(img.id) || this.pendingVisuDeletions.has(img.id)) continue;
+      // Cohérence avec deleteImageUnified : sur un projet backup, la suppression physique
+      // est différée au Partager (le contenu publié référence encore l'image) ; sinon immédiate.
+      this.recentlyDeletedImageIds.add(img.id);
+      const sectionId = this.findParentFolder(img.id, this.files)?.id ?? null;
+      const node = this.findNode(img.id, this.files);
+      if (this.backupType && sectionId && node) {
+        this.pendingVisuDeletions.set(img.id, { node, sectionId });
+      } else {
+        this.svc.deleteFile(this.projectName, img.id).then(() => this.refresh.emit()).catch(() => {});
+      }
     }
   }
 
@@ -6806,13 +6836,32 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   private deleteImageUnified(imgId: string) {
     const parentFolder = this.findParentFolder(imgId, this.files);
     const sectionId = parentFolder?.id ?? null;
+    const imgNode = this.findNode(imgId, this.files); // capturé avant filtrage d'allImages
+    // Garde durable posée AVANT tout re-render : empêche buildDocSections de ré-injecter
+    // l'image ({{IMG:id}} autonome) tant que son nœud subsiste dans this.files (stale)
+    // — notamment au changement de mode (Edition relance buildDocSections). Levée
+    // uniquement sur Annuler (restauration). L'id d'une image n'étant jamais réutilisé,
+    // le conserver après suppression définitive est sans risque.
+    this.recentlyDeletedImageIds.add(imgId);
     clearTimeout(this.visuLiveSaveTimeout);
+    // Marqueur image, quel que soit le mode (avec ou sans options |…)
+    const reG = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'gi');
 
     if (this.mode === 'structure') {
-      // Source de vérité en Structure = structureNodes
-      const reG = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'gi');
+      // Source de vérité en Structure = structureNodes (textContent + blocs fichiers)
       for (const n of this.structureNodes) {
-        if (n.textContent) n.textContent = n.textContent.replace(reG, '').replace(/\n{3,}/g, '\n\n').trim();
+        const newText = (n.textContent || '').replace(reG, '').replace(/\n{3,}/g, '\n\n').trim();
+        let blockChanged = false;
+        for (const b of n.additionalBlocks || []) {
+          if (b.content && b.content !== b.content.replace(reG, '')) { blockChanged = true; break; }
+        }
+        if (newText === (n.textContent || '') && !blockChanged) continue;
+        // Marquer la section « en attente » + snapshot AVANT édition (pour Annuler / Partager)
+        this.applyStructLock(n.folderId ?? '');
+        n.textContent = newText;
+        for (const b of n.additionalBlocks || []) {
+          if (b.content) b.content = b.content.replace(reG, '').replace(/\n{3,}/g, '\n\n');
+        }
       }
       this.allImages = this.allImages.filter(im => im.id !== imgId);
       clearTimeout(this.structFlushTimeout);
@@ -6829,12 +6878,18 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         fig.remove();
       }
       for (const sid of affected) this.commitVisuSection(sid);
-      const reG = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'gi');
       if (reG.test(this.unifiedContent)) {
         this.unifiedContent = this.unifiedContent.replace(reG, '').replace(/\n{3,}/g, '\n\n');
         const ta = this.textareaRef?.nativeElement;
         if (ta) ta.value = this.unifiedContent;
         this.recomputeAll();
+      }
+      // Purger l'image du cache visuSections (HTML + markdown baseline) : sinon une
+      // section « en attente » dont le DOM est recréé la ré-injecte → réapparition.
+      const figRe = new RegExp(`<figure[^>]*data-img-id="${imgId}"[\\s\\S]*?</figure>`, 'gi');
+      for (const vs of this.visuSections) {
+        if (vs.contentHtml) vs.contentHtml = vs.contentHtml.replace(figRe, '');
+        if (vs.markdownBefore) vs.markdownBefore = vs.markdownBefore.replace(reG, '').replace(/\n{3,}/g, '\n\n');
       }
       this.allImages = this.allImages.filter(im => im.id !== imgId);
       this.saveAll();
@@ -6855,10 +6910,21 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       setTimeout(() => this.initVisuSectionHtml(), 80);
     }
 
-    // Suppression physique du fichier si l'image n'est plus référencée nulle part
+    // Nettoyer aussi le backup plein (section focus) sinon le marqueur y subsiste
+    // et bloque la suppression physique du fichier.
+    if (this.fullContentBackup) {
+      this.fullContentBackup = this.fullContentBackup.replace(reG, '').replace(/\n{3,}/g, '\n\n');
+    }
+    // Image encore référencée ailleurs → ne rien supprimer physiquement
     const refRe = new RegExp('\\{\\{IMG:' + imgId + '\\b', 'i');
     const stillUsed = refRe.test(this.unifiedContent) || (!!this.fullContentBackup && refRe.test(this.fullContentBackup));
-    if (!stillUsed && this.projectName) {
+    if (stillUsed || !this.projectName) return;
+    // Projet backup : la modif n'est qu'« en attente ». Différer la suppression
+    // physique au Partager (annulable via Annuler) pour ne pas orpheliner le
+    // marqueur encore publié. Sinon, suppression immédiate.
+    if (this.backupType && sectionId && imgNode) {
+      this.pendingVisuDeletions.set(imgId, { node: imgNode, sectionId });
+    } else {
       this.svc.deleteFile(this.projectName, imgId).then(() => this.refresh.emit()).catch(() => {});
     }
   }

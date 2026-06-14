@@ -95,3 +95,16 @@ Vue : arborescence éditable des sections du document
 | Barre Structure visible | Annuler/Partager en haut (projets backup) |
 | Barre cross-mode visible | Pending Code + Structure simultanément |
 | Aucune section | Message "Document vide" |
+
+---
+
+## `2-5-2-6-10` — Suppression d'image unifiée (tag Structure)
+
+- **Déclenchement** : clic × sur le tag image d'une section → `removeImageMarker(seg.imageId)` → `deleteImageUnified(id)`
+- **Nettoyage du marqueur `{{IMG:id}}`** dans toutes les sources de vérité Structure :
+  - `node.textContent` de chaque nœud
+  - `node.additionalBlocks[].content` (blocs fichiers `'…'`, `` `…` ``, `^…^`) — sinon le tag persiste
+  - `fullContentBackup` (backup plein quand une section est en focus) — sinon le fichier n'est jamais supprimé
+- **Reconstruction** : `flushStructureNodes()` → `unifiedContent` + sauvegarde, puis `parseStructureNodes()` rafraîchit les tags
+- **Suppression physique** : si plus aucune référence `{{IMG:id}}` (dans `unifiedContent` ni `fullContentBackup`) → `svc.deleteFile(projectName, imgId)` → l'image disparaît du dossier
+- **Cohérence inter-modes** : le même `deleteImageUnified` est appelé depuis Code, Édition et Structure → comportement identique partout

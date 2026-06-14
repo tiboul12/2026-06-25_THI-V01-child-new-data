@@ -9132,6 +9132,46 @@
       "prompt": "le mode Edition ne doit pas faire apparaitre le code de mise en forme (html ni markdown), on voit le ** en gras. Dans le mode Structure pour l'affichage dans les blocs, c'est la même chose que le mode Edition : on ne doit pas voir le code mais le texte formaté",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-310",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "data"],
+      "features": "projets:editor|zone-structure",
+      "title": "Suppression d'image unifiée : fichier différé + plus de réapparition",
+      "description": "Refonte de deleteImageUnified. (1) Structure : le marqueur {{IMG:id}} est retiré de textContent ET des additionalBlocks (blocs fichiers), avec applyStructLock sur la section concernée pour faire apparaître le Partager. (2) Suppression physique du fichier différée pour les projets backup : enregistrée dans pendingVisuDeletions (exécutée au Partager, annulable) au lieu d'être immédiate — sinon le fichier disparaissait du dossier alors que le marqueur restait publié (image cassée au reload). (3) Edition : purge de l'image du cache visuSections (HTML figure + markdown baseline). (4) Cause racine de la réapparition : buildDocSections ré-injectait automatiquement un {{IMG:id}} autonome pour toute image présente dans this.files mais non référencée — or le fichier n'étant plus effacé immédiatement, l'image revenait. Ajout d'un garde DURABLE recentlyDeletedImageIds (posé avant tout re-render, levé uniquement à l'Annuler) : la réapparition survenait surtout au RETOUR en mode Edition, car ngOnChanges(files)→buildDocSections ré-injecte tout {{IMG:id}} d'une image encore présente dans this.files (stale) mais non référencée. Le garde exclut l'image de buildDocSections ET d'allImages tant que son nœud n'a pas disparu de this.files. Comportement identique en Code, Edition et Structure.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-structure/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "si je veux supprimé une image à partir du mode Structure [Image #25] Cela supprime le nom mais pas le tag, cela supprime bien le code dans le mode Code et l'image dans le mode Edition, mais l'image dans le dossier n'est pas supprimé, il faut utilisé la même fonction et uniformisé la suppression d'image dans tous les modes",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-311",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "data"],
+      "features": "projets:editor|zone-code",
+      "title": "Code : suppression manuelle de la ligne image efface le fichier",
+      "description": "Supprimer une image en effaçant sa ligne {{IMG:id}} en mode Code ne passe pas par deleteImageUnified mais par reconcileImageLifecycle (appelé dans saveAll). Celui-ci faisait un svc.deleteFile immédiat qui échouait silencieusement sur les projets backup (le contenu publié référence encore l'image) → fichier orphelin jamais supprimé. reconcileImageLifecycle est désormais cohérent avec deleteImageUnified : sur projet backup, la suppression est différée au Partager via pendingVisuDeletions ; sinon immédiate. Ajout d'une réconciliation inverse : une image redevenue référencée (couper/coller, undo, ré-ajout) est dé-programmée et restaurée pour éviter une exclusion par le garde durable recentlyDeletedImageIds.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque j'efface l'image dans le mode Code en supprimant la ligne, je n'ai plus l'image dans tous les modes mais le fichier image n'est pas supprimé du dossier",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
     }
   ]
 }
