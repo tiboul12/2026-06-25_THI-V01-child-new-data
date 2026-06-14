@@ -1,6 +1,363 @@
 {
   "modifications": [
     {
+      "id": "mod-331",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-structure,projets:editor|zone-preview",
+      "title": "Suppression d'image unifiée dans tous les modes (Structure incluse)",
+      "description": "En Structure, supprimer une image (tag ×) retirait le nom mais pas le tag et n'effaçait pas le fichier. Unification : deleteImageUnified(imgId) gère Code/Edition/Structure — en Structure il retire le marqueur des structureNodes, flushe et re-parse les tags ; en Edition retire les figures du DOM ; markdown dans tous les cas ; puis supprime le fichier physique si plus référencé. removeImageMarker (tag × Structure) et les deletes Edition (icône/figure, panneau F5) délèguent tous à deleteImageUnified.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "si je supprime une image depuis le mode Structure, cela supprime le nom mais pas le tag, supprime le code en Code et l'image en Edition, mais le fichier n'est pas supprimé. Utiliser la même fonction et uniformiser la suppression d'image dans tous les modes.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-330",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : image insérée affichée immédiatement (sans changer de mode)",
+      "description": "À l'upload, le marqueur était inséré dans unifiedContent mais buildVisuSections re-render depuis docSections (fichiers sans le marqueur) → image invisible jusqu'au reload (changement de mode). Correctif : la figure image est insérée directement dans le DOM de la section (renderImageMarkerHtml) puis commit (DOM → markdown), comme pour la suppression. Plus de forceVisuReinject (qui re-render depuis les fichiers stale). Fallback markdown si la section n'est pas rendue.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque j'insère une image dans le mode Edition, je suis obligé de changer de mode et revenir pour voir l'image.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-329",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview,projets:editor|zone-code",
+      "title": "Suppression d'image : effacement du fichier quand plus référencé (Code/Edition)",
+      "description": "Supprimer une image efface désormais le fichier physique quand elle n'est plus référencée. Edition : deleteVisuImage retire toutes les figures du DOM + marqueurs (corrige le « image manquante » persistant) puis supprime le fichier (svc.deleteFile) si aucun {{IMG:id}} ne subsiste dans unifiedContent/fullContentBackup. Code : ajout de reconcileImageLifecycle (appelé dans saveAll, comme les cycles de vie Trello/Array) qui supprime les fichiers image non référencés par le contenu, avec garde-fous (recentlyAddedImageIds, pendingLocalImages). Plus de mise en attente (pendingVisuDeletions) pour la suppression.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on supprime une image (mode Code ou Edition) si l'image n'existe qu'une seule fois dans la section, celle-ci doit être effacée du dossier.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-328",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-code",
+      "title": "Mode Code : images en Markdown standard ![alt](fichier) au lieu de {{IMG:id}}",
+      "description": "Dans le fichier propre (contenu.md, vu par l'IA), les marqueurs {{IMG:id}} sont convertis en image Markdown standard ![alt](nom-fichier) (chemin = nom du fichier image dans le dossier de la section, alt = légende ou nom sans extension). stripStyleMarkdown accepte un ImgMarkerResolver optionnel ; cleanImgResolver implémenté côté zone (allImages) et parent (arbre de fichiers), appliqué au codeCleanView, à l'écriture de contenu.md (zone writeSectionStyled + parent processSectionsChange) et à la comparaison IA→app (buildDocSections). Le jumeau -css.md conserve {{IMG:id}} ; round-trip via mergeCleanIntoStyled.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/content-style.util.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode Code quand une image est ajoutée le code type markdown doit être de type : ![image](assets/mon-image.jpg).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-327",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : suppression d'image — fin du « image manquante »",
+      "description": "La suppression affichait « [image manquante: id] » : l'image était retirée de allImages mais le marqueur restait, car forceVisuReinject re-render depuis docSections (fichiers pas encore à jour, marqueur toujours présent). Correctif : pour une section dirty, le DOM fait foi → on retire la figure (querySelector [data-img-id]) directement du DOM puis on commit (DOM → markdown, marqueur supprimé), sans re-render depuis les fichiers. Fallback markdown si la section n'est pas rendue (filtrée). La suppression physique du fichier reste différée au Partager (pendingVisuDeletions).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la fonction pour supprimer les images ne fonctionne toujours pas, pas d'erreur console, mais à la suppression j'ai « [image manquante: id] » au-dessus de l'image. L'image est bien présente dans le répertoire de la section.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-326",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : suppression d'image fonctionnelle",
+      "description": "Supprimer une image (bouton du panneau ou icône) ne fonctionnait pas : la section dirty n'était pas rafraîchie (la figure restait dans le DOM) et un commit ultérieur ré-ajoutait le marqueur depuis le DOM. deleteVisuImage flushe d'abord le DOM (commitVisuSection), retire le marqueur {{IMG:id}} (ligne propre ou inline) puis force le re-render (forceVisuReinject) → la figure disparaît et la suppression persiste.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le bouton supprimer une image (icône ou menu) ne fonctionne pas.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-325",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : panneau propriétés d'image affiché au point de clic",
+      "description": "Le panneau de propriétés d'image (F5) s'ouvrait sous l'image (rect.bottom), peu ergonomique pour les grandes images. openImagePropsPanel reçoit désormais l'événement de clic et positionne le panneau aux coordonnées du clic (relatif au conteneur scrollable). Fallback rect.bottom si pas d'événement.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "pour la modification d'image, le popup s'affiche sous l'image (peu ergonomique), il faut l'afficher là où on clique sur l'image.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-324",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : l'image insérée s'affiche immédiatement",
+      "description": "Après upload via la barre de style, le marqueur {{IMG:id}} était inséré dans unifiedContent mais la section (dirty) n'était pas rafraîchie → image invisible jusqu'au changement de mode. Ajout de commitVisuSection (flush de la saisie en cours) puis forceVisuReinject avant recomputeAll → la section se re-render avec l'image.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je fais insérer une image, je sélectionne une image mais celle-ci ne s'affiche pas dans le mode Edition.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-323",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : image via la barre de style, suppression des boutons d'insertion bas",
+      "description": "Suppression de la ligne d'insertion en bas de chaque section (boutons « Ajouter un bloc » et « Insérer une image »). Ajout d'une icône image dans la barre de style : insertVisuImageActive() déclenche triggerVisuImageUpload sur la section active → sélection + upload de l'image dans le dossier de la section. L'insertion de blocs reste possible via le slash menu /.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode Edition supprime les boutons ajouter un bloc et insérer une image. Rajoute dans la barre des styles un icône pour rajouter une image, cela doit permettre de sélectionner une image et la télécharger dans le dossier de la section.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-322",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : modification d'un lien via popup stylisé",
+      "description": "La modification d'URL d'un lien utilisait window.prompt. Remplacé par un popup modal stylisé cohérent avec les autres popups projet (showLinkEditPopup / linkEditUrl, input URL, boutons Valider/Annuler). visuLinkEdit ouvre le popup (conserve visuLinkEl), confirmLinkEdit applique le href + persiste, cancelLinkEdit ferme.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la modification d'un lien doit se faire dans un popup stylisé comme les autres modifications de projet.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-321",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : menu d'actions sur un lien (suivre / modifier / supprimer)",
+      "description": "Remplace l'ouverture directe au clic d'un lien par un menu d'actions. onVisuContainerClick ouvre visuLinkMenu (position du lien). Actions : visuLinkFollow (window.open _blank), visuLinkEdit (prompt URL → met à jour href), visuLinkRemove (déballe le <a> en conservant le texte). persistVisuLinkChange retrouve la section (.visu-sec-content data-section-id) et commit + saveAll. Menu fermé au clic extérieur. Styles .visu-link-menu.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "il faut pouvoir modifier le lien, change le système : au clic sur un lien on doit avoir un menu : suivre le lien, supprimer le lien, modifier le lien.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-320",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : clic sur un lien ouvre dans une nouvelle fenêtre",
+      "description": "En mode Edition, cliquer sur un lien place le curseur (contenteditable) au lieu d'ouvrir le lien. onVisuContainerClick détecte un a[href] cliqué, fait preventDefault/stopPropagation et ouvre l'URL via window.open(href, '_blank', 'noopener,noreferrer'). Style des liens en bleu souligné + curseur pointeur.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le mode Edition si je met un lien sur un texte, je dois pouvoir cliquer dessus pour ouvrir le lien dans une autre fenêtre.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-319",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : retirer le titre déplacé de la section parente à la création d'une sous-section",
+      "description": "Quand on créait un titre (H1-H4) dans une section, la nouvelle section était bien créée mais le titre restait aussi en doublon dans la section parente (le DOM contenteditable, dirty, n'était pas rafraîchi). Ajout d'un drapeau forceVisuReinject : applyVisuFormat (formatBlock H1-H4) sauvegarde immédiatement (commit + saveAll) et arme forceVisuReinject ; initVisuSectionHtml réinjecte alors toutes les sections (y compris dirty) une fois → la section parente se rafraîchit sans le titre déplacé. Même drapeau armé dans insertVisuMarkdownBlock (slash menu).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on rajoute une sous section (ex: titre H4) cela crée bien la nouvelle section, mais cela n'efface pas le texte dans la section où le titre a été créé.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-318",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : zone de texte continue (plus de découpage par section)",
+      "description": "Le mode Edition n'affiche plus chaque section comme une carte/zone séparée mais une zone de texte continue ; seuls les méga-outils incrustés créent une rupture. Aplatissement visuel : .visu-sec-content sans bordure/encadré (hover/focus), --active transparent, suppression du décalage par niveau (margin-left) et du liseré --nested, marges de section réduites. Le badge de niveau H1-H4 reste dans la gouttière gauche (left -3.2rem). Le filtrage menu (section + enfants) et la création de sections via titres H (pipeline de parsing) restent inchangés.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la zone edition ne me convient pas, il ne faut pas que chaque section soit découpée en zone mais une seule zone de texte avec découpe uniquement quand un MO est incrusté. Le clic menu affiche toujours la section sélectionnée (+ enfants). Garder les infos de niveau H à gauche, retirer les décalages de niveau. Ajouter un titre via le format H crée les sections (menu/fichiers/autres modes) mais laisse une seule zone affichée en Edition.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-317",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : badge de niveau + restriction de création aux sous-sections",
+      "description": "(1) Badge H1/H2/H3/H4 affiché dans la gouttière gauche en face de chaque titre de section (.visu-sec-level, offset inline pour s'aligner quel que soit le décalage). (2) Restriction : quand une section de niveau N est active, on ne peut créer qu'une section de niveau > N. Les boutons titres de la barre de style (H1-H4, ajout de H4) sont grisés via [disabled]=activeVisuSectionLevel>=n ; le slash menu masque ces niveaux (getter visuSlashCommandsFiltered). Nouveau getter activeVisuSectionLevel = niveau de la section active. Style :disabled (opacity .3) sur la toolbar.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Lorsqu'on sélectionne une section d'un certain niveau, on ne doit pas pouvoir créer une section de niveau identique ou supérieur, la barre des styles doit griser les niveaux indisponibles. Complètement à gauche de la zone 4, en face des titres, indiquer le niveau (H1 H2 H3 ou H4).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-316",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|zone-preview",
+      "title": "Mode Edition : décalage visuel des sections selon leur niveau",
+      "description": "En mode Edition (zone 4), les niveaux de sections n'étaient pas distinguables visuellement. Ajout d'un décalage à gauche proportionnel au niveau (margin-left = (level - 1) * 32px) sur .visu-section-wrap, et d'un liseré gauche pour les sous-sections (classe --nested, level > 1). La hiérarchie des sections est désormais clairement visible.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le mode Edition zone 4 on peut afficher les titres des sections et les contenus, mais on ne voit pas la différence entre les niveaux des sections, il faudrait rajouter des décalages plus importants pour bien voir la différence entre les niveaux.",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-315",
       "version": "B-0.283",
       "date": "2026-06-14T00:00:00.000Z",
@@ -8773,6 +9130,46 @@
       "ai": "Claude Code",
       "model": "claude-opus-4-8",
       "prompt": "le mode Edition ne doit pas faire apparaitre le code de mise en forme (html ni markdown), on voit le ** en gras. Dans le mode Structure pour l'affichage dans les blocs, c'est la même chose que le mode Edition : on ne doit pas voir le code mais le texte formaté",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-310",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "data"],
+      "features": "projets:editor|zone-structure",
+      "title": "Suppression d'image unifiée : fichier différé + plus de réapparition",
+      "description": "Refonte de deleteImageUnified. (1) Structure : le marqueur {{IMG:id}} est retiré de textContent ET des additionalBlocks (blocs fichiers), avec applyStructLock sur la section concernée pour faire apparaître le Partager. (2) Suppression physique du fichier différée pour les projets backup : enregistrée dans pendingVisuDeletions (exécutée au Partager, annulable) au lieu d'être immédiate — sinon le fichier disparaissait du dossier alors que le marqueur restait publié (image cassée au reload). (3) Edition : purge de l'image du cache visuSections (HTML figure + markdown baseline). (4) Cause racine de la réapparition : buildDocSections ré-injectait automatiquement un {{IMG:id}} autonome pour toute image présente dans this.files mais non référencée — or le fichier n'étant plus effacé immédiatement, l'image revenait. Ajout d'un garde DURABLE recentlyDeletedImageIds (posé avant tout re-render, levé uniquement à l'Annuler) : la réapparition survenait surtout au RETOUR en mode Edition, car ngOnChanges(files)→buildDocSections ré-injecte tout {{IMG:id}} d'une image encore présente dans this.files (stale) mais non référencée. Le garde exclut l'image de buildDocSections ET d'allImages tant que son nœud n'a pas disparu de this.files. Comportement identique en Code, Edition et Structure.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-structure/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "si je veux supprimé une image à partir du mode Structure [Image #25] Cela supprime le nom mais pas le tag, cela supprime bien le code dans le mode Code et l'image dans le mode Edition, mais l'image dans le dossier n'est pas supprimé, il faut utilisé la même fonction et uniformisé la suppression d'image dans tous les modes",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-311",
+      "version": "B-0.284",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets", "data"],
+      "features": "projets:editor|zone-code",
+      "title": "Code : suppression manuelle de la ligne image efface le fichier",
+      "description": "Supprimer une image en effaçant sa ligne {{IMG:id}} en mode Code ne passe pas par deleteImageUnified mais par reconcileImageLifecycle (appelé dans saveAll). Celui-ci faisait un svc.deleteFile immédiat qui échouait silencieusement sur les projets backup (le contenu publié référence encore l'image) → fichier orphelin jamais supprimé. reconcileImageLifecycle est désormais cohérent avec deleteImageUnified : sur projet backup, la suppression est différée au Partager via pendingVisuDeletions ; sinon immédiate. Ajout d'une réconciliation inverse : une image redevenue référencée (couper/coller, undo, ré-ajout) est dé-programmée et restaurée pour éviter une exclusion par le garde durable recentlyDeletedImageIds.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque j'efface l'image dans le mode Code en supprimant la ligne, je n'ai plus l'image dans tous les modes mais le fichier image n'est pas supprimé du dossier",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
     }

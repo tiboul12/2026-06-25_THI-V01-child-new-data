@@ -55,9 +55,22 @@ function stripInlineHtml(s: string): string {
  * non-markdown, en conservant le Markdown standard, les fences ```TRELLO/ARRAY``` et
  * les marqueurs {{IMG}} / {{MOCKUP}}.
  */
-export function stripStyleMarkdown(md: string): string {
+/** Résout un id d'image en {alt, path} pour produire un Markdown image standard. */
+export type ImgMarkerResolver = (id: string) => { alt: string; path: string } | null;
+
+export function stripStyleMarkdown(md: string, imgResolver?: ImgMarkerResolver): string {
   if (!md) return md;
   let out = md;
+  // Marqueurs image {{IMG:id|caption|align|width}} → Markdown standard ![alt](chemin)
+  if (imgResolver) {
+    out = out.replace(/\{\{IMG:([a-z0-9-]+)(?:\|([^}]*))?\}\}/gi, (m, id, params) => {
+      const r = imgResolver(id);
+      if (!r) return m;
+      const caption = ((params || '').split('|')[0] || '').trim();
+      const alt = caption || r.alt;
+      return `![${alt}](${r.path})`;
+    });
+  }
   // Blocs alignés : <h1..4 …>inner</h1..4> → "#.. inner"
   out = out.replace(/<h([1-4])\b[^>]*>([\s\S]*?)<\/h\1>/gi,
     (_m, lvl, inner) => '\n' + '#'.repeat(Number(lvl)) + ' ' + stripInlineHtml(inner).trim() + '\n');

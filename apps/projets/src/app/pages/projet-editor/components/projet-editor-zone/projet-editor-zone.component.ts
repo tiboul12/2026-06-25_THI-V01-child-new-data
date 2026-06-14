@@ -448,7 +448,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   };
   // Mode Code : afficher le style (jumeau -css.md) ou le Markdown propre (défaut). Voir système double fichier.
   showCssInCode = signal(false);
-  get codeCleanView(): string { return stripStyleMarkdown(this.unifiedContent); }
+  get codeCleanView(): string { return stripStyleMarkdown(this.unifiedContent, this.cleanImgResolver); }
+  // Résout {{IMG:id}} → ![alt](nom-fichier) pour le Markdown propre (image dans le dossier de la section)
+  private cleanImgResolver = (id: string): { alt: string; path: string } | null => {
+    const n = this.allImages.find(im => im.id === id);
+    if (!n) return null;
+    return { alt: n.name.replace(/\.[^.]+$/, ''), path: n.name };
+  };
 
   // Slash command menu (mode Edition / visu) — insertion par section
   visuSlash: { visible: boolean; top: number; left: number; query: string; sectionId: string } = {
@@ -458,6 +464,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   private visuSlashAnchor: { node: Node; offset: number } | null = null;
   // Auto-save « live » du mode Edition (débounce pendant la frappe)
   private visuLiveSaveTimeout: any = null;
+  // Menu d'actions sur un lien cliqué (suivre / modifier / supprimer) en mode Edition
+  visuLinkMenu: { x: number; y: number; href: string } | null = null;
+  private visuLinkEl: HTMLAnchorElement | null = null;
+  // Popup stylisé de modification d'URL du lien
+  showLinkEditPopup = signal(false);
+  linkEditUrl = '';
+  // Force le re-render complet des sections visu au prochain initVisuSectionHtml
+  // (utilisé après création d'un titre qui scinde la section → retirer le titre déplacé)
+  private forceVisuReinject = false;
   // Liste enrichie de commandes pour le menu slash en mode Edition (titres, listes, blocs, MO)
   readonly visuSlashCommands: SlashCommand[] = [
     { id: 'heading-1',       label: 'Titre 1',          description: 'Grand titre de section',      icon: 'title',                keywords: ['titre', 'heading', 'h1'] },
@@ -498,6 +513,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // pour éviter que patchFileContent → ngOnChanges → recomputeMirrorLines ne supprime
   // un marqueur fraîchement inséré dont l'image est en cours de propagation.
   private recentlyAddedImageIds = new Set<string>();
+  // Garde transitoire : images qu'on vient de supprimer. Empêche buildDocSections de
+  // les ré-injecter ({{IMG:id}} autonome) tant que le fichier n'est pas réellement
+  // effacé (suppression différée au Partager pour les projets backup).
+  private recentlyDeletedImageIds = new Set<string>();
   // Nœuds complets des images uploadées localement — pour conserver name/path dans allImages
   // même quand ngOnChanges réécrit allImages depuis this.files (avant que loadFiles ne propage).
   private pendingLocalImages: FileNode[] = [];
@@ -557,7 +576,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     // les fichiers déjà patchés par le parent, en préservant le mode focus si actif.
     if (changes['restoreToken'] && !changes['restoreToken'].firstChange) {
       this.docSections = this.buildDocSections(this.files, 1);
-      this.allImages = this.collectAllImages(this.files).filter(im => !this.pendingVisuDeletions.has(im.id));
+      this.allImages = this.collectAllImages(this.files).filter(im => !this.pendingVisuDeletions.has(im.id) && !this.recentlyDeletedImageIds.has(im.id));
       const newFullContent = this.reconstructFromSections();
 
       if (this.focusedHandle) {
@@ -607,7 +626,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
       this.docSections = this.buildDocSections(this.files, 1);
       this.allImages = this.collectAllImages(this.files)
-        .filter(im => !this.pendingVisuDeletions.has(im.id));
+        .filter(im => !this.pendingVisuDeletions.has(im.id) && !this.recentlyDeletedImageIds.has(im.id));
       // Conserver les nœuds uploadés localement non encore propagés dans this.files
       for (const local of this.pendingLocalImages) {
         if (!this.allImages.find(im => im.id === local.id)) {
@@ -1068,7 +1087,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       let mainStyledContent: string | undefined;
       if (cssTwin && mainFile) {
         const twinStyled = normalizeStyledMarkdown(cssTwin.content ?? '');
-        const cleanFromTwin = stripStyleMarkdown(twinStyled);
+        const cleanFromTwin = stripStyleMarkdown(twinStyled, this.cleanImgResolver);
         const cleanActual = mainFile.content ?? '';
         // Si contenu.md (propre) a été édité hors app (IA) → réconcilier dans le master stylé.
         mainStyledContent = cleanActual.trim() === cleanFromTwin.trim()
@@ -1100,6 +1119,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         if (isCssTwinName(child.name)) continue;
 
         if (this.isImageFile(child.name)) {
+          // Image en cours de suppression (différée ou en vol) → ne pas la ré-injecter
+          if (this.pendingVisuDeletions.has(child.id) || this.recentlyDeletedImageIds.has(child.id)) continue;
           images.push(child);
           // On insère l'image comme un bloc autonome UNIQUEMENT si elle n'est pas déjà
           // référencée dans un fichier texte de cette section (évite les doublons).
@@ -3456,6 +3477,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.reconcileArrayLifecycle(contentToParse);
     this.ensureArrayInstancesFromContent(this.unifiedContent);
 
+    // Cycle de vie des images : un fichier image plus référencé nulle part (marqueur retiré
+    // en mode Code ou Edition) est supprimé du dossier de la section.
+    this.reconcileImageLifecycle(contentToParse);
+
     // parseContent() opère sur this.unifiedContent — on substitue temporairement
     const saved = this.unifiedContent;
     this.unifiedContent = contentToParse;
@@ -5196,13 +5221,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   initVisuSectionHtml() {
     // Lookup par data-section-id pour gérer correctement les sections filtrées
     const sections = this.filteredVisuSections;
+    // force = re-render complet (ex: après création d'un titre qui scinde la section)
+    const force = this.forceVisuReinject;
     this.visuSectionEls.forEach((ref) => {
       const el = ref.nativeElement;
       const sectionId = el.getAttribute('data-section-id');
       if (!sectionId) return;
       const sec = sections.find(s => s.sectionId === sectionId);
       if (!sec) return;
-      if (this.dirtyVisuSectionIds.has(sec.sectionId)) {
+      if (!force && this.dirtyVisuSectionIds.has(sec.sectionId)) {
         // Section avec modifs en attente : réinjecter uniquement si vide (nouvelle instance DOM)
         // pour ne pas écraser le contenu en cours de frappe
         if (!el.innerHTML.trim()) {
@@ -5212,6 +5239,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         el.innerHTML = this.stripTrelloMarkers(sec.contentHtml);
       }
     });
+    this.forceVisuReinject = false;
   }
 
   private flushVisuSections() {
@@ -5366,6 +5394,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     toRestore.forEach(([imgId, { node }]) => {
       this.allImages = [...this.allImages, node];
       this.pendingVisuDeletions.delete(imgId);
+      this.recentlyDeletedImageIds.delete(imgId);
     });
 
     this.dirtyVisuSectionIds.delete(sectionId);
@@ -5489,6 +5518,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     toRestore.forEach(([imgId, { node }]) => {
       this.allImages = [...this.allImages, node];
       this.pendingVisuDeletions.delete(imgId);
+      this.recentlyDeletedImageIds.delete(imgId);
     });
 
     this.unifiedContent = newContent;
@@ -5778,6 +5808,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       imgRestore.forEach(([imgId, { node }]) => {
         this.allImages = [...this.allImages, node];
         this.pendingVisuDeletions.delete(imgId);
+        this.recentlyDeletedImageIds.delete(imgId);
       });
       this.recomputeAll();
       this.saveAll();
@@ -5815,7 +5846,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // styled → jumeau *-css.md (créé si absent). Conserve l'invariant contenu.md propre.
   private async writeSectionStyled(fileId: string, folderId: string | null | undefined, styledRaw: string, publish: boolean): Promise<void> {
     const styled = normalizeStyledMarkdown(styledRaw);
-    const clean = stripStyleMarkdown(styled);
+    const clean = stripStyleMarkdown(styled, this.cleanImgResolver);
     await this.svc.updateFile(this.projectName, fileId, clean, folderId ?? undefined, publish);
     const folder = folderId ? this.findNode(folderId, this.files) : null;
     const children = folder?.children || [];
@@ -6010,6 +6041,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (this.backupType) this.onVisuSectionInput(sectionId);
     this.recomputeAll();
     this.scheduleSave();
+    // Forcer le re-render (le bloc a été inséré dans le markdown, pas dans le DOM)
+    this.forceVisuReinject = true;
     setTimeout(() => this.initVisuSectionHtml(), 50);
   }
 
@@ -6310,6 +6343,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (command !== 'foreColor' && command !== 'hiliteColor' && command !== 'fontSize') {
       this.visuToolbar = null;
     }
+    // Création d'un titre (H1-H4) : la section est scindée au save → forcer la sauvegarde
+    // immédiate et le re-render pour retirer le titre déplacé de la section parente.
+    if (command === 'formatBlock' && /^H[1-4]$/i.test(value || '')) {
+      const id = this.getActiveVisuSectionId();
+      clearTimeout(this.visuLiveSaveTimeout);
+      this.forceVisuReinject = true;
+      if (id) this.commitVisuSection(id);
+      this.saveAll();
+    }
   }
 
   // Insère une liste de cases à cocher (markdown - [ ]) au point d'insertion
@@ -6328,6 +6370,67 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.visuToolbar = null;
   }
 
+  // ── Menu d'actions sur un lien (mode Edition) ──────────────
+  closeVisuLinkMenu() {
+    this.visuLinkMenu = null;
+    this.visuLinkEl = null;
+  }
+
+  // Suivre le lien dans une nouvelle fenêtre
+  visuLinkFollow() {
+    const href = this.visuLinkMenu?.href;
+    if (href) window.open(href, '_blank', 'noopener,noreferrer');
+    this.closeVisuLinkMenu();
+  }
+
+  // Modifier l'URL du lien via un popup stylisé (garde visuLinkEl pour la validation)
+  visuLinkEdit() {
+    const el = this.visuLinkEl;
+    if (!el) { this.closeVisuLinkMenu(); return; }
+    this.linkEditUrl = el.getAttribute('href') || 'https://';
+    this.visuLinkMenu = null; // masque le menu, conserve visuLinkEl
+    this.showLinkEditPopup.set(true);
+  }
+
+  confirmLinkEdit() {
+    const el = this.visuLinkEl;
+    const url = (this.linkEditUrl || '').trim();
+    if (el && url) {
+      el.setAttribute('href', url);
+      this.persistVisuLinkChange(el);
+    }
+    this.showLinkEditPopup.set(false);
+    this.visuLinkEl = null;
+  }
+
+  cancelLinkEdit() {
+    this.showLinkEditPopup.set(false);
+    this.visuLinkEl = null;
+  }
+
+  // Supprimer le lien (conserver le texte)
+  visuLinkRemove() {
+    const el = this.visuLinkEl;
+    if (!el) { this.closeVisuLinkMenu(); return; }
+    const parent = el.parentNode;
+    if (parent) {
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+      this.persistVisuLinkChange(parent as HTMLElement);
+    }
+    this.closeVisuLinkMenu();
+  }
+
+  // Persiste la modification d'un lien : commit + save de la section contenant le lien
+  private persistVisuLinkChange(node: HTMLElement) {
+    const content = node.closest('.visu-sec-content') as HTMLElement | null;
+    const sectionId = content?.getAttribute('data-section-id');
+    if (!sectionId) return;
+    if (this.backupType) this.onVisuSectionInput(sectionId);
+    this.commitVisuSection(sectionId);
+    this.saveAll();
+  }
+
   // Crée un lien sur la sélection
   insertVisuLink() {
     const url = window.prompt('URL du lien :', 'https://');
@@ -6343,6 +6446,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       this.dirtyVisuSectionIds.add(activeId);
       if (this.backupType) this.onVisuSectionInput(activeId);
     }
+  }
+
+  // Niveau de la section active en mode Edition (0 si aucune). Sert à interdire la création
+  // d'une section de niveau identique ou supérieur (seules les sous-sections sont permises).
+  get activeVisuSectionLevel(): number {
+    const id = this.getActiveVisuSectionId();
+    if (!id) return 0;
+    return this.visuSections.find(v => v.sectionId === id)?.level ?? 0;
+  }
+
+  // Slash menu filtré : retire les niveaux de titre ≤ section active (création de sous-sections seulement)
+  get visuSlashCommandsFiltered(): SlashCommand[] {
+    const lvl = this.activeVisuSectionLevel;
+    if (lvl <= 0) return this.visuSlashCommands;
+    return this.visuSlashCommands.filter(c => {
+      const m = /^heading-(\d)$/.exec(c.id);
+      return !m || Number(m[1]) > lvl;
+    });
   }
 
   private getActiveVisuSectionId(): string | null {
@@ -6415,6 +6536,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   onVisuContainerClick(ev: MouseEvent) {
     const target = ev.target as HTMLElement;
+    // Lien cliqué : ouvrir le menu d'actions (suivre / modifier / supprimer)
+    const link = target.closest('a[href]') as HTMLAnchorElement | null;
+    if (link) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const rect = link.getBoundingClientRect();
+      this.visuLinkEl = link;
+      this.visuLinkMenu = { x: rect.left, y: rect.bottom + 4, href: link.getAttribute('href') || '' };
+      return;
+    }
+    // Fermer le menu de lien si clic en dehors
+    if (this.visuLinkMenu && !target.closest('.visu-link-menu')) {
+      this.closeVisuLinkMenu();
+    }
     // Fermer le menu d'insertion si clic en dehors
     if (this.visuInsertMenu && !target.closest('.visu-insert-menu') && !target.closest('.visu-insert-btn')) {
       this.visuInsertMenu = null;
@@ -6436,14 +6571,14 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     const delBtn = target.closest('.visu-img-del') as HTMLElement | null;
     if (delBtn) {
       const imgId = delBtn.getAttribute('data-img-id');
-      if (imgId) this.deleteVisuImage(imgId);
+      if (imgId) this.deleteImageUnified(imgId);
       return;
     }
     // F5 — clic sur une figure image : ouvrir le panneau de propriétés
     const fig = target.closest('.visu-figure') as HTMLElement | null;
     if (fig && fig.hasAttribute('data-img-id')) {
       ev.stopPropagation();
-      this.openImagePropsPanel(fig);
+      this.openImagePropsPanel(fig, ev);
       return;
     }
     // Bouton "Modifier le mockup" (lien vers l'édition du mockup)
@@ -6466,17 +6601,24 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
   }
 
-  // F5 — Panneau de propriétés d'image
-  openImagePropsPanel(figEl: HTMLElement) {
+  // F5 — Panneau de propriétés d'image (positionné à l'endroit du clic)
+  openImagePropsPanel(figEl: HTMLElement, ev?: MouseEvent) {
     const id = figEl.getAttribute('data-img-id') || '';
     const caption = figEl.getAttribute('data-img-caption') || '';
     const alignment = (figEl.getAttribute('data-img-align') || '') as '' | 'left' | 'center' | 'right';
     const width = figEl.getAttribute('data-img-width') || '';
-    const rect = figEl.getBoundingClientRect();
     const container = this.visuRef?.nativeElement;
     const containerRect = container?.getBoundingClientRect();
-    const top = (containerRect ? rect.bottom - containerRect.top : rect.bottom) + (container?.scrollTop || 0) + 8;
-    const left = (containerRect ? rect.left - containerRect.left : rect.left) + 12;
+    let top: number, left: number;
+    if (ev) {
+      // À l'endroit du clic (relatif au conteneur scrollable)
+      top = (containerRect ? ev.clientY - containerRect.top : ev.clientY) + (container?.scrollTop || 0) + 6;
+      left = (containerRect ? ev.clientX - containerRect.left : ev.clientX) + 6;
+    } else {
+      const rect = figEl.getBoundingClientRect();
+      top = (containerRect ? rect.bottom - containerRect.top : rect.bottom) + (container?.scrollTop || 0) + 8;
+      left = (containerRect ? rect.left - containerRect.left : rect.left) + 12;
+    }
     this.imagePropsPanel = { visible: true, imageId: id, kind: 'image', caption, alignment, width, top, left };
   }
 
@@ -6512,7 +6654,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (kind === 'mockup') {
       this.removeVisuMockupMarker(id);
     } else {
-      this.deleteVisuImage(id);
+      this.deleteImageUnified(id);
     }
   }
 
@@ -6569,6 +6711,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.visuImgInputRef?.nativeElement.click();
   }
 
+  // Bouton image de la barre de style : insérer une image dans la section active
+  insertVisuImageActive() {
+    const id = this.getActiveVisuSectionId() || this.docSections[0]?.folderId;
+    if (id) this.triggerVisuImageUpload(id);
+  }
+
   async onVisuImageSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -6603,73 +6751,30 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         this.pendingLocalImages = this.pendingLocalImages.filter(n => n.id !== node.id);
         this.recentlyAddedImageIds.delete(node.id);
       }, 10000);
-      // Insérer le marqueur image dans unifiedContent après la section
-      const range = this.sectionRanges.find(r => r.folderId === sectionId);
-      if (range) {
-        const lines = this.unifiedContent.split('\n');
-        lines.splice(range.lineEnd + 1, 0, '', `{{IMG:${node.id}}}`, '');
-        this.unifiedContent = lines.join('\n');
-        const ta = this.textareaRef?.nativeElement;
-        if (ta) ta.value = this.unifiedContent;
-        this.recomputeAll();
-        // Save immédiat pour que onRefresh attende la fin du save (évite race avec loadFiles)
-        this.saveAll();
-        // saveAll() reset localDirty à false — on le remet à true car l'image n'est pas
-        // encore pushée : l'utilisateur doit cliquer "Partager" pour que les autres la reçoivent.
-        this.dirtyVisuSectionIds.add(sectionId);
-        this.localDirty = true;
-        this.dirtyChange.emit(true);
-        // Activer la barre "Modifications en cours" (mode visu) — projets backup uniquement
-        if (this.backupType) {
-          if (!this.visuSectionLockSnapshot.has(sectionId)) {
-            const vs = this.visuSections.find(v => v.sectionId === sectionId);
-            if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
-          }
-          if (!this.editingVisuSectionId()) {
-            this.editingVisuSectionId.set(sectionId);
-          }
-          this.collab.addLocalPending(sectionId);
-          if (this.projectName) {
-            this.collab.lockNode(this.projectName, sectionId).catch(() => {});
-          }
+      // Insérer la figure DIRECTEMENT dans le DOM de la section (la section dirty fait foi ;
+      // re-render depuis docSections impossible car les fichiers n'ont pas encore le marqueur).
+      clearTimeout(this.visuLiveSaveTimeout);
+      const container = this.visuRef?.nativeElement;
+      const secEl = container?.querySelector(`.visu-sec-content[data-section-id="${sectionId}"]`) as HTMLElement | null;
+      if (secEl) {
+        const figHtml = this.renderImageMarkerHtml(node.id, '', '', '', { withDeleteBar: true });
+        secEl.insertAdjacentHTML('beforeend', figHtml);
+        this.commitVisuSection(sectionId); // DOM → markdown (ajoute le marqueur)
+      } else {
+        // Section non rendue (filtrée) : insérer le marqueur dans le markdown
+        const range = this.sectionRanges.find(r => r.folderId === sectionId);
+        if (range) {
+          const lines = this.unifiedContent.split('\n');
+          lines.splice(range.lineEnd + 1, 0, '', `{{IMG:${node.id}}}`, '');
+          this.unifiedContent = lines.join('\n');
+          const ta = this.textareaRef?.nativeElement;
+          if (ta) ta.value = this.unifiedContent;
+          this.recomputeAll();
         }
-        this.refresh.emit();
-        setTimeout(() => this.initVisuSectionHtml(), 80);
       }
-    } catch (e: any) {
-      this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';
-    }
-  }
-
-  private deleteVisuImage(imgId: string) {
-    // Capturer le dossier parent AVANT le refresh (files encore à jour)
-    const parentFolder = this.findParentFolder(imgId, this.files);
-    const sectionId = parentFolder?.id ?? null;
-
-    // Stocker la suppression en attente — exécutée au Partager, annulable via Annuler
-    const imgNode = this.allImages.find(im => im.id === imgId);
-    if (imgNode) {
-      this.pendingVisuDeletions.set(imgId, { node: imgNode, sectionId: sectionId ?? '' });
-    }
-
-    // Retrait local de allImages pour éviter affichage "manquante"
-    this.allImages = this.allImages.filter(im => im.id !== imgId);
-    // Retirer le marqueur de unifiedContent
-    const lines = this.unifiedContent.split('\n');
-    const idx = lines.findIndex(l => {
-      const t = l.trim();
-      const m = /^\{\{IMG:([a-z0-9-]+)(?:\|[^}]*)?\}\}$/i.exec(t);
-      return !!m && m[1] === imgId;
-    });
-    if (idx !== -1) lines.splice(idx, 1);
-    this.unifiedContent = lines.join('\n');
-    const ta = this.textareaRef?.nativeElement;
-    if (ta) ta.value = this.unifiedContent;
-    this.recomputeAll();
-    this.saveAll();
-    // saveAll() remet localDirty à false — on le remet à true car la suppression
-    // n'est pas encore effective : l'utilisateur doit cliquer "Partager".
-    if (sectionId) {
+      // Save immédiat
+      this.saveAll();
+      // saveAll() reset localDirty à false — l'image n'est pas encore publiée (Partager)
       this.dirtyVisuSectionIds.add(sectionId);
       this.localDirty = true;
       this.dirtyChange.emit(true);
@@ -6682,8 +6787,146 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         this.collab.addLocalPending(sectionId);
         if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
       }
+    } catch (e: any) {
+      this.imageUploadError = e?.error?.error || 'Erreur lors de l\'upload.';
     }
-    setTimeout(() => this.initVisuSectionHtml(), 80);
+  }
+
+  // Supprime physiquement les images du document plus référencées par aucun marqueur {{IMG:id}}
+  // (mode Code : marqueur retiré du texte ; mode Edition : figure supprimée). Garde-fous :
+  // images récemment ajoutées (marqueur pas encore propagé) exclues.
+  private reconcileImageLifecycle(content: string) {
+    if (!this.hasLoaded || !this.projectName) return;
+    const referenced = new Set<string>();
+    const re = /\{\{IMG:([a-z0-9-]+)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(content))) referenced.add(m[1]);
+    // Réconciliation inverse : une image redevenue référencée (couper/coller, undo,
+    // ré-ajout) est dé-programmée et restaurée — sinon le garde durable l'exclurait.
+    for (const id of referenced) {
+      this.recentlyDeletedImageIds.delete(id);
+      const pending = this.pendingVisuDeletions.get(id);
+      if (pending) {
+        if (!this.allImages.find(im => im.id === id)) this.allImages = [...this.allImages, pending.node];
+        this.pendingVisuDeletions.delete(id);
+      }
+    }
+    for (const img of this.collectAllImages(this.files)) {
+      if (referenced.has(img.id)) continue;
+      if (this.recentlyAddedImageIds.has(img.id)) continue;
+      if (this.pendingLocalImages.some(n => n.id === img.id)) continue;
+      // Déjà programmée / en cours de suppression → ne pas retraiter
+      if (this.recentlyDeletedImageIds.has(img.id) || this.pendingVisuDeletions.has(img.id)) continue;
+      // Cohérence avec deleteImageUnified : sur un projet backup, la suppression physique
+      // est différée au Partager (le contenu publié référence encore l'image) ; sinon immédiate.
+      this.recentlyDeletedImageIds.add(img.id);
+      const sectionId = this.findParentFolder(img.id, this.files)?.id ?? null;
+      const node = this.findNode(img.id, this.files);
+      if (this.backupType && sectionId && node) {
+        this.pendingVisuDeletions.set(img.id, { node, sectionId });
+      } else {
+        this.svc.deleteFile(this.projectName, img.id).then(() => this.refresh.emit()).catch(() => {});
+      }
+    }
+  }
+
+  // Suppression d'image UNIFIÉE pour tous les modes (Code / Edition / Structure) :
+  // retire le marqueur partout, met à jour la vue du mode courant, puis supprime le
+  // fichier physique si l'image n'est plus référencée nulle part.
+  private deleteImageUnified(imgId: string) {
+    const parentFolder = this.findParentFolder(imgId, this.files);
+    const sectionId = parentFolder?.id ?? null;
+    const imgNode = this.findNode(imgId, this.files); // capturé avant filtrage d'allImages
+    // Garde durable posée AVANT tout re-render : empêche buildDocSections de ré-injecter
+    // l'image ({{IMG:id}} autonome) tant que son nœud subsiste dans this.files (stale)
+    // — notamment au changement de mode (Edition relance buildDocSections). Levée
+    // uniquement sur Annuler (restauration). L'id d'une image n'étant jamais réutilisé,
+    // le conserver après suppression définitive est sans risque.
+    this.recentlyDeletedImageIds.add(imgId);
+    clearTimeout(this.visuLiveSaveTimeout);
+    // Marqueur image, quel que soit le mode (avec ou sans options |…)
+    const reG = new RegExp('\\{\\{IMG:' + imgId + '(?:\\|[^}]*)?\\}\\}', 'gi');
+
+    if (this.mode === 'structure') {
+      // Source de vérité en Structure = structureNodes (textContent + blocs fichiers)
+      for (const n of this.structureNodes) {
+        const newText = (n.textContent || '').replace(reG, '').replace(/\n{3,}/g, '\n\n').trim();
+        let blockChanged = false;
+        for (const b of n.additionalBlocks || []) {
+          if (b.content && b.content !== b.content.replace(reG, '')) { blockChanged = true; break; }
+        }
+        if (newText === (n.textContent || '') && !blockChanged) continue;
+        // Marquer la section « en attente » + snapshot AVANT édition (pour Annuler / Partager)
+        this.applyStructLock(n.folderId ?? '');
+        n.textContent = newText;
+        for (const b of n.additionalBlocks || []) {
+          if (b.content) b.content = b.content.replace(reG, '').replace(/\n{3,}/g, '\n\n');
+        }
+      }
+      this.allImages = this.allImages.filter(im => im.id !== imgId);
+      clearTimeout(this.structFlushTimeout);
+      this.flushStructureNodes();                 // reconstruit unifiedContent + sauvegarde
+      this.structureNodes = this.parseStructureNodes(); // rafraîchit les tags
+    } else {
+      // Edition / Code : retirer les figures du DOM (section dirty fait foi) + le marqueur markdown
+      const container = this.visuRef?.nativeElement;
+      const figs = container ? (Array.from(container.querySelectorAll(`[data-img-id="${imgId}"]`)) as HTMLElement[]) : [];
+      const affected = new Set<string>();
+      for (const fig of figs) {
+        const sid = (fig.closest('.visu-sec-content') as HTMLElement | null)?.getAttribute('data-section-id');
+        if (sid) affected.add(sid);
+        fig.remove();
+      }
+      for (const sid of affected) this.commitVisuSection(sid);
+      if (reG.test(this.unifiedContent)) {
+        this.unifiedContent = this.unifiedContent.replace(reG, '').replace(/\n{3,}/g, '\n\n');
+        const ta = this.textareaRef?.nativeElement;
+        if (ta) ta.value = this.unifiedContent;
+        this.recomputeAll();
+      }
+      // Purger l'image du cache visuSections (HTML + markdown baseline) : sinon une
+      // section « en attente » dont le DOM est recréé la ré-injecte → réapparition.
+      const figRe = new RegExp(`<figure[^>]*data-img-id="${imgId}"[\\s\\S]*?</figure>`, 'gi');
+      for (const vs of this.visuSections) {
+        if (vs.contentHtml) vs.contentHtml = vs.contentHtml.replace(figRe, '');
+        if (vs.markdownBefore) vs.markdownBefore = vs.markdownBefore.replace(reG, '').replace(/\n{3,}/g, '\n\n');
+      }
+      this.allImages = this.allImages.filter(im => im.id !== imgId);
+      this.saveAll();
+      if (sectionId) {
+        this.dirtyVisuSectionIds.add(sectionId);
+        this.localDirty = true;
+        this.dirtyChange.emit(true);
+        if (this.backupType) {
+          if (!this.visuSectionLockSnapshot.has(sectionId)) {
+            const vs = this.visuSections.find(v => v.sectionId === sectionId);
+            if (vs) this.visuSectionLockSnapshot.set(sectionId, vs.markdownBefore);
+          }
+          if (!this.editingVisuSectionId()) this.editingVisuSectionId.set(sectionId);
+          this.collab.addLocalPending(sectionId);
+          if (this.projectName) this.collab.lockNode(this.projectName, sectionId).catch(() => {});
+        }
+      }
+      setTimeout(() => this.initVisuSectionHtml(), 80);
+    }
+
+    // Nettoyer aussi le backup plein (section focus) sinon le marqueur y subsiste
+    // et bloque la suppression physique du fichier.
+    if (this.fullContentBackup) {
+      this.fullContentBackup = this.fullContentBackup.replace(reG, '').replace(/\n{3,}/g, '\n\n');
+    }
+    // Image encore référencée ailleurs → ne rien supprimer physiquement
+    const refRe = new RegExp('\\{\\{IMG:' + imgId + '\\b', 'i');
+    const stillUsed = refRe.test(this.unifiedContent) || (!!this.fullContentBackup && refRe.test(this.fullContentBackup));
+    if (stillUsed || !this.projectName) return;
+    // Projet backup : la modif n'est qu'« en attente ». Différer la suppression
+    // physique au Partager (annulable via Annuler) pour ne pas orpheliner le
+    // marqueur encore publié. Sinon, suppression immédiate.
+    if (this.backupType && sectionId && imgNode) {
+      this.pendingVisuDeletions.set(imgId, { node: imgNode, sectionId });
+    } else {
+      this.svc.deleteFile(this.projectName, imgId).then(() => this.refresh.emit()).catch(() => {});
+    }
   }
 
   // ── Mode Structure ──────────────────────────────────────────
@@ -7266,18 +7509,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
   }
 
-  /** Supprime le marqueur {{IMG:id...}} du contenu (ne supprime pas le fichier image). */
+  /** Supprime une image (marqueur dans tous les modes + fichier si plus référencé). */
   removeImageMarker(imageId: string): void {
-    const re = new RegExp(`\\{\\{IMG:${imageId}(?:\\|[^}]*)?\\}\\}`);
-    const lines = this.unifiedContent.split('\n');
-    const idx = lines.findIndex(l => re.test(l.trim()));
-    if (idx === -1) return;
-    lines.splice(idx, 1);
-    this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
-    const ta = this.textareaRef?.nativeElement;
-    if (ta) ta.value = this.unifiedContent;
-    this.recomputeAll();
-    this.scheduleSave();
+    this.deleteImageUnified(imageId);
   }
 
   /** Supprime le marqueur {{MOCKUP:id}} du contenu et efface le folderId de l'instance. */

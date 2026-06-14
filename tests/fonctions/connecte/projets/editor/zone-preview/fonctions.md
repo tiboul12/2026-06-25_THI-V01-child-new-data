@@ -12,6 +12,9 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 - **Corps** : contenu Markdown rendu en HTML, éditable via `contenteditable="true"`
 - **Images** : affichées dans leur contexte de section
 - **Filtre** : `filteredVisuSections` — si un dossier est actif dans la sidebar → seule la section sélectionnée + enfants sont affichés
+- **Zone de texte continue** (vB-0.284) : les sections ne sont plus présentées comme des cartes/zones séparées. Le rendu est une **zone de texte continue** (sections sans bordure/fond/encadré : `.visu-sec-content` borderless, `--active` transparent) ; seuls les **méga-outils incrustés** (Trello/Array/Mockup) créent une rupture visuelle. Pas de décalage par niveau (indentation supprimée). Un titre ajouté via le format H crée bien la section dans le menu/les fichiers/les autres modes (pipeline de parsing), tout en restant une seule zone affichée en Edition.
+- **Badge de niveau** (vB-0.284) : un badge `H1`/`H2`/`H3`/`H4` reste affiché dans la gouttière gauche, en face de chaque titre (`.visu-sec-level`, `left: -3.2rem` dans la colonne centrée `.visu-content-wrap`)
+- **Création de sous-section uniquement** (vB-0.284) : quand une section de niveau N est active, on ne peut créer qu'une section de niveau > N. Les boutons titres de la barre (H1-H4) sont **grisés** pour les niveaux ≤ N (`[disabled]="activeVisuSectionLevel >= n"`) et le slash menu masque ces niveaux (`visuSlashCommandsFiltered`). `activeVisuSectionLevel` = niveau de la section active.
 
 ---
 
@@ -43,7 +46,7 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
   - Inline : Gras, Italique, **Souligné** (`underline`), Barré
   - Titres / blocs : H1, H2, H3, Paragraphe (`formatBlock`), Citation (`BLOCKQUOTE`)
   - Listes : à puces, numérotée, **case à cocher** (`insertVisuChecklist`)
-  - **Code** inline (`insertVisuInlineCode`), **Lien** (`insertVisuLink` → `createLink`)
+  - **Code** inline (`insertVisuInlineCode`), **Lien** (`insertVisuLink` → `createLink`) ; un **clic sur un lien** ouvre un **menu d'actions** (`visuLinkMenu`) : *Suivre le lien* (`visuLinkFollow` → `window.open(_blank)`), *Modifier le lien* (`visuLinkEdit` → **popup stylisé** `showLinkEditPopup`/`linkEditUrl` → `confirmLinkEdit` met à jour `href`), *Supprimer le lien* (`visuLinkRemove` → déballe le `<a>`, conserve le texte). Toute modif persiste la section (`persistVisuLinkChange` → commit + saveAll). (vB-0.284)
   - **Alignement** : gauche / centre / droite (`justifyLeft/Center/Right`)
   - **Taille** : Petit / Grand (`fontSize`)
   - **Couleur du texte** (`foreColor`) et **Surlignage** (`hiliteColor`) via pastilles (`visuTextColors`, `visuHighlightColors`) — `styleWithCSS` activé pour produire des `<span style>`
@@ -53,21 +56,17 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 
 ---
 
-## `2-5-2-5-5` — Menu d'insertion de bloc (`+`)
+## `2-5-2-5-5` — Insertion de blocs
 
-- **Déclenchement** : clic bouton "Ajouter un bloc" (ligne du bas de chaque section) → `showVisuInsertMenu(sectionId)`
-- **Options** :
-  - **Nouveau titre** → `insertVisuBlock('menu', sectionId)` → insère `## Nouveau titre`
-  - **Nouveau document** → `insertVisuBlock('doc', sectionId)` → insère bloc document
-  - **Bloc de code** → `insertVisuBlock('code', sectionId)` → insère ` ```code``` `
-- **Fermeture** : clic ailleurs ou Escape
+- Les boutons « Ajouter un bloc » et « Insérer une image » en bas de section ont été **supprimés** (vB-0.284). L'insertion se fait via le **slash menu `/`** (voir `2-5-2-5-18`) et la **barre de style** (image, voir `2-5-2-5-6`).
 
 ---
 
 ## `2-5-2-5-6` — Upload d'image dans une section
 
-- **Déclenchement** : clic bouton 📷 de la ligne d'ajout → `triggerVisuImageUpload(sectionId)`
-- **Sélection fichier** : input file → POST `/api/file-projects/{name}/files` (multipart)
+- **Déclenchement** : icône **image de la barre de style** → `insertVisuImageActive()` → `triggerVisuImageUpload(sectionId actif)` (vB-0.284) ; aussi via le slash `/image`. La section cible = section active (`getActiveVisuSectionId`).
+- **Sélection fichier** : input file → POST `/api/file-projects/{name}/files` (multipart) → l'image est téléchargée dans le dossier de la section
+- **Suppression unifiée (tous modes) → effacement du fichier** (vB-0.284) : une seule fonction `deleteImageUnified(imgId)` gère Code / Edition / Structure. Elle retire le marqueur de la vue du mode courant (Structure : `structureNodes` + `flushStructureNodes` + re-parse des tags ; Edition : figures du DOM ; markdown dans tous les cas), met à jour `allImages`, sauvegarde, puis **supprime le fichier physique** si plus aucun `{{IMG:id}}` ne subsiste. Les points d'entrée (icône/figure Edition, panneau F5, tag × Structure via `removeImageMarker`) délèguent tous à cette fonction. `reconcileImageLifecycle` (au save) reste le filet pour les marqueurs retirés au clavier en Code.
 - **Résultat** :
   - Marqueur `{{IMG:uuid}}` inséré dans `unifiedContent` à la fin de la section
   - Image rendue dans le HTML
