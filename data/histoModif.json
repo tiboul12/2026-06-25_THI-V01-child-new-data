@@ -1,6 +1,31 @@
 {
   "modifications": [
     {
+      "id": "mod-315",
+      "version": "B-0.283",
+      "date": "2026-06-14T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "projets",
+        "libs"
+      ],
+      "features": "projets:editor|zone-preview,libs:mega-outils",
+      "title": "Mode Edition : Trello à hauteur dynamique (au contenu des tasks)",
+      "description": "En mode Edition, le board Trello s'étirait sur toute la hauteur de la zone. Ajout de @Input autoHeight au composant app-trello-board : quand true, la racine n'a plus h-full, le conteneur colonnes n'a plus flex-1, et la zone cartes n'a plus flex-1/overflow (hauteur au contenu, min-height 48px pour colonnes vides). Le Trello de section en mode Edition passe [autoHeight]=true et utilise un wrapper .visu-trello-board-wrap--auto (height auto) ; le wrapper partagé (72vh) reste inchangé pour les previews standalone et le board Array. Le board grandit/rétrécit dynamiquement à l'ajout/suppression de cartes.",
+      "files": [
+        "libs/shared/ui/src/lib/mega-outils/trello/trello-board.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le mode Edition, l'affichage d'un trello est trop grand en hauteur, il ne doit avoir que la taille des tasks et s'agrandir si d'autres tasks sont créées, dynamique avec les tasks (add/del).",
+      "startedAt": "2026-06-14T00:00:00.000Z",
+      "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
       "id": "mod-314",
       "version": "B-0.283",
       "date": "2026-06-14T00:00:00.000Z",

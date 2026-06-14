@@ -31,7 +31,7 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="flex flex-col h-full bg-light-background dark:bg-background overflow-hidden">
+    <div class="flex flex-col bg-light-background dark:bg-background overflow-hidden" [class.h-full]="!autoHeight">
 
       <!-- Header board -->
       <div class="flex items-center gap-3 px-4 py-3 border-b border-light-border dark:border-white/8 flex-shrink-0">
@@ -61,7 +61,7 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
       </div>
 
       <!-- Colonnes -->
-      <div class="flex gap-3 flex-1 overflow-x-hidden overflow-y-hidden p-4">
+      <div class="flex gap-3 overflow-x-hidden overflow-y-hidden p-4" [class.flex-1]="!autoHeight">
         @for (col of columns; track col) {
           <div class="flex flex-col flex-1 min-w-0 rounded-xl border bg-light-surface dark:bg-surface"
                [class]="columnBorder(col)"
@@ -78,8 +78,12 @@ const COLUMN_STYLES: Record<TrelloStatus, { border: string; header: string }> = 
               </span>
             </div>
 
-            <!-- Cards (zone scrollable) -->
-            <div class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2">
+            <!-- Cards : zone scrollable (hauteur fixe) ou au contenu (autoHeight) -->
+            <div class="p-2 flex flex-col gap-2"
+                 [class.flex-1]="!autoHeight"
+                 [class.min-h-0]="!autoHeight"
+                 [class.overflow-y-auto]="!autoHeight"
+                 [style.min-height.px]="autoHeight ? 48 : null">
               @for (card of cardsForColumn(col); track card.id) {
                 <div class="rounded-lg border border-light-border dark:border-white/10 bg-white dark:bg-white/5 p-2.5 cursor-pointer select-none transition-all hover:border-light-primary/30 dark:hover:border-primary/30"
                      [class.ring-1]="expandedCardId() === card.id"
@@ -272,6 +276,8 @@ export class TrelloBoardComponent implements OnInit, OnDestroy {
   @Input() deletable  = false;
   /** Lecture seule : aucune création/édition/suppression/déplacement de carte possible. */
   @Input() readonly   = false;
+  /** Hauteur au contenu (colonnes dimensionnées aux cartes) au lieu de remplir le conteneur. */
+  @Input() autoHeight = false;
   @Output() deleteBoard  = new EventEmitter<string>();
   @Output() cardsChanged = new EventEmitter<TrelloCard[]>();
 

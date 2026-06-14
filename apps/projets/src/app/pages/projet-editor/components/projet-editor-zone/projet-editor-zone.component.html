@@ -1253,11 +1253,12 @@
 
               <!-- Boards Trello de la section (vrai composant, identique à la sélection du fichier) -->
               @for (tinst of trelloInstancesForVisuSection(sec.sectionId); track tinst.id) {
-                <div class="visu-trello-board-wrap">
+                <div class="visu-trello-board-wrap visu-trello-board-wrap--auto">
                   <app-trello-board
                     [instanceId]="tinst.id"
                     [boardName]="trelloInstanceName(tinst.id)"
                     [deletable]="false"
+                    [autoHeight]="true"
                     [readonly]="isTrelloInstanceLocked(tinst.id)"
                     (cardsChanged)="onTrelloCardsChanged(tinst.id, $event)" />
                 </div>

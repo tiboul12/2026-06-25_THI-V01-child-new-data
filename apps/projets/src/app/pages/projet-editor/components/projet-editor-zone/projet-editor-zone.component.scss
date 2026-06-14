@@ -2652,5 +2652,11 @@ $struct-colors: (
   display: flex;
   flex-direction: column;
   min-height: 0;
+
+  // Trello incrusté dans une section (mode Edition) : hauteur au contenu des tasks
+  &--auto {
+    height: auto;
+    min-height: 0;
+  }
 }
 
