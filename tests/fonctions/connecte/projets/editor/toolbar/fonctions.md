@@ -107,3 +107,11 @@ Actions des barres :
 - Liste les instances de méga-outils (Trello) du projet + bouton "+ Trello" (création au curseur)
 - Clic sur un onglet (`selectMegaOutil`) : sélectionne l'instance (`megaOutilSelect`) **et** navigue vers la section où le trello est incrusté (`trelloNavigate`, résolu via `resolveTrelloFolderId` : marqueur dans `docSections`, fallback `inst.folderId`)
 - Le board s'affiche en zone basse (voir `2-5-2-5-16`)
+
+## `2-5-2-3-9` — Menus déroulants de la barre Édition (mode Edition/visu)
+
+- Pour gagner de la place, trois groupes de boutons de la barre de formatage du mode Edition sont regroupés en menus déroulants (`visuDropdown`, `toggleVisuDropdown`) :
+  - **Style de bloc** (icône `title`) : Paragraphe + Titres H1→H4 (`applyVisuFormat('formatBlock', …)`), niveaux ≤ section active grisés
+  - **Couleur du texte** (lettre `A` soulignée) : pastilles `visuTextColors` (`applyVisuFormat('foreColor', …)`)
+  - **Couleur de fond / surlignage** (icône `format_ink_highlighter`) : pastilles `visuHighlightColors` (`applyVisuFormat('hiliteColor', …)`)
+- Ouverture/fermeture via `mousedown` + `preventDefault` (conserve la sélection de texte) ; fermeture au clic extérieur (`HostListener('document:mousedown')`) ou après choix d'une option

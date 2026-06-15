@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, AfterViewChecked, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnDestroy, AfterViewChecked, SimpleChanges, ViewChild, ViewChildren, QueryList, ElementRef, inject, NgZone, ChangeDetectorRef, signal, HostListener } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { stripStyleMarkdown, mergeCleanIntoStyled, normalizeStyledMarkdown, cssTwinName, isCssTwinName } from '../../content-style.util';
 import { CommonModule } from '@angular/common';
@@ -417,6 +417,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // Palettes de la toolbar de mise en forme (mode Edition)
   readonly visuTextColors = ['#111827', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
   readonly visuHighlightColors = ['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca'];
+  // Menu déroulant actif de la barre d'édition (titres / couleur / surlignage)
+  visuDropdown: 'title' | 'color' | 'highlight' | null = null;
   visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
   activeVisuSectionId: string | null = null;
   editingVisuSectionId = signal<string | null>(null);
@@ -6328,6 +6330,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     ));
     this.visuToolbar = { top: Math.max(4, rect.top - 56), left };
     this.cdr.detectChanges();
+  }
+
+  // Ouvre/ferme un menu déroulant de la barre d'édition (mousedown + preventDefault
+  // dans le template pour conserver la sélection de texte en cours).
+  toggleVisuDropdown(name: 'title' | 'color' | 'highlight') {
+    this.visuDropdown = this.visuDropdown === name ? null : name;
+  }
+
+  // Ferme le menu déroulant ouvert si l'on clique en dehors
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentMousedownForVisuDropdown(ev: MouseEvent) {
+    if (!this.visuDropdown) return;
+    const target = ev.target as HTMLElement;
+    if (!target.closest('.visu-tb-dropdown')) this.visuDropdown = null;
   }
 
   applyVisuFormat(command: string, value?: string) {

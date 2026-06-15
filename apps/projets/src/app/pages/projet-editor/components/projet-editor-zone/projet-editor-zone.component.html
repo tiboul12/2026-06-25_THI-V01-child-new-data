@@ -1047,20 +1047,31 @@
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S</s></button>
             <div class="visu-format-toolbar__sep"></div>
-            <!-- Titres / blocs (niveaux ≤ section active grisés : on ne peut créer qu'une sous-section) -->
-            <button [disabled]="activeVisuSectionLevel >= 1"
-                    (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H1')"
-                    [title]="activeVisuSectionLevel >= 1 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 1'">H1</button>
-            <button [disabled]="activeVisuSectionLevel >= 2"
-                    (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H2')"
-                    [title]="activeVisuSectionLevel >= 2 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 2'">H2</button>
-            <button [disabled]="activeVisuSectionLevel >= 3"
-                    (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H3')"
-                    [title]="activeVisuSectionLevel >= 3 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 3'">H3</button>
-            <button [disabled]="activeVisuSectionLevel >= 4"
-                    (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H4')"
-                    [title]="activeVisuSectionLevel >= 4 ? 'Niveau indisponible' : 'Titre 4'">H4</button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'P')" title="Paragraphe">¶</button>
+            <!-- Titres / paragraphe : menu déroulant (gain de place) -->
+            <div class="visu-tb-dropdown">
+              <button type="button" class="visu-tb-trigger" title="Style de bloc (titres / paragraphe)"
+                      (mousedown)="$event.preventDefault(); toggleVisuDropdown('title')">
+                <span class="material-symbols-outlined" style="font-size:14px;line-height:1">title</span>
+                <span class="material-symbols-outlined visu-tb-caret" style="font-size:13px;line-height:1">arrow_drop_down</span>
+              </button>
+              @if (visuDropdown === 'title') {
+                <div class="visu-tb-menu">
+                  <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'P'); visuDropdown = null" title="Paragraphe"><span class="visu-tb-h">¶</span> Paragraphe</button>
+                  <button [disabled]="activeVisuSectionLevel >= 1"
+                          (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H1'); visuDropdown = null"
+                          [title]="activeVisuSectionLevel >= 1 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 1'"><span class="visu-tb-h">H1</span> Titre 1</button>
+                  <button [disabled]="activeVisuSectionLevel >= 2"
+                          (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H2'); visuDropdown = null"
+                          [title]="activeVisuSectionLevel >= 2 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 2'"><span class="visu-tb-h">H2</span> Titre 2</button>
+                  <button [disabled]="activeVisuSectionLevel >= 3"
+                          (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H3'); visuDropdown = null"
+                          [title]="activeVisuSectionLevel >= 3 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 3'"><span class="visu-tb-h">H3</span> Titre 3</button>
+                  <button [disabled]="activeVisuSectionLevel >= 4"
+                          (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H4'); visuDropdown = null"
+                          [title]="activeVisuSectionLevel >= 4 ? 'Niveau indisponible' : 'Titre 4'"><span class="visu-tb-h">H4</span> Titre 4</button>
+                </div>
+              }
+            </div>
             <div class="visu-format-toolbar__sep"></div>
             <!-- Listes -->
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('insertUnorderedList')" title="Liste à puces"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_bulleted</span></button>
@@ -1080,18 +1091,40 @@
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('fontSize', '2')" title="Petit" style="font-size:10px">A</button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('fontSize', '4')" title="Grand" style="font-size:15px">A</button>
             <div class="visu-format-toolbar__sep"></div>
-            <!-- Couleur du texte -->
-            @for (c of visuTextColors; track c) {
-              <button class="visu-color-swatch" [style.background]="c"
-                      (mousedown)="$event.preventDefault(); applyVisuFormat('foreColor', c)"
-                      [title]="'Couleur ' + c"></button>
-            }
-            <!-- Surlignage -->
-            @for (c of visuHighlightColors; track c) {
-              <button class="visu-color-swatch visu-color-swatch--hl" [style.background]="c"
-                      (mousedown)="$event.preventDefault(); applyVisuFormat('hiliteColor', c)"
-                      [title]="'Surlignage ' + c"></button>
-            }
+            <!-- Couleur du texte : menu déroulant (gain de place) -->
+            <div class="visu-tb-dropdown">
+              <button type="button" class="visu-tb-trigger" title="Couleur du texte"
+                      (mousedown)="$event.preventDefault(); toggleVisuDropdown('color')">
+                <span class="visu-tb-aletter">A</span>
+                <span class="material-symbols-outlined visu-tb-caret" style="font-size:13px;line-height:1">arrow_drop_down</span>
+              </button>
+              @if (visuDropdown === 'color') {
+                <div class="visu-tb-menu visu-tb-menu--swatches">
+                  @for (c of visuTextColors; track c) {
+                    <button class="visu-color-swatch" [style.background]="c"
+                            (mousedown)="$event.preventDefault(); applyVisuFormat('foreColor', c); visuDropdown = null"
+                            [title]="'Couleur ' + c"></button>
+                  }
+                </div>
+              }
+            </div>
+            <!-- Surlignage : menu déroulant (gain de place) -->
+            <div class="visu-tb-dropdown">
+              <button type="button" class="visu-tb-trigger" title="Couleur de fond (surlignage)"
+                      (mousedown)="$event.preventDefault(); toggleVisuDropdown('highlight')">
+                <span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_ink_highlighter</span>
+                <span class="material-symbols-outlined visu-tb-caret" style="font-size:13px;line-height:1">arrow_drop_down</span>
+              </button>
+              @if (visuDropdown === 'highlight') {
+                <div class="visu-tb-menu visu-tb-menu--swatches">
+                  @for (c of visuHighlightColors; track c) {
+                    <button class="visu-color-swatch visu-color-swatch--hl" [style.background]="c"
+                            (mousedown)="$event.preventDefault(); applyVisuFormat('hiliteColor', c); visuDropdown = null"
+                            [title]="'Surlignage ' + c"></button>
+                  }
+                </div>
+              }
+            </div>
             <div class="visu-format-toolbar__sep"></div>
             <button class="visu-format-toolbar__clear"
                     (mousedown)="$event.preventDefault(); applyVisuFormat('removeFormat')"

@@ -505,7 +505,9 @@
       "date": "2026-06-14T14:45:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|array-inline-block",
       "title": "Array : lettres de colonnes manquantes après collage (colWidths vide)",
       "description": "Après collage d'un tableau, les lettres de colonnes (A, B, C) n'étaient pas affichées dans le board (Structure/Preview) : le board itère colWidths pour l'en-tête, or deserializeArrayGrid laissait colWidths vide (fallback). Fix : deserializeArrayGrid génère colWidths/rowHeights de la bonne longueur (défaut 100/32) si le fallback ne correspond pas. Ajout de normalizeArrayGrid() appelée au chargement (loadArrayGrid + loadAllVisuArrayGrids) pour réparer et persister les grilles existantes dont colWidths/rowHeights ne correspondent pas à colCount/rowCount.",
@@ -524,7 +526,9 @@
       "date": "2026-06-14T14:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|array-inline-block",
       "title": "Array : coller un bloc avec contenu dans une autre section conserve le contenu",
       "description": "Coller un bloc ```ARRAY: NOM avec une table dans une autre section effaçait le contenu : l'instance créée avait une grille vide en BDD → loadArrayGrid chargeait le vide → saveArrayCsvFile écrasait la table collée. Fix : ensureArrayInstancesFromContent extrait la table du bloc collé et initialise la grille en BDD (deserializeArrayGrid → updateArrayGrid). De plus, tryRecoverGridFromDocSections récupère désormais la grille depuis le fence ```ARRAY: (section + contenu live) si la grille DB est vide, en filet anti-race.",
@@ -543,7 +547,9 @@
       "date": "2026-06-14T13:45:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|array-inline-block",
       "title": "Array : un chiffre ajouté dans le tableau disparaissait après passage en Code",
       "description": "Ajouter une valeur dans le board ne se reflétait pas dans le bloc ```ARRAY: en mode Code (onArrayGridChanged écrivait le fichier+rebuild sans mettre à jour le bloc inline), si bien que le code vide réécrasait la grille au retour. Fix : onArrayGridChanged met désormais à jour DIRECTEMENT le bloc inline ```ARRAY: NOM dans unifiedContent via syncArrayInlineBlock (mirror de syncTrelloInlineBlock), avec re-parse de structureNodes en mode Structure pour ne pas être écrasé au flush. Le round-trip grille↔code↔grille préserve les valeurs.",
@@ -562,7 +568,9 @@
       "date": "2026-06-14T13:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|array-inline-block",
       "title": "Array : corps du bloc en table Markdown avec contenu brut des cellules (formules non évaluées)",
       "description": "Le corps du bloc ```ARRAY: NOM est désormais une table Markdown (| A | B | ... | + séparateur + lignes) contenant le CONTENU BRUT des cellules : texte ou formule (=5*2, =B1+C2) affiché tel quel, jamais le résultat (le board garde cell.value brut + cell.computed pour l'affichage). serializeArrayGrid produit la table (cell.value, styles/dimensions exclus), deserializeArrayGrid parse la table (1ère ligne = en-tête, séparateur ignoré), splitMarkdownRow gère le \\| échappé. syncArrayCodeToGrid reconnaît le format table (^|). Les styles sont préservés depuis la grille en base lors de la sync code→grille.",
@@ -581,7 +589,9 @@
       "date": "2026-06-14T12:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|array-inline-block",
       "title": "MO Array : mêmes fonctions générales que Trello (marqueur ```ARRAY:, fichier array-NOM, modes, cycle de vie, sync)",
       "description": "Le MO Array adopte le pattern du MO Trello : (A) identifié par ```ARRAY: NOM (parseContent, recomputeRanges fileRange, exclusion des headings internes des fences générique) ; (B) fichier physique array-NOM.md contenant le bloc complet ```ARRAY: NOM\\n<grille>\\n``` (jamais vide), affiché 'AR: NOM' dans la sidebar (nodeDisplayName) ; (C) affichage par mode : Code = code brut, Structure = tag 'ARRAY : NOM' + board (panneau structure-only), Preview = app-array-board inline (lecture seule) que l'on sélectionne la section ou le fichier ; (E) cycle de vie : ensureArrayInstancesFromContent (création sur marqueur collé/Nouveau), reconcileArrayLifecycle (suppression instance+fichier sur marqueur disparu/corrompu), cleanupOrphanArrayInstances, healArraySectionOnOpen ; (F) sync bidirectionnelle grille↔code : saveArrayCsvFile écrit le bloc complet dans array-NOM, syncArrayCodeToGrid extrait la grille du bloc et met à jour la BDD ; (G) verrou section (isArrayInstanceLocked + readonly). Helpers isArrayFileBase/arrayNameFromBase/findArrayFileNode. confirmArrayPopup insère le fence. selectMegaOutil focus sur le fichier Array.",
@@ -602,7 +612,9 @@
       "date": "2026-06-14T11:00:00.000Z",
       "type": "config",
       "commitType": "AMELIORATION",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:commands",
       "title": "Commande /nouveau-mega-outil : spécifications générales d'un MO (réf. Trello)",
       "description": "Ajout d'une section 'Spécifications générales d'un méga-outil (comportement obligatoire)' à la commande .claude/commands/nouveau-mega-outil.md, extraite de l'implémentation du MO Trello (hors données métier) : A) marqueur ```TYPE: NOM source de vérité + exclusion des headings internes des fences ; B) fichier physique type-NOM au contenu = bloc complet, affiché XX: NOM ; C) affichage selon mode (Code brut / Structure tag+board scopé / Preview board inline) ; D) barre MO tous modes + vue Liste + focus ; E) cycle de vie create/delete/corruption/orphelins ; F) sync bidirectionnelle + à l'ouverture ; G) verrou section readonly + cadenas jaune/rouge ; H) popups sans fermeture au backdrop. Phase 5 mise à jour pour pointer vers ces specs.",
@@ -621,7 +633,9 @@
       "date": "2026-06-14T10:20:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils",
       "title": "Structure : afficher la barre méga-outils",
       "description": "La barre méga-outils (Trello/Mockup/Tableau + onglets instances) était masquée en mode Structure (@if mode !== 'structure'). Suppression de cette condition → la barre est désormais visible dans tous les modes (Code, Structure, Preview).",
@@ -640,7 +654,9 @@
       "date": "2026-06-14T10:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|mega-outils,projets:editor|sidebar",
       "title": "Trello : le bouton Trello de la barre MO ouvre la vue Liste ; suppression du bouton sidebar",
       "description": "Le bouton Trello de la barre méga-outils ouvre désormais la vue 'Liste des trellos' (toggleMoType émet openTrelloList → onTrelloListClick → showTrelloList ; ferme via closeTrelloList au re-clic). Ajout de l'@Output openTrelloList sur la zone éditeur, forwardé par le wrapper edition-outil (app-edition-outil), binding dans le parent. Suppression du bouton 'Liste des trellos' en bas de la sidebar (le déclencheur unique est maintenant la barre MO).",
@@ -662,7 +678,9 @@
       "date": "2026-06-14T09:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : synchronisation bloc ↔ fichier à l'ouverture de la section",
       "description": "À l'ouverture d'une section (clic dans le menu), synchronisation bidirectionnelle bloc Trello ↔ fichier trello-NOM : healTrelloSectionOnOpen() détecte les blocs ```TRELLO: NOM présents dans la section sans fichier correspondant et force une sauvegarde → parseContent crée le fichier trello-NOM. Le cas inverse (fichier présent sans bloc dans le texte) est géré par buildDocSections qui injecte le contenu du fichier dans la section. Déclenché sur changement d'activeNodeId.",
@@ -681,7 +699,9 @@
       "date": "2026-06-14T09:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : fichier physique 'trello-NOM.md' contenant le bloc complet (plus de fichier vide)",
       "description": "Le fichier physique d'un trello était nommé 'TL: NOM' avec un contenu vide (corps seul, 0 octet à la création). Désormais : nom du fichier = 'trello-NOM' (plusieurs trellos/section possibles), contenu = le BLOC COMPLET ```TRELLO: NOM ... ``` (jamais vide). buildDocSections injecte le contenu tel quel s'il commence par ```; sinon enveloppe (legacy). Affichage sidebar 'TL: NOM' via nodeDisplayName(). Helpers isTrelloFileBase/trelloNameFromBase/findTrelloFileNode centralisent la détection (couvre trello-NOM, 'trello' legacy, et 'TL: NOM' existant). Compat ascendante des anciens fichiers 'TL: NOM'.",
@@ -702,7 +722,9 @@
       "date": "2026-06-13T23:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : marqueur corrompu (```TRLO:) ne doit pas modifier le code (texte transféré)",
       "description": "Quand le marqueur ```TRELLO: est corrompu (ex: ```TRELO:), le corps du bloc (### À faire, tâches…) était PERDU : (1) reconcileTrelloLifecycle émettait refresh.emit() → re-sérialisation du fichier 'TL: NOM' écrasant la correction → refresh supprimé ; (2) surtout, le ### interne du bloc corrompu (non reconnu comme fence Trello) était interprété comme un TITRE de section → découpage et perte du corps. Fix racine : exclure les ### internes de TOUT bloc de code fencé ```…``` (Trello, corrompu, ou code normal) de la détection de sections — dans parseContent (codeFencePreScan générique), recomputeRanges et parseStructureNodes (blockLineRanges générique sur startsWith('```')). Résultat : le texte corrompu reste intact, transféré dans contenu.md ; instance + trello.md supprimés ; board/onglet disparaissent. Le code n'est jamais effacé.",
@@ -721,7 +743,9 @@
       "date": "2026-06-13T23:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : carte ajoutée en Code dupliquée au passage en Structure",
       "description": "reconcileTrelloCardsFromCode créait une carte depuis le code mais ne mettait pas à jour le cache local trelloCodeCards → au save suivant (cache obsolète), la carte n'était pas vue comme existante et était recréée → doublon visible dans le board. Fix : la réconciliation construit une liste optimiste (newLocal) reflétant le code et met à jour trelloCodeCards (carte temporaire remplacée par la vraie au retour de createTrelloCard). Les doublons déjà en base sont nettoyés au prochain save (carte non matchée par titre = supprimée).",
@@ -740,7 +764,9 @@
       "date": "2026-06-13T22:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Coller un bloc ```TRELLO: ``` : code inchangé + création fichier/instance",
       "description": "Coller un bloc ```TRELLO: NOM ... ``` en mode Code modifiait le code : le fichier 'TL: NOM' créé n'avait pas d'instance DB → buildDocSections le re-sérialisait en délimiteur 'TL: NOM'. Fix : (1) un fichier 'TL: NOM' est TOUJOURS sérialisé en fence ```TRELLO: NOM (instance optionnelle) → code collé inchangé ; (2) ensureTrelloInstancesFromContent() (dans saveAll) crée l'instance DB pour tout marqueur ```TRELLO: NOM sans instance (résolution folderId via sectionRanges) → fichier sidebar + onglet MO + board. Les cartes du bloc collé alimentent le board via reconcileTrelloCardsFromCode au save suivant.",
@@ -759,7 +785,10 @@
       "date": "2026-06-13T22:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor|popups,libs:mega-outils",
       "title": "Popups : ne plus fermer au clic sur le backdrop (fermeture via boutons uniquement)",
       "description": "Conformément à la règle CLAUDE.md, suppression de la fermeture au clic sur le backdrop pour tous les popups : retrait du (click) de fermeture sur l'overlay et du $event.stopPropagation() sur le contenu. Popups concernés : zone éditeur (mockup, liaison mockup, trello, label connexion), liste projets (copie, nouveau), historique (vider), conversation (prompt/contexte/IA info), board trello (modal carte), board mockup (label). La fermeture se fait uniquement via les boutons ✕ / Annuler / validation.",
@@ -783,7 +812,9 @@
       "date": "2026-06-13T21:30:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Suppression des instances Trello orphelines (onglet sans bloc correspondant)",
       "description": "Un onglet trello (ex: 'Roadmap MVP #1') pouvait subsister dans la barre MO sans bloc/fichier réel (instance orpheline en BDD) → clic affichait juste des listes. cleanupOrphanTrelloInstances() (appelée au chargement, hors focus) construit l'ensemble des noms de trellos représentés (marqueurs ```TRELLO:/## Trello: dans les fichiers + contenu live, fichiers 'TL: NOM' / 'trello') et supprime en BDD toute instance trello non représentée (deleteInstance + megaOutilDeleted). Détection sur this.files (contenu) + contenu live pour éviter de supprimer un trello fraîchement créé.",
@@ -802,7 +833,9 @@
       "date": "2026-06-13T21:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Preview : afficher aussi les trellos au format legacy (board manquant)",
       "description": "Quand une section contient un trello au format legacy (bloc 'trello / ## Trello: NAME, fichier 'trello') en plus d'un trello au nouveau format (TL: NOM), seul le nouveau s'affichait en Preview. trelloInstancesForVisuSection ne se base plus uniquement sur les fichiers 'TL:' mais inclut toute instance liée à la section par folderId (ou resolveTrelloFolderId), couvrant le legacy. Le board app-trello-board charge ses cartes par instanceId, indépendamment du format markdown. En mode Code, buildDocSections sérialise aussi le fichier legacy 'trello' en fence ```TRELLO: NOM (instance du dossier non déjà prise par un fichier 'TL:', en-tête ## Trello: retiré du corps) → le trello legacy devient visible en Code et migre au format TL: à la prochaine sauvegarde.",
@@ -821,7 +854,9 @@
       "date": "2026-06-13T20:45:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "Zone Code : fond jaune sur la section avec modifications locales non partagées",
       "description": "Les lignes d'une section (ou fichier additionnel) ayant des modifications locales non partagées (isLocalPending, cadenas jaune) ont désormais un fond jaune dans la zone Code. Ajout du flag MirrorLine.isPending (calculé via pendingHl dans recomputeMirrorLines) + classe .ed-line--pending (placée en dernier pour primer sur le surlignage de sélection bleu/vert). Gère aussi le mode focus (fichier/trello) : si l'entité focusée est pending, tout le contenu affiché est jaune (pas de sectionRange/fileRange mappable en focus fichier).",
@@ -842,7 +877,9 @@
       "date": "2026-06-13T20:15:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|verrou-section",
       "title": "Verrou : cadenas jaune (mes modifs en attente) vs rouge (autre user) + message partage explicite",
       "description": "Le cadenas sidebar utilisait la même couleur rouge pour isLocalPending (mes modifications non partagées) et isLockedByOther (verrou d'un autre) → confusion. isLocalPending passe en jaune (text-amber-400), isLockedByOther reste rouge. De plus, l'erreur de partage générique masquait la vraie cause : buildPublishErrorMsg() affiche désormais 'Section verrouillée par X — partage impossible' quand le serveur renvoie 423 (la mise à jour de fichier est refusée si un autre utilisateur détient le verrou).",
@@ -862,7 +899,10 @@
       "date": "2026-06-13T19:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor|verrou-section,libs:trello-board",
       "title": "Section verrouillée (autre user) : tout est en lecture seule (code, trello, array, structure)",
       "description": "Quand une section est verrouillée par un autre utilisateur (cadenas rouge), plus aucune modification possible. Les verrous étant granulaires (posés sur l'entité contenu.md ou un bloc 'folderId##...', pas sur le folderId), ajout de isFolderLockedByOther(folderId) qui scanne aussi les verrous des entités enfants. Getters isActiveSectionLockedByOther (textarea code readonly), isTrelloInstanceLocked / isArrayInstanceLocked / isStructNodeLocked basés dessus. app-trello-board reçoit un @Input readonly (gardes sur startAdd/submitAdd/startEdit/saveEdit/askDelete/confirmDelete/onDragStart/onDrop, masquage des boutons +Carte/Modifier/Supprimer, drag désactivé). app-array-board readonly + non supprimable si verrouillé. Inputs/textarea de la zone Structure en readonly. insertAt (toolbar/slash) bloqué. Garde (beforeinput) onTextareaBeforeInput/isSelectionInLockedSection : bloque la saisie/collage quand le curseur est dans une section verrouillée même en vue plein-document (pas seulement la section active). Preview déjà géré (contenteditable false).",
@@ -883,7 +923,9 @@
       "date": "2026-06-13T18:45:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : en Preview, board visuel inline (kanban) au lieu du panneau bas",
       "description": "En mode Preview, le panneau board du bas n'est plus affiché (trello gated à mode === 'structure'). À la place, le VRAI composant app-trello-board est rendu dans la zone d'édition, de façon identique que l'on sélectionne le fichier Trello 'TL: NOM' (getter previewTrelloInstanceId ; singleFileVisuPreview retourne null pour ces fichiers) OU la section (dossier) le contenant (trelloInstancesForVisuSection, boucle dans le template après le contenu de section). Le bloc Trello est retiré du HTML de section (buildVisuSectionHtml strip fence + délimiteur 'TL:'). Wrapper .visu-trello-board-wrap (height 72vh). Le rendu HTML kanban via [innerHTML] sanitizé ne fonctionnait pas (styles ignorés) → usage du composant réel partout.",
@@ -904,7 +946,9 @@
       "date": "2026-06-13T18:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : en Structure, board affiché seulement pour la section/élément sélectionné",
       "description": "Avant, en mode Structure tous les boards s'affichaient. Désormais recomputeContentTrelloIds scope à la section active dans TOUS les modes (résolution fichier→dossier parent via resolveActiveFolderId). Le board n'apparaît que quand on clique sur une section possédant un trello ou sur un élément trello dans le menu. Le changement d'activeNodeId hors mode Code recalcule contentTrelloIds (applyFocusByActiveNode ne s'exécute pas hors edit).",
@@ -923,7 +967,9 @@
       "date": "2026-06-13T17:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : description de la carte affichée dans le code (round-trip)",
       "description": "La description d'une carte est désormais affichée dans le code sous la carte, en lignes indentées (2 espaces). trelloCardCodeText l'ajoute ; parseTrelloBodyCards capture les lignes de continuation comme description ; reconcileTrelloCardsFromCode met à jour/crée la description en base. Round-trip complet board ↔ code pour la description.",
@@ -942,7 +988,9 @@
       "date": "2026-06-13T17:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : ajout de carte en mode Structure met bien à jour le code",
       "description": "Bug : ajouter une carte dans le board en mode Structure ne mettait pas à jour le code. Causes : (1) syncTrelloInlineBlock met à jour unifiedContent mais structureNodes gardait l'ancien bloc vide ; au changement de mode, flushStructureNodes reconstruit unifiedContent depuis structureNodes et écrasait la MAJ ; (2) syncTrelloInlineBlock dépendait de contentTrelloIds (potentiellement obsolète/vide selon le mode). Fix : (1) en mode Structure, onTrelloCardsChanged flush puis re-parse structureNodes après syncTrelloInlineBlock ; (2) syncTrelloInlineBlock met désormais à jour toute instance dont le marqueur est présent dans unifiedContent ET dont les cartes sont chargées, indépendamment de contentTrelloIds.",
@@ -961,7 +1009,9 @@
       "date": "2026-06-13T16:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : board masqué en Code, affiché en Structure avec tag graphique",
       "description": "1) Le panneau board (app-trello-board) n'est plus affiché en mode Code (edit) — condition gated mode !== 'edit' comme array/mockup ; affiché en Structure/Preview. 2) recomputeContentTrelloIds dérive les ids de TOUT le contenu en mode non-edit (et de la section active en edit). 3) En mode Structure, le code brut du fence est remplacé par un tag graphique 'TRELLO : NOM' : getStructBodySegments émet un segment type 'trello' (bloc complet préservé dans value, non éditable), rendu en chip bleu. parseStructureNodes exclut les ### internes du fence de la détection de headings.",
@@ -982,7 +1032,9 @@
       "date": "2026-06-13T15:45:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : clic sur le nœud/onglet → focus sur la seule section du trello",
       "description": "Le bloc ```TRELLO: NOM est traité comme un élément à part entière : recomputeRanges crée une fileRange (mappée au fichier TL: NOM) pour le fence → un handle 'file' existe. Cliquer sur le nœud sidebar 'TL: NOM' met la zone 4 en mode focus sur le seul bloc Trello. selectMegaOutil (clic onglet MO) émet désormais l'id du fichier Trello (en mode édition) → même focus. Suppression de scrollToTrelloBlock (remplacé par le focus). Helper trelloFileId.",
@@ -1002,7 +1054,9 @@
       "date": "2026-06-13T15:15:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : nœud sidebar affiché sous la forme 'TL: NOM_DU_TRELLO'",
       "description": "Le fichier/nœud sidebar d'un Trello est désormais nommé 'TL: NOM' (le fence code reste ```TRELLO: NOM). parseContent préfixe l'AdditionalFile par 'TL: ' ; buildDocSections retire le préfixe pour matcher l'instance et re-sérialiser le fence ; reconcileTrelloLifecycle retrouve le fichier en ignorant le préfixe à la suppression.",
@@ -1022,7 +1076,9 @@
       "date": "2026-06-13T14:45:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : sync bidirectionnelle code ↔ board (éditer/supprimer une task dans le code)",
       "description": "Ajout de la sync inverse code → board/BDD. reconcileTrelloCardsFromCode() (appelée dans saveAll, gated par trelloAutoSync) parse le corps de chaque bloc ```TRELLO: NOM (### colonnes + lignes - [x] Titre `[Prio]`), puis réconcilie les cartes en base par correspondance de titre : supprime les cartes absentes du code, crée les nouvelles, met à jour statut/priorité. Le board se rafraîchit via SSE (broadcastTrelloUpdate côté serveur). Helpers : parseTrelloBodyCards, trelloLabelToStatus, trelloLabelToPriority. Garde anti-doublon : on ne réconcilie que les instances dont les cartes sont déjà chargées.",
@@ -1042,7 +1098,9 @@
       "date": "2026-06-13T14:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : ajout d'une carte met à jour le code (bloc vide + sync auto par défaut)",
       "description": "Deux corrections pour que l'ajout d'une task dans le board mette à jour automatiquement le code du fence. 1) Le regex de syncTrelloInlineBlock (et removeTrelloBlockFromContent) exigeait \\n[\\s\\S]*?\\n``` et ne matchait donc PAS un bloc vide ```TRELLO: NOM\\n``` (un seul \\n) : corps rendu optionnel via (?:[\\s\\S]*?\\n)?. 2) trelloAutoSync passe à true par défaut : onTrelloCardsChanged met à jour le bloc inline dès qu'une carte change (la corruption des blocs ``` classiques étant désormais évitée par le parsing dédié du fence Trello). Le toggle reste disponible pour désactiver.",
@@ -1062,7 +1120,9 @@
       "date": "2026-06-13T13:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello piloté par le code : fence ```TRELLO: NOM source de vérité",
       "description": "Le marqueur ```TRELLO: NOM dans le code devient la source de vérité. 1) Affichage code brut (plus de badge) : la ligne d'ouverture est rendue comme texte/code (ed-trello-fence). 2) Le fence est parsé comme fichier additionnel système 'trello' (parseContent : pré-scan des ### internes + extraction en AdditionalFile) → crée le fichier trello.md (nœud sidebar) via la réconciliation parente. 3) buildDocSections re-sérialise un fichier lié à une instance trello (folderId+nom) en fence ```TRELLO: NOM au lieu du délimiteur '. 4) recomputeContentTrelloIds : la vue board s'affiche selon la présence du marqueur dans la section active (et non plus le folderId). 5) Cycle de vie : si un marqueur vu auparavant disparaît/est corrompu (ex: ```TREO:), reconcileTrelloLifecycle() supprime l'instance + l'onglet MO + le fichier trello.md ; le texte restant est intégré à contenu.md ; seedSeenTrelloMarkers amorce le suivi au chargement pour éviter de supprimer les instances legacy.",
@@ -1084,7 +1144,9 @@
       "date": "2026-06-13T12:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "Code : un bloc fencé ``` n'est plus reformaté en bloc-fichier à la sauvegarde",
       "description": "Cause racine identifiée : le flux de parsing/sauvegarde (parseContent, reconstruction markdown, parseAdditionalBlocks, syntaxHighlight) traitait toute ligne commençant par ` comme un délimiteur de bloc-fichier additionnel. Une ligne ``` (fence code markdown) commence par ` → elle était interprétée comme un bloc-fichier, et à la re-sérialisation (auto-save 2s) le code était reformaté (perte d'un backtick, insertion du titre). Ajout d'un lookahead négatif (?!``` ` ` `) aux regex /^(['`^]).../ dans blockPreScan, blockRegex (parseContent), les deux .replace de reconstruction markdown, parseAdditionalBlocks, et garde !startsWith('```') sur les .exec/.test restants (recomputeRanges déjà OK, parseStructureNodes déjà OK). Désormais un bloc ``` reste intact à la sauvegarde.",
@@ -1104,7 +1166,9 @@
       "date": "2026-06-13T11:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello Code : bouton Sync auto pour autoriser/empêcher la modif auto du code",
       "description": "Ajout d'un toggle 'Sync auto' dans la barre des actions Trello (mode Code). Signal trelloAutoSync (désactivé par défaut). Quand désactivé, onTrelloCardsChanged() n'appelle plus syncTrelloInlineBlock() : le contenu du code n'est jamais modifié automatiquement quand les cartes Trello changent. Quand activé, le bloc TRELLO inline se met à jour avec les cartes. Corrige définitivement la régression où un bloc ``` de code classique était transformé en bloc Trello tout seul.",
@@ -1125,7 +1189,9 @@
       "date": "2026-06-13T11:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello Code : suppression de l'insertion automatique du bloc inline",
       "description": "syncTrelloInlineBlock() ne crée plus de bloc Trello automatiquement si le bloc n'existe pas dans le contenu. Suppression de la branche else qui appendait le bloc en fin de section (comportement legacy). La création du bloc reste uniquement via confirmTrelloPopup(). Corrige la regression : tout bloc ``` (code classique) dans une section Trello était transformé en bloc Trello inline au bout de quelques secondes.",
@@ -1145,7 +1211,9 @@
       "date": "2026-06-13T10:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello Code : format TRELLO: + sélection bloc + label [trello:NOM]",
       "description": "Correction du format des blocs Trello inline : syntaxe ```## Trello: NAME remplacée par ```TRELLO: NAME (compatibilité ascendante via regex (?:## Trello:|TRELLO:)). Ajout de scrollToTrelloBlock() : clic sur un onglet Trello en mode Code sélectionne le bloc dans la textarea et scrolle dessus. Label des onglets Trello dans la barre MO changé de 'NOM' à '[trello:NOM]'. Correction critique : le regex de fermeture \\n``` n'était pas ancré en fin de ligne et matchait ```language (ajout (?=\\n|$)). Correction dans recomputeInlineBlocks, recomputeRanges et parseStructureNodes : les lignes ``` étaient capturées comme file-blocks à délimiteur unique (` jamais fermé), bloquant tout le document ; ajout de !lines[i].startsWith('```') pour les exclure.",
@@ -1166,7 +1234,9 @@
       "date": "2026-06-13T00:10:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|trello-inline-block",
       "title": "Trello : bloc fencé inline ```## Trello: NAME en mode Code",
       "description": "Le Trello MO est désormais représenté inline dans le contenu markdown par un bloc fencé ```## Trello: NOM_DU_TRELLO```  au lieu du fichier trello.md séparé. La ligne d'ouverture est rendue comme un badge bleu dans le miroir. syncTrelloInlineBlock() remplace saveTrelloMarkdownFile() pour mettre à jour le contenu inline. resolveTrelloFolderId() scanne le bloc dans le contenu pour maintenir le folderId DB cohérent. removeTrelloBlockFromContent() supprime le bloc à la suppression de l'instance.",
@@ -1188,7 +1258,9 @@
       "date": "2026-06-13T00:00:00.000Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|save-bar",
       "title": "Éditeur : barre sauvegarde déplacée en bas de zone",
       "description": "La barre d'info sauvegarde (statut Sauvegardé/Non sauvegardé/Erreur + badge FTP + zone Annuler/Partager) a été retirée du haut de la barre d'outils et repositionnée en pied de zone édition, avec une bordure top.",
@@ -1208,7 +1280,9 @@
       "date": "2026-06-12T19:15:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|array-code-sync",
       "title": "Array : format code complet + sync bidirectionnelle",
       "description": "Nouveau format dans le bloc 'array en mode Code : chaque cellule est écrite sur une ligne (A1:valeur|bold|bg=#ff0000|center), avec entêtes cols:w1,w2 et rows:h1,h2. Formules conservées brutes (=SUM(A1:A3)). Sync code→grille : saveAll() appelle syncArrayCodeToGrid() qui détecte les changements dans le bloc 'array, parse via deserializeArrayGrid() et pousse via updateArrayGrid(). Dedup via lastArrayCodeFromGrid + guard has() + validation nouveau format (/^[A-Z]+\\d+:/) pour éviter la boucle et prévenir l'écrasement par ancien format markdown. Récupération : si DB vide + fichier ancien format markdown → recoverGridFromMarkdownTable() reconstruit la grille.",
@@ -1228,7 +1302,9 @@
       "date": "2026-06-12T18:30:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|array-preview",
       "title": "Array : tableau stylisé en mode Preview",
       "description": "En mode Preview (visu), le bloc 'array' de la section est remplacé par un tableau HTML stylisé généré depuis la grille ArrayGrid en cache. Les couleurs de fond/texte, gras, italique et alignement des cellules sont appliqués via des attributs style inline. Chargement asynchrone de toutes les grilles au premier affichage en mode visu via loadAllVisuArrayGrids(). Mise à jour automatique si onArrayGridChanged est appelé.",
@@ -1249,7 +1325,9 @@
       "date": "2026-06-12T16:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|array-panel",
       "title": "Array : panneau bas visible en mode Structure",
       "description": "Regroupement des panneaux Trello/Array/Mockup dans un container .ed-panels-zone (flex-shrink:0, overflow-y:auto, max-height:60vh). Résout le bug où deux panneaux (Array+Mockup 560px chacun) poussaient le struct-wrap à 0px de hauteur, rendant le panneau Array visible au top au lieu du bas. Array masqué en mode Code (mode !== edit) comme Mockup.",
@@ -1269,7 +1347,9 @@
       "date": "2026-06-12T15:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:array-board",
       "title": "Array : menu contextuel dédié lignes et colonnes",
       "description": "Clic droit sur les en-têtes de colonnes (A, B, C...) et de lignes (1, 2, 3...) ouvre un menu contextuel dédié avec gras, italique, alignement et couleurs pour toute la ligne ou colonne. Le menu cellule conserve uniquement les options cellule + supprimer. ctxMenu étendu avec un champ target: cell|row|col.",
@@ -1288,7 +1368,9 @@
       "date": "2026-06-12T14:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:array-board",
       "title": "Array : 500 au clic entête colonne/ligne",
       "description": "Suppression du (mousedown) sur le <th> et <td> d'entête (gardé uniquement sur le handle de resize) : évite de déclencher un PUT à chaque clic. Correction de onMouseUp qui envoyait { colWidths, rowHeights } uniquement au lieu de la grille complète, causant cells=undefined dans le SQL.",
@@ -1307,7 +1389,9 @@
       "date": "2026-06-12T13:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:array-board",
       "title": "Array : Enter valide la formule sans rouvrir l'édition",
       "description": "Ajout de e.stopPropagation() dans onInputKeydown pour Enter/Tab/Escape : empêche le bubble du keydown vers le <td> qui appelait startEdit() après commitEdit(), rouvrant l'édition et masquant le résultat calculé.",
@@ -1326,7 +1410,9 @@
       "date": "2026-06-12T12:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:array-board",
       "title": "Array : couleurs ligne/colonne + copier/couper/coller",
       "description": "Fix du menu contextuel (stopPropagation empêche la fermeture au clic du color picker). Ajout coloration fond/texte par ligne et par colonne. Ajout copier/couper/coller dans le menu contextuel et via Ctrl+C/X/V clavier. setBgColor/setTextColor ferment le menu après application.",
@@ -1345,7 +1431,9 @@
       "date": "2026-06-12T11:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:array-board",
       "title": "Array : formules réactives au changement de valeur",
       "description": "Ajout de recomputeAllFormulas() dans ArrayBoardComponent : après chaque mutation de cellule (commitEdit, addRow, addCol, deleteRow, deleteCol) et au chargement initial (loadGrid), toutes les cellules formule sont recalculées localement avec les nouvelles valeurs. Double passe pour supporter les formules chaînées.",
@@ -1364,7 +1452,9 @@
       "date": "2026-06-12T10:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["libs"],
+      "scope": [
+        "libs"
+      ],
       "features": "libs:array-board",
       "title": "Array : mode construction de formule Excel-like",
       "description": "Implémentation du mode formule interactif dans ArrayBoardComponent : taper '=' passe en mode formule, cliquer une cellule insère sa référence (ex: B2) dans l'input sans fermer l'édition, les cellules référencées sont surlignées en bleu. Correction du bug #ERR causé par commitEdit déclenché au clic pendant la saisie d'une formule incomplète.",
@@ -1383,7 +1473,12 @@
       "date": "2026-06-12T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs", "server", "data"],
+      "scope": [
+        "projets",
+        "libs",
+        "server",
+        "data"
+      ],
       "features": "projets:editor|array-panel,libs:array-board,server:array-routes,data:mega-outils",
       "title": "Mega-Outil Array (tableur interactif)",
       "description": "Création du méga-outil Array : tableur interactif avec édition inline, formules (SUM/AVG/COUNT/MAX/MIN), redimensionnement colonnes/lignes, styles de cellules, sync temps réel SSE et persistance fichier 'array' dans la section. Panneau affiché dans les 3 modes (Code/Structure/Preview).",
@@ -1411,7 +1506,10 @@
       "date": "2026-06-12T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "libs"],
+      "scope": [
+        "projets",
+        "libs"
+      ],
       "features": "projets:editor|zone-code,libs:trello-board",
       "title": "Trello : propagation live des mutations vers Code et Preview",
       "description": "Ajout du @Output() cardsChanged sur TrelloBoardComponent, émis après chaque mutation locale (ajout, édition, suppression, drag-drop) et après rechargement SSE. Dans le zone component, le handler onTrelloCardsChanged reçoit les cards mises à jour, charge les boards manquants si mode non-Code, met à jour trelloCodeCards puis appelle saveTrelloMarkdownFile. Cette méthode met désormais aussi à jour existingFile.content en mémoire, reconstruit docSections et unifiedContent, rafraîchit la textarea DOM et les vues rendues (miroir + preview), sans passer par recomputeContentTrelloIds pour éviter de vider trelloCodeCards.",
@@ -1433,7 +1531,9 @@
       "date": "2026-06-12T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "Trello : sync live entre les 3 modes",
       "description": "Suppression de la condition mode !== 'edit' sur le panneau Trello de l'éditeur. Le composant app-trello-board est désormais monté dans les 3 modes (Code, Structure, Preview) et reste actif lors des changements de mode. Cela garantit que les modifications de tâches (ajout, titre, déplacement) sont visibles en temps réel dans tous les modes et que les événements SSE collaboratifs sont reçus quel que soit le mode actif.",
@@ -1453,7 +1553,9 @@
       "date": "2026-06-12T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-structure",
       "title": "Structure : masquer le fichier trello.md dans la vue texte",
       "description": "En mode Structure, lorsqu'un Trello est lié à une section, le fichier trello.md généré automatiquement (contenant des headings ## et ###) brisait le parsing de parseStructureNodes en créant des faux nœuds de section et laissait le délimiteur `'trello` visible dans la zone texte. Correction : pré-calcul des plages de blocs fichiers dans parseStructureNodes (même logique que recomputeRanges) pour ignorer les headings internes lors du scan.",
@@ -1473,7 +1575,9 @@
       "date": "2026-06-12T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-structure",
       "title": "Mode Structure : masquage de la barre Mega-outils",
       "description": "En mode Structure, la barre Mega-outils (MEGA-OUTILS / Trello / Mockup) est masquée. Le bloc additionnel 'trello' (trello.md) est masqué dans les cards de structure — le board s'affiche via le panel en zone basse. Les modes Code et Preview sont inchangés.",
@@ -1494,7 +1598,9 @@
       "date": "2026-06-11T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "Mode Code : Trello persisté comme vrai fichier trello.md dans le dossier section",
       "description": "Quand une section a un Trello associé (folderId), un vrai fichier trello.md est créé/mis à jour dans le dossier de la section via ProjectFilesService.createFile()/updateFile(). Le contenu Markdown liste toutes les cards par statut (## Trello: nom, ### colonne, - [checkbox] titre `[priorité]` — auteur · date). Refresh uniquement à la première création ; comparaison de contenu pour éviter les re-écritures inutiles. Suppression de toute injection virtuelle (strip/inject, TRELLO_INJECT_MARKER, contentWithoutTrelloBlocks, stripTrelloMarkdownBlocks, injectTrelloMarkdownIntoContent). trello.md inclus normalement dans buildDocSections → apparaît comme bloc 'trello dans le mode Code, stable sans apparition/disparition.",
@@ -1516,7 +1622,9 @@
       "date": "2026-06-11T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code|zone-structure",
       "title": "Edition : comportement images/mockups/trello par mode (Code/Structure/Preview)",
       "description": "Mode Code : les marqueurs {{IMG:...}}, {{MOCKUP:...}} et {{TRELLO:...}} s'affichent désormais comme du code brut (syntaxHighlight) au lieu de cartes visuelles. Mode Structure : les images apparaissent maintenant comme des blocs visuels (chip avec icône + nom + bouton de déliaison), identiques aux chips mockup. Panneaux bas Trello et Mockup : masqués en mode Code, visibles uniquement en mode Structure et Preview.",
@@ -1536,7 +1644,9 @@
       "date": "2026-06-11T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|sidebar",
       "title": "Sidebar : clic sur section Edition depuis Agenda bascule vers l'outil Edition",
       "description": "Quand l'outil Agenda est actif (zone 4) et que l'utilisateur clique sur une section de l'outil Edition dans le sidebar, la zone 4 bascule automatiquement vers l'outil Edition et navigue vers la section sélectionnée. Implémenté via findOutilForNode() qui parcourt les rootFolderIds de chaque outil pour identifier le propriétaire du noeud cliqué.",
@@ -9139,7 +9249,10 @@
       "date": "2026-06-14T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "data"],
+      "scope": [
+        "projets",
+        "data"
+      ],
       "features": "projets:editor|zone-structure",
       "title": "Suppression d'image unifiée : fichier différé + plus de réapparition",
       "description": "Refonte de deleteImageUnified. (1) Structure : le marqueur {{IMG:id}} est retiré de textContent ET des additionalBlocks (blocs fichiers), avec applyStructLock sur la section concernée pour faire apparaître le Partager. (2) Suppression physique du fichier différée pour les projets backup : enregistrée dans pendingVisuDeletions (exécutée au Partager, annulable) au lieu d'être immédiate — sinon le fichier disparaissait du dossier alors que le marqueur restait publié (image cassée au reload). (3) Edition : purge de l'image du cache visuSections (HTML figure + markdown baseline). (4) Cause racine de la réapparition : buildDocSections ré-injectait automatiquement un {{IMG:id}} autonome pour toute image présente dans this.files mais non référencée — or le fichier n'étant plus effacé immédiatement, l'image revenait. Ajout d'un garde DURABLE recentlyDeletedImageIds (posé avant tout re-render, levé uniquement à l'Annuler) : la réapparition survenait surtout au RETOUR en mode Edition, car ngOnChanges(files)→buildDocSections ré-injecte tout {{IMG:id}} d'une image encore présente dans this.files (stale) mais non référencée. Le garde exclut l'image de buildDocSections ET d'allImages tant que son nœud n'a pas disparu de this.files. Comportement identique en Code, Edition et Structure.",
@@ -9159,7 +9272,10 @@
       "date": "2026-06-14T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets", "data"],
+      "scope": [
+        "projets",
+        "data"
+      ],
       "features": "projets:editor|zone-code",
       "title": "Code : suppression manuelle de la ligne image efface le fichier",
       "description": "Supprimer une image en effaçant sa ligne {{IMG:id}} en mode Code ne passe pas par deleteImageUnified mais par reconcileImageLifecycle (appelé dans saveAll). Celui-ci faisait un svc.deleteFile immédiat qui échouait silencieusement sur les projets backup (le contenu publié référence encore l'image) → fichier orphelin jamais supprimé. reconcileImageLifecycle est désormais cohérent avec deleteImageUnified : sur projet backup, la suppression est différée au Partager via pendingVisuDeletions ; sinon immédiate. Ajout d'une réconciliation inverse : une image redevenue référencée (couper/coller, undo, ré-ajout) est dé-programmée et restaurée pour éviter une exclusion par le garde durable recentlyDeletedImageIds.",
@@ -9172,6 +9288,30 @@
       "prompt": "lorsque j'efface l'image dans le mode Code en supprimant la ligne, je n'ai plus l'image dans tous les modes mais le fichier image n'est pas supprimé du dossier",
       "startedAt": "2026-06-14T00:00:00.000Z",
       "completedAt": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "mod-312",
+      "version": "B-0.285",
+      "date": "2026-06-15T19:22:29.350Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|toolbar",
+      "title": "Barre Edition : menus deroulants titres/couleurs (gain de place)",
+      "description": "Regroupement de trois groupes de boutons de la barre de formatage du mode Edition (visu) en menus deroulants pour gagner de la place : Style de bloc (Paragraphe + H1-H4), Couleur du texte (foreColor) et Couleur de fond/surlignage (hiliteColor). Etat visuDropdown + toggleVisuDropdown ; ouverture via mousedown+preventDefault pour conserver la selection ; fermeture au clic exterieur via HostListener(document:mousedown) ou apres choix dune option. Niveaux de titre <= section active toujours grises.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "tests/fonctions/connecte/projets/editor/toolbar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le projet, dans le menu projet/Outils editor dans la partie Edition on a une bar de style. Pour certain element je voudrais une liste select pour mettre dedans les infos, exemple les couleurs de texte, les couleurs de fond, les titres, le but est de gagne de la place",
+      "startedAt": "2026-06-15T19:22:29.350Z",
+      "completedAt": "2026-06-15T19:22:29.350Z"
     }
   ]
 }
