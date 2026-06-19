@@ -891,11 +891,19 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     console.log('[EDITOR] Sections changed, analyzing structure...', { sections: resolved.length });
 
     // 1. Liaison hiérarchique textuelle (parent direct dans le texte)
+    // Le parent est la section précédente de niveau STRICTEMENT inférieur (ancêtre le plus
+    // proche), pas forcément level-1 : gère les sauts de niveau. Ex. insérer un H1 au milieu
+    // de H3 → les H3 suivants ont le H1 pour parent (puis seront remontés en H2 par la
+    // normalisation de profondeur de buildDocSections). Un nouveau heading ferme les niveaux
+    // ouverts plus profonds (réinitialisation).
     const parentSectionMap = new Map<SectionInfo, SectionInfo | null>();
-    const lastAtLevel = new Array(5).fill(null);
+    const lastAtLevel = new Array(6).fill(null);
     for (const s of resolved) {
-      parentSectionMap.set(s, lastAtLevel[s.level - 1]);
+      let parent: SectionInfo | null = null;
+      for (let lv = s.level - 1; lv >= 1; lv--) { if (lastAtLevel[lv]) { parent = lastAtLevel[lv]; break; } }
+      parentSectionMap.set(s, parent);
       lastAtLevel[s.level] = s;
+      for (let lv = s.level + 1; lv < lastAtLevel.length; lv++) lastAtLevel[lv] = null;
     }
 
     interface RenameOp { folderId: string; newName: string; section: typeof resolved[0] }
@@ -906,6 +914,14 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     for (const s of resolved) {
       if (s.folderId) {
         matchedFolderIds.add(s.folderId);
+        // Renommage robuste par identifiant stable {{SID}} : si le titre diffère du nom
+        // de dossier courant, c'est un renommage — matché par ID, jamais par ordre.
+        const sidFolder = this.findFolderById(s.folderId, currentFiles);
+        if (sidFolder && s.folderName && sidFolder.name !== s.folderName
+            && !renameOps.some(op => op.folderId === s.folderId)) {
+          console.log('[EDITOR] Rename detected (SID):', { from: sidFolder.name, to: s.folderName });
+          renameOps.push({ folderId: s.folderId, newName: s.folderName, section: s });
+        }
         continue;
       }
 
@@ -962,6 +978,10 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
     for (const [fp, folder] of allFolderPaths) {
       // Si le dossier a été renommé, on ne le supprime pas (son ID est dans renamedIds)
       if (renamedIds.has(folder.id)) continue;
+      // Filet de sécurité (identité stable) : un dossier encore référencé par une section
+      // (via {{SID}}) ne doit JAMAIS être supprimé, même si son chemin slugifié a changé
+      // suite au renommage d'un ancêtre. Évite les suppressions parasites.
+      if (matchedFolderIds.has(folder.id)) continue;
       // Si le dossier vient d'être créé via la sidebar, on le protège d'une suppression
       // accidentelle (race entre le signal parent mis à jour et l'@Input editor zone stale)
       if (this.pendingFolderNames.has(folder.name)) continue;
@@ -1056,7 +1076,19 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       return !(folder?.children || []).some(c => c.type === 'file');
     });
 
-    const hasStructural = renameOps.length > 0 || toDelete.length > 0 || toCreate.length > 0 || needsFile.length > 0 || additionalFileDeleted || filesToMove.length > 0;
+    // Re-parentage requis : un dossier existant dont le parent textuel (imbrication markdown)
+    // diffère du parent physique, même sans autre changement structurel (ré-imbrication pure
+    // par couper/coller en mode Code). Le cas « parent pas encore créé » est déjà couvert par toCreate.
+    const needsReparent = resolved.some(s => {
+      if (!s.folderId) return false;
+      const parentS = parentSectionMap.get(s);
+      if (parentS && !parentS.folderId) return false; // parent à créer → couvert par toCreate
+      const desiredParentId = parentS ? (parentS.folderId ?? null) : null;
+      const physicalParentId = this.findParentFolder(s.folderId, currentFiles)?.id ?? null;
+      return desiredParentId !== physicalParentId;
+    });
+
+    const hasStructural = renameOps.length > 0 || toDelete.length > 0 || toCreate.length > 0 || needsFile.length > 0 || additionalFileDeleted || filesToMove.length > 0 || needsReparent;
     const sectionsWithFile = resolved.filter(s => s.fileId || s.folderId); // Tous ceux qui ont potentiellement du contenu à sauver
 
     if (!hasStructural && sectionsWithFile.length === 0 && !resolved.some(s => s.additionalFiles?.some(af => !af.fileId))) {
@@ -1149,6 +1181,44 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
             .catch(e => console.warn('[ProjetEditor] updateOutil rootFolderIds failed:', e));
         }
 
+        // 3b. Re-parentage : déplacer les dossiers EXISTANTS dont le parent textuel
+        // (imbrication markdown courante) diffère du parent physique. Indispensable pour que
+        // l'insertion d'un titre rattache correctement les sous-sections suivantes :
+        // ex. un H2 inséré au milieu de H3 → les H3 qui le suivent deviennent ses enfants,
+        // ceux du dessus restent sous l'ancien H2. L'identité étant garantie par le {{SID}},
+        // le déplacement est sûr (jamais une recréation/suppression).
+        const createdIds = new Set(toCreate.map(s => s.folderId).filter((id): id is string => !!id));
+        const folderMoves: { folderId: string; level: number; targetParentId: string | null }[] = [];
+        for (const s of resolved) {
+          if (!s.folderId || createdIds.has(s.folderId)) continue;
+          const parentS = parentSectionMap.get(s);
+          const desiredParentId = parentS ? (parentS.folderId ?? null) : null;
+          const physicalParentId = this.findParentFolder(s.folderId, currentFiles)?.id ?? null;
+          if (desiredParentId !== physicalParentId) {
+            folderMoves.push({ folderId: s.folderId, level: s.level, targetParentId: desiredParentId });
+          }
+        }
+        folderMoves.sort((a, b) => a.level - b.level); // parents avant enfants
+        const movedToRoot: string[] = [];
+        for (const mv of folderMoves) {
+          try {
+            console.log(`[EDITOR] Re-parenting folder ${mv.folderId} -> ${mv.targetParentId ?? '(racine)'}`);
+            await this.projectFilesService.moveFolder(this.projectFolderName, mv.folderId, mv.targetParentId);
+            if (mv.targetParentId === null) movedToRoot.push(mv.folderId);
+          } catch (e) {
+            console.error('Folder re-parent failed:', e);
+          }
+        }
+        // Dossiers promus en racine → rattachés à l'outil Édition
+        if (movedToRoot.length > 0 && this.activeOutil()) {
+          const outilId = this.activeOutilId()!;
+          const currentRootIds = this.activeOutil()!.rootFolderIds;
+          const updatedRootIds = [...currentRootIds, ...movedToRoot.filter(id => !currentRootIds.includes(id))];
+          this.projectFilesService.updateOutil(this.projectFolderName, outilId, { rootFolderIds: updatedRootIds })
+            .then(() => this.outils.update(list => list.map(o => o.id === outilId ? { ...o, rootFolderIds: updatedRootIds } : o)))
+            .catch(e => console.warn('[ProjetEditor] updateOutil rootFolderIds (move) failed:', e));
+        }
+
         // 4. Missing content files
         for (const section of needsFile) {
           const folderId = section.folderId || renameOps.find(op => op.section === section)?.folderId;
@@ -1224,6 +1294,12 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
             const contentFile = (freshFolder.children || []).find(c => c.type === 'file');
             if (contentFile) s.fileId = contentFile.id;
           }
+        }
+        // Rafraîchit le parent réel (folderId du parent textuel, désormais créé/déplacé) pour
+        // que applySectionFolderOrder ordonne les frères sous le BON parent — sinon un nouveau
+        // parent (folderId null au moment du calcul initial) ferait grouper ses enfants à la racine.
+        for (const s of resolved) {
+          s.parentFolderId = parentSectionMap.get(s)?.folderId ?? null;
         }
       }
 
@@ -1368,6 +1444,25 @@ export class ProjetEditorComponent implements OnInit, OnDestroy {
       this.saveStatus.set('error');
       this.savedStatusTimer = setTimeout(() => this.saveStatus.set('idle'), 3000);
     }
+  }
+
+  /**
+   * Changement de niveau d'une section (clic droit sidebar / Structure). Délègue à l'éditeur
+   * qui modifie le `#` de la ligne de heading ; processSectionsChange applique ensuite le
+   * re-parentage positionnel (outdent/indent) + la normalisation de profondeur :
+   *  - Monter (−1) : la section remonte et récupère les sections suivantes comme enfants ;
+   *  - Descendre (+1) : la section se niche sous sa sœur précédente.
+   */
+  onNodeLevelChange(event: { folderId: string; delta: number }) {
+    this.editionOutil?.changeHeadingLevel(event.folderId, event.delta);
+  }
+
+  /**
+   * Suppression d'un titre en gardant le texte (clic droit sidebar). Délègue à l'éditeur qui
+   * retire la ligne de heading ; le texte est alors fusionné dans la section précédente.
+   */
+  onTitleMerge(event: { folderId: string }) {
+    this.editionOutil?.mergeTitleIntoPrevious(event.folderId);
   }
 
   async onDragDrop(event: DragDropEvent) {

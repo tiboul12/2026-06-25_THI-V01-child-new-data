@@ -43,6 +43,8 @@ export class ProjetSidebarComponent implements OnChanges {
   @Output() mockupListClick = new EventEmitter<void>();
   @Output() fileSelect = new EventEmitter<FileNode>();
   @Output() folderCreated = new EventEmitter<{ name: string; parentId: string | null }>();
+  @Output() nodeLevelChange = new EventEmitter<{ folderId: string; delta: number }>();
+  @Output() titleMerge = new EventEmitter<{ folderId: string }>();
   @Output() refresh = new EventEmitter<void>();
   @Output() projectSelect = new EventEmitter<void>();
   @Output() outilSelect = new EventEmitter<string>();
@@ -236,6 +238,70 @@ export class ProjetSidebarComponent implements OnChanges {
   }
 
   closeContextMenu() { this.contextMenu.set(null); }
+
+  // ── Changement de niveau hiérarchique d'une section ────────────────────────
+  // Contexte d'un nœud dans l'arbre : parent, frères, profondeur (racine = 1).
+  private getNodeContext(id: string): { parent: FileNode | null; siblings: FileNode[]; depth: number } | null {
+    const walk = (nodes: FileNode[], parent: FileNode | null, depth: number): { parent: FileNode | null; siblings: FileNode[]; depth: number } | null => {
+      for (const n of nodes) {
+        if (n.id === id) return { parent, siblings: nodes, depth };
+        if (n.children) { const r = walk(n.children, n, depth + 1); if (r) return r; }
+      }
+      return null;
+    };
+    return walk(this.files, null, 1);
+  }
+
+  private subtreeMaxDepth(node: FileNode, depth: number): number {
+    let max = depth;
+    for (const c of node.children || []) {
+      if (c.type === 'folder') max = Math.max(max, this.subtreeMaxDepth(c, depth + 1));
+    }
+    return max;
+  }
+
+  /** Monter (−1) : possible si la section n'est pas déjà au niveau racine. */
+  canPromoteNode(node: FileNode): boolean {
+    if (node.type !== 'folder') return false;
+    const ctx = this.getNodeContext(node.id);
+    return !!ctx && ctx.depth > 1;
+  }
+
+  /** Descendre (+1) : possible s'il existe un dossier frère précédent ET profondeur max ≤ 4. */
+  canDemoteNode(node: FileNode): boolean {
+    if (node.type !== 'folder') return false;
+    const ctx = this.getNodeContext(node.id);
+    if (!ctx) return false;
+    if (this.subtreeMaxDepth(node, ctx.depth) >= 4) return false;
+    const folderSiblings = ctx.siblings.filter(n => n.type === 'folder');
+    const idx = folderSiblings.findIndex(n => n.id === node.id);
+    return idx > 0;
+  }
+
+  changeNodeLevel(node: FileNode, delta: number) {
+    this.closeContextMenu();
+    if (node.type !== 'folder') return;
+    if (delta < 0 && !this.canPromoteNode(node)) return;
+    if (delta > 0 && !this.canDemoteNode(node)) return;
+    this.nodeLevelChange.emit({ folderId: node.id, delta });
+  }
+
+  /** Fusion possible si une section existe au-dessus : un parent, ou un dossier frère précédent. */
+  canMergeTitle(node: FileNode): boolean {
+    if (node.type !== 'folder') return false;
+    const ctx = this.getNodeContext(node.id);
+    if (!ctx) return false;
+    if (ctx.depth > 1) return true; // fusion dans le parent
+    const folderSiblings = ctx.siblings.filter(n => n.type === 'folder');
+    return folderSiblings.findIndex(n => n.id === node.id) > 0; // fusion dans le frère précédent
+  }
+
+  /** Supprime le titre en gardant le texte : le contenu est fusionné dans la section du dessus. */
+  mergeTitle(node: FileNode) {
+    this.closeContextMenu();
+    if (!this.canMergeTitle(node)) return;
+    this.titleMerge.emit({ folderId: node.id });
+  }
 
   startNewFolder(parentId: string | null) {
     this.closeContextMenu();

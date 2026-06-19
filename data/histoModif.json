@@ -9312,6 +9312,170 @@
       "prompt": "Dans le projet, dans le menu projet/Outils editor dans la partie Edition on a une bar de style. Pour certain element je voudrais une liste select pour mettre dedans les infos, exemple les couleurs de texte, les couleurs de fond, les titres, le but est de gagne de la place",
       "startedAt": "2026-06-15T19:22:29.350Z",
       "completedAt": "2026-06-15T19:22:29.350Z"
+    },
+    {
+      "id": "mod-396",
+      "version": "B-0.285",
+      "date": "2026-06-18T19:25:24.632Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets",
+        "libs"
+      ],
+      "features": "projets:editor|zone-preview|zone-structure|zone-code,libs:shared-ui",
+      "title": "Stabilisation creation titres H1-H4 : popup atomique + identifiant stable SID",
+      "description": "Refonte de la gestion des titres dans loutil Edition (3 modes). Identifiant stable {{SID:folderId}} accole a chaque heading (composeHeading), derive du dossier et reinjecte a chaque reconstruction (buildDocSections/reconstructFromSections) : parseContent, recomputeRanges et parseStructureNodes resolvent le folderId prioritairement par SID, supprimant la devinette par ordre. Migration legacy automatique au chargement. Creation de titre desormais atomique via popup partage worg-title-create-dialog (libs/shared/ui) : createTitleSection cree le dossier physique dabord (createFolder) puis insere le heading+SID. Branche sur la barre de style (mode Edition), le slash-menu et les boutons + du mode Structure. Cote parent (processSectionsChange) : renommage robuste par SID (folder.name != folderName) et filet de securite empechant la suppression dun dossier encore reference. Remplace execCommand(formatBlock,H1-4). Ajout du re-parentage automatique : a la creation/deplacement dun titre, les sous-sections suivantes sont rattachees au bon parent via moveFolder (detection desiredParent vs parent physique, par SID), declenche meme sans autre changement structurel (needsReparent). Resolution du parent corrigee (niveau strictement inferieur le plus proche + reset des niveaux profonds) pour gerer les sauts de niveau ; la normalisation de niveau (level=profondeur dans buildDocSections) remonte automatiquement les H3 en H2 quand ils deviennent enfants directs dun H1. Flux de creation de titre unifie avec le mode Code : le popup insere desormais le heading a la position du curseur (apres la section active) et delegue creation/ordre/re-parentage a processSectionsChange (applySectionFolderOrder ordonne selon la position dans le texte, parentFolderId rafraichi apres reload) au lieu de creer le dossier dans la zone (qui le placait en dernier). Corrige le positionnement du nouveau titre.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "libs/shared/ui/src/lib/editor/title-create-dialog.component.ts",
+        "libs/shared/ui/src/index.ts",
+        "docs/structure/projet-editor-zone.component.md",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-structure/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le site et dans le menu projet, on a un outils edition avec 3 modes... le systeme de creation de nouveau titre H1 H2 H3 H4 ne fonctionne pas parfaitement... je voudrais que tu verifi le systeme et que tu me propose dautre solution... creer un nouveau menu en selectionnant un endroit dans le texte, ensuite en cliquant dans la bar de style sur h1,h2,h3,h4. Un popup souvre pour ecrire le titre et ensuite le dossier est rajoute, le titre cree et le texte mis a jour.",
+      "startedAt": "2026-06-18T19:25:24.632Z",
+      "completedAt": "2026-06-18T19:25:24.632Z"
+    },
+    {
+      "id": "mod-397",
+      "version": "B-0.285",
+      "date": "2026-06-18T20:15:53.397Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|sidebar|zone-structure",
+      "title": "Changer le niveau dune section (+1/-1) via clic droit",
+      "description": "Ajout du changement de niveau dune section (+1/-1) via clic droit, dans le menu contextuel de la SIDEBAR et du mode Structure. Semantique outdent/indent de plan : Monter = la section remonte dun niveau et recupere les sections suivantes comme enfants (les precedentes restent) ; Descendre = la section se niche sous sa soeur precedente, son sous-arbre suit. Mecanisme : changeHeadingLevel modifie uniquement le nombre de # de la ligne de heading (SID preserve) puis saveAll ; le re-parentage physique et la normalisation de profondeur sont appliques par processSectionsChange (meme pipeline que ledition mode Code). Garde-fous canPromote/canDemote (profondeur>1 pour monter ; soeur precedente + profondeur<=4 pour descendre). Cablage : menu Structure appelle changeHeadingLevel directement ; sidebar emet nodeLevelChange -> onNodeLevelChange -> editionOutil.changeHeadingLevel.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/outils/edition/edition-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-structure/fonctions.md",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Tu dois pouvoir modifie le niveau dun menu en +1 ou -1, avec un clique droite dans le menu on doit pouvoir monter ou descendre dun niveau, si la section possede des sous sections, celle ci seront aussi mise a jour en consequence",
+      "startedAt": "2026-06-18T20:15:53.397Z",
+      "completedAt": "2026-06-18T20:15:53.397Z"
+    },
+    {
+      "id": "mod-398",
+      "version": "B-0.285",
+      "date": "2026-06-19T12:28:27.972Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor-toolbar",
+      "title": "Titre au curseur : coupe la section en deux",
+      "description": "Mode Édition : créer un titre depuis le menu Style de bloc l'insère à la position du curseur ; le texte sous le curseur (fin de sélection) bascule dans la nouvelle section. Approche sûre, sans réécriture du contenu : computeVisuCursorInsertLine() commit la section (sérialiseur éprouvé), compte les blocs feuilles avant le point de coupe et mappe ce compte sur la ligne markdown du contenu direct, puis délègue à createTitleSection() qui n'insère qu'une ligne ### Titre (le reste du contenu est intact). Repli sur le comportement standard (titre en fin de section) sans curseur. Remplace une tentative précédente (createTitleSectionAtCursor) qui réécrivait le contenu via sérialisation DOM et corrompait le markdown.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/toolbar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "donc je recommence, lorsque je selectionne au mileu d'un texte et que je rajoute un titre, le texte après la selection doit ce mettre sous le nouveau titre, le texte est donc decoupé en 2 avant et après le nouveau titre",
+      "startedAt": "2026-06-19T12:00:00.000Z",
+      "completedAt": "2026-06-19T12:28:27.972Z"
+    },
+    {
+      "id": "mod-399",
+      "version": "B-0.285",
+      "date": "2026-06-19T12:51:02.139Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor-sidebar",
+      "title": "Menu sidebar : supprimer le titre en gardant le texte",
+      "description": "Nouvel item dans le menu contextuel de la sidebar (sections) : « Supprimer le titre (garder le texte) ». Retire uniquement la ligne de heading du markdown (mergeTitleIntoPrevious) ; le texte est alors fusionné dans la section au-dessus (parent direct ou frère précédent), inverse de la création de titre. processSectionsChange rattache le texte et supprime le dossier orphelin ; aucune réécriture du contenu. Désactivé pour la 1re section du document (rien au-dessus). Flux : titleMerge (sidebar) → onTitleMerge → editionOutil.mergeTitleIntoPrevious → zone.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/outils/edition/edition-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je veux que tu rajoute un menu dans le popup du menu Edition ce menu doit permettre de supprimé un titre en gardant le texte, celui ci doit être mergé avec le texte du menu au dessus.",
+      "startedAt": "2026-06-19T12:40:00.000Z",
+      "completedAt": "2026-06-19T12:51:02.139Z"
+    },
+    {
+      "id": "mod-400",
+      "version": "B-0.285",
+      "date": "2026-06-19T13:10:03.069Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-zone",
+      "title": "Scission de titre : texte dupliqué dans l'ancienne section",
+      "description": "Après une coupure au curseur (création de titre), le texte déplacé restait affiché en double : la section donneuse étant marquée dirty, buildVisuSections conservait son HTML obsolète (contenu complet) au lieu de le reconstruire tronqué. Correctif dans createTitleSection : repérer la section donneuse (celle contenant le point d'insertion), retirer son flag dirtyVisuSectionIds et forcer la réinjection (forceVisuReinject). Même correctif appliqué à mergeTitleIntoPrevious pour la section réceptrice. Le contenu côté serveur était correct ; seul l'affichage du mode Édition était obsolète.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je crait une coupure dans un texte avec un nouveau titre, le texte après ce copie bien dans la nouvelle section mais ne se supprime pas de suite après dans l'ancienne section",
+      "startedAt": "2026-06-19T13:00:00.000Z",
+      "completedAt": "2026-06-19T13:10:03.069Z"
+    },
+    {
+      "id": "mod-401",
+      "version": "B-0.285",
+      "date": "2026-06-19T13:23:16.322Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-zone",
+      "title": "Scission de titre : ligne du curseur incluse à tort",
+      "description": "La coupure démarrait à la ligne du curseur (la ligne basculait dans la nouvelle section) au lieu de la ligne suivante. Le comptage par comparePoint sur la fin des blocs excluait la ligne du curseur (ambiguïté de bord fin de ligne / début ligne suivante). Remplacé par une détection déterministe du bloc feuille contenant le curseur dans computeVisuCursorInsertLine : la ligne du curseur reste toujours au-dessus (blocksBefore = index du bloc + 1), la nouvelle section démarre à la ligne suivante. Sélectionner en fin de ligne ne prend donc plus cette ligne.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/toolbar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la decoupe ce fait à partir de la ligne et non après le cursor, si je selectionne à la fin de la ligne, cela ne doit pas prendre la ligne mais après",
+      "startedAt": "2026-06-19T13:15:00.000Z",
+      "completedAt": "2026-06-19T13:23:16.322Z"
+    },
+    {
+      "id": "mod-402",
+      "version": "B-0.285",
+      "date": "2026-06-19T13:31:36.489Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-zone",
+      "title": "Supprimer le titre : sans effet en mode focus",
+      "description": "En mode focus (éditeur ne montrant qu'une section), « Supprimer le titre (garder le texte) » ne faisait rien (aucun réseau) : la vue focusée ne contient qu'une section, donc aucune « section au-dessus » → mergeTitleIntoPrevious sortait sur idx<=0. Correctif : si focusedHandle est actif, reconstruire le document complet (réinjection des éditions de la vue focusée), sortir du focus, puis fusionner sur le document complet. changeHeadingLevel n'était pas affecté car il n'a pas besoin d'une section au-dessus.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la supression de titre ne fonctionne plus aucune erreur dans la console ou dans le reseau, rien ne ce passe",
+      "startedAt": "2026-06-19T13:25:00.000Z",
+      "completedAt": "2026-06-19T13:31:36.489Z"
     }
   ]
 }

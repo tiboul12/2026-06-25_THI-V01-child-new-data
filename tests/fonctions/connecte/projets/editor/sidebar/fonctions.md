@@ -94,7 +94,7 @@ Options selon le type de nœud :
 
 | Type | Options disponibles |
 |------|-------------------|
-| Dossier | Nouveau dossier, Nouveau fichier, Renommer, Supprimer, Ajout MO Trello, Ajout MO Tableau |
+| Dossier | Nouveau dossier, Nouveau fichier, Renommer, Supprimer, Monter/Descendre d'un niveau, Supprimer le titre (garder le texte), Ajout MO Trello, Ajout MO Tableau |
 | Fichier `.md` | Renommer, Supprimer |
 | Image | Renommer, Supprimer |
 | Nœud verrouillé par moi **et modifié** | Partager mes modifications, Annuler les modifications |
@@ -163,3 +163,25 @@ Options selon le type de nœud :
 - Affiché au pied de la sidebar dès qu'au moins un trello existe dans l'outil (`trelloCount > 0`)
 - Badge avec le nombre de trellos
 - Clic → émet `trelloListClick` → ouvre la vue "Liste des trellos" dans la zone centrale (voir `2-5-2-5-17`)
+
+---
+
+## `2-5-2-2-15` — Changer le niveau d'une section (menu contextuel sidebar)
+
+- **Déclenchement** : clic droit sur un dossier dans la sidebar → « Monter d'un niveau » (−1) / « Descendre d'un niveau » (+1).
+- **Sémantique = outdent / indent de plan** (le niveau = profondeur dans l'arbre) :
+  - **Monter** : la section remonte d'un niveau et **récupère les sections suivantes** (positionnellement plus profondes) comme enfants ; les sections **précédentes** restent rattachées à l'ancien parent.
+  - **Descendre** : la section se **niche sous sa sœur précédente** (qui devient son parent). Son propre sous-arbre suit.
+- **Mécanisme** : on modifie uniquement le nombre de `#` de la **ligne de heading** (marqueur `{{SID}}` préservé) ; le re-parentage physique des dossiers et la normalisation de profondeur sont appliqués par `processSectionsChange` (même pipeline que l'édition en mode Code).
+- **Disponibilité** : Monter si profondeur > 1 (`canPromoteNode`) ; Descendre s'il existe un dossier frère précédent **et** que la profondeur max du sous-arbre reste ≤ 4 (`canDemoteNode`).
+- **Flux** : `nodeLevelChange` (sidebar → `onNodeLevelChange` → `editionOutil.changeHeadingLevel`). Même point d'entrée que le menu contextuel du mode Structure (`2-5-2-6-12`).
+
+## `2-5-2-2-16` — Supprimer le titre en gardant le texte (menu contextuel sidebar)
+
+- **Déclenchement** : clic droit sur un dossier → « Supprimer le titre (garder le texte) ».
+- **Sémantique** : supprime uniquement le **titre** de la section ; son **texte est fusionné dans la section au-dessus** (le parent direct, ou le dossier frère précédent si la section est à la racine). Inverse de la création de titre au curseur (`2-5-2-3-10`).
+- **Mécanisme** : retire la **seule ligne de heading** du markdown (`mergeTitleIntoPrevious`) ; le contenu « remonte » dans la section précédente (sémantique markdown), puis `processSectionsChange` rattache le texte et supprime le dossier orphelin. Aucune réécriture du contenu → pas de perte de texte.
+- **Disponibilité** (`canMergeTitle`) : il doit exister une section au-dessus — profondeur > 1 (a un parent) **ou** un dossier frère précédent. La toute 1re section du document n'est pas fusionnable.
+- **Mode focus** : si l'éditeur est focalisé sur une seule section, `mergeTitleIntoPrevious` reconstruit d'abord le document complet (réinjection des éditions de la vue focusée) et **sort du focus** avant de fusionner — sinon il n'y aurait pas de section au-dessus.
+- **Limite** : un éventuel fichier média propre à la section (image/Trello/Tableau) est supprimé avec le dossier ; seul le texte markdown est fusionné.
+- **Flux** : `titleMerge` (sidebar → `onTitleMerge` → `editionOutil.mergeTitleIntoPrevious`).
