@@ -119,6 +119,6 @@ Actions des barres :
 ## `2-5-2-3-10` — Création de titre au curseur (coupe de section)
 
 - Dans le menu **Style de bloc** (`2-5-2-3-9`), choisir un titre H1→H4 crée la section **à la position du curseur** : le texte situé sous le curseur (fin de sélection) bascule dans la nouvelle section, le texte au-dessus reste dans la section courante
-- `computeVisuCursorInsertLine()` commit d'abord la section (sérialiseur éprouvé), compte les blocs feuilles (`li/p/h1..h4/blockquote/pre`) entièrement avant le point de coupe, puis mappe ce compte sur la ligne markdown correspondante du contenu DIRECT
+- `computeVisuCursorInsertLine()` commit d'abord la section (sérialiseur éprouvé), repère le bloc feuille (`li/p/h1..h4/blockquote/pre`) **contenant le curseur** et mappe son index sur la ligne markdown du contenu DIRECT. **La ligne du curseur reste toujours au-dessus** : la nouvelle section démarre à la ligne SUIVANTE (sélectionner en fin de ligne ne « prend » pas cette ligne)
 - L'insertion délègue à `createTitleSection(level, title, insertLine)` qui **insère seulement une ligne `### Titre`** (aucune réécriture du contenu existant → pas de corruption possible) ; `saveAll()` fait créer le dossier et déplacer le contenu suivant par le parent
 - Repli sur le comportement standard (titre ajouté en fin de section courante) si aucun curseur n'est présent dans une section éditable

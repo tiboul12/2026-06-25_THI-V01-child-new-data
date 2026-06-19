@@ -6483,14 +6483,27 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     cut.setStart(range.endContainer, range.endOffset);
     cut.collapse(true);
 
-    // Compter les blocs « feuilles » entièrement situés avant le point de coupe
-    const leaves = Array.from(editable.querySelectorAll('li,p,h1,h2,h3,h4,blockquote,pre')) as HTMLElement[];
-    let blocksBefore = 0;
-    for (const leaf of leaves) {
-      if (leaf.querySelector('li,p,h1,h2,h3,h4,blockquote,pre')) continue; // conteneur, pas une feuille
-      try {
-        if (cut.comparePoint(leaf, leaf.childNodes.length) <= 0) blocksBefore++; // fin de feuille ≤ curseur
-      } catch { /* nœud hors plage : ignorer */ }
+    // Blocs « feuilles » (une ligne markdown chacun), dans l'ordre du document
+    const leaves = (Array.from(editable.querySelectorAll('li,p,h1,h2,h3,h4,blockquote,pre')) as HTMLElement[])
+      .filter(l => !l.querySelector('li,p,h1,h2,h3,h4,blockquote,pre')); // exclure les conteneurs
+
+    // Nombre de blocs qui restent AU-DESSUS du nouveau titre. La LIGNE DU CURSEUR reste toujours
+    // dans l'ancienne section ; la nouvelle démarre à la ligne SUIVANTE (donc sélectionner en fin
+    // de ligne ne « prend » pas cette ligne). On repère le bloc contenant le curseur et on inclut
+    // ce bloc dans le « dessus » (idx + 1) — déterministe, sans ambiguïté de bord fin/début.
+    let leafNode: HTMLElement | null = range.endContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.endContainer as HTMLElement)
+      : range.endContainer.parentElement;
+    while (leafNode && leafNode !== editable && !leaves.includes(leafNode)) leafNode = leafNode.parentElement;
+    const cursorIdx = leafNode && leafNode !== editable ? leaves.indexOf(leafNode) : -1;
+    let blocksBefore: number;
+    if (cursorIdx >= 0) {
+      blocksBefore = cursorIdx + 1; // la ligne du curseur reste au-dessus
+    } else {
+      // Curseur hors d'un bloc (entre deux blocs) : compter les blocs avant le point de coupe
+      blocksBefore = leaves.filter(l => {
+        try { return cut.comparePoint(l, l.childNodes.length) <= 0; } catch { return false; }
+      }).length;
     }
 
     // Mapper blocksBefore → ligne markdown du contenu DIRECT (s'arrête avant la 1re sous-section)
@@ -6577,6 +6590,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     const lines = this.unifiedContent.split('\n');
     const heading = '#'.repeat(level) + ' ' + clean;
     const at = Math.min(Math.max(insertLine + 1, 0), lines.length);
+    // Section « donneuse » (celle qui contient le point d'insertion) : son contenu vient d'être
+    // scindé. Son DOM est sérialisé dans unifiedContent (commit lors du calcul du point de coupe),
+    // donc on retire son flag dirty pour que buildVisuSections reconstruise son HTML tronqué au
+    // lieu de conserver l'ancien (sinon le texte déplacé reste affiché en double).
+    const donorId = this.sectionRanges.find(r => r.lineStart <= insertLine && insertLine <= r.lineEnd)?.folderId ?? null;
     lines.splice(at, 0, '', heading, '');
     this.unifiedContent = lines.join('\n');
     const ta = this.textareaRef?.nativeElement;
@@ -6584,7 +6602,11 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
     this.recomputeAll();
     if (this.mode === 'structure') this.structureNodes = this.parseStructureNodes();
-    if (this.mode === 'visu') this.buildVisuSections();
+    if (this.mode === 'visu') {
+      if (donorId) this.dirtyVisuSectionIds.delete(donorId);
+      this.forceVisuReinject = true; // re-render complet immédiat (section scindée)
+      this.buildVisuSections();
+    }
 
     if (!this.localDirty) { this.localDirty = true; this.dirtyChange.emit(true); }
     // Sauvegarde immédiate : le parent crée le dossier au bon endroit + re-parent, puis recharge
@@ -7604,6 +7626,54 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.recomputeAll();
     if (this.mode === 'structure') this.structureNodes = this.parseStructureNodes();
     if (this.mode === 'visu') this.buildVisuSections();
+    if (!this.localDirty) { this.localDirty = true; this.dirtyChange.emit(true); }
+    this.saveAll();
+  }
+
+  /**
+   * Supprime le TITRE d'une section en gardant son texte : retire uniquement la ligne de heading
+   * du markdown. Le contenu « remonte » alors dans la section précédente (sémantique markdown,
+   * inverse de la création de titre). La réconciliation parente (processSectionsChange) rattache
+   * le texte à la section du dessus et supprime le dossier orphelin. Aucune réécriture du contenu
+   * (on ne touche qu'à une ligne) → pas de perte de texte. La 1re section du document (rien
+   * au-dessus) n'est pas fusionnable.
+   */
+  mergeTitleIntoPrevious(folderId: string): void {
+    // En mode focus, l'éditeur ne contient qu'UNE section → aucune « section au-dessus » visible.
+    // On reconstruit le document complet (en réinjectant les éventuelles éditions de la vue focusée)
+    // et on sort du focus, puisque la section fusionnée va disparaître.
+    if (this.focusedHandle) {
+      const fullLines = this.fullContentBackup.split('\n');
+      fullLines.splice(this.focusedLineStart, this.focusedOriginalLineCount, ...this.unifiedContent.split('\n'));
+      this.unifiedContent = fullLines.join('\n');
+      this.focusedHandle = null;
+      this.fullContentBackup = '';
+      this.focusedLineStart = 0;
+      this.focusedOriginalLineCount = 0;
+      const ta0 = this.textareaRef?.nativeElement;
+      if (ta0) ta0.value = this.unifiedContent;
+      this.recomputeAll();
+    }
+    const ranges = [...this.sectionRanges].sort((a, b) => a.lineStart - b.lineStart);
+    const idx = ranges.findIndex(r => r.folderId === folderId);
+    if (idx <= 0) return; // pas de section au-dessus → fusion impossible
+    const range = ranges[idx];
+    const recipientId = ranges[idx - 1].folderId; // section du dessus qui reçoit le texte
+    const lines = this.unifiedContent.split('\n');
+    if (!/^#{1,4}\s/.test(lines[range.lineStart] ?? '')) return;
+    lines.splice(range.lineStart, 1); // retire la seule ligne de heading
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+    if (this.mode === 'structure') this.structureNodes = this.parseStructureNodes();
+    if (this.mode === 'visu') {
+      // La section réceptrice voit son texte changer : retirer son flag dirty + re-render complet
+      // pour que son HTML reflète le contenu fusionné (sinon affichage obsolète).
+      this.dirtyVisuSectionIds.delete(recipientId);
+      this.forceVisuReinject = true;
+      this.buildVisuSections();
+    }
     if (!this.localDirty) { this.localDirty = true; this.dirtyChange.emit(true); }
     this.saveAll();
   }

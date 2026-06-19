@@ -102,4 +102,12 @@ export class EditionOutilComponent {
   flushContentModifications(filterSectionId?: string): void {
     this.innerZone?.flushContentModifications(filterSectionId);
   }
+
+  changeHeadingLevel(folderId: string, delta: number): void {
+    this.innerZone?.changeHeadingLevel(folderId, delta);
+  }
+
+  mergeTitleIntoPrevious(folderId: string): void {
+    this.innerZone?.mergeTitleIntoPrevious(folderId);
+  }
 }

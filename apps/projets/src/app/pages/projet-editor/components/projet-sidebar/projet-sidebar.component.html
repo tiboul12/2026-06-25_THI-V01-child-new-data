@@ -322,6 +322,27 @@
         <span class="material-symbols-outlined text-sm">delete</span> Supprimer
       </button>
 
+      <!-- Changement de niveau hiérarchique (sections uniquement) -->
+      @if (contextMenu()!.node!.type === 'folder') {
+        <div class="border-t border-light-border dark:border-white/10 my-1"></div>
+        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                [disabled]="!canPromoteNode(contextMenu()!.node!)"
+                (click)="changeNodeLevel(contextMenu()!.node!, -1)">
+          <span class="material-symbols-outlined text-sm">arrow_upward</span> Monter d'un niveau
+        </button>
+        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                [disabled]="!canDemoteNode(contextMenu()!.node!)"
+                (click)="changeNodeLevel(contextMenu()!.node!, 1)">
+          <span class="material-symbols-outlined text-sm">arrow_downward</span> Descendre d'un niveau
+        </button>
+        <button class="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-light-surface dark:hover:bg-white/5 text-light-text dark:text-white/80 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                [disabled]="!canMergeTitle(contextMenu()!.node!)"
+                (click)="mergeTitle(contextMenu()!.node!)"
+                title="Supprime le titre et fusionne son texte dans la section au-dessus">
+          <span class="material-symbols-outlined text-sm">merge</span> Supprimer le titre (garder le texte)
+        </button>
+      }
+
       <!-- Ajout méga-outil (sections uniquement) -->
       @if (contextMenu()!.node!.type === 'folder') {
         <div class="border-t border-light-border dark:border-white/10 my-1"></div>

@@ -9392,6 +9392,90 @@
       "prompt": "donc je recommence, lorsque je selectionne au mileu d'un texte et que je rajoute un titre, le texte après la selection doit ce mettre sous le nouveau titre, le texte est donc decoupé en 2 avant et après le nouveau titre",
       "startedAt": "2026-06-19T12:00:00.000Z",
       "completedAt": "2026-06-19T12:28:27.972Z"
+    },
+    {
+      "id": "mod-399",
+      "version": "B-0.285",
+      "date": "2026-06-19T12:51:02.139Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor-sidebar",
+      "title": "Menu sidebar : supprimer le titre en gardant le texte",
+      "description": "Nouvel item dans le menu contextuel de la sidebar (sections) : « Supprimer le titre (garder le texte) ». Retire uniquement la ligne de heading du markdown (mergeTitleIntoPrevious) ; le texte est alors fusionné dans la section au-dessus (parent direct ou frère précédent), inverse de la création de titre. processSectionsChange rattache le texte et supprime le dossier orphelin ; aucune réécriture du contenu. Désactivé pour la 1re section du document (rien au-dessus). Flux : titleMerge (sidebar) → onTitleMerge → editionOutil.mergeTitleIntoPrevious → zone.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-sidebar/projet-sidebar.component.ts",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.html",
+        "apps/projets/src/app/pages/projet-editor/projet-editor.component.ts",
+        "apps/projets/src/app/pages/projet-editor/outils/edition/edition-outil.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je veux que tu rajoute un menu dans le popup du menu Edition ce menu doit permettre de supprimé un titre en gardant le texte, celui ci doit être mergé avec le texte du menu au dessus.",
+      "startedAt": "2026-06-19T12:40:00.000Z",
+      "completedAt": "2026-06-19T12:51:02.139Z"
+    },
+    {
+      "id": "mod-400",
+      "version": "B-0.285",
+      "date": "2026-06-19T13:10:03.069Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-zone",
+      "title": "Scission de titre : texte dupliqué dans l'ancienne section",
+      "description": "Après une coupure au curseur (création de titre), le texte déplacé restait affiché en double : la section donneuse étant marquée dirty, buildVisuSections conservait son HTML obsolète (contenu complet) au lieu de le reconstruire tronqué. Correctif dans createTitleSection : repérer la section donneuse (celle contenant le point d'insertion), retirer son flag dirtyVisuSectionIds et forcer la réinjection (forceVisuReinject). Même correctif appliqué à mergeTitleIntoPrevious pour la section réceptrice. Le contenu côté serveur était correct ; seul l'affichage du mode Édition était obsolète.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je crait une coupure dans un texte avec un nouveau titre, le texte après ce copie bien dans la nouvelle section mais ne se supprime pas de suite après dans l'ancienne section",
+      "startedAt": "2026-06-19T13:00:00.000Z",
+      "completedAt": "2026-06-19T13:10:03.069Z"
+    },
+    {
+      "id": "mod-401",
+      "version": "B-0.285",
+      "date": "2026-06-19T13:23:16.322Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-zone",
+      "title": "Scission de titre : ligne du curseur incluse à tort",
+      "description": "La coupure démarrait à la ligne du curseur (la ligne basculait dans la nouvelle section) au lieu de la ligne suivante. Le comptage par comparePoint sur la fin des blocs excluait la ligne du curseur (ambiguïté de bord fin de ligne / début ligne suivante). Remplacé par une détection déterministe du bloc feuille contenant le curseur dans computeVisuCursorInsertLine : la ligne du curseur reste toujours au-dessus (blocksBefore = index du bloc + 1), la nouvelle section démarre à la ligne suivante. Sélectionner en fin de ligne ne prend donc plus cette ligne.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/toolbar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la decoupe ce fait à partir de la ligne et non après le cursor, si je selectionne à la fin de la ligne, cela ne doit pas prendre la ligne mais après",
+      "startedAt": "2026-06-19T13:15:00.000Z",
+      "completedAt": "2026-06-19T13:23:16.322Z"
+    },
+    {
+      "id": "mod-402",
+      "version": "B-0.285",
+      "date": "2026-06-19T13:31:36.489Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor-zone",
+      "title": "Supprimer le titre : sans effet en mode focus",
+      "description": "En mode focus (éditeur ne montrant qu'une section), « Supprimer le titre (garder le texte) » ne faisait rien (aucun réseau) : la vue focusée ne contient qu'une section, donc aucune « section au-dessus » → mergeTitleIntoPrevious sortait sur idx<=0. Correctif : si focusedHandle est actif, reconstruire le document complet (réinjection des éditions de la vue focusée), sortir du focus, puis fusionner sur le document complet. changeHeadingLevel n'était pas affecté car il n'a pas besoin d'une section au-dessus.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "tests/fonctions/connecte/projets/editor/sidebar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la supression de titre ne fonctionne plus aucune erreur dans la console ou dans le reseau, rien ne ce passe",
+      "startedAt": "2026-06-19T13:25:00.000Z",
+      "completedAt": "2026-06-19T13:31:36.489Z"
     }
   ]
 }
