@@ -9506,6 +9506,49 @@
       "prompt": "Gemini cli à été supprimé (plus utilisable), je voudrais que sur le même système que gemini cli dans le fonctionnement d'une IA dans l'application et comme claude code, tu intègre antigravity cli en remplacement de gemini cli",
       "startedAt": "2026-06-19T15:30:00.000Z",
       "completedAt": "2026-06-19T16:35:37.413Z"
+    },
+    {
+      "id": "mod-404",
+      "version": "B-0.287",
+      "date": "2026-06-19T21:15:09.756Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets", "libs", "server"],
+      "features": "projets:editor-zone-code,projets:editor-toolbar,server",
+      "title": "Mode Code : barre de style dockée identique à l'Édition + bouton Ouvrir le dossier",
+      "description": "Mode Code : la barre de formatage est déplacée du bandeau des onglets vers une barre DOCKÉE en haut de la zone (même emplacement et même apparence que le mode Édition, classes visu-format-toolbar--docked + menus déroulants titres/couleur/surlignage). Mêmes éléments que l'Édition, actions adaptées au textarea : Markdown (B/I/S, titres, listes, citation, code, lien) et HTML inline pour les styles sans équivalent Markdown (souligné, couleur codeColor, surlignage codeHighlight, taille codeFontSize, alignement codeAlign) ; codeClearFormat retire les marqueurs. Extras Code à droite (bloc code, tableau, séparateur, toggle Markdown propre/Avec style). Nouveau bouton « Dossier » (folder_open) à droite de la barre des modes (tous modes) : openSectionFolder() → ProjectFilesService.openFolder(projectName, folderId) → endpoint serveur POST /api/file-projects/:name/open-folder (résolution chemin via safeProjectPath, ouverture dans l'explorateur OS explorer/open/xdg-open). L'endpoint était manquant côté serveur (méthode service orpheline) ; openFolder() étendu avec folderId optionnel.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "libs/portail-core/data-access/src/lib/project-files.service.ts",
+        "server/server-data.js",
+        "tests/fonctions/connecte/projets/editor/toolbar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "en mode Code je voudrais pouvoir ouvrir le dossier ou le fichier tu contenue du dossier est stocker en local. Modifi en mode code la place de la barre de style pour la mettre au même endroit que pour le mode Edition. Change aussi les elements pour que la barre de style soi identique à la bar de style du mode Edition. Dans la barre des mode rajout à droite un bouton pour ouvrir le dossier ou ce trouve les documents de la section selectionné.",
+      "startedAt": "2026-06-19T20:30:00.000Z",
+      "completedAt": "2026-06-19T21:15:09.756Z"
+    },
+    {
+      "id": "mod-405",
+      "version": "B-0.287",
+      "date": "2026-06-19T21:19:10.377Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor-zone-code",
+      "title": "Mode Code : barre de style réservée à la vue « Avec style »",
+      "description": "La barre de style dockée du mode Code n'apparaît plus que dans la vue « Avec style » (@if showCssInCode()) ; la vue « Markdown propre » n'a plus de barre de style. Le toggle Markdown propre / Avec style est déplacé hors de la barre de style, dans le groupe droite de la barre des modes (avec le bouton Dossier), pour rester accessible dans les deux vues.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/toolbar/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Dans le mode Code tu as une version Markdown propre ou avec style, seul la version Style dois avoir la bar de style",
+      "startedAt": "2026-06-19T21:16:00.000Z",
+      "completedAt": "2026-06-19T21:19:10.377Z"
     }
   ]
 }

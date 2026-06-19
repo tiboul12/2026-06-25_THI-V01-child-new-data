@@ -182,8 +182,9 @@ export class ProjectFilesService {
     return firstValueFrom(this.http.get<any>(`${this.apiUrl}/api/github/reachable`, { headers: this.h() }));
   }
 
-  openFolder(name: string): Promise<{ success: boolean }> {
-    return firstValueFrom(this.http.post<any>(`${this.apiUrl}/api/file-projects/${name}/open-folder`, {}, { headers: this.h() }));
+  /** Ouvre le dossier local d'une section (ou la racine si folderId absent) dans l'explorateur OS. */
+  openFolder(name: string, folderId: string | null = null): Promise<{ success: boolean; path?: string; error?: string }> {
+    return firstValueFrom(this.http.post<any>(`${this.apiUrl}/api/file-projects/${name}/open-folder`, { folderId }, { headers: this.h() }));
   }
 
   getOutils(name: string): Promise<{ outils: Outil[] }> {

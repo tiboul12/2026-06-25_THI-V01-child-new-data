@@ -2279,6 +2279,31 @@ h4.visu-sec-heading {
   gap: 0.5rem;
 }
 
+.struct-addbar {
+  display: flex;
+  margin-bottom: 0.25rem;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border: 1px dashed rgba(99, 102, 241, 0.5);
+    border-radius: 7px;
+    background: rgba(99, 102, 241, 0.06);
+    color: rgb(79, 70, 229);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+
+    &:hover { background: rgba(99, 102, 241, 0.12); border-color: rgba(99, 102, 241, 0.8); }
+    .material-symbols-outlined { font-size: 16px; }
+
+    :host-context(.dark) & { color: rgb(165, 180, 252); }
+  }
+}
+
 // Couleurs par niveau
 $struct-colors: (
   1: (border: rgb(99, 102, 241), badge-bg: rgb(99, 102, 241), badge-text: #fff, head-bg-light: rgba(99,102,241,0.06), head-bg-dark: rgba(99,102,241,0.12)),

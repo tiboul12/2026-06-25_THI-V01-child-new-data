@@ -93,5 +93,31 @@
       "costOutput": 4
     }
   ],
-  "lastUpdated": "2026-03-16T17:35:00.000Z"
+  "lastUpdated": "2026-06-19T17:24:32.968Z",
+  "antigravity": [
+    {
+      "value": "default",
+      "label": "Défaut (modèle configuré dans agy)",
+      "costInput": 0,
+      "costOutput": 0
+    },
+    {
+      "value": "gemini-3-pro",
+      "label": "Gemini 3 Pro",
+      "costInput": 1.25,
+      "costOutput": 5
+    },
+    {
+      "value": "gemini-3-flash",
+      "label": "Gemini 3 Flash",
+      "costInput": 0.1,
+      "costOutput": 0.4
+    },
+    {
+      "value": "claude-sonnet-4.5",
+      "label": "Claude Sonnet 4.5",
+      "costInput": 3,
+      "costOutput": 15
+    }
+  ]
 }

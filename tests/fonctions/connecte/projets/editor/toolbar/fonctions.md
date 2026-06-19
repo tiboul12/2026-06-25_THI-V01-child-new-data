@@ -49,24 +49,39 @@ Visible en permanence dans l'éditeur de projet
 
 ## `2-5-2-3-5` — Barre de formatage (mode Code uniquement)
 
-Outils d'insertion Markdown dans le textarea :
+Barre **dockée en haut de la zone Code** (même emplacement et même apparence que la barre du mode Édition — classes `visu-format-toolbar--docked`, mêmes icônes et menus déroulants titres/couleur/surlignage). En mode Code elle agit sur le **textarea** : insertion Markdown, et HTML inline pour les styles sans équivalent Markdown (rendu via le mode « Avec style »).
+
+> **Affichée uniquement dans la vue « Avec style »** (`@if (showCssInCode())`) — la vue « Markdown propre » n'a pas de barre de style. Le **toggle** Markdown propre / Avec style est déplacé dans la **barre des modes** (groupe droite, avec le bouton Dossier) pour rester accessible dans les deux vues.
 
 | Bouton | Action | Insère |
 |--------|--------|--------|
 | **B** | Gras | `**texte**` |
 | *I* | Italique | `*texte*` |
+| U | Souligné | `<u>texte</u>` |
 | ~~S~~ | Barré | `~~texte~~` |
-| H1 | Titre 1 | `\n# ` |
-| H2 | Titre 2 | `\n## ` |
-| H3 | Titre 3 | `\n### ` |
-| H4 | Titre 4 | `\n#### ` |
-| • Liste | Liste | `- ` |
-| " | Citation | `\n> ` |
-| — | Séparateur | `\n---\n` |
-| `</> ` | Code inline | `` `code` `` |
-| ` ``` ` | Bloc code | `insertCodeBlock()` |
-| ⊞ | Tableau | `insertTable()` |
-| 🖼 | Image | `triggerImageUpload()` |
+| Titres ▾ | Menu : Paragraphe + H1→H4 | `\n# `…`\n#### ` (`insertAt`) |
+| Liste / Numérotée / Case | Listes | `- ` / `1. ` / `- [ ] ` |
+| Citation | Blockquote | `\n> ` |
+| Code | Code inline | `` `code` `` |
+| Lien | `codeLink()` | `[texte](https://)` |
+| Image | `triggerImageUpload()` | marqueur image |
+| Align ◧◨◩ | `codeAlign(dir)` | `<div style="text-align:…">` |
+| A A | `codeFontSize(em)` | `<span style="font-size:…">` |
+| Couleur ▾ | `codeColor(c)` (pastilles `visuTextColors`) | `<span style="color:…">` |
+| Surlignage ▾ | `codeHighlight(c)` (pastilles `visuHighlightColors`) | `<span style="background:…">` |
+| Effacer | `codeClearFormat()` | retire les marqueurs MD/HTML de la sélection |
+| ` ``` ` / ⊞ / — | Extras Code (droite) | `insertCodeBlock()` / `insertTable()` / `\n---\n` |
+| Toggle « Markdown propre / Avec style » | `showCssInCode()` | contenu.md ↔ contenu-css.md |
+
+> Les menus déroulants réutilisent l'état `visuDropdown` / `toggleVisuDropdown` du mode Édition.
+
+---
+
+## `2-5-2-3-11` — Bouton « Ouvrir le dossier » (barre des modes, tous modes)
+
+- À droite de la barre des onglets de mode (`ml-auto`), bouton **Dossier** (`folder_open`) — visible dans tous les modes.
+- `openSectionFolder()` résout le dossier de la **section active** (`resolveActiveFolderId(focusedHandle?.id ?? activeNodeId)`, racine projet si aucune) et appelle `ProjectFilesService.openFolder(projectName, folderId)`.
+- Serveur : `POST /api/file-projects/:name/open-folder { folderId }` → résout le chemin local (`safeProjectPath`, anti-traversal), ouvre le dossier dans l'**explorateur de l'OS** (`explorer.exe` / `open` / `xdg-open`). 404 si la section n'est pas clonée en local.
 
 ---
 

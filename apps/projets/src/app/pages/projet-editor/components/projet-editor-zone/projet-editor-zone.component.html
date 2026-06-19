@@ -48,47 +48,25 @@
         </button>
       </div>
 
-      @if (mode === 'edit') {
-        <!-- Formatage inline -->
-        <button type="button" class="ed-tb-btn" title="Gras" (click)="insertAt('**', '**')"><strong>B</strong></button>
-        <button type="button" class="ed-tb-btn" title="Italique" (click)="insertAt('*', '*')"><em>I</em></button>
-        <button type="button" class="ed-tb-btn" title="Barré" (click)="insertAt('~~', '~~')"><s>S</s></button>
-        <div class="ed-tb-sep"></div>
-        <!-- Titres -->
-        <button type="button" class="ed-tb-btn ed-tb-btn--h1" title="Titre 1" (click)="insertAt('\n# ', '')">H1</button>
-        <button type="button" class="ed-tb-btn ed-tb-btn--h2" title="Titre 2" (click)="insertAt('\n## ', '')">H2</button>
-        <button type="button" class="ed-tb-btn ed-tb-btn--h3" title="Titre 3" (click)="insertAt('\n### ', '')">H3</button>
-        <button type="button" class="ed-tb-btn ed-tb-btn--h4" title="Titre 4" (click)="insertAt('\n#### ', '')">H4</button>
-        <div class="ed-tb-sep"></div>
-        <!-- Listes & blocs -->
-        <button type="button" class="ed-tb-btn" title="Liste à puces" (click)="insertAt('- ')">&#8226; Liste</button>
-        <button type="button" class="ed-tb-btn" title="Citation / Blockquote" (click)="insertAt('\n> ', '')">
-          <span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_quote</span>
+      <!-- Groupe droite : toggle de vue (mode Code) + ouvrir le dossier (tous modes) -->
+      <div class="ml-auto flex items-center gap-1">
+        @if (mode === 'edit') {
+          <!-- Toggle : Markdown propre (contenu.md) vs Avec style (contenu-css.md) -->
+          <button type="button" class="ed-css-toggle"
+                  [class.ed-css-toggle--on]="showCssInCode()"
+                  (click)="showCssInCode.set(!showCssInCode())"
+                  [title]="showCssInCode() ? 'Afficher le Markdown propre (sans style)' : 'Afficher le contenu stylisé'">
+            <span class="material-symbols-outlined">{{ showCssInCode() ? 'palette' : 'code_off' }}</span>
+            {{ showCssInCode() ? 'Avec style' : 'Markdown propre' }}
+          </button>
+        }
+        <button type="button" class="ed-tb-btn flex items-center gap-1"
+                title="Ouvrir le dossier local de la section sélectionnée"
+                (click)="openSectionFolder()">
+          <span class="material-symbols-outlined" style="font-size:15px;line-height:1">folder_open</span>
+          Dossier
         </button>
-        <button type="button" class="ed-tb-btn" title="Séparateur horizontal" (click)="insertAt('\n---\n', '')">&#8212;</button>
-        <div class="ed-tb-sep"></div>
-        <!-- Code -->
-        <button type="button" class="ed-tb-btn ed-tb-btn--code" title="Code inline" (click)="insertAt('`', '`')">&lt;/&gt;</button>
-        <button type="button" class="ed-tb-btn ed-tb-btn--code" title="Bloc de code" (click)="insertCodeBlock()">```</button>
-        <!-- Table -->
-        <button type="button" class="ed-tb-btn" title="Insérer un tableau" (click)="insertTable()">
-          <span class="material-symbols-outlined" style="font-size:14px;line-height:1">table</span>
-        </button>
-        <div class="ed-tb-sep"></div>
-        <!-- Image -->
-        <button type="button" class="ed-tb-btn flex items-center gap-1" title="Insérer une image" (click)="triggerImageUpload()" [disabled]="isUploading()">
-          <span class="material-symbols-outlined text-sm leading-none">image</span>
-        </button>
-        <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
-        <!-- Toggle : Markdown propre (contenu.md, défaut) vs avec style (contenu-css.md) -->
-        <button type="button" class="ed-css-toggle ml-auto"
-                [class.ed-css-toggle--on]="showCssInCode()"
-                (click)="showCssInCode.set(!showCssInCode())"
-                [title]="showCssInCode() ? 'Afficher le Markdown propre (sans style)' : 'Afficher le contenu stylisé'">
-          <span class="material-symbols-outlined">{{ showCssInCode() ? 'palette' : 'code_off' }}</span>
-          {{ showCssInCode() ? 'Avec style' : 'Markdown propre' }}
-        </button>
-      }
+      </div>
     </div>
 
   </div>
@@ -705,6 +683,100 @@
 
     <!-- Mode Code : textarea + miroir overlay -->
     @if (mode === 'edit') {
+      <!-- Barre de style dockée (identique au mode Édition ; actions Markdown/HTML pour le textarea).
+           Affichée uniquement dans la vue « Avec style » (showCssInCode). -->
+      @if (showCssInCode()) {
+      <div class="visu-format-toolbar visu-format-toolbar--docked">
+          <button (mousedown)="$event.preventDefault(); insertAt('**', '**')" title="Gras"><b>B</b></button>
+          <button (mousedown)="$event.preventDefault(); insertAt('*', '*')" title="Italique"><i>I</i></button>
+          <button (mousedown)="$event.preventDefault(); insertAt('<u>', '</u>')" title="Souligné"><u>U</u></button>
+          <button (mousedown)="$event.preventDefault(); insertAt('~~', '~~')" title="Barré"><s>S</s></button>
+          <div class="visu-format-toolbar__sep"></div>
+          <!-- Titres / paragraphe : menu déroulant -->
+          <div class="visu-tb-dropdown">
+            <button type="button" class="visu-tb-trigger" title="Style de bloc (titres / paragraphe)"
+                    (mousedown)="$event.preventDefault(); toggleVisuDropdown('title')">
+              <span class="material-symbols-outlined" style="font-size:14px;line-height:1">title</span>
+              <span class="material-symbols-outlined visu-tb-caret" style="font-size:13px;line-height:1">arrow_drop_down</span>
+            </button>
+            @if (visuDropdown === 'title') {
+              <div class="visu-tb-menu">
+                <button (mousedown)="$event.preventDefault(); insertAt('\n', ''); visuDropdown = null" title="Paragraphe"><span class="visu-tb-h">¶</span> Paragraphe</button>
+                <button (mousedown)="$event.preventDefault(); insertAt('\n# ', ''); visuDropdown = null" title="Titre 1"><span class="visu-tb-h">H1</span> Titre 1</button>
+                <button (mousedown)="$event.preventDefault(); insertAt('\n## ', ''); visuDropdown = null" title="Titre 2"><span class="visu-tb-h">H2</span> Titre 2</button>
+                <button (mousedown)="$event.preventDefault(); insertAt('\n### ', ''); visuDropdown = null" title="Titre 3"><span class="visu-tb-h">H3</span> Titre 3</button>
+                <button (mousedown)="$event.preventDefault(); insertAt('\n#### ', ''); visuDropdown = null" title="Titre 4"><span class="visu-tb-h">H4</span> Titre 4</button>
+              </div>
+            }
+          </div>
+          <div class="visu-format-toolbar__sep"></div>
+          <!-- Listes -->
+          <button (mousedown)="$event.preventDefault(); insertAt('- ', '')" title="Liste à puces"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_bulleted</span></button>
+          <button (mousedown)="$event.preventDefault(); insertAt('1. ', '')" title="Liste numérotée"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_numbered</span></button>
+          <button (mousedown)="$event.preventDefault(); insertAt('- [ ] ', '')" title="Case à cocher"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">checklist</span></button>
+          <button (mousedown)="$event.preventDefault(); insertAt('\n> ', '')" title="Citation"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_quote</span></button>
+          <button (mousedown)="$event.preventDefault(); insertAt('`', '`')" title="Code"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">code</span></button>
+          <button (mousedown)="$event.preventDefault(); codeLink()" title="Lien"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">link</span></button>
+          <button (click)="triggerImageUpload()" [disabled]="isUploading()" title="Insérer une image"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">image</span></button>
+          <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
+          <div class="visu-format-toolbar__sep"></div>
+          <!-- Alignement (HTML) -->
+          <button (mousedown)="$event.preventDefault(); codeAlign('left')" title="Aligner à gauche"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_left</span></button>
+          <button (mousedown)="$event.preventDefault(); codeAlign('center')" title="Centrer"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_center</span></button>
+          <button (mousedown)="$event.preventDefault(); codeAlign('right')" title="Aligner à droite"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_right</span></button>
+          <div class="visu-format-toolbar__sep"></div>
+          <!-- Taille (HTML) -->
+          <button (mousedown)="$event.preventDefault(); codeFontSize('0.85em')" title="Petit" style="font-size:10px">A</button>
+          <button (mousedown)="$event.preventDefault(); codeFontSize('1.3em')" title="Grand" style="font-size:15px">A</button>
+          <div class="visu-format-toolbar__sep"></div>
+          <!-- Couleur du texte -->
+          <div class="visu-tb-dropdown">
+            <button type="button" class="visu-tb-trigger" title="Couleur du texte"
+                    (mousedown)="$event.preventDefault(); toggleVisuDropdown('color')">
+              <span class="visu-tb-aletter">A</span>
+              <span class="material-symbols-outlined visu-tb-caret" style="font-size:13px;line-height:1">arrow_drop_down</span>
+            </button>
+            @if (visuDropdown === 'color') {
+              <div class="visu-tb-menu visu-tb-menu--swatches">
+                @for (c of visuTextColors; track c) {
+                  <button class="visu-color-swatch" [style.background]="c"
+                          (mousedown)="$event.preventDefault(); codeColor(c)"
+                          [title]="'Couleur ' + c"></button>
+                }
+              </div>
+            }
+          </div>
+          <!-- Surlignage -->
+          <div class="visu-tb-dropdown">
+            <button type="button" class="visu-tb-trigger" title="Couleur de fond (surlignage)"
+                    (mousedown)="$event.preventDefault(); toggleVisuDropdown('highlight')">
+              <span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_ink_highlighter</span>
+              <span class="material-symbols-outlined visu-tb-caret" style="font-size:13px;line-height:1">arrow_drop_down</span>
+            </button>
+            @if (visuDropdown === 'highlight') {
+              <div class="visu-tb-menu visu-tb-menu--swatches">
+                @for (c of visuHighlightColors; track c) {
+                  <button class="visu-color-swatch visu-color-swatch--hl" [style.background]="c"
+                          (mousedown)="$event.preventDefault(); codeHighlight(c)"
+                          [title]="'Surlignage ' + c"></button>
+                }
+              </div>
+            }
+          </div>
+          <div class="visu-format-toolbar__sep"></div>
+          <button class="visu-format-toolbar__clear"
+                  (mousedown)="$event.preventDefault(); codeClearFormat()"
+                  title="Effacer la mise en forme">
+            <span class="material-symbols-outlined" style="font-size:13px;line-height:1">format_clear</span>
+          </button>
+          <!-- Extras spécifiques au mode Code (à droite) -->
+          <div class="visu-format-toolbar__sep"></div>
+          <button (mousedown)="$event.preventDefault(); insertCodeBlock()" title="Bloc de code">```</button>
+          <button (mousedown)="$event.preventDefault(); insertTable()" title="Insérer un tableau"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">table</span></button>
+          <button (mousedown)="$event.preventDefault(); insertAt('\n---\n', '')" title="Séparateur horizontal">&#8212;</button>
+      </div>
+      }
+
       <div class="ed-wrap flex-1 min-h-0 relative"
            (mousemove)="onWrapMouseMove($event)"
            (mouseleave)="onWrapMouseLeave()">
@@ -902,6 +974,14 @@
            (click)="closeStructContextMenu()">
         <div class="struct-inner">
 
+          <!-- Création atomique d'une section racine (popup → dossier + heading + SID) -->
+          <div class="struct-addbar">
+            <button type="button" class="struct-addbar__btn" (click)="openTitleDialogStructRoot()">
+              <span class="material-symbols-outlined">add</span>
+              Nouvelle section
+            </button>
+          </div>
+
           @for (node of filteredStructureNodes; track node.id) {
             <div class="struct-card"
                  [class.struct-card--l1]="node.level === 1"
@@ -1025,6 +1105,25 @@
              [style.left.px]="structContextMenu.x"
              [style.top.px]="structContextMenu.y"
              (click)="$event.stopPropagation()">
+          @if (structContextMenu.node.level < 4) {
+            <button class="struct-ctx-menu__item"
+                    (click)="openTitleDialogStructChild(structContextMenu.node)">
+              <span class="material-symbols-outlined">add</span>
+              Ajouter un sous-titre
+            </button>
+          }
+          <button class="struct-ctx-menu__item"
+                  [disabled]="!canPromoteStructNode(structContextMenu.node)"
+                  (click)="changeStructNodeLevel(structContextMenu.node, -1)">
+            <span class="material-symbols-outlined">arrow_upward</span>
+            Monter d'un niveau
+          </button>
+          <button class="struct-ctx-menu__item"
+                  [disabled]="!canDemoteStructNode(structContextMenu.node)"
+                  (click)="changeStructNodeLevel(structContextMenu.node, 1)">
+            <span class="material-symbols-outlined">arrow_downward</span>
+            Descendre d'un niveau
+          </button>
           <button class="struct-ctx-menu__item struct-ctx-menu__item--danger"
                   (click)="structureDeleteSection(structContextMenu.node)">
             <span class="material-symbols-outlined">delete</span>
@@ -1057,18 +1156,10 @@
               @if (visuDropdown === 'title') {
                 <div class="visu-tb-menu">
                   <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'P'); visuDropdown = null" title="Paragraphe"><span class="visu-tb-h">¶</span> Paragraphe</button>
-                  <button [disabled]="activeVisuSectionLevel >= 1"
-                          (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H1'); visuDropdown = null"
-                          [title]="activeVisuSectionLevel >= 1 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 1'"><span class="visu-tb-h">H1</span> Titre 1</button>
-                  <button [disabled]="activeVisuSectionLevel >= 2"
-                          (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H2'); visuDropdown = null"
-                          [title]="activeVisuSectionLevel >= 2 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 2'"><span class="visu-tb-h">H2</span> Titre 2</button>
-                  <button [disabled]="activeVisuSectionLevel >= 3"
-                          (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H3'); visuDropdown = null"
-                          [title]="activeVisuSectionLevel >= 3 ? 'Niveau indisponible (section de niveau ' + activeVisuSectionLevel + ')' : 'Titre 3'"><span class="visu-tb-h">H3</span> Titre 3</button>
-                  <button [disabled]="activeVisuSectionLevel >= 4"
-                          (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'H4'); visuDropdown = null"
-                          [title]="activeVisuSectionLevel >= 4 ? 'Niveau indisponible' : 'Titre 4'"><span class="visu-tb-h">H4</span> Titre 4</button>
+                  <button (mousedown)="$event.preventDefault(); openTitleDialogFromVisu(1)" title="Créer un titre de niveau 1 (nouvelle section)"><span class="visu-tb-h">H1</span> Titre 1</button>
+                  <button (mousedown)="$event.preventDefault(); openTitleDialogFromVisu(2)" title="Créer un titre de niveau 2 (nouvelle section)"><span class="visu-tb-h">H2</span> Titre 2</button>
+                  <button (mousedown)="$event.preventDefault(); openTitleDialogFromVisu(3)" title="Créer un titre de niveau 3 (nouvelle section)"><span class="visu-tb-h">H3</span> Titre 3</button>
+                  <button (mousedown)="$event.preventDefault(); openTitleDialogFromVisu(4)" title="Créer un titre de niveau 4 (nouvelle section)"><span class="visu-tb-h">H4</span> Titre 4</button>
                 </div>
               }
             </div>
@@ -1573,5 +1664,16 @@
     }
 
   </div>
+
+  <!-- Popup de création de titre (création atomique d'un dossier + heading + SID) -->
+  @if (titleDialog) {
+    <worg-title-create-dialog
+      [level]="titleDialog.level"
+      [prefilledTitle]="titleDialog.prefilled"
+      [parentLabel]="titleDialog.parentLabel"
+      (confirm)="onTitleDialogConfirm($event)"
+      (cancel)="onTitleDialogCancel()">
+    </worg-title-create-dialog>
+  }
 
 </div>
