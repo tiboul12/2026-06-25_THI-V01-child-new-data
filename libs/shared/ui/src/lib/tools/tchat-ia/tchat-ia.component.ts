@@ -206,8 +206,8 @@ export class TchatIaComponent implements OnChanges, AfterViewChecked {
     this.variants = [];
 
     // --- Sécurité contre les combinaisons fournisseur/modèle impossibles ---
-    if (this.provider === 'gemini') {
-      if (!this.model.startsWith('gemini-')) this.model = 'gemini-3-flash-preview';
+    if (this.provider === 'antigravity') {
+      if (!this.model) this.model = 'default';
     } else if (this.provider === 'claude') {
       if (!this.model.startsWith('claude-')) this.model = 'claude-sonnet-4-6';
     }

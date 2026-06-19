@@ -11,11 +11,11 @@
   },
   "appVersion": "aaaaa",
   "ticketsEnabled": false,
-  "lastUpdated": "2026-05-24T16:12:11.406Z",
+  "lastUpdated": "2026-06-19T17:25:12.724Z",
   "cliConfig": {
     "activeProviders": [
       "claude",
-      "gemini"
+      "antigravity"
     ],
     "enabledModels": {
       "claude": [
@@ -24,9 +24,9 @@
         "claude-sonnet-4-6",
         "claude-haiku-4-5-20251001"
       ],
-      "gemini": [
-        "gemini-2.5-pro-preview",
-        "gemini-3-flash-preview"
+      "antigravity": [
+        "default",
+        "gemini-3-pro"
       ]
     }
   },

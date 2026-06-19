@@ -1,7 +1,7 @@
 /**
  * Worganic Platform - Executor Server (Local Electron)
  * =====================================================
- * Responsable : exécution des IA (Claude CLI, Gemini CLI) sur le PC de l'utilisateur.
+ * Responsable : exécution des IA (Claude CLI, Antigravity CLI `agy`) sur le PC de l'utilisateur.
  * Ce serveur tourne localement dans l'application Electron.
  *
  * Port: 3002
@@ -10,9 +10,9 @@
  * Reçoit les prompts depuis Angular via HTTP POST et stream le résultat via SSE.
  *
  * Routes exposées :
- *   POST /execute-prompt        → Lance claude/gemini CLI, stream SSE
+ *   POST /execute-prompt        → Lance claude/antigravity CLI, stream SSE
  *   POST /execute-file-prompt   → Lance claude CLI pour un fichier, stream SSE
- *   POST /execute-workflow-ai   → Lance claude/gemini CLI pour workflow, stream SSE
+ *   POST /execute-workflow-ai   → Lance claude/antigravity CLI pour workflow, stream SSE
  *   POST /stop-execution        → Tue le process CLI en cours
  *   GET  /api/cli-status        → Statut complet des CLI (cache)
  *   GET  /api/cli-check-only    → Statut CLI instantané (cache seulement)
@@ -62,31 +62,23 @@ const MODEL_COSTS = {
     'claude-3-5-sonnet-latest':          { costInput: 3.00,  costOutput: 15.00 },
     'claude-3-5-haiku-latest':           { costInput: 0.80,  costOutput: 4.00 },
     'claude-3-opus-latest':              { costInput: 15.00, costOutput: 75.00 },
-    // Gemini
-    'gemini-3.1-pro-preview':            { costInput: 1.25,  costOutput: 5.00 },
+    // Antigravity (agy) — multi-modèles (Gemini 3 / Claude / open-source). Coûts indicatifs,
+    // alignés sur les modèles Gemini sous-jacents ; ajuster selon ta facturation réelle.
+    'gemini-3-pro':                      { costInput: 1.25,  costOutput: 5.00 },
     'gemini-3-flash':                    { costInput: 0.10,  costOutput: 0.40 },
-    'gemini-3-flash-preview':            { costInput: 0.10,  costOutput: 0.40 },
-    'gemini-2.5-pro':                    { costInput: 1.25,  costOutput: 5.00 },
-    'gemini-2.5-pro-preview':            { costInput: 1.25,  costOutput: 5.00 },
-    'gemini-2.5-flash':                  { costInput: 0.10,  costOutput: 0.40 },
-    'gemini-2.0-flash':                  { costInput: 0.10,  costOutput: 0.40 },
-    'gemini-2.0-pro-preview':            { costInput: 1.25,  costOutput: 5.00 },
-    'gemini-1.5-pro':                    { costInput: 1.25,  costOutput: 5.00 },
-    'gemini-1.5-flash':                  { costInput: 0.075, costOutput: 0.30 }
+    'claude-sonnet-4.5':                 { costInput: 3.00,  costOutput: 15.00 }
 };
 
 // Fallback statique quand l'API n'est pas joignable (pas de clé, hors-ligne, etc.)
 const DEFAULT_MODELS = {
-    gemini: [
-        { value: 'gemini-3.1-pro-preview',  label: 'Gemini 3.1 Pro (Preview)' },
-        { value: 'gemini-3-flash',          label: 'Gemini 3 Flash' },
-        { value: 'gemini-3-flash-preview',  label: 'Gemini 3 Flash (Preview)' },
-        { value: 'gemini-2.5-pro',          label: 'Gemini 2.5 Pro' },
-        { value: 'gemini-2.5-flash',        label: 'Gemini 2.5 Flash' },
-        { value: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash' },
-        { value: 'gemini-2.0-pro-preview',  label: 'Gemini 2.0 Pro (Preview)' },
-        { value: 'gemini-1.5-pro',          label: 'Gemini 1.5 Pro' },
-        { value: 'gemini-1.5-flash',        label: 'Gemini 1.5 Flash' }
+    // Antigravity (agy). 'default' → on ne passe PAS --model (agy utilise son modèle configuré),
+    // ce qui fonctionne quels que soient les ids exacts. Les autres valeurs sont à ajuster selon
+    // la sortie de `agy --model` / `agy --help` de ta version installée.
+    antigravity: [
+        { value: 'default',           label: 'Défaut (modèle configuré dans agy)' },
+        { value: 'gemini-3-pro',      label: 'Gemini 3 Pro' },
+        { value: 'gemini-3-flash',    label: 'Gemini 3 Flash' },
+        { value: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5' }
     ],
     claude: [
         { value: 'claude-opus-4-7',              label: 'Claude Opus 4.7' },
@@ -122,7 +114,7 @@ function applyKnownCosts(models) {
 // Cache for CLI status
 // source: 'api' = liste récupérée depuis l'API officielle | 'default' = fallback statique
 let cachedCliStatus = {
-    gemini: { installed: false, version: '', models: [], source: 'default', lastCheck: 0, lastUpdated: '' },
+    antigravity: { installed: false, version: '', models: [], source: 'default', lastCheck: 0, lastUpdated: '' },
     claude: { installed: false, version: '', models: [], source: 'default', lastCheck: 0, lastUpdated: '' },
     loading: false
 };
@@ -306,7 +298,7 @@ function httpsGetJson(urlStr, headers = {}) {
 /**
  * Récupère les clés API utilisateur depuis le serveur data (cookies non transmis,
  * donc la route doit être ouverte ou retourner un fallback).
- * Retourne { claude: { key, active }, gemini: { key, active } } ou null.
+ * Retourne { claude: { key, active }, antigravity: { key, active } } ou null.
  */
 function fetchApiKeysFromDataServer() {
     return new Promise((resolve) => {
@@ -325,7 +317,7 @@ function fetchApiKeysFromDataServer() {
                     const parsed = JSON.parse(data);
                     resolve({
                         claude: parsed.claude || {},
-                        gemini: parsed.gemini || {}
+                        antigravity: parsed.antigravity || {}
                     });
                 } catch { resolve(null); }
             });
@@ -442,28 +434,23 @@ async function refreshCliStatusCache(provider) {
     };
 
     try {
-        const checkGemini = !provider || provider === 'gemini';
+        const checkAntigravity = !provider || provider === 'antigravity';
         const checkClaude = !provider || provider === 'claude';
 
         // Tente de récupérer les clés API (pour fetch dynamique des modèles)
         const keys = await fetchApiKeysFromDataServer();
 
-        if (checkGemini) {
-            const gVer = await checkCli(['gemini', 'gemini-cli', 'gemini.cmd']);
-            cachedCliStatus.gemini.installed = !!gVer;
-            cachedCliStatus.gemini.version = gVer || '';
-            cachedCliStatus.gemini.lastCheck = Date.now();
-            if (gVer) {
-                const apiKey = (keys?.gemini?.active && keys.gemini.key) ? keys.gemini.key : null;
-                const apiModels = await fetchGoogleModels(apiKey);
-                if (apiModels && apiModels.length > 0) {
-                    cachedCliStatus.gemini.models = apiModels;
-                    cachedCliStatus.gemini.source = 'api';
-                } else {
-                    cachedCliStatus.gemini.models = applyKnownCosts(DEFAULT_MODELS.gemini);
-                    cachedCliStatus.gemini.source = 'default';
-                }
-                cachedCliStatus.gemini.lastUpdated = new Date().toISOString();
+        if (checkAntigravity) {
+            // CLI Antigravity = `agy` (fallbacks éventuels selon l'installation)
+            const aVer = await checkCli(['agy', 'antigravity', 'agy.cmd']);
+            cachedCliStatus.antigravity.installed = !!aVer;
+            cachedCliStatus.antigravity.version = aVer || '';
+            cachedCliStatus.antigravity.lastCheck = Date.now();
+            if (aVer) {
+                // Pas d'API publique de liste de modèles pour agy → liste statique par défaut.
+                cachedCliStatus.antigravity.models = applyKnownCosts(DEFAULT_MODELS.antigravity);
+                cachedCliStatus.antigravity.source = 'default';
+                cachedCliStatus.antigravity.lastUpdated = new Date().toISOString();
             }
         }
 
@@ -486,7 +473,7 @@ async function refreshCliStatusCache(provider) {
             }
         }
 
-        console.log(`[CLI-CACHE] Refresh complete. Sources: gemini=${cachedCliStatus.gemini.source}, claude=${cachedCliStatus.claude.source}`);
+        console.log(`[CLI-CACHE] Refresh complete. Sources: antigravity=${cachedCliStatus.antigravity.source}, claude=${cachedCliStatus.claude.source}`);
     } catch (e) {
         console.error('[CLI-CACHE] Error:', e);
     } finally {
@@ -586,11 +573,11 @@ app.get('/get-model', (req, res) => {
 // GET /api/cli-check-only - Retourne le statut en cache instantanément
 app.get('/api/cli-check-only', (req, res) => {
     res.json({
-        gemini: { installed: cachedCliStatus.gemini.installed, version: cachedCliStatus.gemini.version },
+        antigravity: { installed: cachedCliStatus.antigravity.installed, version: cachedCliStatus.antigravity.version },
         claude: { installed: cachedCliStatus.claude.installed, version: cachedCliStatus.claude.version }
     });
     const provider = req.query.provider;
-    if (req.query.force === 'true' || Date.now() - cachedCliStatus.gemini.lastCheck > 300000) {
+    if (req.query.force === 'true' || Date.now() - cachedCliStatus.antigravity.lastCheck > 300000) {
         refreshCliStatusCache(provider);
     }
 });
@@ -598,7 +585,7 @@ app.get('/api/cli-check-only', (req, res) => {
 // GET /api/cli-status - Retourne le statut complet (avec modèles)
 app.get('/api/cli-status', (req, res) => {
     res.json({
-        gemini: cachedCliStatus.gemini,
+        antigravity: cachedCliStatus.antigravity,
         claude: cachedCliStatus.claude
     });
 });
@@ -611,7 +598,7 @@ app.get('/api/cli-status', (req, res) => {
  * POST /execute-prompt
  * Body: { stepId, content, provider?, model? }
  * - content   : le texte du prompt à envoyer à l'IA
- * - provider  : 'claude' ou 'gemini' (optionnel, utilise getCurrentSettings() si absent)
+ * - provider  : 'claude' ou 'antigravity' (optionnel, utilise getCurrentSettings() si absent)
  * - model     : nom du modèle (optionnel)
  * - stepId    : identifiant de l'étape (pour le suivi côté Angular)
  *
@@ -631,8 +618,8 @@ app.post('/execute-prompt', (req, res) => {
         let model = bodyModel || settings.model || 'claude-3-7-sonnet-latest';
 
         // --- Sécurité contre les combinaisons fournisseur/modèle impossibles ---
-        if (provider === 'gemini') {
-            if (!model.startsWith('gemini-')) model = 'gemini-3.1-pro-preview';
+        if (provider === 'antigravity') {
+            if (!model) model = 'default';
         } else if (provider === 'claude') {
             if (!model.startsWith('claude-')) model = 'claude-3-7-sonnet-latest';
         }
@@ -658,38 +645,38 @@ app.post('/execute-prompt', (req, res) => {
             runningProcesses.delete(stepId);
         };
 
-        // Gemini execution
-        if (provider === 'gemini') {
-            sseWrite(res, 'info', `[${startTime.toLocaleTimeString('fr-FR', { hour12: false })}] Executing Gemini CLI (${model})\n`);
+        // Antigravity (agy) execution
+        if (provider === 'antigravity') {
+            sseWrite(res, 'info', `[${startTime.toLocaleTimeString('fr-FR', { hour12: false })}] Executing Antigravity CLI (agy) (${model})\n`);
 
             const escapedPrompt = promptContent.replace(/"/g, '\\"').replace(/\n/g, ' ');
-            const geminiProcess = spawn('cmd', ['/c', `echo "${escapedPrompt}" | gemini --model ${model} --yolo`], {
+            const agyProcess = spawn('cmd', ['/c', `agy -p "${escapedPrompt}" ${model && model !== 'default' ? '--model ' + model + ' ' : ''}--dangerously-skip-permissions`], {
                 shell: false,
                 env: { ...process.env, FORCE_COLOR: '0' },
                 stdio: ['ignore', 'pipe', 'pipe']
             });
 
-            console.log(`[EXECUTOR] Gemini process spawned (PID: ${geminiProcess.pid})`);
-            runningProcesses.set(stepId, { process: geminiProcess, startTime: Date.now() });
+            console.log(`[EXECUTOR] Antigravity (agy) process spawned (PID: ${agyProcess.pid})`);
+            runningProcesses.set(stepId, { process: agyProcess, startTime: Date.now() });
 
-            geminiProcess.stdout?.on('data', (data) => {
+            agyProcess.stdout?.on('data', (data) => {
                 sseWrite(res, 'stdout', data.toString());
             });
 
-            geminiProcess.stderr?.on('data', (data) => {
+            agyProcess.stderr?.on('data', (data) => {
                 sseWrite(res, 'stderr', data.toString());
             });
 
-            geminiProcess.on('close', (code) => {
+            agyProcess.on('close', (code) => {
                 cleanup();
-                sseWrite(res, 'end', `Gemini finished with code ${code}\n`, { code });
+                sseWrite(res, 'end', `Antigravity finished with code ${code}\n`, { code });
                 res.end();
             });
 
-            geminiProcess.on('error', (err) => {
+            agyProcess.on('error', (err) => {
                 cleanup();
-                sseWrite(res, 'error', `[Gemini Error] ${err.message}. Make sure 'gemini' is installed.\n`);
-                sseWrite(res, 'end', 'Gemini failed', { code: 1 });
+                sseWrite(res, 'error', `[Antigravity Error] ${err.message}. Make sure 'agy' (Antigravity CLI) is installed.\n`);
+                sseWrite(res, 'end', 'Antigravity failed', { code: 1 });
                 res.end();
             });
 
@@ -776,8 +763,8 @@ app.post('/execute-file-prompt', (req, res) => {
         let model = bodyModel || settings.model || 'claude-3-7-sonnet-latest';
 
         // --- Sécurité contre les combinaisons fournisseur/modèle impossibles ---
-        if (provider === 'gemini') {
-            if (!model.startsWith('gemini-')) model = 'gemini-3.1-pro-preview';
+        if (provider === 'antigravity') {
+            if (!model) model = 'default';
         } else if (provider === 'claude') {
             if (!model.startsWith('claude-')) model = 'claude-3-7-sonnet-latest';
         }
@@ -799,8 +786,8 @@ app.post('/execute-file-prompt', (req, res) => {
         sseWrite(res, 'start', `> Executing prompt for ${fileName}...\n`);
         sseWrite(res, 'info', `Model: ${model}\n`);
 
-        if (provider === 'gemini') {
-            sseWrite(res, 'error', 'Gemini not supported for file prompts\n');
+        if (provider === 'antigravity') {
+            sseWrite(res, 'error', 'Antigravity not supported for file prompts\n');
             res.end();
             return;
         }
@@ -866,8 +853,8 @@ app.post('/execute-workflow-ai', (req, res) => {
         let model = bodyModel || settings.model || 'claude-3-7-sonnet-latest';
 
         // --- Sécurité contre les combinaisons fournisseur/modèle impossibles ---
-        if (provider === 'gemini') {
-            if (!model.startsWith('gemini-')) model = 'gemini-3.1-pro-preview';
+        if (provider === 'antigravity') {
+            if (!model) model = 'default';
         } else if (provider === 'claude') {
             if (!model.startsWith('claude-')) model = 'claude-3-7-sonnet-latest';
         }
@@ -890,32 +877,27 @@ app.post('/execute-workflow-ai', (req, res) => {
             runningProcesses.delete(key);
         };
 
-        if (provider === 'gemini') {
-            const gemini = spawn('gemini', ['-m', model], {
+        if (provider === 'antigravity') {
+            const escapedPrompt = promptContent.replace(/"/g, '\\"').replace(/\n/g, ' ');
+            const agyProc = spawn('cmd', ['/c', `agy -p "${escapedPrompt}" ${model && model !== 'default' ? '--model ' + model + ' ' : ''}--dangerously-skip-permissions`], {
                 env: { ...process.env, FORCE_COLOR: '0' },
-                stdio: ['pipe', 'pipe', 'pipe'],
-                shell: true
+                stdio: ['ignore', 'pipe', 'pipe']
             });
 
-            if (gemini.stdin) {
-                gemini.stdin.write(promptContent);
-                gemini.stdin.end();
-            }
+            runningProcesses.set(key, { process: agyProc, startTime: Date.now() });
 
-            runningProcesses.set(key, { process: gemini, startTime: Date.now() });
+            agyProc.stdout?.on('data', (chunk) => sseWrite(res, 'stdout', chunk.toString()));
+            agyProc.stderr?.on('data', (chunk) => sseWrite(res, 'stderr', chunk.toString()));
 
-            gemini.stdout?.on('data', (chunk) => sseWrite(res, 'stdout', chunk.toString()));
-            gemini.stderr?.on('data', (chunk) => sseWrite(res, 'stderr', chunk.toString()));
-
-            gemini.on('close', (code) => {
+            agyProc.on('close', (code) => {
                 cleanup();
                 sseWrite(res, 'end', `Process finished (code ${code || 0})\n`, { code: code || 0 });
                 setTimeout(() => res.end(), 200);
             });
 
-            gemini.on('error', (err) => {
+            agyProc.on('error', (err) => {
                 cleanup();
-                sseWrite(res, 'error', 'Gemini error: ' + err.message);
+                sseWrite(res, 'error', 'Antigravity error: ' + err.message);
                 res.end();
             });
 
@@ -975,8 +957,8 @@ app.post('/generate-questionnaire', (req, res) => {
         let model = bodyModel || settings.model || 'claude-3-7-sonnet-latest';
 
         // --- Sécurité contre les combinaisons fournisseur/modèle impossibles ---
-        if (provider === 'gemini') {
-            if (!model.startsWith('gemini-')) model = 'gemini-3.1-pro-preview';
+        if (provider === 'antigravity') {
+            if (!model) model = 'default';
         } else if (provider === 'claude') {
             if (!model.startsWith('claude-')) model = 'claude-3-7-sonnet-latest';
         }
@@ -1049,25 +1031,25 @@ ${promptContent}`;
             res.end();
         };
 
-        if (provider === 'gemini') {
-            sseWrite(res, 'info', `[${startTime.toLocaleTimeString('fr-FR', { hour12: false })}] Executing Gemini CLI (${model})\n`);
+        if (provider === 'antigravity') {
+            sseWrite(res, 'info', `[${startTime.toLocaleTimeString('fr-FR', { hour12: false })}] Executing Antigravity CLI (agy) (${model})\n`);
             const escapedPrompt = questionnairePrompt.replace(/"/g, '\\"').replace(/\n/g, ' ');
-            const geminiProcess = spawn('cmd', ['/c', `echo "${escapedPrompt}" | gemini --model ${model} --yolo`], {
+            const agyProcess = spawn('cmd', ['/c', `agy -p "${escapedPrompt}" ${model && model !== 'default' ? '--model ' + model + ' ' : ''}--dangerously-skip-permissions`], {
                 shell: false,
                 env: { ...process.env, FORCE_COLOR: '0' },
                 stdio: ['ignore', 'pipe', 'pipe']
             });
-            geminiProcess.stdout?.on('data', (data) => {
+            agyProcess.stdout?.on('data', (data) => {
                 const text = data.toString();
                 fullOutput += text;
                 sseWrite(res, 'stdout', text);
             });
-            geminiProcess.stderr?.on('data', (data) => sseWrite(res, 'stderr', data.toString()));
-            geminiProcess.on('close', (code) => finish(code));
-            geminiProcess.on('error', (err) => {
+            agyProcess.stderr?.on('data', (data) => sseWrite(res, 'stderr', data.toString()));
+            agyProcess.on('close', (code) => finish(code));
+            agyProcess.on('error', (err) => {
                 clearInterval(heartbeatInterval);
-                sseWrite(res, 'error', `[Gemini Error] ${err.message}\n`);
-                sseWrite(res, 'end', 'Gemini failed', { code: 1, questionnaire: null });
+                sseWrite(res, 'error', `[Antigravity Error] ${err.message}\n`);
+                sseWrite(res, 'end', 'Antigravity failed', { code: 1, questionnaire: null });
                 res.end();
             });
             return;
@@ -1119,8 +1101,8 @@ app.post('/execute-chat-turn', (req, res) => {
         let model = bodyModel || settings.model || 'claude-3-7-sonnet-latest';
 
         // --- Sécurité contre les combinaisons fournisseur/modèle impossibles ---
-        if (provider === 'gemini') {
-            if (!model.startsWith('gemini-')) model = 'gemini-3.1-pro-preview';
+        if (provider === 'antigravity') {
+            if (!model) model = 'default';
         } else if (provider === 'claude') {
             if (!model.startsWith('claude-')) model = 'claude-3-7-sonnet-latest';
         }
@@ -1186,33 +1168,33 @@ app.post('/execute-chat-turn', (req, res) => {
             runningProcesses.delete(chatStepId);
         };
 
-        // Gemini execution
-        if (provider === 'gemini') {
+        // Antigravity (agy) execution
+        if (provider === 'antigravity') {
             const escapedPrompt = combinedPrompt.replace(/"/g, '\\"').replace(/\n/g, ' ');
-            const geminiProcess = spawn('cmd', ['/c', `echo "${escapedPrompt}" | gemini --model ${model} --yolo`], {
+            const agyProcess = spawn('cmd', ['/c', `agy -p "${escapedPrompt}" ${model && model !== 'default' ? '--model ' + model + ' ' : ''}--dangerously-skip-permissions`], {
                 shell: false,
                 cwd: spawnCwd,
                 env: { ...process.env, FORCE_COLOR: '0' },
                 stdio: ['ignore', 'pipe', 'pipe']
             });
 
-            runningProcesses.set(chatStepId, { process: geminiProcess, startTime: Date.now() });
+            runningProcesses.set(chatStepId, { process: agyProcess, startTime: Date.now() });
 
-            geminiProcess.stdout?.on('data', (data) => {
+            agyProcess.stdout?.on('data', (data) => {
                 sseWrite(res, 'stdout', data.toString());
             });
-            geminiProcess.stderr?.on('data', (data) => {
+            agyProcess.stderr?.on('data', (data) => {
                 sseWrite(res, 'stderr', data.toString());
             });
-            geminiProcess.on('close', (code) => {
+            agyProcess.on('close', (code) => {
                 cleanup();
-                sseWrite(res, 'end', `Gemini finished with code ${code}\n`, { code });
+                sseWrite(res, 'end', `Antigravity finished with code ${code}\n`, { code });
                 res.end();
             });
-            geminiProcess.on('error', (err) => {
+            agyProcess.on('error', (err) => {
                 cleanup();
-                sseWrite(res, 'error', `[Gemini Error] ${err.message}\n`);
-                sseWrite(res, 'end', 'Gemini failed', { code: 1 });
+                sseWrite(res, 'error', `[Antigravity Error] ${err.message}\n`);
+                sseWrite(res, 'end', 'Antigravity failed', { code: 1 });
                 res.end();
             });
             return;
@@ -1325,9 +1307,9 @@ app.post('/execute-prompt-sync', async (req, res) => {
             let out = '';
             let proc;
 
-            if (provider === 'gemini') {
+            if (provider === 'antigravity') {
                 const escaped = promptContent.replace(/"/g, '\\"').replace(/\n/g, ' ');
-                proc = spawn('cmd', ['/c', `echo "${escaped}" | gemini --yolo`], {
+                proc = spawn('cmd', ['/c', `agy -p "${escaped}" --dangerously-skip-permissions`], {
                     shell: false, env: { ...process.env, FORCE_COLOR: '0' },
                     stdio: ['ignore', 'pipe', 'pipe']
                 });
@@ -1366,7 +1348,7 @@ app.listen(PORT, () => {
 +==========================================+
 
   Port:       http://localhost:${PORT}
-  Rôle:       Exécution IA locale (Claude/Gemini CLI)
+  Rôle:       Exécution IA locale (Claude/Antigravity CLI)
 
   Modèle actif : ${currentSettings.provider.toUpperCase()} / ${currentSettings.model}
   Settings     : ${SETTINGS_LOCAL_FILE}

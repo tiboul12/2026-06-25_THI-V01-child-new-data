@@ -67,15 +67,15 @@ export class ConfigComponent implements OnInit, OnDestroy {
   // CLI Status (models loaded from server)
   // source: 'api' = liste fraîche depuis l'API officielle, 'default' = fallback statique
   cliStatus: {
-    gemini: { installed: boolean; version: string; lastUpdated?: string; source?: 'api' | 'default'; models: { value: string; label: string; costInput?: number; costOutput?: number }[] };
+    antigravity: { installed: boolean; version: string; lastUpdated?: string; source?: 'api' | 'default'; models: { value: string; label: string; costInput?: number; costOutput?: number }[] };
     claude: { installed: boolean; version: string; lastUpdated?: string; source?: 'api' | 'default'; models: { value: string; label: string; costInput?: number; costOutput?: number }[] };
   } = {
-    gemini: { installed: false, version: '', source: 'default', models: [] },
+    antigravity: { installed: false, version: '', source: 'default', models: [] },
     claude: { installed: false, version: '', source: 'default', models: [] }
   };
-  
+
   loadingStatus = {
-    gemini: true,
+    antigravity: true,
     claude: true
   };
   
@@ -83,7 +83,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
 
   // CLI Config — providers actifs par checkbox + modèles activés par checkbox
   activeProviders: string[] = [];
-  enabledModels: { claude: string[]; gemini: string[] } = { claude: [], gemini: [] };
+  enabledModels: { claude: string[]; antigravity: string[] } = { claude: [], antigravity: [] };
 
   private cliConfigLoaded = false;
   private cliStatusLoaded = false;
@@ -155,7 +155,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
           this.activeProviders = data.cliConfig.activeProviders || [];
           this.enabledModels = {
             claude: data.cliConfig.enabledModels?.claude || [],
-            gemini: data.cliConfig.enabledModels?.gemini || []
+            antigravity: data.cliConfig.enabledModels?.antigravity || []
           };
         }
         this.cliConfigLoaded = true;
@@ -176,11 +176,11 @@ export class ConfigComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadCliStatus(provider?: 'gemini' | 'claude') {
+  loadCliStatus(provider?: 'antigravity' | 'claude') {
     if (provider) {
         this.loadingStatus[provider] = true;
     } else {
-        this.loadingStatus.gemini = true;
+        this.loadingStatus.antigravity = true;
         this.loadingStatus.claude = true;
     }
     this.cliError = false;
@@ -192,9 +192,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
     this.http.get<any>(`${EXECUTOR_API}/api/cli-check-only?force=true${providerParam}`).pipe(takeUntil(this.destroy$)).subscribe({
       next: (quickData) => {
         // Mettre à jour l'UI immédiatement avec les infos d'installation
-        if (!provider || provider === 'gemini') {
-            this.cliStatus.gemini.installed = quickData.gemini.installed;
-            this.cliStatus.gemini.version = quickData.gemini.version;
+        if (!provider || provider === 'antigravity') {
+            this.cliStatus.antigravity.installed = quickData.antigravity.installed;
+            this.cliStatus.antigravity.version = quickData.antigravity.version;
         }
         if (!provider || provider === 'claude') {
             this.cliStatus.claude.installed = quickData.claude.installed;
@@ -202,18 +202,18 @@ export class ConfigComponent implements OnInit, OnDestroy {
         }
 
         // Si non installés, on arrête le loading pour celui concerné
-        if ((!provider || provider === 'gemini') && !quickData.gemini.installed) this.loadingStatus.gemini = false;
+        if ((!provider || provider === 'antigravity') && !quickData.antigravity.installed) this.loadingStatus.antigravity = false;
         if ((!provider || provider === 'claude') && !quickData.claude.installed) this.loadingStatus.claude = false;
 
         // Étape 2 : Chargement complet (modèles, etc.)
         this.http.get<any>(`${EXECUTOR_API}/api/cli-status`).pipe(takeUntil(this.destroy$)).subscribe({
           next: (fullData) => {
-            if (!provider || provider === 'gemini') {
-                this.cliStatus.gemini = fullData.gemini;
-                if (this.cliStatus.gemini.models) {
-                    this.cliStatus.gemini.models = this.sortModelsByCost(this.cliStatus.gemini.models);
+            if (!provider || provider === 'antigravity') {
+                this.cliStatus.antigravity = fullData.antigravity;
+                if (this.cliStatus.antigravity.models) {
+                    this.cliStatus.antigravity.models = this.sortModelsByCost(this.cliStatus.antigravity.models);
                 }
-                this.loadingStatus.gemini = false;
+                this.loadingStatus.antigravity = false;
             }
             if (!provider || provider === 'claude') {
                 this.cliStatus.claude = fullData.claude;
@@ -229,7 +229,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
           },
           error: () => {
             if (provider) this.loadingStatus[provider] = false;
-            else { this.loadingStatus.gemini = false; this.loadingStatus.claude = false; }
+            else { this.loadingStatus.antigravity = false; this.loadingStatus.claude = false; }
             this.cliStatusLoaded = true;
             this.reconcileEnabledModels();
           }
@@ -239,12 +239,12 @@ export class ConfigComponent implements OnInit, OnDestroy {
         // En cas d'erreur sur le check rapide, on tente quand même le complet
         this.http.get<any>(`${EXECUTOR_API}/api/cli-status`).pipe(takeUntil(this.destroy$)).subscribe({
           next: (data) => {
-            if (!provider || provider === 'gemini') {
-                this.cliStatus.gemini = data.gemini;
-                if (this.cliStatus.gemini.models) {
-                    this.cliStatus.gemini.models = this.sortModelsByCost(this.cliStatus.gemini.models);
+            if (!provider || provider === 'antigravity') {
+                this.cliStatus.antigravity = data.antigravity;
+                if (this.cliStatus.antigravity.models) {
+                    this.cliStatus.antigravity.models = this.sortModelsByCost(this.cliStatus.antigravity.models);
                 }
-                this.loadingStatus.gemini = false;
+                this.loadingStatus.antigravity = false;
             }
             if (!provider || provider === 'claude') {
                 this.cliStatus.claude = data.claude;
@@ -258,7 +258,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
           },
           error: () => {
             if (provider) this.loadingStatus[provider] = false;
-            else { this.loadingStatus.gemini = false; this.loadingStatus.claude = false; }
+            else { this.loadingStatus.antigravity = false; this.loadingStatus.claude = false; }
             this.cliError = true;
             this.cliStatusLoaded = true;
           }
@@ -274,7 +274,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
   private reconcileEnabledModels() {
     if (!this.cliConfigLoaded || !this.cliStatusLoaded) return;
 
-    const initProvider = (provider: 'claude' | 'gemini') => {
+    const initProvider = (provider: 'claude' | 'antigravity') => {
       // Si non installé, on décoche tout
       if (!this.cliStatus[provider].installed) {
         this.activeProviders = this.activeProviders.filter(p => p !== provider);
@@ -289,7 +289,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
     };
 
     initProvider('claude');
-    initProvider('gemini');
+    initProvider('antigravity');
   }
 
   // ── Providers ──────────────────────────────────────────────────────────
@@ -299,18 +299,18 @@ export class ConfigComponent implements OnInit, OnDestroy {
   }
 
   toggleProvider(provider: string) {
-    if (!this.cliStatus[provider as 'claude' | 'gemini'].installed) return;
+    if (!this.cliStatus[provider as 'claude' | 'antigravity'].installed) return;
     
     const idx = this.activeProviders.indexOf(provider);
     if (idx === -1) {
       this.activeProviders.push(provider);
       // Activer tous les modèles par défaut lors de l'activation du provider
-      const models = this.cliStatus[provider as 'claude' | 'gemini'].models;
-      this.enabledModels[provider as 'claude' | 'gemini'] = models.map(m => m.value);
+      const models = this.cliStatus[provider as 'claude' | 'antigravity'].models;
+      this.enabledModels[provider as 'claude' | 'antigravity'] = models.map(m => m.value);
     } else {
       this.activeProviders.splice(idx, 1);
       // Décocher tous les modèles si on désactive le provider
-      this.enabledModels[provider as 'claude' | 'gemini'] = [];
+      this.enabledModels[provider as 'claude' | 'antigravity'] = [];
     }
     // Sauvegarde immédiate
     this.saveKeys(true);
@@ -318,11 +318,11 @@ export class ConfigComponent implements OnInit, OnDestroy {
 
   // ── Checkboxes modèles ─────────────────────────────────────────────────
 
-  isModelEnabled(provider: 'claude' | 'gemini', modelValue: string): boolean {
+  isModelEnabled(provider: 'claude' | 'antigravity', modelValue: string): boolean {
     return this.activeProviders.includes(provider) && this.enabledModels[provider].includes(modelValue);
   }
 
-  toggleModel(provider: 'claude' | 'gemini', modelValue: string) {
+  toggleModel(provider: 'claude' | 'antigravity', modelValue: string) {
     if (!this.cliStatus[provider].installed || !this.activeProviders.includes(provider)) return;
 
     const list = this.enabledModels[provider];
@@ -338,7 +338,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
 
   // ── Mise à jour des coûts ──────────────────────────────────────────────
 
-  updateCosts(provider: 'gemini' | 'claude') {
+  updateCosts(provider: 'antigravity' | 'claude') {
     this.loadingStatus[provider] = true;
     this.http.post<any>(`${API}/api/admin/update-models-costs`, { provider }).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
@@ -390,7 +390,7 @@ export class ConfigComponent implements OnInit, OnDestroy {
         activeProviders: this.activeProviders,
         enabledModels: {
           claude: this.enabledModels.claude,
-          gemini: this.enabledModels.gemini
+          antigravity: this.enabledModels.antigravity
         }
       },
       headerIaVisible: this.headerIaVisible,

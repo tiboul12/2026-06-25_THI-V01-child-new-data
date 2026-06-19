@@ -3,8 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { API_DATA_URL, API_EXECUTOR_URL } from './tokens';
 
 export interface ProviderOption {
-  value: string;      // 'claude-cli', 'claude-api', 'gemini-cli', 'gemini-api'
-  baseId: string;     // 'claude', 'gemini'
+  value: string;      // 'claude-cli', 'claude-api', 'antigravity-cli', 'gemini-api'
+  baseId: string;     // 'claude', 'antigravity', 'gemini'
   label: string;
   type: 'cli' | 'api';
 }
@@ -13,11 +13,11 @@ export interface CliConfigState {
   activeProviders: string[];
   enabledModels: {
     claude: string[];
-    gemini: string[];
+    antigravity: string[];
   };
   modelsList: {
     claude: { value: string; label: string; costInput?: number; costOutput?: number }[];
-    gemini: { value: string; label: string; costInput?: number; costOutput?: number }[];
+    antigravity: { value: string; label: string; costInput?: number; costOutput?: number }[];
   };
   availableProviders: ProviderOption[];
   executorAvailable: boolean;
@@ -78,8 +78,8 @@ export class ConfigService {
   // Config CLI (providers, modèles)
   cliConfig = signal<CliConfigState>({
     activeProviders: [],
-    enabledModels: { claude: [], gemini: [] },
-    modelsList: { claude: [], gemini: [] },
+    enabledModels: { claude: [], antigravity: [] },
+    modelsList: { claude: [], antigravity: [] },
     availableProviders: [],
     executorAvailable: false,
     headerSelection: { provider: '', model: '' }
@@ -99,15 +99,15 @@ export class ConfigService {
           activeCliProviders = keys.cliConfig.activeProviders;
         } else {
           if (keys.claude?.active) activeCliProviders.push('claude');
-          if (keys.gemini?.active) activeCliProviders.push('gemini');
+          if (keys.antigravity?.active) activeCliProviders.push('antigravity');
         }
 
         const availableProviders: ProviderOption[] = [];
         if (activeCliProviders.includes('claude')) {
           availableProviders.push({ value: 'claude-cli', baseId: 'claude', label: 'Claude Code (Anthropic)', type: 'cli' });
         }
-        if (activeCliProviders.includes('gemini')) {
-          availableProviders.push({ value: 'gemini-cli', baseId: 'gemini', label: 'Gemini CLI (Google)', type: 'cli' });
+        if (activeCliProviders.includes('antigravity')) {
+          availableProviders.push({ value: 'antigravity-cli', baseId: 'antigravity', label: 'Antigravity CLI (agy)', type: 'cli' });
         }
         if (keys.claude?.active) {
           availableProviders.push({ value: 'claude-api', baseId: 'claude', label: 'Claude API Key (Anthropic)', type: 'api' });
@@ -118,7 +118,7 @@ export class ConfigService {
 
         const enabledModels = {
           claude: keys.cliConfig?.enabledModels?.claude || [],
-          gemini: keys.cliConfig?.enabledModels?.gemini || []
+          antigravity: keys.cliConfig?.enabledModels?.antigravity || []
         };
 
         const headerSelection = {
@@ -179,18 +179,18 @@ export class ConfigService {
           executorAvailable: true,
           modelsList: {
             claude: status.claude?.models || [],
-            gemini: status.gemini?.models || []
+            antigravity: status.antigravity?.models || []
           }
         }));
       },
       error: () => {
-        this.cliConfig.update(current => ({ ...current, executorAvailable: false, modelsList: { claude: [], gemini: [] } }));
+        this.cliConfig.update(current => ({ ...current, executorAvailable: false, modelsList: { claude: [], antigravity: [] } }));
         console.warn('[ConfigService] Executor server not available');
       }
     });
   }
 
-  updateLocalCliConfig(activeProviders: string[], enabledModels: { claude: string[], gemini: string[] }) {
+  updateLocalCliConfig(activeProviders: string[], enabledModels: { claude: string[], antigravity: string[] }) {
     this.cliConfig.update(state => ({ ...state, activeProviders, enabledModels }));
   }
 

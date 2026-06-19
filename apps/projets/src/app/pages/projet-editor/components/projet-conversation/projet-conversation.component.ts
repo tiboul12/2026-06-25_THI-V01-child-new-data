@@ -69,8 +69,8 @@ export class ProjetConversationComponent implements OnChanges, AfterViewChecked,
   readonly allModels = computed(() => {
     const cfg = this.configService.cliConfig();
     const claude = (cfg.modelsList?.claude || []).map(m => ({ ...m, provider: 'claude' }));
-    const gemini = (cfg.modelsList?.gemini || []).map(m => ({ ...m, provider: 'gemini' }));
-    return [...claude, ...gemini];
+    const antigravity = (cfg.modelsList?.antigravity || []).map(m => ({ ...m, provider: 'antigravity' }));
+    return [...claude, ...antigravity];
   });
 
   // Le modèle actif : soit selectedModel, soit celui de la config

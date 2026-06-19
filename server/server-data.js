@@ -37,16 +37,12 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'conf.json');
 const AI_MODELS_FILE = path.join(CONFIG_DIR, 'ai-models.json');
 
 const DEFAULT_MODELS = {
-    gemini: [
-        { value: 'gemini-3.1-pro-preview',  label: 'Gemini 3.1 Pro (Preview)', costInput: 1.25,  costOutput: 5.00 },
-        { value: 'gemini-3-flash',          label: 'Gemini 3 Flash',           costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-3-flash-preview',  label: 'Gemini 3 Flash (Preview)', costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-2.5-pro',          label: 'Gemini 2.5 Pro',           costInput: 1.25,  costOutput: 5.00 },
-        { value: 'gemini-2.5-flash',        label: 'Gemini 2.5 Flash',         costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-2.0-pro-preview',  label: 'Gemini 2.0 Pro (Preview)', costInput: 1.25,  costOutput: 5.00 },
-        { value: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash',         costInput: 0.10,  costOutput: 0.40 },
-        { value: 'gemini-1.5-pro',          label: 'Gemini 1.5 Pro',           costInput: 1.25,  costOutput: 5.00 },
-        { value: 'gemini-1.5-flash',        label: 'Gemini 1.5 Flash',         costInput: 0.075, costOutput: 0.30 }
+    // Antigravity (agy) — provider CLI. 'default' = pas de --model (modèle configuré dans agy).
+    antigravity: [
+        { value: 'default',           label: 'Défaut (modèle configuré dans agy)', costInput: 0, costOutput: 0 },
+        { value: 'gemini-3-pro',      label: 'Gemini 3 Pro',                        costInput: 1.25, costOutput: 5.00 },
+        { value: 'gemini-3-flash',    label: 'Gemini 3 Flash',                      costInput: 0.10, costOutput: 0.40 },
+        { value: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5',                   costInput: 3.00, costOutput: 15.00 }
     ],
     claude: [
         { value: 'claude-opus-4-7',              label: 'Claude Opus 4.7',            costInput: 15.00, costOutput: 75.00 },
@@ -670,7 +666,7 @@ app.get('/api/config/keys', (req, res) => {
                 activeProviders,
                 enabledModels: {
                     claude: cliConfig.enabledModels?.claude || [],
-                    gemini: cliConfig.enabledModels?.gemini || []
+                    antigravity: cliConfig.enabledModels?.antigravity || []
                 },
                 headerSelection: {
                     provider: cliConfig.headerSelection?.provider || '',
@@ -731,7 +727,7 @@ app.post('/api/config/keys', async (req, res) => {
                 activeProviders: Array.isArray(cliConfig.activeProviders) ? cliConfig.activeProviders : [],
                 enabledModels: {
                     claude: Array.isArray(cliConfig.enabledModels?.claude) ? cliConfig.enabledModels.claude : [],
-                    gemini: Array.isArray(cliConfig.enabledModels?.gemini) ? cliConfig.enabledModels.gemini : []
+                    antigravity: Array.isArray(cliConfig.enabledModels?.antigravity) ? cliConfig.enabledModels.antigravity : []
                 },
                 headerSelection: (cliConfig.headerSelection && typeof cliConfig.headerSelection === 'object')
                     ? { provider: cliConfig.headerSelection.provider || '', model: cliConfig.headerSelection.model || '' }
@@ -799,9 +795,9 @@ app.post('/api/admin/update-models-costs', (req, res) => {
         const currentData = loadAiModels();
         let updatedCount = 0;
 
-        if (!provider || provider === 'gemini') {
-            currentData.gemini = JSON.parse(JSON.stringify(DEFAULT_MODELS.gemini));
-            updatedCount += currentData.gemini.length;
+        if (!provider || provider === 'antigravity') {
+            currentData.antigravity = JSON.parse(JSON.stringify(DEFAULT_MODELS.antigravity));
+            updatedCount += currentData.antigravity.length;
         }
         if (!provider || provider === 'claude') {
             currentData.claude = JSON.parse(JSON.stringify(DEFAULT_MODELS.claude));
@@ -8818,7 +8814,7 @@ Règles :
 - Les titres doivent être courts et actionnables`;
 
         try {
-            // Appel à l'executor local (port 3002) qui gère Claude CLI / Gemini CLI
+            // Appel à l'executor local (port 3002) qui gère Claude CLI / Antigravity CLI (agy)
             const executorBody = JSON.stringify({ content: prompt });
             const output = await new Promise((resolve, reject) => {
                 const http = require('http');

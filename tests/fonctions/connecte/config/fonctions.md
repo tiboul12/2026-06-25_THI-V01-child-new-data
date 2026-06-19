@@ -31,7 +31,7 @@ Accès : utilisateur connecté
 ## `2-2-3` — Configuration CLI IA
 
 - **Toggle section** : `toggleCliIa()` → afficher/masquer
-- **Providers actifs** : liste des providers (claude, gemini)
+- **Providers actifs** : liste des providers CLI (claude, antigravity) — le CLI Antigravity `agy` a remplacé Gemini CLI
   - `toggleProvider(provider)` → active/désactive un provider
   - `isProviderActive(provider)` → état courant
 - **Modèles par provider** :
@@ -41,7 +41,7 @@ Accès : utilisateur connecté
 - **Statut CLI** :
   - GET `/api/cli-check-only?force=true` → vérification rapide installation
   - GET `/api/cli-status` → version installée, liste modèles disponibles
-  - `loadingStatus.gemini|claude` : spinners pendant vérification
+  - `loadingStatus.antigravity|claude` : spinners pendant vérification
   - `cliError` : message si CLI non installé
 - **Auto-save** : toggle provider/model → sauvegarde automatique
 

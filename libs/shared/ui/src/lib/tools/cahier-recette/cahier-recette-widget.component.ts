@@ -91,7 +91,7 @@ export class CahierRecetteWidgetComponent implements OnInit {
   get currentAiInfo(): { providerLabel: string; model: string } {
     const prefs = this.getAiPrefs();
     const base = prefs.provider.split('-')[0];
-    const providerLabel = base === 'gemini' ? 'Gemini CLI' : base === 'claude' ? 'Claude Code' : prefs.provider;
+    const providerLabel = base === 'antigravity' ? 'Antigravity CLI' : base === 'claude' ? 'Claude Code' : prefs.provider;
     return { providerLabel, model: prefs.model };
   }
 

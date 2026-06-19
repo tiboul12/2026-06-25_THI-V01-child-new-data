@@ -255,7 +255,7 @@ export class WoHistoryComponent implements OnInit {
   getAiLogo(ai?: string): { type: 'img' | 'icon', value: string } {
     const name = ai?.toLowerCase() || '';
     if (name.includes('claude'))  return { type: 'img',  value: 'https://api.iconify.design/logos:claude-icon.svg' };
-    if (name.includes('gemini'))  return { type: 'img',  value: 'https://api.iconify.design/logos:google-gemini.svg' };
+    if (name.includes('antigravity') || name.includes('agy') || name.includes('gemini'))  return { type: 'icon', value: 'rocket_launch' };
     return { type: 'icon', value: 'smart_toy' };
   }
 }
