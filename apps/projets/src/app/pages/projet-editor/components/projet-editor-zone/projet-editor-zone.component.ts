@@ -11,7 +11,7 @@ import { ProjetCollabService } from '@worganic/portail-core/data-access';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { ImagePropsPanelComponent, ImageProps } from '../image-props-panel/image-props-panel.component';
 import { SlashCommandMenuComponent, SlashCommand } from '../slash-command-menu/slash-command-menu.component';
-import { TrelloBoardComponent, MockupBoardComponent, ArrayBoardComponent } from '@worganic/shared/ui';
+import { TrelloBoardComponent, MockupBoardComponent, ArrayBoardComponent, TitleCreateDialogComponent } from '@worganic/shared/ui';
 
 export interface FileSaveEvent {
   fileId: string;
@@ -35,6 +35,9 @@ export interface SectionInfo {
   content: string;
   additionalFiles: AdditionalFile[];
   orderedFileIds: string[];
+  // Identifiant stable encodé dans le heading via {{SID:folderId}} — source de vérité
+  // du lien section↔dossier, prioritaire sur le matching par chemin/ordre.
+  sid: string | null;
 }
 
 interface DocSection {
@@ -149,6 +152,8 @@ interface StructureNode {
   lineStart: number;
   lineEnd: number;
   folderId: string | null;
+  // Identifiant stable extrait du heading ({{SID:folderId}}), ré-injecté au flush
+  sid: string | null;
 }
 
 interface StructContextMenu {
@@ -175,7 +180,7 @@ interface MockupDiagDragState {
 @Component({
   selector: 'app-projet-editor-zone',
   standalone: true,
-  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent, TrelloBoardComponent, MockupBoardComponent, ArrayBoardComponent],
+  imports: [CommonModule, FormsModule, ImagePropsPanelComponent, SlashCommandMenuComponent, TrelloBoardComponent, MockupBoardComponent, ArrayBoardComponent, TitleCreateDialogComponent],
   templateUrl: './projet-editor-zone.component.html',
   styleUrl: './projet-editor-zone.component.scss',
   host: { class: 'flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden' },
@@ -419,6 +424,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   readonly visuHighlightColors = ['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca'];
   // Menu déroulant actif de la barre d'édition (titres / couleur / surlignage)
   visuDropdown: 'title' | 'color' | 'highlight' | null = null;
+  // Popup de création de titre (création atomique d'un dossier + heading + SID)
+  titleDialog: { level: number; prefilled: string; parentFolderId: string | null; parentLabel: string; insertLine: number } | null = null;
+  titleDialogBusy = false;
   visuInsertMenu: { sectionId: string; top: number; left: number } | null = null;
   activeVisuSectionId: string | null = null;
   editingVisuSectionId = signal<string | null>(null);
@@ -1077,7 +1085,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     for (const node of sorted) {
       if (node.type !== 'folder') continue;
       const level = Math.min(depth, 4);
-      const heading = '#'.repeat(level) + ' ' + node.name;
+      // Heading porté par son identifiant stable {{SID:folderId}} : dérivé du dossier
+      // physique → toujours présent après reconstruction, migration legacy automatique.
+      const heading = this.composeHeading(level, node.name, node.id);
       const nodeChildren = [...(node.children || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
 
       const mainFile = nodeChildren.find(c => c.type === 'file' && c.name === 'contenu.md')
@@ -1301,7 +1311,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   private recomputeRanges() {
     const lines = this.unifiedContent.split('\n');
-    const flatHeads: { lineIdx: number; level: number; name: string }[] = [];
+    const flatHeads: { lineIdx: number; level: number; name: string; sid: string | null }[] = [];
 
     // Détecter les plages de lignes à l'intérieur des blocs fichier pour les exclure du scan de headings
     // Note : exclure les ``` (3 backticks) qui ne sont pas des file-blocks à délimiteur unique
@@ -1331,7 +1341,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     for (let i = 0; i < lines.length; i++) {
       if (isInsideBlock(i)) continue;
       const m = /^(#{1,4}) (.+)$/.exec(lines[i]);
-      if (m) flatHeads.push({ lineIdx: i, level: m[1].length, name: m[2].trim() });
+      if (m) {
+        const sp = this.splitHeadingSid(m[2].trim());
+        flatHeads.push({ lineIdx: i, level: m[1].length, name: sp.title, sid: sp.sid });
+      }
     }
     // Associer chaque titre du buffer (flatHeads, dans l'ordre du texte affiché) à son
     // dossier (docSection, par level + name). On itère dans l'ordre du BUFFER — et non dans
@@ -1341,10 +1354,20 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     const usedDocSections = new Set<number>();
     for (const head of flatHeads) {
       let di = -1;
-      for (let k = 0; k < this.docSections.length; k++) {
-        if (usedDocSections.has(k)) continue;
-        const sec = this.docSections[k];
-        if (sec.level === head.level && sec.folderName === head.name) { di = k; break; }
+      // Priorité au lien stable {{SID:id}} : match direct par folderId
+      if (head.sid) {
+        for (let k = 0; k < this.docSections.length; k++) {
+          if (usedDocSections.has(k)) continue;
+          if (this.docSections[k].folderId === head.sid) { di = k; break; }
+        }
+      }
+      // Fallback : match par niveau + nom (sections sans SID, frappe libre, legacy)
+      if (di === -1) {
+        for (let k = 0; k < this.docSections.length; k++) {
+          if (usedDocSections.has(k)) continue;
+          const sec = this.docSections[k];
+          if (sec.level === head.level && sec.folderName === head.name) { di = k; break; }
+        }
       }
       if (di === -1) continue;
       usedDocSections.add(di);
@@ -2351,11 +2374,12 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       return `<span class="syn-file-delim">${esc(text)}</span>`;
     }
 
-    // Headings
+    // Headings — le marqueur d'identité {{SID:id}} est atténué (reste lisible en mode brut)
     const hm = /^(#{1,6})\s/.exec(trimmed);
     if (hm) {
       const lvl = Math.min(hm[1].length, 6);
-      return `<span class="syn-h${lvl}">${esc(text)}</span>`;
+      const inner = esc(text).replace(/(\{\{SID:[a-zA-Z0-9-]+\}\})/g, '<span style="opacity:.35">$1</span>');
+      return `<span class="syn-h${lvl}">${inner}</span>`;
     }
 
     // Code fence (``` or ~~~)
@@ -3855,12 +3879,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
     const isInsideFileBlock = (pos: number) => fileBlockCharRanges.some(([s, e]) => pos > s && pos <= e);
 
+    // Index des dossiers par id pour la résolution prioritaire via {{SID:id}}
+    const folderById = new Map<string, { folder: FileNode; files: FileNode[] }>();
+    for (const v of folderMap.values()) folderById.set(v.folder.id, v);
+
     const regex = /^(#{1,4}) (.+)$/gm;
-    const matches: { level: number; name: string; index: number; contentStart: number }[] = [];
+    const matches: { level: number; name: string; sid: string | null; index: number; contentStart: number }[] = [];
     let m: RegExpExecArray | null;
     while ((m = regex.exec(text)) !== null) {
       if (!isInsideFileBlock(m.index)) {
-        matches.push({ level: m[1].length, name: m[2].trim(), index: m.index, contentStart: m.index + m[0].length + 1 });
+        const { title, sid } = this.splitHeadingSid(m[2].trim());
+        matches.push({ level: m[1].length, name: title, sid, index: m.index, contentStart: m.index + m[0].length + 1 });
       }
     }
     for (let i = 0; i < matches.length; i++) {
@@ -3875,7 +3904,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       }
       const fullPath = [...parentPath.map(p => this.slugify(p)), this.slugify(current.name)].join('/');
       const parentKey = parentPath.map(p => this.slugify(p)).join('/');
-      const info = folderMap.get(fullPath);
+      // Priorité au lien stable {{SID:id}} : si le dossier existe encore, on l'utilise
+      // directement — insensible au renommage du titre ou au réordonnancement.
+      const sidInfo = current.sid ? folderById.get(current.sid) : undefined;
+      const info = sidInfo || folderMap.get(fullPath);
       const parentInfo = parentKey ? folderMap.get(parentKey) : null;
       const mainFile = info?.files.find(f => f.name === 'contenu.md') || info?.files.find(f => !this.isImageFile(f.name));
 
@@ -3979,7 +4011,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         level: current.level, folderName: current.name, parentPath,
         folderId: info?.folder.id ?? null, parentFolderId: parentInfo?.folder.id ?? null,
         fileId: mainFile?.id ?? null, content: mainContent, additionalFiles,
-        orderedFileIds
+        orderedFileIds, sid: current.sid
       });
     }
     return sections;
@@ -4080,6 +4112,30 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // Shortcode Trello dans le contenu : {{TRELLO:<id>}}
   private static readonly TRELLO_MARKER_SRC  = '\\{\\{TRELLO:([a-zA-Z0-9-]+)\\}\\}';
   private static readonly MOCKUP_MARKER_SRC  = '\\{\\{MOCKUP:([a-zA-Z0-9-]+)(?:\\|[^}]*)?\\}\\}';
+  // Identifiant stable de section, accolé en fin de ligne de heading : {{SID:<folderId>}}
+  // Visible en mode Code (brut), masqué en Structure et Édition. Garantit un lien
+  // section↔dossier insensible au renommage/réordonnancement.
+  private static readonly SID_MARKER_SRC = '\\{\\{SID:([a-zA-Z0-9-]+)\\}\\}';
+
+  /** Sépare un libellé de heading de son marqueur {{SID:id}} éventuel. */
+  private splitHeadingSid(name: string): { title: string; sid: string | null } {
+    const re = new RegExp(ProjetEditorZoneComponent.SID_MARKER_SRC);
+    const m = re.exec(name);
+    if (!m) return { title: name.trim(), sid: null };
+    const title = name.replace(re, '').replace(/\s{2,}/g, ' ').trim();
+    return { title, sid: m[1] };
+  }
+
+  /** Retire tous les marqueurs {{SID:id}} d'un texte (pour affichage/rendu). */
+  private stripSidMarkers(text: string): string {
+    return text.replace(new RegExp(ProjetEditorZoneComponent.SID_MARKER_SRC, 'g'), '').replace(/[ \t]{2,}/g, ' ');
+  }
+
+  /** Compose une ligne de heading avec son SID : "## Titre {{SID:id}}". */
+  private composeHeading(level: number, title: string, sid: string | null): string {
+    const base = '#'.repeat(level) + ' ' + (title || 'Sans titre').trim();
+    return sid ? `${base} {{SID:${sid}}}` : base;
+  }
 
   /** Nom d'une instance à partir de son id. */
   trelloInstanceName(id: string): string {
@@ -5995,6 +6051,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (cmd.id === 'image') { this.triggerVisuImageUpload(sectionId); return; }
     if (cmd.id === 'mo-trello') { this.pendingMoFolderId = sectionId; await this.createMoInVisuSection('trello', sectionId); return; }
     if (cmd.id === 'mo-array')  { this.pendingMoFolderId = sectionId; await this.createMoInVisuSection('array', sectionId); return; }
+    // Titres : on passe par la création atomique (popup → dossier + heading + SID),
+    // jamais par une insertion de markdown brut (qui ré-introduirait la devinette).
+    const hMatch = /^heading-(\d)$/.exec(cmd.id);
+    if (hMatch) { this.openTitleDialogFromVisu(Number(hMatch[1])); return; }
     this.insertVisuMarkdownBlock(sectionId, this.slashSnippet(cmd.id));
   }
 
@@ -6368,6 +6428,168 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       if (id) this.commitVisuSection(id);
       this.saveAll();
     }
+  }
+
+  // ── Création atomique d'un titre (popup → dossier → heading + SID) ─────────
+  // Remplace l'ancienne création par execCommand('formatBlock') : le dossier physique
+  // est créé d'abord (folderId connu), puis le heading inséré avec {{SID:folderId}}.
+  // Plus de devinette par ordre côté cascade.
+
+  /** Ouvre le popup depuis la barre de style du mode Édition. */
+  openTitleDialogFromVisu(level: number) {
+    this.visuDropdown = null;
+    if (this.isActiveSectionLockedByOther) return;
+    const sel = window.getSelection();
+    const prefilled = (sel?.toString() || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+    // Point de coupe au curseur : la nouvelle section démarre à la ligne du curseur
+    // (le texte après bascule dessous). Repli sur la fin de la section si pas de curseur.
+    const cursor = this.computeVisuCursorInsertLine();
+    const anchorId = cursor?.sectionId || this.getActiveVisuSectionId() || this.editingVisuSectionId() || this.docSections[0]?.folderId || null;
+    const base = this.computeTitleInsertion(anchorId, level);
+    const insertLine = cursor ? cursor.insertLine : base.insertLine;
+    this.titleDialog = { level, prefilled, parentFolderId: base.parentFolderId, parentLabel: base.parentLabel, insertLine };
+  }
+
+  /**
+   * Détermine la LIGNE markdown au point de coupe (fin de sélection) dans la section éditée,
+   * afin que `createTitleSection` insère le heading exactement là — le contenu situé sous le
+   * curseur devient la nouvelle section. Ne réécrit RIEN : compte seulement des blocs DOM et
+   * les mappe sur les lignes du contenu DIRECT de la section. Retourne null si pas de curseur
+   * dans une section éditable (→ comportement standard : titre ajouté en fin de section).
+   */
+  private computeVisuCursorInsertLine(): { sectionId: string; insertLine: number } | null {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !sel.focusNode) return null;
+    // Remonter jusqu'au contenteditable de section contenant le curseur
+    let cur: HTMLElement | null = sel.focusNode.nodeType === Node.ELEMENT_NODE
+      ? (sel.focusNode as HTMLElement)
+      : sel.focusNode.parentElement;
+    let editable: HTMLElement | null = null;
+    let sectionId: string | null = null;
+    while (cur && cur.tagName !== 'BODY') {
+      if (cur.hasAttribute?.('data-section-id') && cur.getAttribute('contenteditable') === 'true') {
+        editable = cur; sectionId = cur.getAttribute('data-section-id'); break;
+      }
+      cur = cur.parentElement;
+    }
+    if (!editable || !sectionId) return null;
+
+    // Synchroniser le markdown stocké avec le DOM courant (sérialiseur éprouvé) avant le mapping
+    this.commitVisuSection(sectionId);
+
+    // Point de coupe = fin de la sélection (le texte après → nouvelle section)
+    const range = sel.getRangeAt(0);
+    const cut = document.createRange();
+    cut.setStart(range.endContainer, range.endOffset);
+    cut.collapse(true);
+
+    // Compter les blocs « feuilles » entièrement situés avant le point de coupe
+    const leaves = Array.from(editable.querySelectorAll('li,p,h1,h2,h3,h4,blockquote,pre')) as HTMLElement[];
+    let blocksBefore = 0;
+    for (const leaf of leaves) {
+      if (leaf.querySelector('li,p,h1,h2,h3,h4,blockquote,pre')) continue; // conteneur, pas une feuille
+      try {
+        if (cut.comparePoint(leaf, leaf.childNodes.length) <= 0) blocksBefore++; // fin de feuille ≤ curseur
+      } catch { /* nœud hors plage : ignorer */ }
+    }
+
+    // Mapper blocksBefore → ligne markdown du contenu DIRECT (s'arrête avant la 1re sous-section)
+    const lines = this.unifiedContent.split('\n');
+    const sr = this.sectionRanges.find(r => r.folderId === sectionId);
+    if (!sr) return null;
+    let directEnd = sr.lineEnd;
+    for (let j = sr.lineStart + 1; j <= sr.lineEnd; j++) {
+      if (/^#{1,4} /.test(lines[j])) { directEnd = j - 1; break; }
+    }
+    let seen = 0;
+    let insertLine = directEnd; // défaut : pas de contenu après → titre en fin de section
+    for (let i = sr.lineStart + 1; i <= directEnd; i++) {
+      if (lines[i].trim() === '') continue;
+      if (seen === blocksBefore) { insertLine = i - 1; break; } // heading inséré juste avant cette ligne
+      seen++;
+    }
+    return { sectionId, insertLine };
+  }
+
+  /** Ouvre le popup pour une section racine (bouton + du mode Structure). */
+  openTitleDialogStructRoot() {
+    const lines = this.unifiedContent.split('\n');
+    this.titleDialog = { level: 1, prefilled: '', parentFolderId: null, parentLabel: 'Racine du document', insertLine: lines.length - 1 };
+  }
+
+  /** Ouvre le popup pour un sous-titre d'un nœud Structure. */
+  openTitleDialogStructChild(node: StructureNode) {
+    this.closeStructContextMenu();
+    const level = Math.min(node.level + 1, 4);
+    const { insertLine, parentFolderId, parentLabel } = this.computeTitleInsertion(node.folderId, level);
+    this.titleDialog = { level, prefilled: '', parentFolderId, parentLabel, insertLine };
+  }
+
+  onTitleDialogCancel() {
+    this.titleDialog = null;
+  }
+
+  onTitleDialogConfirm(title: string) {
+    if (!this.titleDialog || this.titleDialogBusy) return;
+    const dlg = this.titleDialog;
+    this.titleDialogBusy = true;
+    try {
+      this.createTitleSection(dlg.level, title, dlg.insertLine);
+    } finally {
+      this.titleDialogBusy = false;
+      this.titleDialog = null;
+    }
+  }
+
+  /**
+   * Calcule, pour un point d'ancrage (folderId) et un niveau cible, la ligne d'insertion
+   * et le dossier parent. Le parent = la section précédente (ou l'ancre) de niveau < cible.
+   */
+  private computeTitleInsertion(anchorFolderId: string | null, level: number): { insertLine: number; parentFolderId: string | null; parentLabel: string } {
+    const lines = this.unifiedContent.split('\n');
+    const ranges = [...this.sectionRanges].sort((a, b) => a.lineStart - b.lineStart);
+    let anchor = anchorFolderId ? ranges.find(r => r.folderId === anchorFolderId) : undefined;
+    if (!anchor && ranges.length) anchor = ranges[ranges.length - 1];
+    const insertLine = anchor ? anchor.lineEnd : lines.length - 1;
+    let parentFolderId: string | null = null;
+    if (level > 1 && anchor) {
+      for (let i = ranges.length - 1; i >= 0; i--) {
+        const r = ranges[i];
+        if (r.lineStart <= anchor.lineStart && r.level < level) { parentFolderId = r.folderId; break; }
+      }
+    }
+    const parentLabel = parentFolderId
+      ? (this.docSections.find(s => s.folderId === parentFolderId)?.folderName || 'Section')
+      : 'Racine du document';
+    return { insertLine, parentFolderId, parentLabel };
+  }
+
+  /**
+   * Insère le heading à la position du curseur (après la section d'ancrage) et déclenche la
+   * sauvegarde. Le flux est UNIFIÉ avec le mode Code : c'est `processSectionsChange` (parent)
+   * qui crée le dossier, l'ordonne selon la position dans le texte (`applySectionFolderOrder`)
+   * et re-parent les sections suivantes si le niveau choisi est plus haut. Pas de création de
+   * dossier dans la zone (évite que le dossier atterrisse en dernier et casse l'ordre).
+   */
+  private createTitleSection(level: number, title: string, insertLine: number): void {
+    const clean = title.trim().replace(/\{\{SID:[^}]*\}\}/g, '').trim();
+    if (!clean) return;
+    const lines = this.unifiedContent.split('\n');
+    const heading = '#'.repeat(level) + ' ' + clean;
+    const at = Math.min(Math.max(insertLine + 1, 0), lines.length);
+    lines.splice(at, 0, '', heading, '');
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+
+    this.recomputeAll();
+    if (this.mode === 'structure') this.structureNodes = this.parseStructureNodes();
+    if (this.mode === 'visu') this.buildVisuSections();
+
+    if (!this.localDirty) { this.localDirty = true; this.dirtyChange.emit(true); }
+    // Sauvegarde immédiate : le parent crée le dossier au bon endroit + re-parent, puis recharge
+    // → le nouveau titre (et la promotion de niveau éventuelle) s'affiche après le round-trip.
+    this.saveAll();
   }
 
   // Insère une liste de cases à cocher (markdown - [ ]) au point d'insertion
@@ -7040,6 +7262,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
     let currentLevel = 0;
     let currentTitle = '';
+    let currentSid: string | null = null;
     let currentLineStart = -1;
     let contentLines: string[] = [];
 
@@ -7062,7 +7285,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       const mockupRe = new RegExp(ProjetEditorZoneComponent.MOCKUP_MARKER_SRC, 'g');
       let mm: RegExpExecArray | null;
       while ((mm = mockupRe.exec(textContent)) !== null) mockupMarkers.push(mm[0]);
-      const folderId = this.sectionRanges.find(r => r.lineStart === currentLineStart)?.folderId ?? null;
+      const folderId = currentSid || (this.sectionRanges.find(r => r.lineStart === currentLineStart)?.folderId ?? null);
       nodes.push({
         id: `struct-${currentLineStart}`,
         level: currentLevel,
@@ -7074,6 +7297,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         lineStart: currentLineStart,
         lineEnd: lineEnd,
         folderId,
+        sid: currentSid,
       });
     };
 
@@ -7086,7 +7310,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       if (m) {
         pushNode(i - 1);
         currentLevel = m[1].length;
-        currentTitle = m[2].trim();
+        const sp = this.splitHeadingSid(m[2].trim());
+        currentTitle = sp.title;
+        currentSid = sp.sid;
         currentLineStart = i;
         contentLines = [];
       } else if (currentLineStart >= 0) {
@@ -7114,9 +7340,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (!this.structureNodes.length) return;
     const parts: string[] = [];
     for (const node of this.structureNodes) {
-      const hashes = '#'.repeat(node.level);
+      const heading = this.composeHeading(node.level, node.title, node.sid);
       const content = this.rebuildNodeRawContent(node);
-      parts.push(`${hashes} ${node.title || 'Sans titre'}${content ? '\n' + content : ''}`);
+      parts.push(`${heading}${content ? '\n' + content : ''}`);
     }
     const newContent = parts.join('\n\n');
     if (newContent !== this.unifiedContent) {
@@ -7144,7 +7370,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       const lines = this.unifiedContent.split('\n');
       const m = /^(#{1,4}) (.+)$/.exec(lines[node.lineStart] ?? '');
       if (m) {
-        node.title = m[2].trim();
+        node.title = this.splitHeadingSid(m[2].trim()).title;
         (event.target as HTMLInputElement).value = node.title;
       } else {
         node.title = 'Sans titre';
@@ -7304,6 +7530,82 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.structureNodes = this.structureNodes.filter(n => n.id !== node.id);
     this.closeStructContextMenu();
     this.flushStructureNodes();
+  }
+
+  // ── Changement de niveau d'une section (clic droit Structure) ──────────────
+  // Le niveau = profondeur dans l'arbre de dossiers. Monter/descendre d'un niveau =
+  // déplacement de dossier (vers le grand-parent / sous le frère précédent). Les
+  // sous-sections suivent automatiquement ; les frères ne bougent pas. Le re-leveling
+  // d'affichage est dérivé de la profondeur par buildDocSections après reload.
+
+  /** node + ses sous-sections (descendants contigus de niveau supérieur). */
+  private getStructSubtree(node: StructureNode): StructureNode[] {
+    const nodes = this.structureNodes;
+    const idx = nodes.findIndex(n => n.id === node.id);
+    if (idx < 0) return [node];
+    const out = [nodes[idx]];
+    for (let i = idx + 1; i < nodes.length; i++) {
+      if (nodes[i].level <= node.level) break;
+      out.push(nodes[i]);
+    }
+    return out;
+  }
+
+  /** Monter (−1) possible si la section n'est pas déjà au niveau racine. */
+  canPromoteStructNode(node: StructureNode): boolean {
+    return !!node.folderId && node.level > 1;
+  }
+
+  /** Descendre (+1) possible s'il existe un frère précédent ET que la profondeur reste ≤ 4. */
+  canDemoteStructNode(node: StructureNode): boolean {
+    if (!node.folderId) return false;
+    const sub = this.getStructSubtree(node);
+    const maxLevel = Math.max(...sub.map(n => n.level));
+    if (maxLevel >= 4) return false;
+    // Frère précédent = nœud précédent de même niveau sans nœud de niveau inférieur entre les deux
+    const nodes = this.structureNodes;
+    const idx = nodes.findIndex(n => n.id === node.id);
+    for (let i = idx - 1; i >= 0; i--) {
+      if (nodes[i].level < node.level) return false; // parent atteint → pas de frère précédent
+      if (nodes[i].level === node.level) return true; // frère précédent trouvé
+    }
+    return false;
+  }
+
+  changeStructNodeLevel(node: StructureNode, delta: number): void {
+    this.closeStructContextMenu();
+    if (!node.folderId) return;
+    if (delta < 0 && !this.canPromoteStructNode(node)) return;
+    if (delta > 0 && !this.canDemoteStructNode(node)) return;
+    this.changeHeadingLevel(node.folderId, delta);
+  }
+
+  /**
+   * Change le niveau d'UNE section (±1) en modifiant uniquement le nombre de `#` de sa ligne
+   * de heading. Le re-parentage positionnel et la normalisation de profondeur sont ensuite
+   * appliqués par processSectionsChange (parent), comme pour une édition en mode Code :
+   *  - Monter (−1) : la section remonte d'un niveau et « récupère » les sections suivantes
+   *    (devenues plus profondes positionnellement) comme enfants ; les précédentes restent.
+   *  - Descendre (+1) : la section se niche sous sa sœur précédente (qui devient son parent).
+   * Le marqueur {{SID}} de la ligne est préservé (on ne touche qu'au préfixe `#`).
+   */
+  changeHeadingLevel(folderId: string, delta: number): void {
+    const range = this.sectionRanges.find(r => r.folderId === folderId);
+    if (!range) return;
+    const lines = this.unifiedContent.split('\n');
+    const m = /^(#{1,4})(\s.*)$/.exec(lines[range.lineStart] ?? '');
+    if (!m) return;
+    const newLevel = m[1].length + delta;
+    if (newLevel < 1 || newLevel > 4) return;
+    lines[range.lineStart] = '#'.repeat(newLevel) + m[2];
+    this.unifiedContent = lines.join('\n');
+    const ta = this.textareaRef?.nativeElement;
+    if (ta) ta.value = this.unifiedContent;
+    this.recomputeAll();
+    if (this.mode === 'structure') this.structureNodes = this.parseStructureNodes();
+    if (this.mode === 'visu') this.buildVisuSections();
+    if (!this.localDirty) { this.localDirty = true; this.dirtyChange.emit(true); }
+    this.saveAll();
   }
 
   // ── Collab mode Structure ───────────────────────────────────

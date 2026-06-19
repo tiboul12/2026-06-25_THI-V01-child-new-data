@@ -115,3 +115,10 @@ Actions des barres :
   - **Couleur du texte** (lettre `A` soulignée) : pastilles `visuTextColors` (`applyVisuFormat('foreColor', …)`)
   - **Couleur de fond / surlignage** (icône `format_ink_highlighter`) : pastilles `visuHighlightColors` (`applyVisuFormat('hiliteColor', …)`)
 - Ouverture/fermeture via `mousedown` + `preventDefault` (conserve la sélection de texte) ; fermeture au clic extérieur (`HostListener('document:mousedown')`) ou après choix d'une option
+
+## `2-5-2-3-10` — Création de titre au curseur (coupe de section)
+
+- Dans le menu **Style de bloc** (`2-5-2-3-9`), choisir un titre H1→H4 crée la section **à la position du curseur** : le texte situé sous le curseur (fin de sélection) bascule dans la nouvelle section, le texte au-dessus reste dans la section courante
+- `computeVisuCursorInsertLine()` commit d'abord la section (sérialiseur éprouvé), compte les blocs feuilles (`li/p/h1..h4/blockquote/pre`) entièrement avant le point de coupe, puis mappe ce compte sur la ligne markdown correspondante du contenu DIRECT
+- L'insertion délègue à `createTitleSection(level, title, insertLine)` qui **insère seulement une ligne `### Titre`** (aucune réécriture du contenu existant → pas de corruption possible) ; `saveAll()` fait créer le dossier et déplacer le contenu suivant par le parent
+- Repli sur le comportement standard (titre ajouté en fin de section courante) si aucun curseur n'est présent dans une section éditable
