@@ -2437,6 +2437,41 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.insertAt('\n| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n| ', ' |       |       |\n');
   }
 
+  // ── Barre de style mode Code (identique visuellement au mode Édition) ─────────
+  // En mode Code on édite du Markdown : les boutons insèrent du Markdown, et le HTML inline
+  // (couleur, surlignage, taille, alignement) pour les styles sans équivalent Markdown
+  // (rendu via le mode « Avec style » / contenu-css).
+  codeColor(c: string)    { this.insertAt(`<span style="color:${c}">`, '</span>'); this.visuDropdown = null; }
+  codeHighlight(c: string){ this.insertAt(`<span style="background:${c}">`, '</span>'); this.visuDropdown = null; }
+  codeFontSize(em: string){ this.insertAt(`<span style="font-size:${em}">`, '</span>'); }
+  codeAlign(dir: string)  { this.insertAt(`\n<div style="text-align:${dir}">\n`, '\n</div>\n'); }
+  codeLink()              { this.insertAt('[', '](https://)'); }
+
+  /** Retire les marqueurs de mise en forme (Markdown inline + balises span/u/b/i) de la sélection. */
+  codeClearFormat() {
+    if (this.isActiveSectionLockedByOther) return;
+    const ta = this.textareaRef?.nativeElement;
+    if (!ta) return;
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const cleaned = ta.value.substring(start, end)
+      .replace(/\*\*|~~|`|(?<!\w)\*(?!\s)|(?<!\w)_(?!\s)/g, '')
+      .replace(/<\/?(?:span|u|b|i|strong|em|div)[^>]*>/gi, '');
+    const newVal = ta.value.substring(0, start) + cleaned + ta.value.substring(end);
+    this.unifiedContent = newVal;
+    ta.value = newVal;
+    this.recomputeRanges();
+    this.recomputeMirrorLines();
+    this.scheduleSave();
+  }
+
+  /** Ouvre, dans l'explorateur de fichiers de l'OS, le dossier local de la section active. */
+  openSectionFolder(): void {
+    if (!this.projectName) return;
+    const folderId = this.resolveActiveFolderId(this.focusedHandle?.id ?? this.activeNodeId ?? null);
+    this.svc.openFolder(this.projectName, folderId).catch(err =>
+      console.warn('[EditorZone] openFolder échoué:', err?.error?.error || err?.message || err));
+  }
+
   // ── Fold / collapse par section ──────────────────────────────
   private getUnfoldedContent(): string {
     if (this.foldedContent.size === 0) return this.unifiedContent;

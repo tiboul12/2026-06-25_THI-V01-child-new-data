@@ -108,3 +108,24 @@ Vue : arborescence éditable des sections du document
 - **Reconstruction** : `flushStructureNodes()` → `unifiedContent` + sauvegarde, puis `parseStructureNodes()` rafraîchit les tags
 - **Suppression physique** : si plus aucune référence `{{IMG:id}}` (dans `unifiedContent` ni `fullContentBackup`) → `svc.deleteFile(projectName, imgId)` → l'image disparaît du dossier
 - **Cohérence inter-modes** : le même `deleteImageUnified` est appelé depuis Code, Édition et Structure → comportement identique partout
+
+---
+
+## `2-5-2-6-11` — Création de titre via popup (Structure)
+
+- **Nouvelle section racine** : bouton « + Nouvelle section » en tête de la vue Structure → `openTitleDialogStructRoot()` (niveau 1, parent = racine).
+- **Sous-titre** : menu contextuel d'un nœud (si `level < 4`) → « Ajouter un sous-titre » → `openTitleDialogStructChild(node)` (niveau = `node.level + 1`, parent = le nœud).
+- **Création** : identique au mode Édition (`createTitleSection` insère le heading à la position d'ancrage puis `saveAll()` ; le parent crée le dossier, l'ordonne et re-parent), via le composant partagé `worg-title-create-dialog`.
+- **Persistance du SID** : `parseStructureNodes` extrait le SID dans `node.sid` (titre nettoyé) ; `flushStructureNodes` le réinjecte via `composeHeading(level, title, node.sid)`. Renommer un titre en Structure renomme le dossier physique sans le perdre (matching par SID dans `processSectionsChange`).
+
+---
+
+## `2-5-2-6-12` — Changer le niveau d'une section (clic droit)
+
+- **Déclenchement** : menu contextuel d'un nœud Structure → « Monter d'un niveau » (−1) ou « Descendre d'un niveau » (+1).
+- **Sémantique = outdent / indent de plan** (le niveau = profondeur dans l'arbre) :
+  - **Monter** : la section remonte d'un niveau et **récupère les sections suivantes** comme enfants ; les sections **précédentes** restent en place.
+  - **Descendre** : la section se **niche sous sa sœur précédente**. Son sous-arbre suit.
+- **Mécanisme** : `changeHeadingLevel(folderId, ±1)` modifie le nombre de `#` de la **ligne de heading** (marqueur `{{SID}}` préservé) puis `saveAll()` ; le re-parentage des dossiers et la normalisation de profondeur (`buildDocSections`) sont appliqués par `processSectionsChange`.
+- **Disponibilité** : Monter si `level > 1` ; Descendre s'il existe un frère précédent **et** que la profondeur max du sous-arbre reste ≤ 4 (`canPromoteStructNode` / `canDemoteStructNode`).
+- **Flux** : menu Structure → `changeStructNodeLevel` → `changeHeadingLevel` (direct) ; sidebar → `nodeLevelChange` → `onNodeLevelChange` → `editionOutil.changeHeadingLevel`.

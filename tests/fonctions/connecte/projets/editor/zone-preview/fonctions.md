@@ -223,3 +223,15 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 - **Balises sémantiques garanties** (vB-0.282) : `applyVisuFormat` force `styleWithCSS=false` pour Gras/Italique/Souligné/Barré (→ `<b>/<i>/<u>/<s>`) et `true` pour couleur/surlignage/taille. En secours, si un `<span>` porte `font-weight`/`font-style`/`text-decoration` (cas styleWithCSS), `nodeToMd` le reconvertit en Markdown (`**`, `*`, `~~`, `<u>`). Le gras sort donc bien en `**gras**` en mode Code.
 - Round-trip Edition ↔ Code stable (les styles Markdown-compatibles en `**`/`*`/`~~`/`#`/listes/liens, les autres en HTML inline `<span style>` / `<u>`)
 - **Espaces hors marqueurs** (vB-0.282) : `wrapInlineMd` hisse les espaces de début/fin hors des marqueurs (`**mot ** ` invalide → `**mot** `), sinon le Markdown ne se rendrait pas et le code resterait visible en Edition. Le mode Edition n'affiche jamais le code de mise en forme (ni `**`, ni HTML), uniquement le texte formaté.
+
+---
+
+## `2-5-2-5-21` — Création de titre via popup (barre de style)
+
+- **Déclenchement** : barre de style dockée → menu « titre » → H1/H2/H3/H4 → ouvre `worg-title-create-dialog` (composant partagé `libs/shared/ui`). Le slash-menu `/` redirige aussi les commandes `heading-N` vers ce popup (`openTitleDialogFromVisu`).
+- **Pré-remplissage** : si du texte est sélectionné, il pré-remplit le champ titre du popup.
+- **Insertion à la position du curseur** (`createTitleSection`) : le heading est inséré dans `unifiedContent` **après la section active** (`computeTitleInsertion` → `insertLine = anchor.lineEnd`), puis `saveAll()` immédiat. Le flux est **unifié avec le mode Code** : c'est `processSectionsChange` (parent) qui crée le dossier, l'ordonne selon la position dans le texte (`applySectionFolderOrder`) et re-parent les sections suivantes. Pas de `createFolder` dans la zone → le titre ne part jamais en fin de liste.
+- **Position & niveau** : titre de même niveau que la section active → inséré **entre** la section active et la suivante. Titre de niveau plus haut → les sections suivantes de niveau plus profond lui sont **rattachées** (re-parentage + normalisation de niveau, identique au mode Code, voir `2-5-2-4-20`).
+- **Parent affiché** : `computeTitleInsertion` calcule le parent (section précédente de niveau strictement inférieur ; niveau 1 → racine) pour l'afficher dans le popup ; le rattachement réel est dérivé de l'imbrication markdown par le parent.
+- **Remplacement** : l'ancien chemin `execCommand('formatBlock', H1-4)` n'est plus utilisé pour les titres (source d'instabilité supprimée). `execCommand` reste pour gras/italique/souligné/couleur.
+- **Popup** : pas de fermeture au clic backdrop (✕ / Annuler / validation Entrée). Émet `(confirm)` / `(cancel)`.

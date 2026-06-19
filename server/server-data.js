@@ -4868,6 +4868,43 @@ function safeProjectPath(projectName, filePath) {
     return full;
 }
 
+// POST /api/file-projects/:name/open-folder — ouvre, dans l'explorateur de fichiers de l'OS,
+// le dossier local d'une section (ou la racine du projet si folderId absent).
+app.post('/api/file-projects/:name/open-folder', async (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+    try {
+        const config = await getProjectConfig(req.params.name);
+        if (!config) return res.status(404).json({ error: 'Projet non trouvé' });
+
+        // folderId → chemin relatif ; un fichier → son dossier parent ; absent → racine projet
+        let relPath = '';
+        const folderId = req.body?.folderId;
+        if (folderId) {
+            const item = findNodeById(config.structure || [], folderId);
+            if (!item) return res.status(404).json({ error: 'Section non trouvée' });
+            relPath = item.type === 'folder' ? item.path : path.dirname(item.path || '');
+        }
+
+        const full = safeProjectPath(req.params.name, relPath);
+        if (!full) return res.status(400).json({ error: 'Chemin invalide' });
+        if (!fs.existsSync(full)) return res.status(404).json({ error: 'Dossier introuvable en local (section non clonée localement)' });
+
+        const { spawn } = require('child_process');
+        if (process.platform === 'win32') {
+            spawn('explorer.exe', [full], { detached: true }).on('error', () => {});
+        } else if (process.platform === 'darwin') {
+            spawn('open', [full], { detached: true }).on('error', () => {});
+        } else {
+            spawn('xdg-open', [full], { detached: true }).on('error', () => {});
+        }
+        res.json({ success: true, path: full });
+    } catch (e) {
+        console.error('[open-folder] error:', e.message);
+        res.status(500).json({ error: 'Échec ouverture du dossier: ' + e.message });
+    }
+});
+
 // GET /api/projects
 app.get('/api/file-projects', async (req, res) => {
     const user = getSessionUser(req);
