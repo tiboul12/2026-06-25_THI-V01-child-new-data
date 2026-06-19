@@ -196,8 +196,8 @@ export class WoActionsComponent implements OnInit, OnDestroy {
 
     const config = this.configService.cliConfig();
     const provider = this.aiProvider || config.activeProviders?.[0] || 'claude';
-    const models = provider === 'claude' ? config.enabledModels?.claude : config.enabledModels?.gemini;
-    const model = this.aiModel || models?.[0] || (provider === 'claude' ? 'claude-sonnet-4-6' : 'gemini-2.0-flash');
+    const models = provider === 'claude' ? config.enabledModels?.claude : config.enabledModels?.antigravity;
+    const model = this.aiModel || models?.[0] || (provider === 'claude' ? 'claude-sonnet-4-6' : 'default');
 
     this.agentLaunching = true;
     this.showPromptsPopup = false;

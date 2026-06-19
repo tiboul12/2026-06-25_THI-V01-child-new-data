@@ -9476,6 +9476,36 @@
       "prompt": "la supression de titre ne fonctionne plus aucune erreur dans la console ou dans le reseau, rien ne ce passe",
       "startedAt": "2026-06-19T13:25:00.000Z",
       "completedAt": "2026-06-19T13:31:36.489Z"
+    },
+    {
+      "id": "mod-403",
+      "version": "B-0.286",
+      "date": "2026-06-19T16:35:37.413Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "portail", "projets", "libs", "system"],
+      "features": "system:ia-provider,portail:config,projets:editor-conversation",
+      "title": "Remplacement du provider CLI Gemini par Antigravity (agy)",
+      "description": "Le provider CLI Gemini est remplacé par Antigravity (binaire `agy`), sur le même mécanisme que Claude Code. Executor (server-executor.js) : spawn `agy -p \"<prompt>\" [--model X] --dangerously-skip-permissions` (équivalent du --yolo gemini ; --model omis si modèle 'default' → agy utilise son modèle configuré), statut CLI via `agy --version` (fallbacks antigravity/agy.cmd), listes de modèles/coûts statiques (pas d'API publique). Server-data.js : DEFAULT_MODELS.antigravity, enabledModels.antigravity, refresh modèles. conf.json : activeProviders ['claude','antigravity']. Front : config.service.ts (provider 'antigravity-cli', modelsList/enabledModels.antigravity, status.antigravity), header, projet-conversation, config (carte Antigravity CLI), wo-actions, tchat-ia, cahier-recette, wo-history, wo-tools-panel. Antigravity étant un agent de code, le blocage 'gemini interdit pour modif fichiers' ne s'applique plus. LAISSÉ INTACT : les appels API HTTP directs à Gemini (server-data.js, generativelanguage.googleapis.com) + apiKeys.gemini + provider 'gemini-api' — mécanisme distinct sans équivalent agy. Résidus cosmétiques laissés : landing, docs, wo-ia-logs comment, wo-action-history label.",
+      "files": [
+        "electron/executor/server-executor.js",
+        "server/server-data.js",
+        "data/config/conf.json",
+        "libs/portail-core/data-access/src/lib/config.service.ts",
+        "libs/shared/ui/src/lib/layout/header/header.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-conversation/projet-conversation.component.html",
+        "apps/portail/src/app/pages/user/config/config.component.ts",
+        "apps/portail/src/app/pages/user/config/config.component.html",
+        "libs/shared/ui/src/lib/tools/wo/wo-actions/wo-actions.component.ts",
+        "libs/shared/ui/src/lib/tools/tchat-ia/tchat-ia.component.ts",
+        "tests/fonctions/connecte/config/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Gemini cli à été supprimé (plus utilisable), je voudrais que sur le même système que gemini cli dans le fonctionnement d'une IA dans l'application et comme claude code, tu intègre antigravity cli en remplacement de gemini cli",
+      "startedAt": "2026-06-19T15:30:00.000Z",
+      "completedAt": "2026-06-19T16:35:37.413Z"
     }
   ]
 }

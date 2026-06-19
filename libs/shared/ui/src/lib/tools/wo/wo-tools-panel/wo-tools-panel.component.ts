@@ -120,7 +120,7 @@ export class WoToolsPanelComponent {
     { name: 'visible',             type: 'boolean',  desc: 'Afficher / masquer le chat' },
     { name: 'executorUrl',         type: 'string',   desc: 'URL serveur executor (:3002)' },
     { name: 'apiUrl',              type: 'string',   desc: 'URL serveur data (:3001)' },
-    { name: 'provider',            type: 'string',   desc: 'Fournisseur IA (gemini, claude)' },
+    { name: 'provider',            type: 'string',   desc: 'Fournisseur IA (antigravity, claude)' },
     { name: 'model',               type: 'string',   desc: 'Modèle IA à utiliser' },
     { name: 'title',               type: 'string',   desc: 'Titre affiché dans le header' },
     { name: 'systemPrompt',        type: 'string',   desc: 'Prompt système initial' },

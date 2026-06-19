@@ -44,15 +44,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
     { value: 'claude-3-5-sonnet-latest',       label: 'Claude 3.5 Sonnet' },
     { value: 'claude-3-5-haiku-latest',        label: 'Claude 3.5 Haiku' },
   ];
-  private allGeminiModels: { value: string; label: string; costInput?: number; costOutput?: number }[] = [
-    { value: 'gemini-2.5-pro-preview',  label: 'Gemini 2.5 Pro (Preview)' },
-    { value: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash' },
-    { value: 'gemini-1.5-pro',          label: 'Gemini 1.5 Pro' },
-    { value: 'gemini-1.5-flash',        label: 'Gemini 1.5 Flash' }
+  private allAntigravityModels: { value: string; label: string; costInput?: number; costOutput?: number }[] = [
+    { value: 'default',           label: 'Défaut (agy)' },
+    { value: 'gemini-3-pro',      label: 'Gemini 3 Pro' },
+    { value: 'gemini-3-flash',    label: 'Gemini 3 Flash' },
+    { value: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5' }
   ];
 
   claudeModels = [...this.allClaudeModels];
-  geminiModels = [...this.allGeminiModels];
+  antigravityModels = [...this.allAntigravityModels];
 
   constructor(
     private themeService: ThemeService,
@@ -73,14 +73,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
         : [{ value: 'claude-cli', baseId: 'claude', label: 'Claude Code (Anthropic)', type: 'cli' }];
 
       const sourceClaude = cfg.modelsList.claude.length > 0 ? cfg.modelsList.claude : this.allClaudeModels;
-      const sourceGemini = cfg.modelsList.gemini.length > 0 ? cfg.modelsList.gemini : this.allGeminiModels;
+      const sourceAntigravity = cfg.modelsList.antigravity.length > 0 ? cfg.modelsList.antigravity : this.allAntigravityModels;
 
       this.claudeModels = cfg.enabledModels.claude.length > 0
         ? sourceClaude.filter(m => cfg.enabledModels.claude.includes(m.value))
         : sourceClaude;
-      this.geminiModels = cfg.enabledModels.gemini.length > 0
-        ? sourceGemini.filter(m => cfg.enabledModels.gemini.includes(m.value))
-        : sourceGemini;
+      this.antigravityModels = cfg.enabledModels.antigravity.length > 0
+        ? sourceAntigravity.filter(m => cfg.enabledModels.antigravity.includes(m.value))
+        : sourceAntigravity;
 
       if (!this.headerSelectionLoaded && cfg.headerSelection.provider) {
         this.aiProvider = cfg.headerSelection.provider;
@@ -88,7 +88,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
         this.headerSelectionLoaded = true;
       }
 
-      const currentList = this.aiProvider.split('-')[0] === 'claude' ? this.claudeModels : this.geminiModels;
+      const currentList = this.aiProvider.split('-')[0] === 'claude' ? this.claudeModels : this.antigravityModels;
       if (currentList.length > 0 && !currentList.find(m => m.value === this.aiModel)) {
         this.aiModel = currentList[0].value;
       }
@@ -156,7 +156,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   get currentModels() {
     const baseId = this.aiProvider.split('-')[0];
-    return baseId === 'claude' ? this.claudeModels : this.geminiModels;
+    return baseId === 'claude' ? this.claudeModels : this.antigravityModels;
   }
 
   get selectedModelCost(): string {
@@ -167,7 +167,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   onProviderChange(): void {
     const baseId = this.aiProvider.split('-')[0];
-    const models = baseId === 'claude' ? this.claudeModels : this.geminiModels;
+    const models = baseId === 'claude' ? this.claudeModels : this.antigravityModels;
     if (models.length > 0) this.aiModel = models[0].value;
     this.configService.saveHeaderSelection(this.aiProvider, this.aiModel);
   }
