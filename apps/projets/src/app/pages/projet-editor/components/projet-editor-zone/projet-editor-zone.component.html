@@ -1293,7 +1293,7 @@
                 [instanceId]="aid"
                 [boardName]="arrayInstanceName(aid)"
                 [deletable]="false"
-                [readonly]="true"
+                [readonly]="isArrayInstanceLocked(aid)"
                 (gridChanged)="onArrayGridChanged(aid, $event)" />
             </div>
           }

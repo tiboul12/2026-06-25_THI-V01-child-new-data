@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-412",
+      "version": "B-0.293",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code",
+      "title": "MO Tableau : éditable en mode Édition comme en Structure",
+      "description": "Le board Array n'était pas éditable en mode Édition. Cause principale : en preview standalone d'un fichier array (clic sur le nœud fichier AR: Mon Tableau), le template passait [readonly]=\"true\" codé en dur, contrairement au Trello équivalent ([readonly]=\"isTrelloInstanceLocked\"). Fix : [readonly]=\"isArrayInstanceLocked(aid)\". Correctif complémentaire : éviter le rebuild visu pendant l'édition live (skipVisu sur recomputeAll, suppression du buildVisuSections dans onArrayGridChanged) — chaque changement de cellule reconstruisait sinon la section.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le MO tableau doit être éditable dans le mode Edition comme pour le mode Structure (qui est ok actuellement)",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
       "id": "mod-411",
       "version": "B-0.292",
       "date": "2026-06-20T00:00:00.000Z",

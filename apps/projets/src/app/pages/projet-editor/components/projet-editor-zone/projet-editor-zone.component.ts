@@ -1253,13 +1253,13 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   }
 
   // ── Recompute pipeline ─────────────────────────────────────
-  private recomputeAll() {
+  private recomputeAll(skipVisu = false) {
     this.recomputeRanges();
     this.recomputeInlineBlocks();
     this.recomputeHighlights();
     this.recomputeHandles();
     this.recomputeRenderedHtml();
-    if (this.mode === 'visu') this.buildVisuSections();
+    if (this.mode === 'visu' && !skipVisu) this.buildVisuSections();
     this.recomputeContentTrelloIds();
     this.recomputeContentMockupIds();
     this.recomputeContentArrayIds();
@@ -2122,7 +2122,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (this.mode === 'structure') { clearTimeout(this.structFlushTimeout); this.flushStructureNodes(); }
     this.syncArrayInlineBlock(instanceId, grid);
     if (this.mode === 'structure') this.structureNodes = this.parseStructureNodes();
-    if (this.mode === 'visu') this.buildVisuSections();
+    // En visu : NE PAS reconstruire les sections (le board affiche déjà la grille live),
+    // sinon l'édition de cellule est interrompue à chaque frappe. Identique au Trello.
   }
 
   /** Met à jour le bloc ```ARRAY: NOM inline dans le contenu à partir de la grille (table Markdown). */
@@ -2144,7 +2145,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.lastArrayCodeFromGrid.set(instanceId, newBlock);
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = updated;
-    this.recomputeAll();
+    // skipVisu : ne pas reconstruire les sections visu (préserve l'édition live du board)
+    this.recomputeAll(true);
     this.scheduleSave();
   }
 
