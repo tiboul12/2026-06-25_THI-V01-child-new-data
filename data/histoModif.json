@@ -9638,6 +9638,28 @@
       "prompt": "fait la même chose avec la bar des style dans le mode Code",
       "startedAt": "2026-06-20T08:35:12.009Z",
       "completedAt": "2026-06-20T08:35:12.009Z"
+    },
+    {
+      "id": "mod-409",
+      "version": "B-0.290",
+      "date": "2026-06-20T09:43:53.087Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|mockup-list",
+      "title": "Liste des mockups : bouton supprimer sur chaque carte",
+      "description": "Chaque carte de la liste des mockups dispose d'un bouton supprimer (icône delete, rouge au survol). Le clic supprime l'instance en BDD (megaOutilsSvc.deleteInstance), retire le marqueur {{MOCKUP:id|...}} du contenu (recomputeRanges + scheduleSave) et émet megaOutilDeleted. La méthode removeMockupMarkerFromContent est améliorée pour gérer les paramètres optionnels (caption/align/width).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je clique sur l'encart liste des mockup, la liste des mockup s'affiche, rajoute dans chaque encart un bouton pour supprimé ce mockup, ce mockup devra être supprimé ainsi que son code dans la section",
+      "startedAt": "2026-06-20T09:43:53.087Z",
+      "completedAt": "2026-06-20T09:43:53.087Z"
     }
   ]
 }

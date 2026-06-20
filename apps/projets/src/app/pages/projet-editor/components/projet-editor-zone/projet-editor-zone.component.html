@@ -529,6 +529,12 @@
                   <div class="trello-list-card__head">
                     <span class="material-symbols-outlined text-violet-400 text-base">design_services</span>
                     <span class="trello-list-card__name">{{ inst.name }}</span>
+                    <button type="button"
+                            class="w-6 h-6 flex items-center justify-center rounded-md text-light-text-muted dark:text-white/30 hover:text-red-500 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                            title="Supprimer ce mockup"
+                            (click)="deleteMockupInstance(inst.id)">
+                      <span class="material-symbols-outlined text-[15px]">delete</span>
+                    </button>
                   </div>
 
                   <!-- Section d'origine + lien -->

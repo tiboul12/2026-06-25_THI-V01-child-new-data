@@ -4359,12 +4359,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   }
 
   private removeMockupMarkerFromContent(id: string) {
-    const re = new RegExp('\n*\{\{MOCKUP:' + id + '\\}\\}\\n*', 'g');
+    const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('\\n*\\{\\{MOCKUP:' + esc + '(?:\\|[^}]*)?\\}\\}\\n*', 'g');
     if (!re.test(this.unifiedContent)) return;
-    this.unifiedContent = this.unifiedContent.replace(re, '\n');
+    re.lastIndex = 0;
+    this.unifiedContent = this.unifiedContent.replace(re, '\n').replace(/\n{3,}/g, '\n\n');
     const ta = this.textareaRef?.nativeElement;
     if (ta) ta.value = this.unifiedContent;
     this.recomputeRanges();
+    this.recomputeMirrorLines();
+    if (this.mode === 'visu') this.buildVisuSections();
+    this.scheduleSave();
   }
 
   /** Masque les shortcodes {{TRELLO:id}} du HTML affiché en Preview. */
