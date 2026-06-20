@@ -26,9 +26,29 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const os = require('os');
 const https = require('https');
+
+/**
+ * Résout le chemin absolu de l'exécutable agy, pour un spawn DIRECT (sans cmd.exe).
+ * Indispensable : agy -p ne lit pas stdin et n'écrit pas sur stdout (cf. tests de recette par
+ * fichier) ; passer par `cmd /c agy -p "..."` casse l'échappement des " du JSON et la limite de
+ * longueur. Spawn direct = pas de quoting, limite de ligne ~32k au lieu de ~8k.
+ */
+let _agyPathCache = null;
+function resolveAgyPath() {
+    if (_agyPathCache) return _agyPathCache;
+    try {
+        const cmd = process.platform === 'win32' ? 'where agy' : 'which agy';
+        const out = execSync(cmd, { encoding: 'utf8' });
+        const first = out.split(/\r?\n/).map(s => s.trim()).filter(Boolean)[0];
+        _agyPathCache = first || 'agy';
+    } catch (e) {
+        _agyPathCache = 'agy';
+    }
+    return _agyPathCache;
+}
 
 // ============================================================
 // Configuration
@@ -649,11 +669,16 @@ app.post('/execute-prompt', (req, res) => {
         if (provider === 'antigravity') {
             sseWrite(res, 'info', `[${startTime.toLocaleTimeString('fr-FR', { hour12: false })}] Executing Antigravity CLI (agy) (${model})\n`);
 
-            const escapedPrompt = promptContent.replace(/"/g, '\\"').replace(/\n/g, ' ');
-            const agyProcess = spawn('cmd', ['/c', `agy -p "${escapedPrompt}" ${model && model !== 'default' ? '--model ' + model + ' ' : ''}--dangerously-skip-permissions`], {
-                shell: false,
+            // Spawn DIRECT (pas de cmd.exe) : le prompt passe en argument tel quel, sans échappement
+            // ni aplatissement des sauts de ligne, et sans limite de longueur de cmd.exe.
+            const agyPath = resolveAgyPath();
+            const agyArgs = ['-p', promptContent];
+            if (model && model !== 'default') agyArgs.push('--model', model);
+            agyArgs.push('--dangerously-skip-permissions');
+            const agyProcess = spawn(agyPath, agyArgs, {
+                cwd: req.body.cwd || process.cwd(),
                 env: { ...process.env, FORCE_COLOR: '0' },
-                stdio: ['ignore', 'pipe', 'pipe']
+                stdio: ['ignore', 'pipe', 'pipe']   // stdin fermé (sinon agy -p reste bloqué)
             });
 
             console.log(`[EXECUTOR] Antigravity (agy) process spawned (PID: ${agyProcess.pid})`);

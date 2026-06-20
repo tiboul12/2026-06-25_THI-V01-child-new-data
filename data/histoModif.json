@@ -1,6 +1,66 @@
 {
   "modifications": [
     {
+      "id": "mod-420",
+      "version": "B-0.294",
+      "date": "2026-06-21T00:36:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["system"],
+      "features": "system:recette-tests",
+      "title": "Création du lanceur CLI tests/run-recette-cli.js pour tester le site via agy",
+      "description": "Ajout d'un script Node.js utilitaire run-recette-cli.js qui permet de lancer des sessions de tests automatisés IA sur tout ou partie des fonctions du projet via agy en direct. Il charge le registre tests/fonctions/_registry.json, construit le prompt QA structuré et parse les sentinelles @@TEST_RESULT@@ en direct sur la sortie standard d'agy pour afficher les résultats.",
+      "files": [
+        "tests/run-recette-cli.js"
+      ],
+      "ai": "Antigravity",
+      "model": "Gemini 3.5 Flash",
+      "prompt": "oui (à la proposition de créer un script utilitaire de lancement)",
+      "startedAt": "2026-06-20T22:08:00.000Z",
+      "completedAt": "2026-06-20T22:36:00.000Z"
+    },
+    {
+      "id": "mod-419",
+      "version": "B-0.294",
+      "date": "2026-06-20T19:58:30.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["portail"],
+      "features": "portail:landing",
+      "title": "Landing : Correction du binding email dans le formulaire d'inscription",
+      "description": "Ajout de l'attribut name='reg-email' manquant sur l'input email d'inscription. En Angular, ngModel utilisé dans une balise form nécessite obligatoirement l'attribut name pour assurer le binding bidirectionnel.",
+      "files": [
+        "apps/portail/src/app/pages/public/landing/landing.component.html"
+      ],
+      "ai": "Antigravity",
+      "model": "Gemini 3.5 Flash",
+      "prompt": "/goal Crée un agent de test de bout en bout pour mon site http://localhost:4202/. Tu dois utiliser Playwright...",
+      "startedAt": "2026-06-20T19:48:36.000Z",
+      "completedAt": "2026-06-20T19:58:30.000Z"
+    },
+    {
+      "id": "mod-418",
+      "version": "B-0.294",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server", "data"],
+      "features": "portail:admin|tests,server:admin-tests",
+      "title": "Admin/Tests : mode automatique IA (Claude Code + Browser MCP)",
+      "description": "Nouveau mode de test automatique. Popup : toggle Manuel/Automatique(IA) ; en IA, sélecteurs provider (CLI agentiques d'admin/config) + modèle, consignes éditables, et bloc format de retour imposé affiché. Serveur : POST /runs stocke mode/aiProvider/aiModel/prompt ; nouvel endpoint SSE GET /runs/:id/ai-stream qui construit le prompt (consignes + format @@TEST_RESULT@@ imposé + liste fonctions), appelle l'executor local /execute-prompt (Claude Code / Antigravity pilotent le navigateur via l'extension Browser MCP), parse les résultats au fil de l'eau, les persiste et ré-émet en SSE. Client : Runner IA avec bannière de progression (X/Y) et affichage progressif des verdicts, revue manuelle puis Terminer ; badge IA au dashboard. Réutilise ConfigService (providers/modèles) et le pattern SSE EventSource.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Actuellement le système de tests est manuel, je voudrais que tu rajoute une option pour lancer le test via une IA … claude code doit permettre avec une extension chrome de testé les fonctionnalités dans le navigateur",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
       "id": "mod-417",
       "version": "B-0.294",
       "date": "2026-06-20T00:00:00.000Z",
@@ -9824,6 +9884,102 @@
       "prompt": "lorsque je clique sur l'encart liste des mockup, la liste des mockup s'affiche, rajoute dans chaque encart un bouton pour supprimé ce mockup, ce mockup devra être supprimé ainsi que son code dans la section",
       "startedAt": "2026-06-20T09:43:53.087Z",
       "completedAt": "2026-06-20T09:43:53.087Z"
+    },
+    {
+      "id": "mod-410",
+      "version": "B-0.294",
+      "date": "2026-06-20T10:15:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server",
+        "data"
+      ],
+      "features": "portail:admin-tests,server:tests-ai-stream",
+      "title": "Tests IA : fenêtre de contrôle en direct + diagnostics",
+      "description": "Le test automatique IA affiche désormais les retours de l'IA en direct dans une fenêtre de contrôle. Côté serveur (ai-stream), le stdout/stderr/info/start/end de l'executor (hors lignes sentinelles @@TEST_RESULT@@) est forwardé en temps réel via un nouvel événement SSE 'ai-log' { stream, text } — le raisonnement de l'IA n'est plus avalé. Ajout de diagnostics : vérification du status HTTP de l'executor (non-200 => run-failed avec le corps), message d'alerte si le run se termine sans aucun résultat (executor non lancé / CLI absent / Browser MCP non connecté). Côté portail, panneau 'Retours en direct de l'IA' (collapsible, auto-scroll, coloration par flux, borné à 500 lignes, compteur) sous la bannière du runner ; bannière ambre dédiée quand 0 fonction testée. Les statuts se remplissent progressivement.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans le système de tests qui viens d'ètre mis en place il faut voir l'évolution du tests et si l'ia est entrain de travailler, affiche les retours en direct de l'IA et l'ia doit renvoyé petit à petit les status des tests pour mettre à jour les tests en live.",
+      "startedAt": "2026-06-20T10:10:00.000Z",
+      "completedAt": "2026-06-20T10:15:00.000Z"
+    },
+    {
+      "id": "mod-411",
+      "version": "B-0.294",
+      "date": "2026-06-21T00:50:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "tests",
+        "system"
+      ],
+      "features": "tests:run-recette-cli,system:antigravity",
+      "title": "Tests IA Antigravity : échange par fichier (agy n'écrit pas sur stdout)",
+      "description": "Correction de tests/run-recette-cli.js pour qu'Antigravity (agy) fonctionne réellement. Diagnostic validé : agy -p n'écrit JAMAIS sur stdout en print mode (il n'émet que les modifications de fichiers), donc la capture via child.stdout donnait toujours 0 résultat. Nouvelle approche : (1) spawn DIRECT de agy.exe (résolu via 'where agy') au lieu de cmd /c → supprime la casse des guillemets du JSON et la limite de longueur 8191 ; (2) prompt court + fichier de tâches lu par agy (plus de limite de longueur) ; (3) agy ÉCRIT les @@TEST_RESULT@@ dans un fichier de sortie via son outil d'écriture ; (4) le script poll ce fichier toutes les secondes pour un affichage live ; (5) prompt rendu directif ('ta seule livraison est d'écrire le fichier', 'status nd si indécidable') car un prompt mou ne déclenchait pas l'écriture. Validé end-to-end sur la fonction 1-1-2 : verdict OK écrit et capté.",
+      "files": [
+        "tests/run-recette-cli.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Serait il possible faire la même chose que claude avec antigravity cli, afin de pouvoir testé des fonctionnalitées du site avec l'ia gemini avec antigravity cli",
+      "startedAt": "2026-06-21T00:20:00.000Z",
+      "completedAt": "2026-06-21T00:50:00.000Z"
+    },
+    {
+      "id": "mod-412",
+      "version": "B-0.294",
+      "date": "2026-06-21T01:10:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "server",
+        "portail",
+        "system",
+        "data"
+      ],
+      "features": "server:tests-ai-stream,system:antigravity,portail:admin-tests",
+      "title": "Tests IA admin : support Antigravity (échange par fichier)",
+      "description": "Le mode test IA de l'admin supporte désormais Antigravity, pas seulement Claude. Serveur (ai-stream) : branche provider==='antigravity' → écrit un fichier de tâches + un fichier de sortie sous data/tests-admin/ai-runs/<runId>/, envoie un prompt directif (agy lit les tâches et ÉCRIT les @@TEST_RESULT@@ dans le fichier), et poll ce fichier toutes les 1,5 s pour émettre les case-result (même flux SSE/fenêtre de contrôle que Claude). Le parsing stdout (Claude) et le poll fichier (agy) partagent un Set 'seen' dédupliqué via ingestResultLine(). Diagnostic 0-résultat adapté à agy. Executor (server-executor.js) : spawn DIRECT de agy.exe (résolu via 'where agy', cache) au lieu de cmd /c → supprime la casse des guillemets JSON et la limite 8191 ; accepte un cwd (racine projet pour lire le code source). Portail : bannière du runner rendue générique ('L'IA teste…' au lieu de 'Claude Code teste…'). Le frontend gère déjà les events SSE sans logique par provider.",
+      "files": [
+        "server/server-data.js",
+        "electron/executor/server-executor.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "oui",
+      "startedAt": "2026-06-21T00:55:00.000Z",
+      "completedAt": "2026-06-21T01:10:00.000Z"
+    },
+    {
+      "id": "mod-413",
+      "version": "B-0.294",
+      "date": "2026-06-21T01:25:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "server"
+      ],
+      "features": "server:config-keys,system:antigravity",
+      "title": "Antigravity absent du sélecteur IA : fallback providers CLI globaux",
+      "description": "Le sélecteur IA (mode test auto, header, etc.) ne proposait que Claude Code car GET /api/config/keys lisait activeProviders uniquement depuis la config utilisateur en DB (tous à undefined), en ignorant conf.json global où cliConfig.activeProviders = ['claude','antigravity']. Correction : activeProviders = union(config utilisateur, conf.json global) — les CLI agentiques sont une capacité machine, pas un réglage par utilisateur. enabledModels claude/antigravity bénéficie aussi d'un fallback global. Par ailleurs, dans ai-stream, le modèle par défaut est désormais 'default' pour agy (au lieu de 'claude-sonnet-4-6') afin de ne pas passer un modèle Claude à Antigravity.",
+      "files": [
+        "server/server-data.js"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je veux lancer un test, je ne vois dispo que claude code",
+      "startedAt": "2026-06-21T01:15:00.000Z",
+      "completedAt": "2026-06-21T01:25:00.000Z"
     }
   ]
 }
