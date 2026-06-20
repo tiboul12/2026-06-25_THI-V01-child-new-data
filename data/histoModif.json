@@ -1,6 +1,111 @@
 {
   "modifications": [
     {
+      "id": "mod-417",
+      "version": "B-0.294",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "refactor",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin|tests",
+      "title": "Admin/Tests : boutons d'action en colonne fixe à gauche du référentiel",
+      "description": "Déplacement des boutons d'action (Lancer / Ouvrir le dossier) de la droite de chaque nœud vers une colonne fixe collée à gauche, non affectée par l'indentation de l'arbre. Les boutons sont désormais toujours visibles (suppression du hover-opacity). L'arborescence (toggle + fonctions) est indentée à droite de cette colonne.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "les boutons placé complètement à droite doivent être déplacer dans 1 colonne collé à gauche",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
+      "id": "mod-416",
+      "version": "B-0.294",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "data"],
+      "features": "portail:admin|tests",
+      "title": "Admin/Tests : lancer un test depuis le référentiel",
+      "description": "Ajout d'un bouton 'Lancer un test sur cette section' (play_arrow) sur chaque nœud du référentiel de fonctions. Il ouvre le popup de lancement existant (même composant) avec la/les section(s) du nœud pré-cochée(s) : un nœud feuille pré-coche sa section, un nœud branche pré-coche toutes ses sous-sections testables. Méthode openLaunchForNode(fullPath) qui résout les folderIds descendants via flatTree.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "on doit aussi pouvoir declenché un test sur une section à partir du Référentiel cela va ouvrir le popup pour choisir le nom et la section sera coché (même composant que le système classique qui existe déjà)",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
+      "id": "mod-415",
+      "version": "B-0.294",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server", "data"],
+      "features": "portail:admin|tests,server:admin-tests",
+      "title": "Admin/Tests : ouvrir le dossier local d'un fonctions.md",
+      "description": "Ajout d'un bouton 'Ouvrir le dossier local' sur chaque nœud du référentiel de fonctions et dans les en-têtes de groupe du runner. Nouvel endpoint POST /api/admin/tests/open-folder { path } : résout le chemin relatif sous tests/fonctions (avec garde anti-traversée) et ouvre le répertoire dans l'explorateur de fichiers (explorer/open/xdg-open). Méthode client openFolder(relPath).",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans chaque tests ajoute un lien qui ouvre le repertoir ou est le fichier du tests.",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
+      "id": "mod-414",
+      "version": "B-0.294",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "data"],
+      "features": "portail:admin|tests",
+      "title": "Admin/Tests : contenu des tâches dans la page de résultat",
+      "description": "Dans la vue détail d'un run, chaque ligne de résultat est désormais dépliable (clic sur le libellé) pour afficher le contenu markdown de la fonction — la liste des tâches à effectuer — comme dans le runner. Ajout du helper getFunctionContent(itemId) et réutilisation de renderContent + isItemExpanded/toggleItemExpand.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans la page de résultat de test il faut affiché la liste des taches à effectué",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
+      "id": "mod-413",
+      "version": "B-0.294",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server", "data"],
+      "features": "portail:admin|tests,server:admin-tests",
+      "title": "Admin/Tests : nom, sélection de sections, annulation, suppression",
+      "description": "Améliorations du système admin/tests. (1) Popup de lancement : champ nom (optionnel) + sélection des sections à tester via cases à cocher (Tout/Aucun). (2) Serveur : POST /api/admin/tests/runs accepte folderIds pour ne créer le run que sur les sections choisies ; le runner filtre l'affichage aux fonctions du run (groupedFunctions filtré par activeRun.results). (3) Bouton Annuler dans le runner : abandonne et supprime le run en cours (avec confirmation). (4) Bouton supprimer par ligne sur le dashboard + confirmation. Popup de confirmation générique (annulation/suppression).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "améliore le système admin/tests ou on doit pouvoir annulé un tests en cours. On doit pouvoir lancer qu'une section de tests (selection dans le menu des catégories). au lancement du tests on doit pouvoir y mettre un nom. On doit pouvoir supprimé un test terminé.",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
       "id": "mod-412",
       "version": "B-0.293",
       "date": "2026-06-20T00:00:00.000Z",

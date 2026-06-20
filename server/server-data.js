@@ -7782,6 +7782,36 @@ app.post('/api/admin/tests/functions/refresh', (req, res) => {
     res.json({ ok: true });
 });
 
+// POST /api/admin/tests/open-folder — ouvre le dossier local d'un fonctions.md (par chemin relatif)
+app.post('/api/admin/tests/open-folder', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    try {
+        // Chemin relatif sous tests/fonctions (ex: "connecte/admin/config")
+        const rel = (req.body?.path || '').toString().replace(/\\/g, '/').replace(/^\/+/, '');
+        const full = path.resolve(FONCTIONS_DIR, rel);
+        // Sécurité : empêcher la traversée hors de FONCTIONS_DIR
+        const base = path.resolve(FONCTIONS_DIR);
+        if (full !== base && !full.startsWith(base + path.sep)) {
+            return res.status(400).json({ error: 'Chemin invalide' });
+        }
+        if (!fs.existsSync(full)) return res.status(404).json({ error: 'Dossier introuvable en local' });
+
+        const { spawn } = require('child_process');
+        if (process.platform === 'win32') {
+            spawn('explorer.exe', [full], { detached: true }).on('error', () => {});
+        } else if (process.platform === 'darwin') {
+            spawn('open', [full], { detached: true }).on('error', () => {});
+        } else {
+            spawn('xdg-open', [full], { detached: true }).on('error', () => {});
+        }
+        res.json({ success: true, path: full });
+    } catch (e) {
+        console.error('[admin-tests open-folder] error:', e.message);
+        res.status(500).json({ error: 'Échec ouverture du dossier: ' + e.message });
+    }
+});
+
 // GET /api/admin/tests/runs — liste tous les runs avec stats et topKo
 app.get('/api/admin/tests/runs', (req, res) => {
     const user = getSessionUser(req);
@@ -7804,14 +7834,21 @@ app.post('/api/admin/tests/runs', (req, res) => {
     const user = getSessionUser(req);
     if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
     if (!_functionItemsCache) _functionItemsCache = scanAllFunctions();
-    const { name, tester } = req.body;
+    const { name, tester, folderIds } = req.body;
+    // Filtrage optionnel par sections (folderIds) : un run peut ne couvrir qu'une partie
+    // du référentiel. Liste vide ou absente = toutes les fonctions.
+    let items = _functionItemsCache;
+    if (Array.isArray(folderIds) && folderIds.length > 0) {
+        const set = new Set(folderIds);
+        items = items.filter(item => set.has(item.folderId));
+    }
     const newRun = {
         id:        testsAdminId(),
         name:      name || null,
         tester:    tester || user.username || 'admin',
         startedAt: new Date().toISOString(),
         status:    'in_progress',
-        results:   _functionItemsCache.map(item => ({ itemId: item.id, status: 'pending' }))
+        results:   items.map(item => ({ itemId: item.id, status: 'pending' }))
     };
     const data = testsAdminLoad();
     data.runs.push(newRun);

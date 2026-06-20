@@ -73,13 +73,41 @@ export class AdminTestsComponent implements OnInit {
   private saveDebounce: any = null;
 
   groupedFunctions = computed(() => {
+    // Si un run est actif, n'afficher que les fonctions qu'il couvre (run filtré par section).
+    const run = this.activeRun();
+    const allowed = run ? new Set(run.results.map(r => r.itemId)) : null;
     const groups = new Map<string, { path: string; pageTitle: string; folderId: string; items: FunctionItem[] }>();
     for (const item of this.functions()) {
+      if (allowed && !allowed.has(item.id)) continue;
       if (!groups.has(item.path)) groups.set(item.path, { path: item.path, pageTitle: item.pageTitle, folderId: item.folderId, items: [] });
       groups.get(item.path)!.items.push(item);
     }
     return [...groups.values()];
   });
+
+  // ── Popup de lancement (nom + sélection de sections) ──
+  showLaunchPopup = signal(false);
+  launchName      = signal('');
+  launchSelected  = signal<Set<string>>(new Set<string>());
+
+  /** Sections testables (dossiers feuilles avec fonctions), pour la sélection au lancement. */
+  launchGroups = computed(() => {
+    const groups = new Map<string, { folderId: string; pageTitle: string; section: string; count: number }>();
+    for (const item of this.functions()) {
+      const key = item.folderId || item.path;
+      if (!groups.has(key)) {
+        const section = item.path.split('/').pop() || item.path;
+        groups.set(key, { folderId: item.folderId, pageTitle: item.pageTitle, section, count: 0 });
+      }
+      groups.get(key)!.count++;
+    }
+    return [...groups.values()];
+  });
+
+  launchSelectedCount = computed(() => this.launchSelected().size);
+
+  // ── Popup de confirmation (annulation d'un run en cours / suppression) ──
+  confirmPopup = signal<{ kind: 'cancel' | 'delete'; runId: string; label: string } | null>(null);
 
   // Référentiel de fonctions — arbre hiérarchique (dashboard)
   showFunctionsTree  = signal(false);
@@ -235,17 +263,63 @@ export class AdminTestsComponent implements OnInit {
     await this.loadFunctions();
   }
 
-  async startNewRun() {
+  /** Ouvre le popup de lancement : charge les fonctions, pré-sélectionne toutes les sections. */
+  async openLaunchPopup() {
     await this.loadFunctions();
+    this.launchName.set('');
+    this.selectAllLaunch();
+    this.runsError.set('');
+    this.showLaunchPopup.set(true);
+  }
+
+  closeLaunchPopup() { this.showLaunchPopup.set(false); }
+
+  /**
+   * Ouvre le popup de lancement (même composant) depuis un nœud du référentiel,
+   * avec la/les section(s) du nœud pré-cochée(s). Un nœud branche pré-coche toutes
+   * ses sous-sections testables ; un nœud feuille uniquement la sienne.
+   */
+  async openLaunchForNode(fullPath: string, ev?: Event) {
+    ev?.stopPropagation();
+    await this.loadFunctions();
+    this.launchName.set('');
+    const ids = this.flatTree()
+      .filter(n => n.folderId && (n.fullPath === fullPath || n.fullPath.startsWith(fullPath + '/')))
+      .map(n => n.folderId);
+    this.launchSelected.set(new Set(ids));
+    this.runsError.set('');
+    this.showLaunchPopup.set(true);
+  }
+
+  toggleLaunchSection(folderId: string) {
+    this.launchSelected.update(s => {
+      const n = new Set(s);
+      n.has(folderId) ? n.delete(folderId) : n.add(folderId);
+      return n;
+    });
+  }
+
+  isLaunchSelected(folderId: string): boolean { return this.launchSelected().has(folderId); }
+  selectAllLaunch() { this.launchSelected.set(new Set(this.launchGroups().map(g => g.folderId))); }
+  clearLaunch()     { this.launchSelected.set(new Set<string>()); }
+
+  /** Crée le run avec le nom et les sections sélectionnées. */
+  async confirmLaunch() {
+    const selected = [...this.launchSelected()];
+    if (selected.length === 0) { this.runsError.set('Sélectionnez au moins une section'); return; }
     this.runsError.set('');
     try {
+      const allIds = this.launchGroups().map(g => g.folderId);
+      // Toutes les sections cochées → [] (= toutes) ; sinon le sous-ensemble.
+      const folderIds = selected.length === allIds.length ? [] : selected;
       const res = await fetch(`${API}/api/admin/tests/runs`, {
         method: 'POST', headers: this.authHeaders,
-        body: JSON.stringify({ tester: this.runnerName() })
+        body: JSON.stringify({ tester: this.runnerName(), name: this.launchName().trim() || null, folderIds })
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Erreur création run');
       const run = await res.json();
       this.activeRun.set(run);
+      this.showLaunchPopup.set(false);
       this.view.set('runner');
     } catch (e: any) {
       this.runsError.set(e.message || 'Erreur création run');
@@ -344,9 +418,32 @@ export class AdminTestsComponent implements OnInit {
     this.view.set('runner');
   }
 
-  async deleteRun(runId: string) {
-    await fetch(`${API}/api/admin/tests/runs/${runId}`, { method: 'DELETE', headers: this.authHeaders });
-    if (this.view() === 'detail') { this.detailRun.set(null); this.view.set('dashboard'); }
+  /** Demande confirmation d'annulation du run en cours (abandon = suppression). */
+  askCancelRun() {
+    const run = this.activeRun();
+    if (run) this.confirmPopup.set({ kind: 'cancel', runId: run.id, label: run.name || run.tester });
+  }
+
+  /** Demande confirmation de suppression d'un run (terminé ou en cours). */
+  askDeleteRun(runId: string, label: string, ev?: Event) {
+    ev?.stopPropagation();
+    this.confirmPopup.set({ kind: 'delete', runId, label });
+  }
+
+  cancelConfirm() { this.confirmPopup.set(null); }
+
+  /** Exécute l'action confirmée (annulation ou suppression) : supprime le run côté serveur. */
+  async confirmAction() {
+    const c = this.confirmPopup();
+    if (!c) return;
+    if (this.saveDebounce) clearTimeout(this.saveDebounce);
+    try {
+      await fetch(`${API}/api/admin/tests/runs/${c.runId}`, { method: 'DELETE', headers: this.authHeaders });
+    } finally {
+      this.confirmPopup.set(null);
+    }
+    if (c.kind === 'cancel') this.activeRun.set(null);
+    if (this.view() !== 'dashboard') { this.detailRun.set(null); this.view.set('dashboard'); }
     await this.loadDashboard();
   }
 
@@ -355,8 +452,28 @@ export class AdminTestsComponent implements OnInit {
     return fn ? `${fn.pageTitle} — ${fn.section}` : itemId;
   }
 
+  /** Contenu markdown (liste des tâches à tester) d'une fonction par son ID. */
+  getFunctionContent(itemId: string): string {
+    return this.functions().find(f => f.id === itemId)?.content || '';
+  }
+
   copyId(id: string) {
     navigator.clipboard.writeText(id).catch(() => {});
+  }
+
+  /** Ouvre, dans l'explorateur de fichiers local, le dossier contenant le fonctions.md. */
+  async openFolder(relPath: string, ev?: Event) {
+    ev?.stopPropagation();
+    if (!relPath) return;
+    try {
+      const res = await fetch(`${API}/api/admin/tests/open-folder`, {
+        method: 'POST', headers: this.authHeaders,
+        body: JSON.stringify({ path: relPath })
+      });
+      if (!res.ok) this.runsError.set((await res.json()).error || 'Échec ouverture du dossier');
+    } catch (e: any) {
+      this.runsError.set(e.message || 'Échec ouverture du dossier');
+    }
   }
 
   formatDate(iso: string | undefined | null): string {
