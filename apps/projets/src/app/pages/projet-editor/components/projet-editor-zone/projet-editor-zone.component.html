@@ -1438,28 +1438,28 @@
                    (input)="onVisuSectionInput(sec.sectionId)">
               </div>
 
-              <!-- Boards Trello de la section (vrai composant, identique à la sélection du fichier) -->
-              @for (tinst of trelloInstancesForVisuSection(sec.sectionId); track tinst.id) {
-                <div class="visu-trello-board-wrap visu-trello-board-wrap--auto">
-                  <app-trello-board
-                    [instanceId]="tinst.id"
-                    [boardName]="trelloInstanceName(tinst.id)"
-                    [deletable]="false"
-                    [autoHeight]="true"
-                    [readonly]="isTrelloInstanceLocked(tinst.id)"
-                    (cardsChanged)="onTrelloCardsChanged(tinst.id, $event)" />
-                </div>
-              }
-              <!-- Boards Array de la section -->
-              @for (ainst of arrayInstancesForVisuSection(sec.sectionId); track ainst.id) {
-                <div class="visu-trello-board-wrap">
-                  <app-array-board
-                    [instanceId]="ainst.id"
-                    [boardName]="arrayInstanceName(ainst.id)"
-                    [deletable]="false"
-                    [readonly]="isArrayInstanceLocked(ainst.id)"
-                    (gridChanged)="onArrayGridChanged(ainst.id, $event)" />
-                </div>
+              <!-- Boards MO (Trello + Array) ordonnés selon l'ordre du menu (position du bloc) -->
+              @for (board of orderedBoardsForVisuSection(sec.sectionId); track board.inst.id) {
+                @if (board.type === 'trello') {
+                  <div class="visu-trello-board-wrap visu-trello-board-wrap--auto">
+                    <app-trello-board
+                      [instanceId]="board.inst.id"
+                      [boardName]="trelloInstanceName(board.inst.id)"
+                      [deletable]="false"
+                      [autoHeight]="true"
+                      [readonly]="isTrelloInstanceLocked(board.inst.id)"
+                      (cardsChanged)="onTrelloCardsChanged(board.inst.id, $event)" />
+                  </div>
+                } @else {
+                  <div class="visu-trello-board-wrap visu-trello-board-wrap--auto">
+                    <app-array-board
+                      [instanceId]="board.inst.id"
+                      [boardName]="arrayInstanceName(board.inst.id)"
+                      [deletable]="false"
+                      [readonly]="isArrayInstanceLocked(board.inst.id)"
+                      (gridChanged)="onArrayGridChanged(board.inst.id, $event)" />
+                  </div>
+                }
               }
 
             </div>

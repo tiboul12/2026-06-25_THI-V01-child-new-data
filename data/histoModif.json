@@ -1,6 +1,45 @@
 {
   "modifications": [
     {
+      "id": "mod-411",
+      "version": "B-0.292",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code",
+      "title": "MO : fence vide avalant le heading voisin + board Array mal placé",
+      "description": "Trois correctifs liés au placement des MO entre sections. (1) Cause racine du déplacement/suppression de section : le pré-scan des fences dans parseContent (/^```[^\\n]*\\n[\\s\\S]*?\\n```/) exigeait un \\n avant la fermeture, donc ne matchait pas un fence VIDE (```ARRAY: Nom\\n```) et avalait tout jusqu'au prochain ``` (fence Trello suivant), absorbant le heading intermédiaire. Fix : corps optionnel (?:[\\s\\S]*?\\n)?. (2) insertAt insère le MO avant la première sous-section enfant (placement correct quand la section a des enfants) + suppression des ta.selectionStart=ta.value.length inutiles. (3) Asymétrie Trello/Array : le board Array s'affichait selon inst.folderId (périmé) au lieu de la position réelle du bloc, le dupliquant dans une section voisine. Ajout de resolveArrayFolderId + recomputeArraySections (symétriques de Trello) ; arrayInstancesForVisuSection utilise désormais la position du bloc et resynchronise le folder_id en base. (4) Ordre d'affichage des boards : le template rendait tous les Trello avant tous les Array, ne respectant pas l'ordre du menu. Ajout de orderedBoardsForVisuSection qui ordonne Trello+Array par position du bloc dans textContent (= ordre des fichiers = ordre du menu) ; template fusionné en une seule boucle. La branche Array du template reçoit aussi le modificateur --auto (height:auto) : sans lui le wrapper faisait 72vh et poussait le board suivant (Trello) hors de l'écran en mode Édition.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "non les MO ce place au mauvais endroit, si je place un MO pas de problème, si j'en place plusieurs il change de place au lieu de resté dans la section selectionné",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
+      "id": "mod-410",
+      "version": "B-0.291",
+      "date": "2026-06-20T00:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code",
+      "title": "MO : insertion de marqueur sans textarea (mode Édition/Structure/liste)",
+      "description": "Correctif dans insertAt() : quand textareaRef est null (mode Édition, Structure, ou vue liste Trello/Mockup ouverte), le contenu est inséré directement dans unifiedContent à la fin de la section active (identifiée par pendingMoFolderId ou activeNodeId). Résout le bug où les MO Trello/Tableau/Mockup apparaissaient dans la liste mais leur marqueur n'était pas sauvegardé dans la section.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "j'ai un gros souci, lorsque je rajoute un MO : trello, tableau ou mockup, avant cela rajoutais dans la version Code le code du MO au format markdown et en version Avec style avec les code html pour le style. Mais actuellement cela ne fonctionne plus, les MO ajouté s'affiche mais ne s'enregistre pas dans la section, verifi le code et git et corrige le problème. Pour info avant cela fonctionnait",
+      "startedAt": "2026-06-20T00:00:00.000Z",
+      "completedAt": "2026-06-20T00:00:00.000Z"
+    },
+    {
       "id": "mod-331",
       "version": "B-0.284",
       "date": "2026-06-14T00:00:00.000Z",

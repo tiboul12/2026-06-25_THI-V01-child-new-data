@@ -991,6 +991,37 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     this.trelloSections.set(map);
   }
 
+  /**
+   * Résout le folderId de la section d'un array : prioritairement via la position du
+   * bloc ```ARRAY: NAME dans docSections, fallback sur inst.folderId. Symétrique de
+   * resolveTrelloFolderId — évite qu'un folderId d'instance périmé affiche le board
+   * dans la mauvaise section (board dupliqué dans une section voisine).
+   */
+  private resolveArrayFolderId(instId: string): string | null {
+    const name = this.arrayInstanceName(instId);
+    const blockOpen = `\`\`\`ARRAY: ${name}`;
+    const sec = this.docSections.find(s => s.textContent.includes(blockOpen));
+    if (sec) return sec.folderId;
+    // Fallback : chercher dans le contenu unifié (mode focus)
+    if (this.unifiedContent.includes(blockOpen)) {
+      const lineIdx = this.unifiedContent.substring(0, this.unifiedContent.indexOf(blockOpen)).split('\n').length - 1;
+      const sr = this.sectionRanges.find(r => r.lineStart <= lineIdx && lineIdx <= r.lineEnd);
+      if (sr) return sr.folderId;
+    }
+    return this.megaOutilInstances.find(i => i.id === instId)?.folderId ?? null;
+  }
+
+  /** Resynchronise le folder_id des instances array selon la position réelle du bloc. */
+  private recomputeArraySections() {
+    for (const inst of this.arrayInstances) {
+      const folderId = this.resolveArrayFolderId(inst.id);
+      if (folderId && folderId !== inst.folderId) {
+        inst.folderId = folderId;
+        this.megaOutilsSvc.updateInstance(inst.id, { folderId }).catch(() => {});
+      }
+    }
+  }
+
   /** Nom de la section où le trello est implanté (pour l'en-tête du board). */
   trelloSectionName(id: string): string {
     return this.trelloSections()[id]?.name ?? '';
@@ -1774,6 +1805,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     const markerLines = sectionText.split('\n').map(l => l.trim());
     const hasMarker = (name: string) => markerLines.some(l => l === '```ARRAY: ' + name);
     this.contentArrayIds = this.arrayInstances.filter(i => hasMarker(i.name)).map(i => i.id);
+    this.recomputeArraySections();
     this.loadArrayGrid();
   }
 
@@ -2126,6 +2158,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   }
 
   openArrayPopup() {
+    if (!this.pendingMoFolderId) {
+      this.pendingMoFolderId = this.getCursorEntity()?.folderId || this.activeNodeId || null;
+    }
     this.arrayName = 'Mon Tableau';
     this.showArrayPopup.set(true);
   }
@@ -2145,10 +2180,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         outilId: this.activeOutilId || undefined,
         folderId,
       });
-      // Création via le menu section : insérer en fin de la section focalisée (après son contenu)
-      const ta = this.textareaRef?.nativeElement;
-      if (this.pendingMoFolderId && ta) ta.selectionStart = ta.selectionEnd = ta.value.length;
-      // Insérer le bloc fencé inline dans le contenu (source de vérité)
+      // insertAt gère le placement via pendingMoFolderId (avant les sous-sections enfants)
       this.insertAt(`\n\n\`\`\`ARRAY: ${name}\n\`\`\`\n\n`, '');
       this.showArrayPopup.set(false);
       this.megaOutilCreated.emit(inst);
@@ -2910,8 +2942,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   /** Instances Array d'une section (dossier) pour affichage en board dans le Preview. */
   arrayInstancesForVisuSection(folderId: string): MegaOutilInstance[] {
     const result: MegaOutilInstance[] = [];
+    // Placement par position réelle du bloc ```ARRAY: (prioritaire sur inst.folderId
+    // qui peut être périmé) — évite que le board s'affiche dans une section voisine.
     for (const inst of this.arrayInstances) {
-      if (inst.folderId === folderId && !result.includes(inst)) result.push(inst);
+      if (this.resolveArrayFolderId(inst.id) === folderId && !result.includes(inst)) result.push(inst);
     }
     const folder = this.findNode(folderId, this.files);
     for (const c of folder?.children || []) {
@@ -2925,6 +2959,26 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       if (inst && !result.includes(inst)) result.push(inst);
     }
     return result;
+  }
+
+  /**
+   * Boards MO (Trello + Array) d'une section, ordonnés selon la position réelle de leur
+   * bloc dans textContent — qui suit l'ordre `order` des fichiers, donc l'ordre du menu.
+   * Évite que le template affiche systématiquement tous les Trello avant tous les Array.
+   */
+  orderedBoardsForVisuSection(folderId: string): { type: 'trello' | 'array'; inst: MegaOutilInstance }[] {
+    const sec = this.docSections.find(s => s.folderId === folderId);
+    const text = sec?.textContent ?? '';
+    const posOf = (marker: string) => { const i = text.indexOf(marker); return i < 0 ? Number.MAX_SAFE_INTEGER : i; };
+    const items: { type: 'trello' | 'array'; inst: MegaOutilInstance; pos: number }[] = [];
+    for (const inst of this.trelloInstancesForVisuSection(folderId)) {
+      items.push({ type: 'trello', inst, pos: posOf('```TRELLO: ' + inst.name) });
+    }
+    for (const inst of this.arrayInstancesForVisuSection(folderId)) {
+      items.push({ type: 'array', inst, pos: posOf('```ARRAY: ' + inst.name) });
+    }
+    items.sort((a, b) => a.pos - b.pos);
+    return items.map(({ type, inst }) => ({ type, inst }));
   }
 
   /** En Preview, si le nœud actif est un fichier Array, retourne l'id d'instance à afficher en board. */
@@ -3929,7 +3983,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     }
     // Pré-scan de TOUT bloc de code fencé (```…```) — y compris Trello et marqueurs corrompus
     // (```TRELO:) — pour exclure leurs ### internes de la détection de sections (le corps reste du texte).
-    const codeFencePreScan = /^```[^\n]*\n[\s\S]*?\n```(?=\n|$)/gm;
+    // Le corps est optionnel (?:…)? pour matcher les fences VIDES (```ARRAY: Nom\n```) :
+    // sans ça, le \n``` exigé avant la fermeture force la regex à avaler jusqu'au prochain
+    // ``` (ex: fence Trello suivant), absorbant les headings intermédiaires (### trello).
+    const codeFencePreScan = /^```[^\n]*\n(?:[\s\S]*?\n)?```(?=\n|$)/gm;
     let tp: RegExpExecArray | null;
     while ((tp = codeFencePreScan.exec(text)) !== null) {
       fileBlockCharRanges.push([tp.index, tp.index + tp[0].length - 1]);
@@ -4100,6 +4157,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // ── Mega-outils : popup config + insertion d'un Trello au curseur ──────────
 
   openTrelloPopup() {
+    if (!this.pendingMoFolderId) {
+      this.pendingMoFolderId = this.getCursorEntity()?.folderId || this.activeNodeId || null;
+    }
     this.trelloName = 'Mon Trello';
     this.showTrelloPopup.set(true);
   }
@@ -4141,10 +4201,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         description: 'Description Task test 1'
       }).catch(() => {});
       const body = this.buildDefaultTrelloBody();
-      // Création via le menu section : insérer en fin de la section focalisée (après son contenu)
-      const ta = this.textareaRef?.nativeElement;
-      if (this.pendingMoFolderId && ta) ta.selectionStart = ta.selectionEnd = ta.value.length;
-      // Insérer le bloc fencé inline dans le contenu
+      // insertAt gère le placement via pendingMoFolderId (avant les sous-sections enfants)
       this.insertAt(`\n\n\`\`\`TRELLO: ${name}\n${body}\n\`\`\`\n\n`, '');
       this.showTrelloPopup.set(false);
       this.megaOutilCreated.emit(inst);
@@ -4250,12 +4307,15 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   }
 
   openMockupPopup() {
+    if (!this.pendingMoFolderId) {
+      this.pendingMoFolderId = this.getCursorEntity()?.folderId || this.activeNodeId || null;
+    }
     this.mockupName = 'Mon Mockup';
     this.mockupNameError.set('');
     this.showMockupPopup.set(true);
   }
 
-  cancelMockupPopup() { this.showMockupPopup.set(false); this.mockupNameError.set(''); }
+  cancelMockupPopup() { this.showMockupPopup.set(false); this.mockupNameError.set(''); this.pendingMoFolderId = null; }
 
   async confirmMockupPopup() {
     const name = (this.mockupName || '').trim() || 'Mon Mockup';
@@ -4266,7 +4326,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       return;
     }
     this.mockupNameError.set('');
-    const folderId = this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
+    const folderId = this.pendingMoFolderId || this.getCursorEntity()?.folderId || this.activeNodeId || undefined;
     this.mockupCreating.set(true);
     try {
       const inst = await this.megaOutilsSvc.createInstance({
@@ -4292,6 +4352,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       console.error('[EditorZone] création Mockup échouée:', e);
     } finally {
       this.mockupCreating.set(false);
+      this.pendingMoFolderId = null;
     }
   }
 
@@ -4316,10 +4377,19 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       return;
     }
     const lines = this.unifiedContent.split('\n');
+    // Offset du point d'insertion (pour ajuster le curseur après value reset)
+    const insertCharOffset = lines.slice(0, range.lineStart + 1).join('\n').length + 1;
     lines.splice(range.lineStart + 1, 0, '', marker);
     this.unifiedContent = lines.join('\n');
     const ta = this.textareaRef?.nativeElement;
-    if (ta) ta.value = this.unifiedContent;
+    if (ta) {
+      const savedStart = ta.selectionStart;
+      const savedEnd   = ta.selectionEnd;
+      ta.value = this.unifiedContent;
+      // Restaurer le curseur : décaler si l'insertion est avant la position courante
+      const shift = insertCharOffset <= savedStart ? marker.length + 2 : 0;
+      ta.setSelectionRange(savedStart + shift, savedEnd + shift);
+    }
     this.recomputeRanges();
     this.recomputeMirrorLines();
     this.scheduleSave();
@@ -4344,10 +4414,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
         const range = this.sectionRanges.find(r => r.folderId === inst.folderId);
         if (!range) continue;
         const lines = this.unifiedContent.split('\n');
+        const insertCharOffset = lines.slice(0, range.lineStart + 1).join('\n').length + 1;
         lines.splice(range.lineStart + 1, 0, '', marker);
         this.unifiedContent = lines.join('\n');
         const ta = this.textareaRef?.nativeElement;
-        if (ta) ta.value = this.unifiedContent;
+        if (ta) {
+          const savedStart = ta.selectionStart;
+          const savedEnd   = ta.selectionEnd;
+          ta.value = this.unifiedContent;
+          const shift = insertCharOffset <= savedStart ? marker.length + 2 : 0;
+          ta.setSelectionRange(savedStart + shift, savedEnd + shift);
+        }
         this.recomputeRanges();
       }
       needsSave = true;
@@ -4429,7 +4506,36 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   insertAt(before: string, after = '') {
     if (this.isActiveSectionLockedByOther) return;
     const ta = this.textareaRef?.nativeElement;
-    if (!ta) return;
+
+    // Quand un folderId cible est défini (menu section ou capture openXxxPopup) OU qu'il
+    // n'y a pas de textarea : insertion directe dans unifiedContent à la fin du contenu DIRECT
+    // de la section cible (avant ses sous-sections enfants). Cela garantit que parseContent
+    // place le MO dans la bonne section même quand la section cible a des enfants.
+    if (this.pendingMoFolderId || !ta) {
+      const text = (before + after).trim();
+      if (!text) return;
+      const folderId = this.pendingMoFolderId || this.activeNodeId;
+      const range = folderId ? this.sectionRanges.find(r => r.folderId === folderId) : null;
+      const insertLines = text.split('\n');
+      if (range) {
+        // Trouver le début de la première sous-section enfant directe (level > range.level).
+        // S'il n'y en a pas, insérer après la dernière ligne de la section.
+        const childFirst = this.sectionRanges
+          .filter(c => c.lineStart > range.lineStart && c.lineStart <= range.lineEnd && c.level > range.level)
+          .reduce((min, c) => Math.min(min, c.lineStart), range.lineEnd + 1);
+        const lines = this.unifiedContent.split('\n');
+        lines.splice(childFirst, 0, '', ...insertLines, '');
+        this.unifiedContent = lines.join('\n').replace(/\n{3,}/g, '\n\n');
+      } else {
+        this.unifiedContent = (this.unifiedContent || '').trimEnd() + '\n\n' + text + '\n\n';
+      }
+      if (ta) ta.value = this.unifiedContent;
+      this.recomputeRanges();
+      this.recomputeMirrorLines();
+      if (this.mode === 'visu') this.buildVisuSections();
+      this.scheduleSave();
+      return;
+    }
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
     const selected = ta.value.substring(start, end);
