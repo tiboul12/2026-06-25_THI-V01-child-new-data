@@ -687,10 +687,10 @@
            Affichée uniquement dans la vue « Avec style » (showCssInCode). -->
       @if (showCssInCode()) {
       <div class="visu-format-toolbar visu-format-toolbar--docked">
-          <button (mousedown)="$event.preventDefault(); insertAt('**', '**')" title="Gras"><b>B</b></button>
-          <button (mousedown)="$event.preventDefault(); insertAt('*', '*')" title="Italique"><i>I</i></button>
-          <button (mousedown)="$event.preventDefault(); insertAt('<u>', '</u>')" title="Souligné"><u>U</u></button>
-          <button (mousedown)="$event.preventDefault(); insertAt('~~', '~~')" title="Barré"><s>S</s></button>
+          <button [class.is-active]="codeActiveStyles['bold']" (mousedown)="$event.preventDefault(); toggleCodeStyle('bold', '**')" title="Gras"><b>B</b></button>
+          <button [class.is-active]="codeActiveStyles['italic']" (mousedown)="$event.preventDefault(); toggleCodeStyle('italic', '*')" title="Italique"><i>I</i></button>
+          <button [class.is-active]="codeActiveStyles['underline']" (mousedown)="$event.preventDefault(); toggleCodeStyle('underline', '<u>', '</u>')" title="Souligné"><u>U</u></button>
+          <button [class.is-active]="codeActiveStyles['strike']" (mousedown)="$event.preventDefault(); toggleCodeStyle('strike', '~~')" title="Barré"><s>S</s></button>
           <div class="visu-format-toolbar__sep"></div>
           <!-- Titres / paragraphe : menu déroulant -->
           <div class="visu-tb-dropdown">
@@ -715,7 +715,7 @@
           <button (mousedown)="$event.preventDefault(); insertAt('1. ', '')" title="Liste numérotée"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_numbered</span></button>
           <button (mousedown)="$event.preventDefault(); insertAt('- [ ] ', '')" title="Case à cocher"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">checklist</span></button>
           <button (mousedown)="$event.preventDefault(); insertAt('\n> ', '')" title="Citation"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_quote</span></button>
-          <button (mousedown)="$event.preventDefault(); insertAt('`', '`')" title="Code"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">code</span></button>
+          <button [class.is-active]="codeActiveStyles['code']" (mousedown)="$event.preventDefault(); toggleCodeStyle('code', '`')" title="Code"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">code</span></button>
           <button (mousedown)="$event.preventDefault(); codeLink()" title="Lien"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">link</span></button>
           <button (click)="triggerImageUpload()" [disabled]="isUploading()" title="Insérer une image"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">image</span></button>
           <input #imageInput type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml,image/bmp" class="hidden" (change)="onImageFileSelected($event)">
@@ -1141,10 +1141,10 @@
 
         <!-- Barre de formatage permanente (haut de zone, mode Edition) -->
         <div class="visu-format-toolbar visu-format-toolbar--docked">
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S</s></button>
+            <button [class.is-active]="visuActiveFormats['bold']" (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
+            <button [class.is-active]="visuActiveFormats['italic']" (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
+            <button [class.is-active]="visuActiveFormats['underline']" (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
+            <button [class.is-active]="visuActiveFormats['strikeThrough']" (mousedown)="$event.preventDefault(); applyVisuFormat('strikeThrough')" title="Barré"><s>S</s></button>
             <div class="visu-format-toolbar__sep"></div>
             <!-- Titres / paragraphe : menu déroulant (gain de place) -->
             <div class="visu-tb-dropdown">
@@ -1165,8 +1165,8 @@
             </div>
             <div class="visu-format-toolbar__sep"></div>
             <!-- Listes -->
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('insertUnorderedList')" title="Liste à puces"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_bulleted</span></button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('insertOrderedList')" title="Liste numérotée"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_numbered</span></button>
+            <button [class.is-active]="visuActiveFormats['insertUnorderedList']" (mousedown)="$event.preventDefault(); applyVisuFormat('insertUnorderedList')" title="Liste à puces"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_bulleted</span></button>
+            <button [class.is-active]="visuActiveFormats['insertOrderedList']" (mousedown)="$event.preventDefault(); applyVisuFormat('insertOrderedList')" title="Liste numérotée"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_list_numbered</span></button>
             <button (mousedown)="$event.preventDefault(); insertVisuChecklist()" title="Case à cocher"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">checklist</span></button>
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('formatBlock', 'BLOCKQUOTE')" title="Citation"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_quote</span></button>
             <button (mousedown)="$event.preventDefault(); insertVisuInlineCode()" title="Code"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">code</span></button>
@@ -1174,9 +1174,9 @@
             <button (mousedown)="$event.preventDefault(); insertVisuImageActive()" title="Insérer une image"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">image</span></button>
             <div class="visu-format-toolbar__sep"></div>
             <!-- Alignement -->
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('justifyLeft')" title="Aligner à gauche"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_left</span></button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('justifyCenter')" title="Centrer"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_center</span></button>
-            <button (mousedown)="$event.preventDefault(); applyVisuFormat('justifyRight')" title="Aligner à droite"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_right</span></button>
+            <button [class.is-active]="visuActiveFormats['justifyLeft']" (mousedown)="$event.preventDefault(); applyVisuFormat('justifyLeft')" title="Aligner à gauche"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_left</span></button>
+            <button [class.is-active]="visuActiveFormats['justifyCenter']" (mousedown)="$event.preventDefault(); applyVisuFormat('justifyCenter')" title="Centrer"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_center</span></button>
+            <button [class.is-active]="visuActiveFormats['justifyRight']" (mousedown)="$event.preventDefault(); applyVisuFormat('justifyRight')" title="Aligner à droite"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">format_align_right</span></button>
             <div class="visu-format-toolbar__sep"></div>
             <!-- Taille -->
             <button (mousedown)="$event.preventDefault(); applyVisuFormat('fontSize', '2')" title="Petit" style="font-size:10px">A</button>

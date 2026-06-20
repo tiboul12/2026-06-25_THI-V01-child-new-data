@@ -9593,6 +9593,51 @@
       "prompt": "Dans le menu projet, outils edition mode Edition, lorsqu'on clique sur un bouton de style dans la barre des styles, le bouton doit resté actif (visible) et tans qu'il est actif tous ce qu'on rajoute comme texte prend le style, exemple si je clique sur le bouton gras et que j'écris du texte, tans que le bouton gras est actif, je continue d'écrire en gras.",
       "startedAt": "2026-06-20T07:01:45.197Z",
       "completedAt": "2026-06-20T07:01:45.197Z"
+    },
+    {
+      "id": "mod-407",
+      "version": "B-0.289",
+      "date": "2026-06-20T08:31:29.637Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|visu-toolbar",
+      "title": "Barre de styles : état actif des boutons en mode Edition",
+      "description": "Les boutons de la barre de styles du mode Edition (Gras, Italique, Souligné, Barré, listes, alignement) reflètent désormais l'état courant du curseur/sélection via document.queryCommandState(). Mis à jour à chaque changement de sélection (onVisuSelectionChange) et après chaque applyVisuFormat. Style visuel : fond blanc/18% + encadré blanc/35%.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsque je clique sur un icone de la barre des style, il doit être indiqué comme selectionné (couleur différentes)",
+      "startedAt": "2026-06-20T08:31:29.637Z",
+      "completedAt": "2026-06-20T08:31:29.637Z"
+    },
+    {
+      "id": "mod-408",
+      "version": "B-0.289",
+      "date": "2026-06-20T08:35:12.009Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "projets"
+      ],
+      "features": "projets:editor|code-toolbar",
+      "title": "Mode Code : état actif sticky des boutons de style",
+      "description": "Les boutons B/I/U/S/code de la barre de style du Mode Code fonctionnent en mode sticky : sans sélection, le clic insère le marqueur ouvrant et maintient le bouton actif ; le re-clic insère le marqueur fermant et le désactive. Avec texte sélectionné, entoure sans activer. Style visuel identique au Mode Edition (.is-active déjà défini dans le SCSS).",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "fait la même chose avec la bar des style dans le mode Code",
+      "startedAt": "2026-06-20T08:35:12.009Z",
+      "completedAt": "2026-06-20T08:35:12.009Z"
     }
   ]
 }

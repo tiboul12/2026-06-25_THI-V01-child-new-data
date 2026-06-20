@@ -424,6 +424,8 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   readonly visuHighlightColors = ['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca'];
   // Menu déroulant actif de la barre d'édition (titres / couleur / surlignage)
   visuDropdown: 'title' | 'color' | 'highlight' | null = null;
+  // État actif des commandes de format (mis à jour à chaque changement de sélection)
+  visuActiveFormats: Record<string, boolean> = {};
   // Popup de création de titre (création atomique d'un dossier + heading + SID)
   titleDialog: { level: number; prefilled: string; parentFolderId: string | null; parentLabel: string; insertLine: number } | null = null;
   titleDialogBusy = false;
@@ -2446,6 +2448,26 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   codeFontSize(em: string){ this.insertAt(`<span style="font-size:${em}">`, '</span>'); }
   codeAlign(dir: string)  { this.insertAt(`\n<div style="text-align:${dir}">\n`, '\n</div>\n'); }
   codeLink()              { this.insertAt('[', '](https://)'); }
+
+  // État sticky des boutons d'inline-style en mode Code
+  codeActiveStyles: Record<string, boolean> = {};
+
+  // Sticky toggle : si texte sélectionné → entoure sans activer.
+  // Sinon → insère marqueur ouvrant/fermant et bascule l'état actif.
+  toggleCodeStyle(key: string, openMarker: string, closeMarker?: string) {
+    const ta = this.textareaRef?.nativeElement;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    if (start !== end) {
+      // Texte sélectionné : entourer, pas de sticky
+      this.insertAt(openMarker, closeMarker ?? openMarker);
+      return;
+    }
+    const isActive = !!this.codeActiveStyles[key];
+    this.codeActiveStyles = { ...this.codeActiveStyles, [key]: !isActive };
+    this.insertAt(isActive ? (closeMarker ?? openMarker) : openMarker, '');
+  }
 
   /** Retire les marqueurs de mise en forme (Markdown inline + balises span/u/b/i) de la sélection. */
   codeClearFormat() {
@@ -6404,6 +6426,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   onVisuSelectionChange() {
     if (this.mode !== 'visu') return;
+    this.updateVisuActiveFormats();
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.toString().trim()) {
       this.visuToolbar = null;
@@ -6450,6 +6473,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     const arg = command === 'formatBlock' && value ? `<${value}>` : value;
     try { document.execCommand(command, false, arg); } catch { /* ignore */ }
     this.markActiveVisuDirty();
+    this.updateVisuActiveFormats();
     // Garder la toolbar ouverte pour enchaîner couleur/taille ; fermer sur les actions de bloc
     if (command !== 'foreColor' && command !== 'hiliteColor' && command !== 'fontSize') {
       this.visuToolbar = null;
@@ -6464,6 +6488,17 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
       this.saveAll();
     }
   }
+
+  updateVisuActiveFormats() {
+    const cmds = ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList', 'justifyLeft', 'justifyCenter', 'justifyRight'];
+    const updated: Record<string, boolean> = {};
+    for (const cmd of cmds) {
+      try { updated[cmd] = document.queryCommandState(cmd); } catch { updated[cmd] = false; }
+    }
+    this.visuActiveFormats = updated;
+    this.cdr.markForCheck();
+  }
+
 
   // ── Création atomique d'un titre (popup → dossier → heading + SID) ─────────
   // Remplace l'ancienne création par execCommand('formatBlock') : le dossier physique
