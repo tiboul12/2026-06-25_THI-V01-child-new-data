@@ -9379,7 +9379,9 @@
       "date": "2026-06-19T12:28:27.972Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-toolbar",
       "title": "Titre au curseur : coupe la section en deux",
       "description": "Mode Édition : créer un titre depuis le menu Style de bloc l'insère à la position du curseur ; le texte sous le curseur (fin de sélection) bascule dans la nouvelle section. Approche sûre, sans réécriture du contenu : computeVisuCursorInsertLine() commit la section (sérialiseur éprouvé), compte les blocs feuilles avant le point de coupe et mappe ce compte sur la ligne markdown du contenu direct, puis délègue à createTitleSection() qui n'insère qu'une ligne ### Titre (le reste du contenu est intact). Repli sur le comportement standard (titre en fin de section) sans curseur. Remplace une tentative précédente (createTitleSectionAtCursor) qui réécrivait le contenu via sérialisation DOM et corrompait le markdown.",
@@ -9399,7 +9401,9 @@
       "date": "2026-06-19T12:51:02.139Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-sidebar",
       "title": "Menu sidebar : supprimer le titre en gardant le texte",
       "description": "Nouvel item dans le menu contextuel de la sidebar (sections) : « Supprimer le titre (garder le texte) ». Retire uniquement la ligne de heading du markdown (mergeTitleIntoPrevious) ; le texte est alors fusionné dans la section au-dessus (parent direct ou frère précédent), inverse de la création de titre. processSectionsChange rattache le texte et supprime le dossier orphelin ; aucune réécriture du contenu. Désactivé pour la 1re section du document (rien au-dessus). Flux : titleMerge (sidebar) → onTitleMerge → editionOutil.mergeTitleIntoPrevious → zone.",
@@ -9424,7 +9428,9 @@
       "date": "2026-06-19T13:10:03.069Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-zone",
       "title": "Scission de titre : texte dupliqué dans l'ancienne section",
       "description": "Après une coupure au curseur (création de titre), le texte déplacé restait affiché en double : la section donneuse étant marquée dirty, buildVisuSections conservait son HTML obsolète (contenu complet) au lieu de le reconstruire tronqué. Correctif dans createTitleSection : repérer la section donneuse (celle contenant le point d'insertion), retirer son flag dirtyVisuSectionIds et forcer la réinjection (forceVisuReinject). Même correctif appliqué à mergeTitleIntoPrevious pour la section réceptrice. Le contenu côté serveur était correct ; seul l'affichage du mode Édition était obsolète.",
@@ -9443,7 +9449,9 @@
       "date": "2026-06-19T13:23:16.322Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-zone",
       "title": "Scission de titre : ligne du curseur incluse à tort",
       "description": "La coupure démarrait à la ligne du curseur (la ligne basculait dans la nouvelle section) au lieu de la ligne suivante. Le comptage par comparePoint sur la fin des blocs excluait la ligne du curseur (ambiguïté de bord fin de ligne / début ligne suivante). Remplacé par une détection déterministe du bloc feuille contenant le curseur dans computeVisuCursorInsertLine : la ligne du curseur reste toujours au-dessus (blocksBefore = index du bloc + 1), la nouvelle section démarre à la ligne suivante. Sélectionner en fin de ligne ne prend donc plus cette ligne.",
@@ -9463,7 +9471,9 @@
       "date": "2026-06-19T13:31:36.489Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-zone",
       "title": "Supprimer le titre : sans effet en mode focus",
       "description": "En mode focus (éditeur ne montrant qu'une section), « Supprimer le titre (garder le texte) » ne faisait rien (aucun réseau) : la vue focusée ne contient qu'une section, donc aucune « section au-dessus » → mergeTitleIntoPrevious sortait sur idx<=0. Correctif : si focusedHandle est actif, reconstruire le document complet (réinjection des éditions de la vue focusée), sortir du focus, puis fusionner sur le document complet. changeHeadingLevel n'était pas affecté car il n'a pas besoin d'une section au-dessus.",
@@ -9483,7 +9493,13 @@
       "date": "2026-06-19T16:35:37.413Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["server", "portail", "projets", "libs", "system"],
+      "scope": [
+        "server",
+        "portail",
+        "projets",
+        "libs",
+        "system"
+      ],
       "features": "system:ia-provider,portail:config,projets:editor-conversation",
       "title": "Remplacement du provider CLI Gemini par Antigravity (agy)",
       "description": "Le provider CLI Gemini est remplacé par Antigravity (binaire `agy`), sur le même mécanisme que Claude Code. Executor (server-executor.js) : spawn `agy -p \"<prompt>\" [--model X] --dangerously-skip-permissions` (équivalent du --yolo gemini ; --model omis si modèle 'default' → agy utilise son modèle configuré), statut CLI via `agy --version` (fallbacks antigravity/agy.cmd), listes de modèles/coûts statiques (pas d'API publique). Server-data.js : DEFAULT_MODELS.antigravity, enabledModels.antigravity, refresh modèles. conf.json : activeProviders ['claude','antigravity']. Front : config.service.ts (provider 'antigravity-cli', modelsList/enabledModels.antigravity, status.antigravity), header, projet-conversation, config (carte Antigravity CLI), wo-actions, tchat-ia, cahier-recette, wo-history, wo-tools-panel. Antigravity étant un agent de code, le blocage 'gemini interdit pour modif fichiers' ne s'applique plus. LAISSÉ INTACT : les appels API HTTP directs à Gemini (server-data.js, generativelanguage.googleapis.com) + apiKeys.gemini + provider 'gemini-api' — mécanisme distinct sans équivalent agy. Résidus cosmétiques laissés : landing, docs, wo-ia-logs comment, wo-action-history label.",
@@ -9513,7 +9529,11 @@
       "date": "2026-06-19T21:15:09.756Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets", "libs", "server"],
+      "scope": [
+        "projets",
+        "libs",
+        "server"
+      ],
       "features": "projets:editor-zone-code,projets:editor-toolbar,server",
       "title": "Mode Code : barre de style dockée identique à l'Édition + bouton Ouvrir le dossier",
       "description": "Mode Code : la barre de formatage est déplacée du bandeau des onglets vers une barre DOCKÉE en haut de la zone (même emplacement et même apparence que le mode Édition, classes visu-format-toolbar--docked + menus déroulants titres/couleur/surlignage). Mêmes éléments que l'Édition, actions adaptées au textarea : Markdown (B/I/S, titres, listes, citation, code, lien) et HTML inline pour les styles sans équivalent Markdown (souligné, couleur codeColor, surlignage codeHighlight, taille codeFontSize, alignement codeAlign) ; codeClearFormat retire les marqueurs. Extras Code à droite (bloc code, tableau, séparateur, toggle Markdown propre/Avec style). Nouveau bouton « Dossier » (folder_open) à droite de la barre des modes (tous modes) : openSectionFolder() → ProjectFilesService.openFolder(projectName, folderId) → endpoint serveur POST /api/file-projects/:name/open-folder (résolution chemin via safeProjectPath, ouverture dans l'explorateur OS explorer/open/xdg-open). L'endpoint était manquant côté serveur (méthode service orpheline) ; openFolder() étendu avec folderId optionnel.",
@@ -9536,7 +9556,9 @@
       "date": "2026-06-19T21:19:10.377Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor-zone-code",
       "title": "Mode Code : barre de style réservée à la vue « Avec style »",
       "description": "La barre de style dockée du mode Code n'apparaît plus que dans la vue « Avec style » (@if showCssInCode()) ; la vue « Markdown propre » n'a plus de barre de style. Le toggle Markdown propre / Avec style est déplacé hors de la barre de style, dans le groupe droite de la barre des modes (avec le bouton Dossier), pour rester accessible dans les deux vues.",
@@ -9549,6 +9571,28 @@
       "prompt": "Dans le mode Code tu as une version Markdown propre ou avec style, seul la version Style dois avoir la bar de style",
       "startedAt": "2026-06-19T21:16:00.000Z",
       "completedAt": "2026-06-19T21:19:10.377Z"
+    },
+    {
+      "id": "mod-406",
+      "version": "B-0.288",
+      "date": "2026-06-20T07:01:45.197Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:editor|markdown-editor",
+      "title": "Style sticky dans l'éditeur Markdown",
+      "description": "Les boutons Gras, Italique, Barré et Code inline de la barre de styles passent en mode sticky : sans sélection, le clic insère le marqueur ouvrant et maintient le bouton actif (visuellement surligné) ; le re-clic insère le marqueur fermant et désactive. Si du texte est sélectionné, le comportement classique s'applique sans activer le sticky.",
+      "files": [
+        "apps/portail/src/app/shared/ui/markdown-editor/markdown-editor.component.ts",
+        "apps/portail/src/app/shared/ui/markdown-editor/markdown-editor.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans le menu projet, outils edition mode Edition, lorsqu'on clique sur un bouton de style dans la barre des styles, le bouton doit resté actif (visible) et tans qu'il est actif tous ce qu'on rajoute comme texte prend le style, exemple si je clique sur le bouton gras et que j'écris du texte, tans que le bouton gras est actif, je continue d'écrire en gras.",
+      "startedAt": "2026-06-20T07:01:45.197Z",
+      "completedAt": "2026-06-20T07:01:45.197Z"
     }
   ]
 }

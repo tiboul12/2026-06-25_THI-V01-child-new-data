@@ -1,14 +1,17 @@
 <!-- Barre d'outils — toujours visible, hors scroll -->
 <div class="flex flex-wrap items-center gap-1 p-2 bg-light-surface dark:bg-surface border-b border-light-border dark:border-white/10 flex-shrink-0">
   <button type="button"
-          class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary border border-transparent hover:border-light-border dark:hover:border-white/10 transition-all"
-          title="Gras" (click)="insertMarkdown('**', '**')"><strong>B</strong></button>
+          class="px-2.5 py-1 rounded text-xs font-bold border transition-all"
+          [ngClass]="activeStyles['bold'] ? 'bg-light-primary/10 dark:bg-primary/10 border-light-primary/30 dark:border-primary/30 text-light-primary dark:text-primary' : 'border-transparent text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary hover:border-light-border dark:hover:border-white/10'"
+          title="Gras" (click)="toggleInlineStyle('bold', '**')"><strong>B</strong></button>
   <button type="button"
-          class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary border border-transparent hover:border-light-border dark:hover:border-white/10 transition-all"
-          title="Italique" (click)="insertMarkdown('*', '*')"><em>I</em></button>
+          class="px-2.5 py-1 rounded text-xs font-bold border transition-all"
+          [ngClass]="activeStyles['italic'] ? 'bg-light-primary/10 dark:bg-primary/10 border-light-primary/30 dark:border-primary/30 text-light-primary dark:text-primary' : 'border-transparent text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary hover:border-light-border dark:hover:border-white/10'"
+          title="Italique" (click)="toggleInlineStyle('italic', '*')"><em>I</em></button>
   <button type="button"
-          class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary border border-transparent hover:border-light-border dark:hover:border-white/10 transition-all"
-          title="Barré" (click)="insertMarkdown('~~', '~~')"><s>S</s></button>
+          class="px-2.5 py-1 rounded text-xs font-bold border transition-all"
+          [ngClass]="activeStyles['strike'] ? 'bg-light-primary/10 dark:bg-primary/10 border-light-primary/30 dark:border-primary/30 text-light-primary dark:text-primary' : 'border-transparent text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary hover:border-light-border dark:hover:border-white/10'"
+          title="Barré" (click)="toggleInlineStyle('strike', '~~')"><s>S</s></button>
   <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
   <button type="button"
           class="px-2.5 py-1 rounded text-xs font-bold text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary border border-transparent hover:border-light-border dark:hover:border-white/10 transition-all"
@@ -31,8 +34,9 @@
           title="Citation" (click)="insertMarkdown('> ')">&#8220; Citation</button>
   <div class="w-px h-5 bg-light-border dark:bg-white/10 mx-1"></div>
   <button type="button"
-          class="px-2.5 py-1 rounded text-xs font-mono text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary border border-transparent hover:border-light-border dark:hover:border-white/10 transition-all"
-          title="Code inline" (click)="insertMarkdown('`', '`')">&lt;/&gt;</button>
+          class="px-2.5 py-1 rounded text-xs font-mono border transition-all"
+          [ngClass]="activeStyles['code'] ? 'bg-light-primary/10 dark:bg-primary/10 border-light-primary/30 dark:border-primary/30 text-light-primary dark:text-primary' : 'border-transparent text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary hover:border-light-border dark:hover:border-white/10'"
+          title="Code inline" (click)="toggleInlineStyle('code', '`')">&lt;/&gt;</button>
   <button type="button"
           class="px-2.5 py-1 rounded text-xs font-medium text-light-text dark:text-white/70 hover:bg-light-surface-hover dark:hover:bg-white/5 hover:text-light-primary dark:hover:text-primary border border-transparent hover:border-light-border dark:hover:border-white/10 transition-all"
           title="Bloc de code" (click)="insertMarkdown('```\n', '\n```')">Bloc code</button>
