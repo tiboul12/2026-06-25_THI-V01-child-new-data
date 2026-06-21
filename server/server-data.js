@@ -7796,8 +7796,13 @@ function parseFonctionsMd(relPath, content, pathToId) {
             // Format attendu : `2-5-2-3-1` — Navigation (tiret long U+2014)
             const m = raw.match(/^`([0-9-]+)`\s*[—–-]\s*(.+)$/);
             const id      = m ? m[1] : `${folderId}-${++fallbackIdx}`;
-            const section = m ? m[2].trim() : raw;
-            currentItem = { id, folderId, path: relPath, pageTitle, section, content: '' };
+            let section   = m ? m[2].trim() : raw;
+            // Tag [modification] : la section a été impactée par une modif de code → à retester.
+            // Présent juste après le tiret long, retiré du libellé affiché.
+            let needsRetest = false;
+            const tagMatch = section.match(/^\[modification\]\s*/i);
+            if (tagMatch) { needsRetest = true; section = section.slice(tagMatch[0].length).trim(); }
+            currentItem = { id, folderId, path: relPath, pageTitle, section, content: '', needsRetest };
         } else if (currentItem) {
             contentLines.push(line);
         }
@@ -8022,6 +8027,7 @@ app.put('/api/admin/tests/runs/:id', (req, res) => {
 
     if (name !== undefined) data.runs[idx].name = name;
 
+    const testedItemIds = [];
     if (results && Array.isArray(results)) {
         const now = new Date().toISOString();
         for (const incoming of results) {
@@ -8031,6 +8037,8 @@ app.put('/api/admin/tests/runs/:id', (req, res) => {
                 existing.note     = incoming.note;
                 existing.testedAt = now;
             }
+            // Un résultat décidé (OK/KO) lève le tag [modification] : la section a été retestée.
+            if (incoming.status === 'ok' || incoming.status === 'ko') testedItemIds.push(incoming.itemId);
         }
     }
 
@@ -8040,6 +8048,7 @@ app.put('/api/admin/tests/runs/:id', (req, res) => {
     }
 
     testsAdminSave(data);
+    try { clearModificationTagForItems(testedItemIds); } catch (e) { console.warn('[ADMIN-TESTS] clear modif tag:', e.message); }
     res.json({ ...data.runs[idx], stats: computeRunStats(data.runs[idx]) });
 });
 
@@ -8448,6 +8457,33 @@ function computeFunctionProposals(folderId, currentItems, proposed) {
 }
 
 // Écrit un fonctions.md à partir d'une liste de fonctions (assigne les IDs manquants).
+// Retire le tag [modification] du heading des fonctions listées (après un test enregistré).
+// Édition ciblée du markdown (ne reformate pas le reste du fichier). Invalide le cache si modifié.
+function clearModificationTagForItems(itemIds) {
+    if (!Array.isArray(itemIds) || itemIds.length === 0) return;
+    if (!_functionItemsCache) { try { _functionItemsCache = scanAllFunctions(); } catch { _functionItemsCache = []; } }
+    const byPath = new Map(); // relPath -> Set(ids)
+    for (const id of itemIds) {
+        const it = _functionItemsCache.find(x => x.id === id);
+        if (!it || !it.needsRetest) continue;            // seulement celles encore taguées
+        if (!byPath.has(it.path)) byPath.set(it.path, new Set());
+        byPath.get(it.path).add(id);
+    }
+    let changed = false;
+    for (const [relPath, ids] of byPath) {
+        const mdFull = path.join(FONCTIONS_DIR, relPath, 'fonctions.md');
+        let content; try { content = fs.readFileSync(mdFull, 'utf8'); } catch { continue; }
+        const lines = content.split('\n');
+        let touched = false;
+        for (let i = 0; i < lines.length; i++) {
+            const m = lines[i].match(/^(##\s+`([0-9-]+)`\s*[—–-]\s*)\[modification\]\s*(.*)$/i);
+            if (m && ids.has(m[2])) { lines[i] = m[1] + m[3]; touched = true; }
+        }
+        if (touched) { fs.writeFileSync(mdFull, lines.join('\n'), 'utf8'); changed = true; }
+    }
+    if (changed) _functionItemsCache = null;
+}
+
 function writeFonctionsMd(relPath, folderId, pageTitle, functions, meta) {
     const mdFull = path.join(FONCTIONS_DIR, relPath, 'fonctions.md');
     let maxN = 0;
@@ -8469,7 +8505,9 @@ function writeFonctionsMd(relPath, folderId, pageTitle, functions, meta) {
         let body = stripComponentsLine((f.content || '').toString());
         const comps = Array.isArray(f.components) ? f.components.map(c => c.toString().trim()).filter(Boolean) : [];
         const priority = normalizePriority(f.priority);
-        lines.push('---', '', `## \`${id}\` — ${section}`, '');
+        // Réinjecte le tag [modification] si la fonction est encore à retester (préservé lors des réécritures).
+        const tag = f.needsRetest ? '[modification] ' : '';
+        lines.push('---', '', `## \`${id}\` — ${tag}${section}`, '');
         if (body) lines.push(body);
         lines.push(`- **Priorité:** ${priority}`);
         if (comps.length) lines.push(`- **Composants:** ${comps.map(c => '`' + c + '`').join(', ')}`);
@@ -8610,6 +8648,11 @@ app.post('/api/admin/tests/apply-functions', (req, res) => {
     try {
         const now = new Date().toISOString();
         const meta = { updatedAt: now, updatedBy: (updatedBy || 'IA').toString() };
+        // Préserve le tag [modification] des fonctions existantes encore à retester (le diff IA ne le porte pas).
+        if (_functionItemsCache) {
+            const retestById = new Map(_functionItemsCache.filter(it => it.folderId === folderId && it.needsRetest).map(it => [it.id, true]));
+            for (const f of functions) { if (f && f.id && retestById.has(f.id) && f.needsRetest === undefined) f.needsRetest = true; }
+        }
         writeFonctionsMd(relPath, folderId, pageTitle, functions, meta);
         _functionItemsCache = null;
         const items = scanAllFunctions().filter(it => it.folderId === folderId);
@@ -8792,6 +8835,7 @@ app.post('/api/admin/tests/function-priority', (req, res) => {
     const functions = groupItems.map(it => ({
         id: it.id, section: it.section, content: it.content, components: it.components || [],
         priority: it.id === itemId ? normalizePriority(priority) : (it.priority || 'mineur'),
+        needsRetest: !!it.needsRetest,   // préserve le tag [modification] lors de l'édition de priorité
     }));
     try {
         writeFonctionsMd(relPath, folderId, pageTitle, functions, meta);

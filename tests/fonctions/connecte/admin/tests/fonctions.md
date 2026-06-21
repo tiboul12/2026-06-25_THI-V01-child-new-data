@@ -8,7 +8,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 
 ---
 
-## `2-1-5-1` — Navigation par onglets + Onglet Cahier de recette
+## `2-1-5-1` — [modification] Navigation par onglets + Onglet Cahier de recette
 
 - **Barre d'onglets** : Cahier de recette (`checklist`) / Exécution (`play_circle`) / Résultats (`bar_chart`) / Historique (`history`) / Site Map (`account_tree`).
 - **URL par sous-onglet** : chaque onglet a une URL directe — `/admin/tests/cahier`, `/admin/tests/execution`, `/admin/tests/resultats`, `/admin/tests/historique`, `/admin/tests/sitemap`. Navigation par URL directe ou via le navigateur (retour arrière) possible.
@@ -22,6 +22,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Filtre d'état** : `Toutes` / `Testées` / `Non testées` / `En erreur` (KO) / `À retester` — masque les sections/fonctions hors critère. Le filtre `À retester` affiche uniquement les fonctions dont le heading contient le tag `[modification]` (champ `needsRetest: true`), indiquant que le code source a été modifié depuis le dernier test.
   - **Favoris** : bouton étoile (`star`/`star_border`) sur chaque section feuille → (dé)marque en favori (POST `/api/admin/tests/favorites { folderId, favorite }`, persistant). Chip filtre **« Favoris »** (★) pour n'afficher que les sections favorites. Chargé via GET `/api/admin/tests/favorites`.
   - Quand une recherche ou un filtre est actif, l'arbre se déplie automatiquement sur les résultats ; message "Aucun résultat" si vide.
+  - **Surcharge « afficher toute la section »** : sous un filtre actif, une section feuille n'affiche que ses fonctions correspondantes. **Cliquer sur le titre de la section** bascule l'affichage de **toutes** ses fonctions (malgré le filtre) ; re-cliquer ré-applique le filtre (`onCahierNodeClick` → `toggleSectionFull`, signal `forceFullPaths`). Badge bleu **« Tout »** affiché tant que la surcharge est active. Réinitialisé automatiquement dès que le filtre/recherche change.
   - **Nœud** : chevron, badge ID cliquable (copie), icône (`folder`/`folder_open` pour une catégorie, `description` pour une section feuille), nom (`pageTitle` ou nom du dossier), compteur de fonctions, bouton "Lancer un test sur cette section" (sur une feuille → pré-coche la section + bascule Exécution), bouton "Ouvrir le dossier local" (POST `/api/admin/tests/open-folder { path }`).
   - **Tableau des fonctions** (déplié sur une section feuille) : colonnes `#` / `Action / Titre` / `ID` / `Étapes` / `Priorité` / `État`.
     - Action / Titre : libellé de la fonction (`section`) + résumé (1re ligne du contenu).
@@ -44,6 +45,9 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Par item** :
   - Badge ID cliquable (copie presse-papiers via `navigator.clipboard`).
   - Libellé de la section, dépliable → contenu markdown des tâches.
+  - **État du dernier test précédent** (à gauche des boutons) : pastille `OK`/`KO` (verte/rouge) + label « préc. », issue du dernier run décidé **hors run en cours** (`funcPrevious` = `funcLatest` excluant `activeRun.id`). Absente si la fonction n'a jamais été testée. La matrice est rechargée au lancement du run pour fiabiliser cet historique.
+    - **Sous la pastille** : nom du **testeur** (icône `person` ; `IA` + icône `smart_toy` pour un run automatique) + **date** du test (`testedAt` réel si dispo), et, si le run était une **campagne**, son **nom** (icône `campaign`). Infobulle complète au survol (statut + testeur + date + campagne).
+  - **Flèche de tendance** entre l'état précédent et la décision en cours (`resultTrend`) : `trending_up` vert si **corrigé** (KO→OK), `trending_down` rouge si **régression** (OK→KO).
   - 3 boutons : **OK** (vert) / **KO** (rouge) / **ND** (gris).
   - Si KO → champ note optionnel.
 - **Auto-save** : debounce 2 s → PUT `/api/admin/tests/runs/:id { results }`.
@@ -116,6 +120,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Mode IA** :
   - **Sélecteur IA** : providers CLI agentiques actifs dans admin/config (Claude Code, Antigravity) — depuis `ConfigService.cliConfig().availableProviders` (type `cli`).
   - **Sélecteur Modèle** : `modelsList[baseId]` du provider choisi.
+  - **Mémorisation du choix** : tout changement de provider ou de modèle (formulaire d'exécution, popup de génération, popup nouvelle section) est **persisté** via `ConfigService.saveHeaderSelection(provider, model)` (`headerSelection`, partagé avec le sélecteur IA du header). Tous les formulaires IA se ré-initialisent depuis ce choix (`onAiModelChange` / `onGenModelChange` / `onCsModelChange` + `persistAiSelection`), de sorte que la dernière IA/modèle utilisée est proposée par défaut au prochain test.
   - **Consignes éditables** (textarea) : intro du prompt, modifiable.
   - **Format de retour imposé** (lecture seule) : exemple `@@TEST_RESULT@@{"itemId":…,"status":"ok|ko|nd","note":…}` pour un retour constant.
   - **Lancer l'analyse IA** : POST `/runs { mode:'ai', aiProvider, aiModel, prompt, folderIds }`.
@@ -223,7 +228,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - Badge visible dans le **Cahier** (nœud feuille), dans l'onglet **Résultats** (en-tête de groupe matrice) et l'onglet **Exécution** (en-tête de groupe runner).
   - Méthode `isSectionUserCreated(folderId)` : retourne `true` si au moins un item de ce dossier a `userCreated: true`.
 
-## `2-1-5-15` — Détection automatique des fonctions à retester après modification de code
+## `2-1-5-15` — [modification] Détection automatique des fonctions à retester après modification de code
 
 - **Déclencheur** : après chaque modification de code (composant Angular, service, template, route Express) par Claude Code, le système vérifie si le fichier modifié est référencé dans les tests pré-programmés.
 - **Sources de détection** :
@@ -232,10 +237,10 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Tag `[modification]`** : ajouté par Claude Code directement dans le heading `##` du `fonctions.md` concerné, entre le tiret long et le libellé.
   - Format : `## \`2-5-2-3-4\` — [modification] Onglets de mode`
   - Non dupliqué si déjà présent.
-- **Champ serveur** : `parseFonctionsMd` détecte `[modification]` → expose `needsRetest: true` sur la fonction.
-- **Retrait automatique** : le serveur retire le tag `[modification]` du heading lors de l'enregistrement d'un résultat (OK/KO) postérieur à la date de modification.
-- **Filtre "À retester"** dans l'onglet Cahier de recette : voir `2-1-5-1`.
-- **Visuel** : dans le Cahier, les fonctions taguées affichent un badge ambre "À retester" dans la colonne État ; les nœuds parents remontent un indicateur si au moins une fonction enfant a `needsRetest: true`.
+- **Champ serveur** : `parseFonctionsMd` détecte `[modification]` après le tiret long → expose `needsRetest: true` et retire le tag du libellé affiché. `writeFonctionsMd` réinjecte le tag tant que `needsRetest` reste vrai (survie aux éditions de priorité et aux générations IA `apply-functions`).
+- **Retrait automatique** : `PUT /api/admin/tests/runs/:id` appelle `clearModificationTagForItems(itemIds)` pour chaque fonction décidée (OK/KO) → le tag disparaît du heading. Il reste donc tant que la section n'a pas été retestée.
+- **Filtre "À retester"** dans l'onglet Cahier de recette (5e chip d'état) : voir `2-1-5-1`. N'affiche que les fonctions `needsRetest: true`.
+- **Visuel** : badge ambre **« Modification »** (icône `edit_note`) affiché (1) sur l'en-tête de nœud de section si ≥1 fonction enfant a `needsRetest` (`isSectionNeedsRetest(folderId)`), et (2) devant le libellé de chaque fonction taguée dans le tableau (`item.needsRetest`).
 
 ---
 

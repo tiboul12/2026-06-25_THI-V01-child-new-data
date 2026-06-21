@@ -1,6 +1,159 @@
 {
   "modifications": [
     {
+      "id": "mod-435",
+      "version": "B-0.298",
+      "date": "2026-06-21T21:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|ia|persistance",
+      "title": "Admin/Tests — mémorisation du provider/modèle IA entre les formulaires",
+      "description": "Quand un provider IA et un modèle sont sélectionnés dans un formulaire (exécution, génération, nouvelle section), le choix est persisté via ConfigService.saveHeaderSelection (headerSelection, partagé avec le sélecteur du header). Helper persistAiSelection + handlers onAiModelChange / onGenModelChange / onCsModelChange, et persistance ajoutée aux onXxxProviderChange. Tous les formulaires IA se ré-initialisant déjà depuis headerSelection, la dernière IA/modèle utilisée est désormais proposée par défaut au prochain test.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "si une IA et un model est selectionné, il faut le gardé en mémoire pour les prochaines demande dans les form",
+      "startedAt": "2026-06-21T21:10:00.000Z",
+      "completedAt": "2026-06-21T21:30:00.000Z"
+    },
+    {
+      "id": "mod-434",
+      "version": "B-0.298",
+      "date": "2026-06-21T21:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|execution|runner",
+      "title": "Admin/Tests — testeur, date et campagne sous l'état du test précédent",
+      "description": "Enrichissement de l'affichage de l'état du dernier test précédent dans le runner (mod-432). funcPrevious renvoie désormais un PrevTest { status, date (testedAt réel), tester, runName, isCampaign, mode }. Sous la pastille OK/KO : nom du testeur (icône person ; 'IA' + smart_toy pour un run automatique via prevTesterLabel), date du test, et nom de la campagne (icône campaign) si isCampaign. Infobulle complète. Bloc passé en colonne (items-end).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lors d'un nouveau test en dessous d'un status d'une fonction déjà testé ajoute le nom de l'utilisateur qui à fait le test et la date du test, voir le nom de la campagne si c'est une campagne",
+      "startedAt": "2026-06-21T20:40:00.000Z",
+      "completedAt": "2026-06-21T21:00:00.000Z"
+    },
+    {
+      "id": "mod-433",
+      "version": "B-0.298",
+      "date": "2026-06-21T20:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|cahier|filtre",
+      "title": "Admin/Tests — clic sur titre de section affiche toute la section malgré le filtre",
+      "description": "Dans le Cahier de recette, sous un filtre actif (En erreur, etc.) une section feuille n'affiche que ses fonctions correspondantes. Cliquer sur le titre de la section bascule l'affichage complet de toutes ses fonctions (forceFullPaths signal + onCahierNodeClick/toggleSectionFull), re-cliquer ré-applique le filtre. visibleTree honore l'override (items complets de l'arbre non filtré). Badge bleu 'Tout' tant que la surcharge est active. Effet de reset (untracked) qui vide forceFullPaths quand statusFilter/searchQuery/favOnly change.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je selectionne un filtre \"En erreur\" ou autre filtre et que ne s'affiche que certain element d'une section, si je clique sur le titre d'une section, toute la section doit s'affiché (et inversement)",
+      "startedAt": "2026-06-21T20:00:00.000Z",
+      "completedAt": "2026-06-21T20:30:00.000Z"
+    },
+    {
+      "id": "mod-432",
+      "version": "B-0.298",
+      "date": "2026-06-21T19:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|execution|runner",
+      "title": "Admin/Tests — état du dernier test précédent affiché dans le runner",
+      "description": "Dans l'onglet Exécution, à gauche des boutons OK/KO/ND, affichage de l'état du dernier test décidé issu des runs précédents (computed funcPrevious = funcLatest excluant activeRun.id). Pastille OK/KO verte/rouge + label 'préc.' + infobulle (statut + date). Flèche de tendance (resultTrend) : trending_up vert si corrigé (KO→OK), trending_down rouge si régression (OK→KO). loadMatrix() appelé au lancement du run pour fiabiliser l'historique. Permet de constater visuellement si un test a été corrigé ou est devenu négatif.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on lance un nouveau test il y a les boutons d'état OK/KO/Non décidé, si les fonctions ont déjà été testé précédemment, il faudrait affiché l'état du dernier test effectué sur la gauche des boutons actuel afin de pouvoir constaté si un ancien test à été corrigé ou si contrairement un test positif est devenu négatif.",
+      "startedAt": "2026-06-21T19:00:00.000Z",
+      "completedAt": "2026-06-21T19:30:00.000Z"
+    },
+    {
+      "id": "mod-431",
+      "version": "B-0.298",
+      "date": "2026-06-21T18:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "portail", "data", "system"],
+      "features": "server:tests-needsRetest,portail:admin/tests|cahier|filtre,system:claude-directives",
+      "title": "Tests — tag [modification] fonctionnel : parsing, filtre À retester, badge, retrait au test",
+      "description": "Implémentation complète du mécanisme needsRetest. Serveur : parseFonctionsMd détecte/retire [modification] → needsRetest; writeFonctionsMd réinjecte le tag (préservé sur édition priorité + apply-functions); helper clearModificationTagForItems appelé par PUT runs/:id pour lever le tag des fonctions décidées OK/KO. Client admin-tests : champ needsRetest, 5e filtre 'À retester', badge ambre Modification sur nœud de section (isSectionNeedsRetest) et devant chaque fonction taguée. Tags posés sur les sections impactées par mod-430 (barre de style) : section 2-5-3 'Projet/Edition/bar de style' (fonctions 2-5-3-1 à 2-5-3-9) + toolbar 2-5-2-3-5 / 2-5-2-3-9 ; et auto-tag de 2-1-5-1 / 2-1-5-15 (composant admin-tests modifié). CLAUDE.md : directive actualisée (mécanisme implémenté) + nouvelle règle de rapport de fin de prompt (composants modifiés & tests liés). Inclut au passage les sections de tests créées par la session Antigravity (registry 2-5-2-12 + 2-5-3, _user-created).",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/toolbar/fonctions.md",
+        "tests/fonctions/connecte/projets/prrojet-edition-bar-de-style/fonctions.md",
+        "tests/fonctions/_registry.json",
+        "tests/fonctions/_user-created.json",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la modification impact la barre de style qui est testé dans admin/test : \"Projet/Edition/bar de style\" il devrait donc y avoir un tag qui indique que cette section à été impacté par des modifications, je ne vois pas non plus le filtre pour affiché les tests impacté. Lorsque un tests à été impacté le tag reste tant que la section n'a pas été mise à jour et tester. Verifi que claude.md à bien les informations pour vérifié les component impacté et les tests lié, et rajoute qu'a la fin de chaque prompt executé il doit indiqué la liste des component modifié et si il y a des tests lié et lesquel.",
+      "startedAt": "2026-06-21T17:30:00.000Z",
+      "completedAt": "2026-06-21T18:30:00.000Z"
+    },
+    {
+      "id": "mod-430",
+      "version": "B-0.298",
+      "date": "2026-06-21T17:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|barre-style|zones-colorees",
+      "title": "Éditeur — barre de style colorée par zone",
+      "description": "Les boutons de la barre de style (modes Code et Visu) sont regroupés en zones colorées identifiées par un fond semi-transparent : history (gris), format B/I/U/S (indigo), title T▾ (violet), blocks listes/lien/image (vert), align (ambre), size A/A (orange), color/highlight (rouge), clear (gris), extras code-block/tableau/hr (bleu ciel). Les séparateurs `__sep` entre groupes sont remplacés par les zones flex. Padding et gap ajustés sur `--docked`.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "modifi la couleur de la bar de style par zone",
+      "startedAt": "2026-06-21T16:30:00.000Z",
+      "completedAt": "2026-06-21T17:00:00.000Z"
+    },
+    {
+      "id": "mod-429",
+      "version": "B-0.298",
+      "date": "2026-06-21T16:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code|zone-preview|barre-style",
+      "title": "Éditeur — Annuler/Refaire (Ctrl+Z / Ctrl+Y) dans la barre de style",
+      "description": "Ajout des boutons Annuler (undo) et Refaire (redo) en première position dans la barre de style des modes Code et Édition (Visu). Mode Code : pile custom (codeUndoStack/codeRedoStack, max 200 entrées) — snapshot avant chaque action toolbar (insertAt, codeClearFormat) et debounce 800 ms sur la frappe ; Ctrl+Z/Y interceptés dans onTextareaKeydown. Mode Visu : document.execCommand('undo'/'redo') natif contenteditable ; Ctrl+Y intercepté dans onVisuSectionKeydown.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu projet/edition je voudrais que tu rajoute une option retour en arrière ou refaire comme control Z et control Y comme sur un editeur de texte. biensur rajoute les icones dans la barre de style en premier",
+      "startedAt": "2026-06-21T15:40:00.000Z",
+      "completedAt": "2026-06-21T16:00:00.000Z"
+    },
+    {
       "id": "mod-428",
       "version": "B-0.297",
       "date": "2026-06-21T15:30:00.000Z",

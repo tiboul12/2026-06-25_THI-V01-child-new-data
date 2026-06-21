@@ -235,3 +235,11 @@ Vue : éditeur type Google Docs — rendu HTML des sections éditables (contente
 - **Parent affiché** : `computeTitleInsertion` calcule le parent (section précédente de niveau strictement inférieur ; niveau 1 → racine) pour l'afficher dans le popup ; le rattachement réel est dérivé de l'imbrication markdown par le parent.
 - **Remplacement** : l'ancien chemin `execCommand('formatBlock', H1-4)` n'est plus utilisé pour les titres (source d'instabilité supprimée). `execCommand` reste pour gras/italique/souligné/couleur.
 - **Popup** : pas de fermeture au clic backdrop (✕ / Annuler / validation Entrée). Émet `(confirm)` / `(cancel)`.
+
+---
+
+## `2-5-2-5-22` — Annuler / Refaire (Ctrl+Z / Ctrl+Y) en mode Édition (Visu)
+
+- **Boutons** : `undo` et `redo` (icônes Material) en **première position** dans la barre de formatage permanente du mode Édition.
+- **Raccourcis** : Ctrl+Z → annuler (natif contenteditable), Ctrl+Y (ou Ctrl+Shift+Z) → refaire. Ctrl+Y intercepté dans `onVisuSectionKeydown`.
+- **Mécanisme** : appels `document.execCommand('undo')` / `document.execCommand('redo')` — le navigateur gère nativement l'historique des modifications sur l'élément `contenteditable`. Suivi par `markActiveVisuDirty()` + `updateVisuActiveFormats()` pour maintenir la cohérence de l'état.

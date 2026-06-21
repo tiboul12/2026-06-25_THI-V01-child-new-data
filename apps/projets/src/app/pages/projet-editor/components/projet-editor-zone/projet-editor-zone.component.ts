@@ -2486,6 +2486,62 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   // État sticky des boutons d'inline-style en mode Code
   codeActiveStyles: Record<string, boolean> = {};
 
+  // ── Undo/Redo mode Code ────────────────────────────────────
+  private codeUndoStack: Array<{ content: string; selStart: number; selEnd: number }> = [];
+  private codeRedoStack: Array<{ content: string; selStart: number; selEnd: number }> = [];
+  private codeSnapshotTimer: any;
+  private codeLastSnapshot = '';
+
+  get canCodeUndo(): boolean { return this.codeUndoStack.length > 0; }
+  get canCodeRedo(): boolean { return this.codeRedoStack.length > 0; }
+
+  pushCodeUndoSnapshot() {
+    const ta = this.textareaRef?.nativeElement;
+    const content = this.unifiedContent;
+    if (content === this.codeLastSnapshot) return;
+    this.codeUndoStack.push({ content, selStart: ta?.selectionStart ?? 0, selEnd: ta?.selectionEnd ?? 0 });
+    if (this.codeUndoStack.length > 200) this.codeUndoStack.shift();
+    this.codeRedoStack = [];
+    this.codeLastSnapshot = content;
+  }
+
+  private scheduleCodeSnapshot() {
+    clearTimeout(this.codeSnapshotTimer);
+    this.codeSnapshotTimer = setTimeout(() => this.pushCodeUndoSnapshot(), 800);
+  }
+
+  private applyCodeSnapshot(snap: { content: string; selStart: number; selEnd: number }) {
+    const ta = this.textareaRef?.nativeElement;
+    this.unifiedContent = snap.content;
+    this.codeLastSnapshot = snap.content;
+    if (ta) {
+      ta.value = snap.content;
+      ta.selectionStart = snap.selStart;
+      ta.selectionEnd = snap.selEnd;
+    }
+    this.recomputeAll();
+    this.scheduleSave();
+  }
+
+  codeUndo() {
+    if (this.codeUndoStack.length === 0) return;
+    const ta = this.textareaRef?.nativeElement;
+    this.codeRedoStack.push({ content: this.unifiedContent, selStart: ta?.selectionStart ?? 0, selEnd: ta?.selectionEnd ?? 0 });
+    this.applyCodeSnapshot(this.codeUndoStack.pop()!);
+  }
+
+  codeRedo() {
+    if (this.codeRedoStack.length === 0) return;
+    const ta = this.textareaRef?.nativeElement;
+    this.codeUndoStack.push({ content: this.unifiedContent, selStart: ta?.selectionStart ?? 0, selEnd: ta?.selectionEnd ?? 0 });
+    this.codeLastSnapshot = this.unifiedContent;
+    this.applyCodeSnapshot(this.codeRedoStack.pop()!);
+  }
+
+  // ── Undo/Redo mode Visu (contenteditable natif) ────────────
+  visuUndo() { document.execCommand('undo'); this.markActiveVisuDirty(); this.updateVisuActiveFormats(); }
+  visuRedo() { document.execCommand('redo'); this.markActiveVisuDirty(); this.updateVisuActiveFormats(); }
+
   // Sticky toggle : si texte sélectionné → entoure sans activer.
   // Sinon → insère marqueur ouvrant/fermant et bascule l'état actif.
   toggleCodeStyle(key: string, openMarker: string, closeMarker?: string) {
@@ -2508,6 +2564,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
     if (this.isActiveSectionLockedByOther) return;
     const ta = this.textareaRef?.nativeElement;
     if (!ta) return;
+    this.pushCodeUndoSnapshot();
     const start = ta.selectionStart, end = ta.selectionEnd;
     const cleaned = ta.value.substring(start, end)
       .replace(/\*\*|~~|`|(?<!\w)\*(?!\s)|(?<!\w)_(?!\s)/g, '')
@@ -3078,6 +3135,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   onTextareaInput(event: Event) {
     const ta = event.target as HTMLTextAreaElement;
     this.unifiedContent = ta.value;
+    this.scheduleCodeSnapshot();
     this.recomputeRanges();
     this.recomputeInlineBlocks();
     this.recomputeMirrorLines();
@@ -3265,6 +3323,10 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
 
   // ── F1 — Slash command menu ──────────────────────────────────
   onTextareaKeydown(ev: KeyboardEvent) {
+    if (ev.ctrlKey || ev.metaKey) {
+      if (ev.key === 'z' && !ev.shiftKey) { ev.preventDefault(); this.codeUndo(); return; }
+      if (ev.key === 'y' || (ev.key === 'z' && ev.shiftKey)) { ev.preventDefault(); this.codeRedo(); return; }
+    }
     if (!this.slashMenuState.visible) return;
     if (ev.key === 'ArrowDown') { ev.preventDefault(); this.slashMenuRef?.moveNext(); }
     else if (ev.key === 'ArrowUp') { ev.preventDefault(); this.slashMenuRef?.movePrev(); }
@@ -4508,6 +4570,7 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   insertAt(before: string, after = '') {
     if (this.isActiveSectionLockedByOther) return;
     const ta = this.textareaRef?.nativeElement;
+    if (ta) this.pushCodeUndoSnapshot();
 
     // Quand un folderId cible est défini (menu section ou capture openXxxPopup) OU qu'il
     // n'y a pas de textarea : insertion directe dans unifiedContent à la fin du contenu DIRECT
@@ -6147,6 +6210,9 @@ export class ProjetEditorZoneComponent implements OnChanges, OnDestroy, AfterVie
   }
 
   onVisuSectionKeydown(ev: KeyboardEvent) {
+    if (ev.ctrlKey || ev.metaKey) {
+      if (ev.key === 'y' || (ev.key === 'z' && ev.shiftKey)) { ev.preventDefault(); this.visuRedo(); return; }
+    }
     // Navigation du slash menu si ouvert
     if (this.visuSlash.visible) {
       if (ev.key === 'ArrowDown') { ev.preventDefault(); this.visuSlashMenuRef?.moveNext(); return; }
