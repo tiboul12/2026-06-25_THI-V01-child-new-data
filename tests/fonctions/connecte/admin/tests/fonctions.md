@@ -4,61 +4,72 @@ Route : `/admin` onglet "Tests"
 Composant : `AdminTestsComponent`  
 Accès : admin uniquement
 
----
-
-## `2-1-5-1` — Tableau de bord (dashboard)
-
-- **Chargement** : GET `/api/admin/tests/runs` → liste des runs + topKo
-- **Bouton "Lancer un nouveau test"** : ouvre le popup de lancement (voir `2-1-5-6`)
-- **Liste des runs** : date, testeur, nom (si défini), stats (OK/KO/ND/%), statut (en cours / terminé)
-- **Bouton supprimer par ligne** : icône poubelle → confirmation → DELETE `/api/admin/tests/runs/:id` (stopPropagation pour ne pas ouvrir le détail)
-- **Encart KO fréquents** : fonctions les plus souvent KO sur tous les runs (top 10)
-  - Affichage : badge ID + libellé + compteur
-- **Clic sur un run** : ouvre la vue Détail
-- **Bouton "Rafraîchir la liste de fonctions"** : POST `/api/admin/tests/functions/refresh` → invalide le cache serveur
-- **Référentiel de fonctions (arbre)** : chaque nœud a au survol :
-  - un bouton "Lancer un test sur cette section" (play_arrow) → ouvre le popup de lancement (`2-1-5-6`) avec la/les section(s) du nœud pré-cochée(s) ; nœud branche = toutes ses sous-sections
-  - un bouton "Ouvrir le dossier local" (folder_open) → POST `/api/admin/tests/open-folder { path }` ouvre le répertoire du `fonctions.md` dans l'explorateur
+Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil`) : **Cahier de recette**, **Exécution**, **Résultats**, **Historique**.
 
 ---
 
-## `2-1-5-2` — Runner (session de test en cours)
+## `2-1-5-1` — Navigation par onglets + Onglet Cahier de recette
 
-- **Périmètre** : si le run a été lancé sur une sélection de sections, seules ces fonctions sont affichées (filtrage par `activeRun.results`)
-- **En-tête** : nom du testeur (pré-rempli), progression `X% (A/B)`, indicateur de sauvegarde, bouton "Annuler", bouton "Terminer"
-- **Bouton "Annuler"** : ouvre la confirmation d'abandon → supprime le run en cours (voir `2-1-5-6`)
-- **Barre de progression** : s'incrémente à chaque item décidé (OK ou KO)
-- **Groupes de fonctions** : organisés par `pageTitle` (titre du fichier fonctions.md), avec bouton "Ouvrir le dossier local" dans l'en-tête de groupe
+- **Barre d'onglets** : Cahier de recette (`checklist`) / Exécution (`play_circle`) / Résultats (`bar_chart`).
+  - L'onglet actif est souligné (border + texte primary).
+  - À l'activation : Exécution initialise les défauts IA ; Résultats charge la matrice (GET `/api/admin/tests/matrix`).
+- **Bouton "Rafraîchir le référentiel"** (en haut à droite, toutes vues) : POST `/api/admin/tests/functions/refresh` → invalide le cache serveur puis recharge.
+- **Onglet Cahier de recette** : référentiel des fonctions testables affiché en **arbre hiérarchique** (catégorie → sous-catégorie → section), chargé via GET `/api/admin/tests/functions`.
+  - **Hiérarchie & tri** : arbre reconstruit depuis les chemins des `fonctions.md`. Les nœuds sont triés **numériquement par ID hiérarchique** en pré-ordre (`1`, `1-1`, `2`, `2-1`, `2-1-1`, …). L'ID d'un nœud intermédiaire est déduit du `folderId` d'une feuille descendante (segments tronqués à la profondeur du nœud).
+  - **Accordéon** : au 1er niveau seules les catégories racines (`1` non-connecte, `2` connecte) sont visibles ; clic sur un nœud déplie/replie ses enfants. Boutons globaux "Tout ouvrir" / "Tout fermer".
+  - **Recherche** (champ avec icône loupe) : filtre l'arbre sur le libellé, le `pageTitle`, l'`ID` et le contenu des fonctions (insensible aux accents/casse). **Autocomplétion** : dropdown de max 8 suggestions (icône d'état + ID + section + page) ; clic → applique la section comme filtre. Bouton ✕ pour vider.
+  - **Filtre d'état** : `Toutes` / `Testées` / `Non testées` / `En erreur` (KO) — masque les sections/fonctions hors critère.
+  - **Favoris** : bouton étoile (`star`/`star_border`) sur chaque section feuille → (dé)marque en favori (POST `/api/admin/tests/favorites { folderId, favorite }`, persistant). Chip filtre **« Favoris »** (★) pour n'afficher que les sections favorites. Chargé via GET `/api/admin/tests/favorites`.
+  - Quand une recherche ou un filtre est actif, l'arbre se déplie automatiquement sur les résultats ; message "Aucun résultat" si vide.
+  - **Nœud** : chevron, badge ID cliquable (copie), icône (`folder`/`folder_open` pour une catégorie, `description` pour une section feuille), nom (`pageTitle` ou nom du dossier), compteur de fonctions, bouton "Lancer un test sur cette section" (sur une feuille → pré-coche la section + bascule Exécution), bouton "Ouvrir le dossier local" (POST `/api/admin/tests/open-folder { path }`).
+  - **Tableau des fonctions** (déplié sur une section feuille) : colonnes `#` / `Action / Titre` / `ID` / `Étapes` / `Priorité` / `État`.
+    - Action / Titre : libellé de la fonction (`section`) + résumé (1re ligne du contenu).
+    - ID : badge cliquable → copie dans le presse-papiers.
+    - Étapes : nombre de puces (`- …`) du contenu markdown.
+    - **Priorité** : `mineur` (jaune) / `critique` (orange) / `bloquant` (rouge), **éditable** via un select → POST `/api/admin/tests/function-priority { itemId, priority }` (réécrit la ligne `- **Priorité:**` du fonctions.md). Voir `2-1-5-12`.
+    - État : dernier résultat décidé (`OK` vert / `KO` rouge / `non testé`) + date du dernier test.
+  - **Clic sur une ligne de fonction** : déplie le contenu markdown complet (liste des tâches, via `renderContent`).
+- **Croisement avec les résultats** (`2-1-5-8`) : les nœuds et lignes sont colorés selon les derniers résultats (matrice GET `/api/admin/tests/matrix`).
+
+---
+
+## `2-1-5-2` — Onglet Exécution — campagne en cours (runner OK/KO/ND)
+
+- **Périmètre** : le run ne couvre que les fonctions des sections sélectionnées (filtrage par `activeRun.results`).
+- **En-tête** : "Campagne en cours — testeur (— nom)", progression `X% (A/B)`, indicateur de sauvegarde, bouton "Annuler", bouton "Terminer le test".
+- **Bouton "Annuler"** : confirmation d'abandon → DELETE du run (voir `2-1-5-6`).
+- **Barre de progression** : s'incrémente à chaque item décidé (OK ou KO).
+- **Groupes de fonctions** : organisés par `pageTitle` + badge `folderId`.
 - **Par item** :
-  - Badge ID cliquable (copie dans le presse-papiers via `navigator.clipboard`)
-  - Libellé de la section
-  - 3 boutons radio : **OK** (vert) / **KO** (rouge) / **ND** (gris)
-  - Si KO → champ note optionnel apparaît
-- **Auto-save** : debounce 2s → PUT `/api/admin/tests/runs/:id { results: [items modifiés] }`
-- **Indicateur de sauvegarde** : spinner + texte "Sauvegarde…"
-- **Bouton "Terminer"** : sauvegarde complète + `status: 'completed'` → retour au dashboard
+  - Badge ID cliquable (copie presse-papiers via `navigator.clipboard`).
+  - Libellé de la section, dépliable → contenu markdown des tâches.
+  - 3 boutons : **OK** (vert) / **KO** (rouge) / **ND** (gris).
+  - Si KO → champ note optionnel.
+- **Auto-save** : debounce 2 s → PUT `/api/admin/tests/runs/:id { results }`.
+- **Bouton "Terminer le test"** : sauvegarde + `status:'completed'` → recharge runs + matrice → bascule sur l'onglet Résultats.
 
 ---
 
-## `2-1-5-3` — Détail d'un run
+## `2-1-5-3` — Onglet Résultats — matrice runs × fonctions
 
-- **En-tête** : testeur, date, stats (OK/KO/ND/okPct%), statut
-- **Bouton "Reprendre"** : visible si run en cours → bascule en vue Runner avec le run actif
-- **Bouton supprimer** : DELETE `/api/admin/tests/runs/:id` → retour dashboard
-- **Filtre** : Tout / KO uniquement
-- **Liste résultats** : triée ko → ok → pending
-  - Icône statut (check_circle vert / cancel rouge / radio_button_unchecked gris)
-  - Badge ID + libellé de la section
-  - Note si KO
-  - **Dépliable** : clic sur le libellé → affiche le contenu markdown de la fonction (liste des tâches à tester), via `getFunctionContent(itemId)` + `renderContent`
+- **Chargement** : GET `/api/admin/tests/matrix` → tous les runs (ordre chronologique) avec leurs résultats (statut, note, date).
+- **Barre d'outils** : « Tout ouvrir / Tout fermer » (accordéon des sections), filtre **« KO uniquement »** (ne garde que les lignes/sections avec au moins un KO), **légende** (OK/KO/·/—).
+- **Tableau matrice** (en-têtes collants, 1re colonne collante) :
+  - **Colonnes = runs / campagnes** : badge **CAMPAGNE** + nom si campagne, date courte, mode (`IA` / testeur), ratio `OK/décidées`, **score global** coloré (vert ≥80, ambre ≥50, rouge <50), suppression au survol (DELETE `/api/admin/tests/runs/:id`).
+  - **Lignes = fonctions groupées par section** :
+    - Ligne section **cliquable** (accordéon) : nom + folderId + compteur + **verdict de section** par run (voir `2-1-5-12` : vert = valide ✓ / rouge = invalide ✗ + %, infobulle = raison), et **MAJ** (date + IA).
+    - Ligne fonction : pastille **couleur de priorité** + libellé + cellule par run → **OK** / **KO** (icône note si présente) / `·` (non décidé) / `—` (non couvert). **Infobulle** par cellule : statut + note + date.
+- **Seuils d'invalidation** éditables dans la barre d'outils (voir `2-1-5-12`).
+- **Filtrage** : seules les sections réellement couvertes par au moins un run sont affichées.
+- **Vide** : "Aucune campagne exécutée." si aucun run ; "Aucune ligne KO." si le filtre KO ne renvoie rien.
 
 ---
 
 ## `2-1-5-4` — IDs de fonctions
 
-- **Format ID** : `{dossierID}-{N}` où `dossierID` vient de `_registry.json` (ex: `2-5-2-3`) et `N` est séquentiel dans le fichier
-- **Badge ID cliquable** : copie l'ID dans le presse-papiers (utile pour référencer une fonction à tester via IA)
-- **Registre** : `tests/fonctions/_registry.json` — source de vérité pour les IDs de dossiers
+- **Format ID** : `{dossierID}-{N}` où `dossierID` vient de `_registry.json` (ex: `2-5-2-3`) et `N` est séquentiel dans le fichier.
+- **Badge ID cliquable** : copie l'ID dans le presse-papiers (utile pour référencer une fonction à tester via IA).
+- **Registre** : `tests/fonctions/_registry.json` — source de vérité pour les IDs de dossiers.
 
 ---
 
@@ -66,51 +77,117 @@ Accès : admin uniquement
 
 | État | Description |
 |------|-------------|
-| Chargement dashboard | Spinner |
-| Aucun run | Message + bouton créer |
-| Run en cours | Pulse ambre sur le run dans la liste |
-| Run terminé | Indicateur vert |
-| KO fréquents visibles | Encart rouge si topKo non vide |
-| Runner actif | Barre de progression + boutons OK/KO/ND |
+| Chargement fonctions | Spinner (onglet Cahier / sélection sections) |
+| Aucune fonction | Message + invitation à rafraîchir |
+| Item déplié (Cahier) | Contenu markdown des tâches affiché |
+| Campagne en cours | En-tête + barre de progression + boutons OK/KO/ND |
 | Auto-save | Indicateur "Sauvegarde…" |
 | Note KO visible | Input texte sous l'item KO |
-| Détail ouvert | Vue résultats complète |
-| Filtre KO actif | Seuls les items KO affichés |
+| Chargement matrice | Spinner (onglet Résultats) |
+| Matrice vide | "Aucune campagne exécutée." |
+| Run IA en cours | Bannière indigo + journal live |
 
 ---
 
-## `2-1-5-6` — Popup de lancement & confirmations
+## `2-1-5-6` — Onglet Exécution — configuration de lancement & confirmations
 
-- **Popup de lancement** (bouton "Lancer un nouveau test") :
-  - **Champ nom** (optionnel) : transmis au serveur (`name`), affiché dans la liste et le détail
-  - **Sélection de sections** : liste des sections testables (1 ligne par dossier `folderId`) avec cases à cocher ; compteur `sélectionnées/total`
-  - **Boutons "Tout" / "Aucun"** : sélection globale
-  - **Lancer le test** : POST `/api/admin/tests/runs { tester, name, folderIds }` — `folderIds` = sous-ensemble sélectionné (vide si toutes les sections cochées = tout le référentiel)
-  - **Désactivé** si aucune section sélectionnée
-- **Filtrage serveur** : le run ne contient que les `results` des fonctions des sections sélectionnées
+- **Configuration inline** (visible tant qu'aucune campagne n'est en cours) :
+  - **Type** : `Test ponctuel` (1 run = 1 colonne) ou `Campagne`.
+    - Campagne : sélecteur `Nouvelle campagne` (+ nom) ou **campagne ouverte existante** (`openCampaigns` = runs `isCampaign` in_progress). Permet de tester des sections **petit à petit** et de les regrouper dans **une seule colonne** de résultats.
+  - **Toggle mode** : Automatique (IA) / Manuel (testeur).
+  - **Catégories à tester** : chips de sections testables + chip "Toutes (N)" ; sélection multiple (compteur de fonctions couvertes).
+  - **Commentaire** (test ponctuel) : transmis comme `name` du run.
+  - **Mode Manuel** : champ "Nom du testeur" + bouton "Démarrer le test / la campagne / Ajouter à la campagne".
+  - **Mode IA** : voir `2-1-5-7` + bouton "Lancer l'analyse IA / Ajouter à la campagne (IA)".
+- **Création** : POST `/api/admin/tests/runs { tester, name, folderIds, isCampaign?, [mode/aiProvider/aiModel/prompt] }`.
+- **Ajout à une campagne** : POST `/api/admin/tests/runs/:id/add-sections { folderIds }` — ajoute les fonctions des sections (en `pending`, sans réinitialiser l'existant), rouvre le run. En IA, seules les fonctions **pending** sont testées (ajout incrémental).
+- **Runner campagne** : boutons "Enregistrer (ajouter d'autres sections)" (`saveAndExit` : enregistre, garde la campagne ouverte, recale la cible) et "Clôturer la campagne" (`completeRun`).
 - **Popup de confirmation** (annulation / suppression) :
-  - **Annuler un test en cours** : abandon = DELETE du run → retour dashboard
-  - **Supprimer un test** (depuis la liste ou le détail) : DELETE → retour dashboard
-  - Boutons : "Retour" (annule) / "Abandonner" ou "Supprimer" (confirme)
+  - **Annuler un test en cours** : abandon = DELETE du run.
+  - **Supprimer un run** (depuis la matrice) : DELETE.
+  - Boutons : "Retour" (annule) / "Abandonner" ou "Supprimer" (confirme).
 
 ---
 
 ## `2-1-5-7` — Mode automatique (test IA via Claude Code + Browser MCP)
 
-- **Toggle Manuel / Automatique (IA)** dans le popup de lancement.
+- **Toggle Manuel / Automatique (IA)** dans la configuration de l'onglet Exécution.
 - **Mode IA** :
-  - **Sélecteur IA** : providers CLI agentiques actifs dans admin/config (Claude Code, Antigravity) — depuis `ConfigService.cliConfig().availableProviders` (type `cli`)
-  - **Sélecteur Modèle** : `modelsList[baseId]` du provider choisi
-  - **Consignes éditables** (textarea) : intro du prompt, modifiable
-  - **Format de retour imposé** (lecture seule) : exemple `@@TEST_RESULT@@{"itemId":…,"status":"ok|ko|nd","note":…}` pour un retour constant
-  - **Lancer avec l'IA** : POST `/runs { mode:'ai', aiProvider, aiModel, prompt, folderIds }`
+  - **Sélecteur IA** : providers CLI agentiques actifs dans admin/config (Claude Code, Antigravity) — depuis `ConfigService.cliConfig().availableProviders` (type `cli`).
+  - **Sélecteur Modèle** : `modelsList[baseId]` du provider choisi.
+  - **Consignes éditables** (textarea) : intro du prompt, modifiable.
+  - **Format de retour imposé** (lecture seule) : exemple `@@TEST_RESULT@@{"itemId":…,"status":"ok|ko|nd","note":…}` pour un retour constant.
+  - **Lancer l'analyse IA** : POST `/runs { mode:'ai', aiProvider, aiModel, prompt, folderIds }`.
 - **Exécution** : `GET /api/admin/tests/runs/:id/ai-stream` (SSE, auth `?token=`) construit le prompt (consignes + format imposé + liste des fonctions), appelle l'executor local `/execute-prompt` (Claude Code / agy pilotent le navigateur via l'extension **Browser MCP**), parse les lignes `@@TEST_RESULT@@`, persiste chaque résultat et ré-émet en SSE (`start`, `case-result`, `ai-log`, `complete`, `ai-error`, `run-failed`).
 - **Deux mécanismes de capture selon le provider** :
   - **Claude** : émet les `@@TEST_RESULT@@` sur **stdout** → le serveur parse le flux stdout de l'executor.
   - **Antigravity (`agy`)** : `agy -p` n'écrit **jamais** sur stdout (print mode = modifications de fichiers). Le serveur écrit un **fichier de tâches** (lu par agy) + un **fichier de sortie** sous `data/tests-admin/ai-runs/<runId>/`, envoie un prompt directif (agy ÉCRIT les `@@TEST_RESULT@@` dans le fichier via son outil d'écriture), et **poll ce fichier** toutes les 1,5 s pour émettre les `case-result`. L'executor spawn agy **directement** (pas `cmd /c`, chemin résolu via `where agy`), `cwd` = racine projet. Voir aussi le CLI `tests/run-recette-cli.js` (même approche).
-- **Retours en direct (`ai-log`)** : tout le stdout/stderr/info de l'IA (hors lignes sentinelles) est forwardé en temps réel via l'événement SSE `ai-log` `{ stream, text }`. Le serveur n'avale plus le raisonnement de l'IA. (Antigravity étant muet sur stdout, le journal live est plus pauvre — les résultats arrivent via le fichier.)
-- **Runner IA** : bannière « Claude Code teste… (X/Y) » + spinner pendant `aiRunning`, résultats remplis **progressivement** ; à la fin → « Tests IA terminés — à revoir » (revue manuelle puis Terminer).
-- **Journal live** (panneau « Retours en direct de l'IA », collapsible, sous la bannière) : affiche au fil de l'eau les lignes `ai-log`, les verdicts (`case-result`) et les messages début/fin/erreur. Coloration par flux (stdout/stderr/info/result/error), auto-scroll vers le bas, borné à 500 lignes, compteur de lignes, réinitialisé à chaque lancement.
-- **Dashboard** : badge **IA** sur les runs automatiques.
+- **Retours en direct (`ai-log`)** : tout le stdout/stderr/info de l'IA (hors lignes sentinelles) est forwardé en temps réel via l'événement SSE `ai-log` `{ stream, text }`.
+- **Runner IA** (onglet Exécution) : bannière « L'IA teste… (X/Y) » + spinner pendant `aiRunning`, résultats remplis **progressivement** ; à la fin → « Tests IA terminés — à revoir » (revue manuelle puis Terminer).
+- **Journal live** (panneau « Retours en direct de l'IA », collapsible) : affiche au fil de l'eau les lignes `ai-log`, les verdicts (`case-result`) et les messages début/fin/erreur. Coloration par flux, auto-scroll, borné à 500 lignes, compteur, réinitialisé à chaque lancement.
+- **Résultats** : badge mode `IA` sur les colonnes de runs automatiques dans la matrice.
 - **Pré-requis** : extension **Browser MCP** installée + enregistrée auprès de Claude Code (`claude mcp add`), onglet de l'app **connecté** relié à Browser MCP, executor (port 3002) lancé.
 - **Champs run** : `mode:'ai'`, `aiProvider`, `aiModel`, `aiState` (`idle|running|done|error`), `prompt`.
+
+---
+
+## `2-1-5-8` — Cahier de recette — couleurs d'après les derniers résultats
+
+- **Source** : `GET /api/admin/tests/matrix` (chargé à l'init et à l'ouverture du Cahier).
+- **Dernier état par fonction** (`funcLatest`) : pour chaque fonction, le dernier résultat **décidé** (OK/KO) tous runs confondus, avec sa date (le plus récent par `startedAt`). Un résultat `pending` n'écrase pas un état décidé.
+- **Agrégat par nœud** (`cahierStats`) : chaque fonction remonte sur tous ses chemins ancêtres → par section ET par catégorie : `total`, `ok`, `ko`, `untested` (jamais décidé), `pct` = OK/(OK+KO), `lastDate`.
+- **Couleur d'un nœud** : **rouge** si ≥1 fonction KO, **vert** si tout décidé est OK, **gris** si rien testé. Rendu : liseré gauche + fond teinté de l'en-tête.
+- **Bloc état dans l'en-tête** : `pct%` (coloré), `X OK / Y KO`, badge `Z non testé(s)`, date du dernier test (`jj/mm hh:mm`).
+- **Ligne de fonction** : fond teinté (vert/rouge/neutre) + colonne **État** (`OK`/`KO`/`non testé`) + date du dernier test.
+
+---
+
+## `2-1-5-9` — Cahier de recette — génération/mise à jour des fonctions par IA
+
+- **Bouton par section** (icône `auto_fix_high`, à côté de Lancer/Ouvrir) sur chaque section feuille → ouvre un popup.
+- **Popup** : sélecteur IA (providers CLI agentiques de admin/config), sélecteur Modèle, consignes éditables, **case « Récupérer les composants liés à chaque fonction »**, journal live, boutons Annuler/Fermer + « Lancer la mise à jour ».
+- **Composants liés** : si l'option est cochée, l'IA renseigne le champ `components` de chaque proposition. À l'application, le serveur écrit une ligne \`- **Composants:** \`chemin\`, …\` sous la fonction ; au scan, \`extractFunctionComponents\` les reparse → champ \`components[]\`, **affiché en chips** sous le titre dans le Cahier (`2-1-5-1`). Paramètre SSE \`components=1|0\`.
+
+---
+
+## `2-1-5-10` — Revue & validation des propositions avant migration
+
+- **Déclenchement** : à la fin de la génération IA (`2-1-5-9`), un popup de revue s'ouvre avec la liste des propositions.
+- **En-tête** : compteurs `+ajouts`, `modifs`, `suppr.`, `inchangées`.
+- **Par proposition** : badge `op` coloré (Ajout vert / Modif ambre / Suppr rouge / Inchangée gris), badge ID (`nouveau` si ajout), libellé, chips composants, et **case à cocher** (sauf inchangées). Dépliable :
+  - **Modif** : vue **Avant / Après** côte à côte (contenu rendu).
+  - **Ajout / Suppr** : contenu de la fonction.
+- **Sélection** : ajouts/modifs/suppressions cochés par défaut ; l'utilisateur décoche ce qu'il refuse. Compteur de changements sélectionnés.
+- **Appliquer** : le client construit la liste finale (ordre existant + modifs/suppressions validées + ajouts validés) → POST `/api/admin/tests/apply-functions { folderId, functions }`.
+- **Historique** : chaque application est enregistrée (`2-1-5-11`) et listée dans l'onglet Historique.
+- **Endpoint application** : `POST /api/admin/tests/apply-functions { folderId, functions, updatedBy, changes }` réécrit le `fonctions.md` (`writeFonctionsMd` : conserve le titre `#`, assigne les nouveaux IDs en continuant après le max, normalise la ligne Composants), invalide le cache, renvoie les fonctions à jour. Le Cahier recharge fonctions + couleurs.
+- **Date + IA de mise à jour** : à l'application, le serveur écrit un commentaire \`<!-- worganic:meta updatedAt="…" updatedBy="…" -->\` en tête du fichier (`updatedBy` = provider + modèle). Reparsé au scan (`parseFonctionsMd`) → champs \`updatedAt\`/\`updatedBy\` sur chaque fonction, affichés : (1) en **chip discret dans l'en-tête** de section (date courte + IA, masqué sur petit écran), et (2) en **bandeau au-dessus du tableau des tests** quand la section est dépliée (« Fonctions mises à jour le {date} par {IA} »).
+- **Objectif** : l'IA analyse le **code** de la section (composants Angular, templates, routes serveur) et **propose** la liste cible des fonctions à tester (ajouts/corrections/suppressions), en respectant le **système d'IDs** existant (format `## \`{folderId}-{N}\` — Libellé`, tiret long, pas de renumérotation, IDs supprimés non réattribués). **Aucune écriture directe** du `fonctions.md`.
+- **Endpoint proposition** : `GET /api/admin/tests/generate-functions-stream?folderId=&provider=&model=&prompt=&components=&token=` (SSE). Résout `folderId`→path via `_registry.json`, prépare un fichier de sortie `data/tests-admin/gen-runs/<id>/proposals.json`, construit un prompt demandant à l'IA d'**écrire un tableau JSON** (liste cible : `id` réutilisé si existant, omis si nouveau, `section`, `tasks`, `components?`), appelle l'executor local `/execute-prompt` (`cwd` = racine), streame (`start`, `ai-log`, `ai-error`, `complete`, `run-failed`). À la fin, lit le JSON et calcule le **diff** vs l'existant (`computeFunctionProposals`) → `op` = `add|modify|delete|unchanged`, renvoyé dans `complete.proposals`.
+- **Popup de revue** (`2-1-5-10`) : avant migration, l'utilisateur valide chaque ajout/modif/suppression.
+- Fonctionne avec Claude Code et Antigravity (tous deux écrivent le fichier JSON).
+
+---
+
+## `2-1-5-11` — Onglet Historique des mises à jour du référentiel
+
+- **Onglet « Historique »** (icône `history`) : liste, du plus récent au plus ancien, chaque **application** de mise à jour des fonctions (générations IA validées).
+- **Source** : `GET /api/admin/tests/functions-history` (fichier `data/tests-admin/functions-history.json`). Une entrée est créée à chaque `apply-functions` ayant au moins un changement.
+- **Par entrée** : date, section (`pageTitle` + `folderId`), IA (`updatedBy`), badges de compteurs (+ajouts `green` / ~modifs `amber` / −suppr `red`). **Dépliable** : listes détaillées des fonctions ajoutées / modifiées / supprimées, chacune avec **badge de priorité** (couleur), ID, libellé et une **explication courte** (ajout : résumé ; modification : ce qui a changé — libellé/tâches/composants/priorité avant→après ; suppression : ancien résumé). Total après mise à jour.
+- **Diff** : fourni par le client à l'application (`changes` = added/modified/deleted avec `priority` + `explanation`), persisté tel quel.
+- **Échange IA complet** : chaque entrée issue d'une génération conserve le **prompt envoyé** (`aiPrompt`) et la **réponse brute de l'IA** (`aiResponse`), affichés dans un bloc dépliable « Échange IA complet (prompt + réponse) » — utile pour vérifier que l'IA renvoie bien les infos demandées (dont la priorité). Transmis par le SSE `complete` de la génération (`prompt`, `rawResponse`) puis au POST apply.
+
+---
+
+## `2-1-5-12` — Priorité des fonctions & validation des sections
+
+- **Priorité par fonction** : `mineur` / `critique` / `bloquant`, stockée dans le `fonctions.md` (ligne `- **Priorité:** …`), parsée (`extractFunctionPriority`) en champ `priority`.
+  - **Renseignée par l'IA** lors de la génération (champ `priority` du JSON de propositions, voir `2-1-5-9`) — le prompt impose d'évaluer fonction par fonction avec exemples (connexion/inscription/paiement/sauvegarde = `bloquant`, etc.) ; le serveur normalise les synonymes FR/EN (`normalizePriority`).
+  - **Éditable manuellement** dans le Cahier (select par fonction) → POST `/api/admin/tests/function-priority`.
+- **Validation d'une section (onglet Résultats)** — par section et par run :
+  - **1 bloquant KO ⇒ section invalide** (quel que soit le reste).
+  - sinon **% de critiques KO > seuil critique** (défaut 15%) ⇒ invalide.
+  - sinon **% de mineurs KO > seuil mineur** (défaut 40%) ⇒ invalide.
+  - sinon valide (si au moins une fonction décidée ; sinon « non testée »).
+- **Seuils modifiables** dans la barre d'outils de l'onglet Résultats (2 champs %), persistés : GET/POST `/api/admin/tests/settings { critiqueThreshold, mineurThreshold }`.
+- **Affichage** : la cellule de score de section devient verte (✓ valide) ou rouge (✗ invalide) avec le %, infobulle = raison de l'invalidation.

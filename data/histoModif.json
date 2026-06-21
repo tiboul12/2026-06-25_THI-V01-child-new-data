@@ -6,7 +6,9 @@
       "date": "2026-06-21T00:36:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["system"],
+      "scope": [
+        "system"
+      ],
       "features": "system:recette-tests",
       "title": "Création du lanceur CLI tests/run-recette-cli.js pour tester le site via agy",
       "description": "Ajout d'un script Node.js utilitaire run-recette-cli.js qui permet de lancer des sessions de tests automatisés IA sur tout ou partie des fonctions du projet via agy en direct. Il charge le registre tests/fonctions/_registry.json, construit le prompt QA structuré et parse les sentinelles @@TEST_RESULT@@ en direct sur la sortie standard d'agy pour afficher les résultats.",
@@ -25,7 +27,9 @@
       "date": "2026-06-20T19:58:30.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["portail"],
+      "scope": [
+        "portail"
+      ],
       "features": "portail:landing",
       "title": "Landing : Correction du binding email dans le formulaire d'inscription",
       "description": "Ajout de l'attribut name='reg-email' manquant sur l'input email d'inscription. En Angular, ngModel utilisé dans une balise form nécessite obligatoirement l'attribut name pour assurer le binding bidirectionnel.",
@@ -44,7 +48,11 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server", "data"],
+      "scope": [
+        "portail",
+        "server",
+        "data"
+      ],
       "features": "portail:admin|tests,server:admin-tests",
       "title": "Admin/Tests : mode automatique IA (Claude Code + Browser MCP)",
       "description": "Nouveau mode de test automatique. Popup : toggle Manuel/Automatique(IA) ; en IA, sélecteurs provider (CLI agentiques d'admin/config) + modèle, consignes éditables, et bloc format de retour imposé affiché. Serveur : POST /runs stocke mode/aiProvider/aiModel/prompt ; nouvel endpoint SSE GET /runs/:id/ai-stream qui construit le prompt (consignes + format @@TEST_RESULT@@ imposé + liste fonctions), appelle l'executor local /execute-prompt (Claude Code / Antigravity pilotent le navigateur via l'extension Browser MCP), parse les résultats au fil de l'eau, les persiste et ré-émet en SSE. Client : Runner IA avec bannière de progression (X/Y) et affichage progressif des verdicts, revue manuelle puis Terminer ; badge IA au dashboard. Réutilise ConfigService (providers/modèles) et le pattern SSE EventSource.",
@@ -66,7 +74,9 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "refactor",
       "commitType": "AMELIORATION",
-      "scope": ["portail"],
+      "scope": [
+        "portail"
+      ],
       "features": "portail:admin|tests",
       "title": "Admin/Tests : boutons d'action en colonne fixe à gauche du référentiel",
       "description": "Déplacement des boutons d'action (Lancer / Ouvrir le dossier) de la droite de chaque nœud vers une colonne fixe collée à gauche, non affectée par l'indentation de l'arbre. Les boutons sont désormais toujours visibles (suppression du hover-opacity). L'arborescence (toggle + fonctions) est indentée à droite de cette colonne.",
@@ -85,7 +95,10 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "data"],
+      "scope": [
+        "portail",
+        "data"
+      ],
       "features": "portail:admin|tests",
       "title": "Admin/Tests : lancer un test depuis le référentiel",
       "description": "Ajout d'un bouton 'Lancer un test sur cette section' (play_arrow) sur chaque nœud du référentiel de fonctions. Il ouvre le popup de lancement existant (même composant) avec la/les section(s) du nœud pré-cochée(s) : un nœud feuille pré-coche sa section, un nœud branche pré-coche toutes ses sous-sections testables. Méthode openLaunchForNode(fullPath) qui résout les folderIds descendants via flatTree.",
@@ -106,7 +119,11 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server", "data"],
+      "scope": [
+        "portail",
+        "server",
+        "data"
+      ],
       "features": "portail:admin|tests,server:admin-tests",
       "title": "Admin/Tests : ouvrir le dossier local d'un fonctions.md",
       "description": "Ajout d'un bouton 'Ouvrir le dossier local' sur chaque nœud du référentiel de fonctions et dans les en-têtes de groupe du runner. Nouvel endpoint POST /api/admin/tests/open-folder { path } : résout le chemin relatif sous tests/fonctions (avec garde anti-traversée) et ouvre le répertoire dans l'explorateur de fichiers (explorer/open/xdg-open). Méthode client openFolder(relPath).",
@@ -128,7 +145,10 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "data"],
+      "scope": [
+        "portail",
+        "data"
+      ],
       "features": "portail:admin|tests",
       "title": "Admin/Tests : contenu des tâches dans la page de résultat",
       "description": "Dans la vue détail d'un run, chaque ligne de résultat est désormais dépliable (clic sur le libellé) pour afficher le contenu markdown de la fonction — la liste des tâches à effectuer — comme dans le runner. Ajout du helper getFunctionContent(itemId) et réutilisation de renderContent + isItemExpanded/toggleItemExpand.",
@@ -149,7 +169,11 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "feature",
       "commitType": "AMELIORATION",
-      "scope": ["portail", "server", "data"],
+      "scope": [
+        "portail",
+        "server",
+        "data"
+      ],
       "features": "portail:admin|tests,server:admin-tests",
       "title": "Admin/Tests : nom, sélection de sections, annulation, suppression",
       "description": "Améliorations du système admin/tests. (1) Popup de lancement : champ nom (optionnel) + sélection des sections à tester via cases à cocher (Tout/Aucun). (2) Serveur : POST /api/admin/tests/runs accepte folderIds pour ne créer le run que sur les sections choisies ; le runner filtre l'affichage aux fonctions du run (groupedFunctions filtré par activeRun.results). (3) Bouton Annuler dans le runner : abandonne et supprime le run en cours (avec confirmation). (4) Bouton supprimer par ligne sur le dashboard + confirmation. Popup de confirmation générique (annulation/suppression).",
@@ -171,7 +195,9 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "MO Tableau : éditable en mode Édition comme en Structure",
       "description": "Le board Array n'était pas éditable en mode Édition. Cause principale : en preview standalone d'un fichier array (clic sur le nœud fichier AR: Mon Tableau), le template passait [readonly]=\"true\" codé en dur, contrairement au Trello équivalent ([readonly]=\"isTrelloInstanceLocked\"). Fix : [readonly]=\"isArrayInstanceLocked(aid)\". Correctif complémentaire : éviter le rebuild visu pendant l'édition live (skipVisu sur recomputeAll, suppression du buildVisuSections dans onArrayGridChanged) — chaque changement de cellule reconstruisait sinon la section.",
@@ -191,7 +217,9 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "MO : fence vide avalant le heading voisin + board Array mal placé",
       "description": "Trois correctifs liés au placement des MO entre sections. (1) Cause racine du déplacement/suppression de section : le pré-scan des fences dans parseContent (/^```[^\\n]*\\n[\\s\\S]*?\\n```/) exigeait un \\n avant la fermeture, donc ne matchait pas un fence VIDE (```ARRAY: Nom\\n```) et avalait tout jusqu'au prochain ``` (fence Trello suivant), absorbant le heading intermédiaire. Fix : corps optionnel (?:[\\s\\S]*?\\n)?. (2) insertAt insère le MO avant la première sous-section enfant (placement correct quand la section a des enfants) + suppression des ta.selectionStart=ta.value.length inutiles. (3) Asymétrie Trello/Array : le board Array s'affichait selon inst.folderId (périmé) au lieu de la position réelle du bloc, le dupliquant dans une section voisine. Ajout de resolveArrayFolderId + recomputeArraySections (symétriques de Trello) ; arrayInstancesForVisuSection utilise désormais la position du bloc et resynchronise le folder_id en base. (4) Ordre d'affichage des boards : le template rendait tous les Trello avant tous les Array, ne respectant pas l'ordre du menu. Ajout de orderedBoardsForVisuSection qui ordonne Trello+Array par position du bloc dans textContent (= ordre des fichiers = ordre du menu) ; template fusionné en une seule boucle. La branche Array du template reçoit aussi le modificateur --auto (height:auto) : sans lui le wrapper faisait 72vh et poussait le board suivant (Trello) hors de l'écran en mode Édition.",
@@ -211,7 +239,9 @@
       "date": "2026-06-20T00:00:00.000Z",
       "type": "fix",
       "commitType": "FIX",
-      "scope": ["projets"],
+      "scope": [
+        "projets"
+      ],
       "features": "projets:editor|zone-code",
       "title": "MO : insertion de marqueur sans textarea (mode Édition/Structure/liste)",
       "description": "Correctif dans insertAt() : quand textareaRef est null (mode Édition, Structure, ou vue liste Trello/Mockup ouverte), le contenu est inséré directement dans unifiedContent à la fin de la section active (identifiée par pendingMoFolderId ou activeNodeId). Résout le bug où les MO Trello/Tableau/Mockup apparaissaient dans la liste mais leur marqueur n'était pas sauvegardé dans la section.",
@@ -9980,6 +10010,479 @@
       "prompt": "lorsque je veux lancer un test, je ne vois dispo que claude code",
       "startedAt": "2026-06-21T01:15:00.000Z",
       "completedAt": "2026-06-21T01:25:00.000Z"
+    },
+    {
+      "id": "mod-421",
+      "version": "B-0.295",
+      "date": "2026-06-21T09:42:15.503Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Admin/Tests : refonte en 3 onglets (Cahier/Exécution/Résultats)",
+      "description": "Refonte de l'affichage admin/tests inspirée de l'outil projets tests-outil : onglets Cahier de recette (référentiel en tableaux par section), Exécution (config de lancement inline + runner OK/KO/ND + journal IA en direct) et Résultats (matrice runs × fonctions avec scores colorés). Système de tests automatiques IA (Claude/Antigravity via Browser MCP) conservé intact. Nouvel endpoint serveur GET /api/admin/tests/matrix.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "en t'inspirant de l'outils projets/outil/tests améliore le menu admin/tests. Met en place 3 mode distinct cahier de rectte, Execution et résultats et met en place l'affichage existant dans l'outil/tests Garde bien le système de tests automatique via IA claude et antigravity, mais améliore l'affichage d'admin/tests",
+      "startedAt": "2026-06-21T09:42:15.503Z",
+      "completedAt": "2026-06-21T09:42:15.503Z"
+    },
+    {
+      "id": "mod-422",
+      "version": "B-0.295",
+      "date": "2026-06-21T10:18:20.071Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "admin:tests",
+      "title": "Admin/Tests Cahier : arbre hiérarchique trié + accordéon",
+      "description": "Onglet Cahier de recette : remplacement de l'affichage plat (mal trié, 2-1-1 avant 1-1) par un arbre hiérarchique catégorie→sous-catégorie→section, trié numériquement par ID en pré-ordre, avec accordéon (catégories racines 1/2 visibles, dépliage des sous-catégories) et boutons Tout ouvrir/fermer. ID des nœuds intermédiaires déduit du folderId des feuilles.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans la page admin/test/cahier de recette, améliore l'affichage avec un ordre plus logique de l'affichage, actuellement 2-1-1 est avant 1-1 ajoute aussi un affichage par hierarchie et catégorie (affichage de 1 et 2, bouton accordeon, pour affiché les sous cat etc)",
+      "startedAt": "2026-06-21T10:18:20.071Z",
+      "completedAt": "2026-06-21T10:18:20.071Z"
+    },
+    {
+      "id": "mod-423",
+      "version": "B-0.295",
+      "date": "2026-06-21T10:27:42.183Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier de recette : couleurs selon les derniers résultats de tests",
+      "description": "Onglet Cahier : croisement avec la matrice des runs. Chaque fonction affiche son dernier état décidé (OK/KO/non testé) + date dans une colonne État ; les sections et catégories sont colorées (rouge si ≥1 KO, vert si tout OK, gris si non testé) avec % de réussite, compteur OK/KO, nombre de non testés et date du dernier test. Matrice chargée à l'init et à l'ouverture du Cahier.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans admin/test/cahier de recette je voudrais que tu récupère les résultats des tests déjà effectué et que tu mette en couleur les fonctions ou section suivant si les résultats sont positive ou négatif... avec le pourcentage, avec le nombre de non testé et la date du dernier test",
+      "startedAt": "2026-06-21T10:27:42.183Z",
+      "completedAt": "2026-06-21T10:27:42.183Z"
+    },
+    {
+      "id": "mod-424",
+      "version": "B-0.295",
+      "date": "2026-06-21T10:37:12.244Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier de recette : recherche (autocomplétion) + filtre par état",
+      "description": "Onglet Cahier : champ de recherche insensible aux accents (libellé/pageTitle/ID/contenu) avec autocomplétion (dropdown 8 suggestions, icône d'état), et filtre d'état Toutes/Testées/Non testées/En erreur. L'arbre se déplie automatiquement sur les résultats, message si aucun résultat.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "ajoute dans admin/test/cahier de recette une recherche (avec autocompletion) et un filtre pour affiché les section testé ou non",
+      "startedAt": "2026-06-21T10:37:12.244Z",
+      "completedAt": "2026-06-21T10:37:12.244Z"
+    },
+    {
+      "id": "mod-425",
+      "version": "B-0.295",
+      "date": "2026-06-21T10:39:54.504Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier de recette : retour à la ligne des titres/descriptions longues",
+      "description": "Tableau du Cahier : suppression du truncate sur le libellé et le résumé des fonctions (passage en break-words) et table en table-fixed pour que les textes longs s'enroulent sous la colonne au lieu de déborder horizontalement.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Certaine section son trop longue, il faut passé le texte en dessous",
+      "startedAt": "2026-06-21T10:39:54.504Z",
+      "completedAt": "2026-06-21T10:39:54.504Z"
+    },
+    {
+      "id": "mod-426",
+      "version": "B-0.295",
+      "date": "2026-06-21T10:59:19.417Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier : génération/mise à jour des fonctions de test par IA",
+      "description": "Bouton par section (auto_fix_high) ouvrant un popup (choix IA/modèle/prompt) qui demande à une IA agentique (Claude Code/Antigravity) d'analyser le code de la section et de mettre à jour son fonctions.md (ajout/correction des fonctions à tester) en respectant le système d'IDs hiérarchiques. Nouvel endpoint SSE GET /api/admin/tests/generate-functions-stream (executor local, cwd=racine, l'IA édite le fichier ; recharge du référentiel en fin).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "ajoute un bouton à chaque section pour lancer une nouvelle fonction, un popup doit s ouvrir avec le choix de l ia du model et un prompt afin de demander à une IA de tester tous le code et le système et de rajouté ou modifié la liste des fonctions à tester...",
+      "startedAt": "2026-06-21T10:59:19.417Z",
+      "completedAt": "2026-06-21T10:59:19.417Z"
+    },
+    {
+      "id": "mod-427",
+      "version": "B-0.295",
+      "date": "2026-06-21T11:13:39.790Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier : composants liés aux fonctions (option IA + affichage)",
+      "description": "Option dans le popup de génération IA pour récupérer les composants/fichiers source liés à chaque fonction (ligne Composants: dans le fonctions.md). Le serveur parse cette ligne (extractFunctionComponents) et expose components[] par fonction ; le Cahier affiche ces composants en chips sous le titre. Paramètre SSE components=1|0.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "ajoute une option dans le prompt pour récupérer les components lié à chaque fonction et affiche les dans le cahier de recette",
+      "startedAt": "2026-06-21T11:13:39.790Z",
+      "completedAt": "2026-06-21T11:13:39.790Z"
+    },
+    {
+      "id": "mod-428",
+      "version": "B-0.295",
+      "date": "2026-06-21T11:34:30.678Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Génération IA des fonctions : revue/validation avant migration",
+      "description": "La génération IA ne modifie plus directement le fonctions.md : l'IA écrit un JSON de propositions, le serveur calcule le diff (ajout/modif/suppression/inchangée) et un popup de revue laisse l'utilisateur valider chaque changement (cases à cocher, vue avant/après pour les modifs, chips composants). L'application réécrit le fichier via POST /api/admin/tests/apply-functions (writeFonctionsMd : titre conservé, IDs continués, composants normalisés).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "avant de migrer les résultats de la liste des fonctions à ajouter/modifié/supprimé, affiche les dans un popup pour que le user valide ou non chaque fonction.",
+      "startedAt": "2026-06-21T11:34:30.678Z",
+      "completedAt": "2026-06-21T11:34:30.678Z"
+    },
+    {
+      "id": "mod-429",
+      "version": "B-0.295",
+      "date": "2026-06-21T12:08:17.182Z",
+      "type": "config",
+      "commitType": "FIX",
+      "scope": [
+        "system"
+      ],
+      "features": "system:launcher",
+      "title": "Launcher : API en mode auto-reload (node --watch)",
+      "description": "Commande API du launcher_app.py passée de 'node server/server-data.js' à 'node --watch server/server-data.js' pour recharger automatiquement le serveur à chaque modification de server-data.js (évite les 404 sur routes nouvellement ajoutées sans redémarrage).",
+      "files": [
+        "launcher_app.py"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "oui modifi ça",
+      "startedAt": "2026-06-21T12:08:17.182Z",
+      "completedAt": "2026-06-21T12:08:17.182Z"
+    },
+    {
+      "id": "mod-430",
+      "version": "B-0.295",
+      "date": "2026-06-21T12:16:25.010Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier : date + IA de mise à jour par section",
+      "description": "À l'application des fonctions générées par IA, le serveur écrit un commentaire meta (updatedAt + updatedBy=provider/modèle) en tête du fonctions.md, reparsé au scan (parseFonctionsMd) et exposé sur chaque fonction. L'en-tête de section du Cahier affiche la date courte + l'IA (icône smart_toy, date complète en infobulle).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "ajoute dans chaque section mise à jour la date et l IA de mise à jour",
+      "startedAt": "2026-06-21T12:16:25.010Z",
+      "completedAt": "2026-06-21T12:16:25.010Z"
+    },
+    {
+      "id": "mod-431",
+      "version": "B-0.295",
+      "date": "2026-06-21T12:21:44.250Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Admin/Tests : historique des mises à jour du référentiel (nouvel onglet)",
+      "description": "Chaque application de mise à jour des fonctions (génération IA validée) est enregistrée dans data/tests-admin/functions-history.json avec date, section, IA et le diff (ajoutées/modifiées/supprimées). Nouvel onglet Historique listant ces mises à jour (récent→ancien) avec compteurs colorés et détail dépliable. Endpoints GET /api/admin/tests/functions-history et enregistrement dans POST apply-functions (param changes).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "chaque mise à jour des fonctions à tester doit être gardé en mémoire et on doit pouvoir les listés dans une nouvelle sous section.",
+      "startedAt": "2026-06-21T12:21:44.250Z",
+      "completedAt": "2026-06-21T12:21:44.250Z"
+    },
+    {
+      "id": "mod-432",
+      "version": "B-0.295",
+      "date": "2026-06-21T12:38:25.624Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier : sections favorites (étoile) + filtre Favoris",
+      "description": "Bouton étoile sur chaque section feuille pour (dé)marquer un favori (persisté côté serveur dans data/tests-admin/favorites.json), et chip filtre Favoris pour n'afficher que les sections favorites. Endpoints GET/POST /api/admin/tests/favorites ; intégration au filtrage de l'arbre (matchingItemIds + suggestions).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "ajoute une option pour rajouté des sections en favoris (étoile) et un filtre pour indiqué les sections en favoris",
+      "startedAt": "2026-06-21T12:38:25.624Z",
+      "completedAt": "2026-06-21T12:38:25.624Z"
+    },
+    {
+      "id": "mod-433",
+      "version": "B-0.295",
+      "date": "2026-06-21T12:45:42.171Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier : bandeau date + IA de mise à jour au-dessus des tests",
+      "description": "Quand une section est dépliée, affichage d'un bandeau (au-dessus du tableau des tests) indiquant la date et l'IA de la dernière mise à jour des fonctions, en complément du chip discret de l'en-tête.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans les sections il faut affiché les infos des tests (déjà le cas) et au dessus la date et l'IA utilisé pour la mise à jour des fonctions",
+      "startedAt": "2026-06-21T12:45:42.171Z",
+      "completedAt": "2026-06-21T12:45:42.171Z"
+    },
+    {
+      "id": "mod-434",
+      "version": "B-0.295",
+      "date": "2026-06-21T13:19:43.960Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Tests : campagnes multi-sections + refonte onglet Résultats",
+      "description": "Exécution : nouveau type 'Campagne' regroupant plusieurs sections testées au fil du temps dans une seule colonne de résultats (nouvelle campagne ou ajout à une campagne ouverte via POST /runs/:id/add-sections ; l'IA ne teste que les fonctions pending ; boutons Enregistrer/Clôturer). Résultats : accordéon des sections (Tout ouvrir/fermer), filtre KO uniquement, légende, en-têtes de colonne enrichis (badge Campagne + nom + ratio OK), date+IA de dernière MAJ des fonctions par section, infobulles de cellule (note + date).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "amélioré affichage admin/test/resultats (infos MAJ, accordéon) + système de campagne dans Exécution (tester plusieurs sections petit à petit, affichées dans une seule colonne)",
+      "startedAt": "2026-06-21T13:19:43.960Z",
+      "completedAt": "2026-06-21T13:19:43.960Z"
+    },
+    {
+      "id": "mod-435",
+      "version": "B-0.295",
+      "date": "2026-06-21T13:52:24.391Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Tests : priorité par fonction (mineur/critique/bloquant) + validation de section",
+      "description": "Priorité par fonction stockée dans fonctions.md (ligne Priorité:), renseignée par l'IA (champ priority du JSON + prompt) ou éditable manuellement (select dans le Cahier, POST /function-priority). Affichée dans Cahier (colonne + pastille) et Résultats (pastille couleur). Validation de section dans Résultats : 1 bloquant KO invalide, >seuil critiques KO invalide, >seuil mineurs KO invalide ; seuils (15/40 par défaut) éditables et persistés (GET/POST /settings). La cellule de score de section affiche le verdict valide/invalide coloré + raison.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Chaque fonction de test doit avoir une prioritée mineur/critique/bloquant renvoyé par l IA ou manuellement, indiqué dans le cahier. Dans résultats: bloquant invalide la section, >15% critique invalide, >40% mineur invalide. Pourcentages modifiables dans Résultats.",
+      "startedAt": "2026-06-21T13:52:24.391Z",
+      "completedAt": "2026-06-21T13:52:24.391Z"
+    },
+    {
+      "id": "mod-436",
+      "version": "B-0.295",
+      "date": "2026-06-21T14:05:35.990Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier : lisibilité du select de priorité",
+      "description": "Le select de priorité colorait aussi le texte des options (menu déroulant) → illisible sur fond clair. Texte du select passé en neutre (lisible), couleur conservée via fond/bordure (prioritySelectClass), options forcées en texte neutre + color-scheme explicite.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "corrige la couleur du select qui est illisible",
+      "startedAt": "2026-06-21T14:05:35.990Z",
+      "completedAt": "2026-06-21T14:05:35.990Z"
+    },
+    {
+      "id": "mod-437",
+      "version": "B-0.295",
+      "date": "2026-06-21T14:07:47.252Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "admin:tests",
+      "title": "Priorités : couleurs mineur bleu / critique jaune / bloquant rouge",
+      "description": "Couleurs de priorité harmonisées : mineur bleu clair (sky), critique jaune, bloquant rouge — badges, select (texte coloré + option colorée par sa propre priorité), et pastille de la matrice.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "met en couleur les texte mineur bleu clair, critique jaune, et bloquant rouge",
+      "startedAt": "2026-06-21T14:07:47.252Z",
+      "completedAt": "2026-06-21T14:07:47.252Z"
+    },
+    {
+      "id": "mod-438",
+      "version": "B-0.295",
+      "date": "2026-06-21T14:14:05.430Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Historique : priorité + explication par fonction",
+      "description": "L'historique des mises à jour affiche désormais, pour chaque fonction ajoutée/modifiée/supprimée, un badge de priorité coloré et une explication courte (ajout : résumé du contenu ; modification : champs modifiés dont priorité avant→après ; suppression : ancien résumé). Le diff client (changes) et l'enregistrement serveur incluent priority + explanation.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans la page historique, cela doit indiquer plus d information comme la priorité de chaque fonctions et une explication minimum",
+      "startedAt": "2026-06-21T14:14:05.430Z",
+      "completedAt": "2026-06-21T14:14:05.430Z"
+    },
+    {
+      "id": "mod-439",
+      "version": "B-0.295",
+      "date": "2026-06-21T14:24:20.367Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "admin:tests",
+      "title": "Priorité IA fiabilisée + échange IA complet dans l historique",
+      "description": "Prompt de génération renforcé pour que l IA évalue réellement la priorité par fonction (exemples bloquant/critique/mineur). normalizePriority tolère les synonymes FR/EN et formes fléchies. L historique conserve et affiche l échange IA complet (prompt envoyé + réponse brute) dans un bloc dépliable, transmis via le SSE complete puis au POST apply-functions.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "l IA doit analyser si la fonction est mineur/critique/bloquant (ne renvoie que mineur) - modifier prompt/récupération. Dans l historique avoir le retour complet de l IA (prompt et retour) pour analyser.",
+      "startedAt": "2026-06-21T14:24:20.367Z",
+      "completedAt": "2026-06-21T14:24:20.367Z"
+    },
+    {
+      "id": "mod-440",
+      "version": "B-0.295",
+      "date": "2026-06-21T14:52:55.057Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "admin:tests",
+      "title": "Cahier : select de priorité affichait toujours Mineur",
+      "description": "Le <select> de priorité gardait l'affichage 'Mineur' (le [value] ne sélectionne pas fiablement l'option) alors que le fond reflétait la vraie priorité. Correction via [selected] sur chaque option.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "l'affichage des prioritées n'est pas bonne, la couleur est ok mais pas le texte",
+      "startedAt": "2026-06-21T14:52:55.057Z",
+      "completedAt": "2026-06-21T14:52:55.057Z"
     }
   ]
 }

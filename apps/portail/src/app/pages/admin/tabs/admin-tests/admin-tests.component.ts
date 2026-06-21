@@ -12,8 +12,14 @@ interface FunctionItem {
   path: string;
   pageTitle: string;
   section: string;
-  content: string;   // contenu markdown sous le ## heading
+  content: string;        // contenu markdown sous le ## heading
+  components?: string[];   // fichiers/composants liés (parsés depuis le markdown)
+  priority?: 'mineur' | 'critique' | 'bloquant';
+  updatedAt?: string;      // date de dernière mise à jour IA de la section
+  updatedBy?: string;      // IA ayant mis à jour la section
 }
+
+type Priority = 'mineur' | 'critique' | 'bloquant';
 
 interface TestResult {
   itemId: string;
@@ -31,6 +37,7 @@ interface TestRunSummary {
   stats: RunStats;
   // Mode automatique (IA via Claude Code + Browser MCP)
   mode?: 'manual' | 'ai';
+  isCampaign?: boolean;
   aiProvider?: string | null;
   aiModel?: string | null;
   aiState?: 'idle' | 'running' | 'done' | 'error';
@@ -39,19 +46,89 @@ interface TestRunSummary {
 
 interface TestRunDetail extends TestRunSummary { results: TestResult[]; }
 
-interface TopKoEntry { itemId: string; count: number; }
+interface MatrixRun {
+  id: string; name: string | null; tester: string;
+  startedAt: string; completedAt: string | null;
+  status: 'in_progress' | 'completed';
+  mode: 'manual' | 'ai';
+  isCampaign?: boolean;
+  stats: RunStats;
+  results: { itemId: string; status: string; note: string | null; testedAt?: string | null }[];
+}
 
-interface FlatTreeNode {
+// Onglet Résultats — structure pré-calculée de la matrice
+interface MatrixCell { runId: string; status: string | null; note?: string | null; testedAt?: string | null; }
+interface MatrixRow { item: FunctionItem; cells: MatrixCell[]; }
+interface MatrixScore { runId: string; score: number | null; }
+interface MatrixGroup {
+  path: string; pageTitle: string; folderId: string;
+  scores: MatrixScore[];
+  rows: MatrixRow[];
+}
+interface MatrixCol { run: MatrixRun; score: number | null; }
+
+// Onglet Cahier — référentiel groupé par section
+interface CahierGroup { path: string; pageTitle: string; folderId: string; items: FunctionItem[]; }
+
+// Onglet Cahier — nœud de l'arbre hiérarchique (catégories → sous-catégories → sections)
+interface CahierNode {
   depth: number;
   name: string;
   fullPath: string;
-  folderId: string;    // '' pour les nœuds intermédiaires sans fonctions.md
+  id: string;          // ID hiérarchique (ex: '2', '2-1', '2-1-5')
   pageTitle: string;
   items: FunctionItem[];
   hasChildren: boolean;
 }
 
-type View = 'dashboard' | 'runner' | 'detail';
+// Proposition de l'IA pour une fonction (revue avant migration)
+interface Proposal {
+  op: 'add' | 'modify' | 'delete' | 'unchanged';
+  id: string | null;
+  section: string;
+  content: string;
+  components?: string[];
+  priority?: 'mineur' | 'critique' | 'bloquant';
+  oldSection?: string;
+  oldContent?: string;
+  oldComponents?: string[];
+  oldPriority?: string;
+}
+
+// Onglet Cahier — agrégat des derniers résultats pour un nœud (section/catégorie)
+interface NodeStat {
+  total: number;
+  ok: number;
+  ko: number;
+  untested: number;
+  pct: number | null;       // OK / (OK+KO)
+  lastDate: string | null;  // date du dernier test décidé
+}
+
+type Tab = 'cahier' | 'execution' | 'resultats' | 'historique';
+
+interface FnHistoryEntry {
+  id: string;
+  date: string;
+  folderId: string;
+  path: string;
+  pageTitle: string;
+  updatedBy: string;
+  added: FnHistoryChange[];
+  modified: FnHistoryChange[];
+  deleted: FnHistoryChange[];
+  counts: { added: number; modified: number; deleted: number };
+  total: number;
+  aiPrompt?: string;
+  aiResponse?: string;
+}
+
+interface FnHistoryChange {
+  id: string | null;
+  section: string;
+  priority?: 'mineur' | 'critique' | 'bloquant';
+  explanation?: string;
+}
 
 @Component({
   selector: 'app-admin-tests',
@@ -65,6 +142,7 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
 
   // Conteneur du journal IA — pour auto-scroll en bas à chaque nouvelle ligne.
   @ViewChild('aiLogBox') aiLogBox?: ElementRef<HTMLDivElement>;
+  @ViewChild('genLogBox') genLogBox?: ElementRef<HTMLDivElement>;
 
   constructor() {
     // Auto-scroll du journal live vers le bas dès qu'une ligne est ajoutée.
@@ -73,41 +151,630 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
       const el = this.aiLogBox?.nativeElement;
       if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
     });
+    effect(() => {
+      this.genLog();
+      const el = this.genLogBox?.nativeElement;
+      if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+    });
   }
 
-  view = signal<View>('dashboard');
+  readonly tabs: { id: Tab; label: string; icon: string }[] = [
+    { id: 'cahier',     label: 'Cahier de recette', icon: 'checklist' },
+    { id: 'execution',  label: 'Exécution',         icon: 'play_circle' },
+    { id: 'resultats',  label: 'Résultats',         icon: 'bar_chart' },
+    { id: 'historique', label: 'Historique',        icon: 'history' },
+  ];
 
-  // Dashboard
-  runs        = signal<TestRunSummary[]>([]);
-  topKo       = signal<TopKoEntry[]>([]);
-  loadingRuns = signal(false);
-  runsError   = signal('');
+  activeTab = signal<Tab>('cahier');
 
-  // Runner
+  // Données communes
   functions        = signal<FunctionItem[]>([]);
   loadingFunctions = signal(false);
-  activeRun        = signal<TestRunDetail | null>(null);
-  runnerName       = signal('');
-  saving           = signal(false);
-  private saveDebounce: any = null;
+  runsError        = signal('');
 
-  groupedFunctions = computed(() => {
-    // Si un run est actif, n'afficher que les fonctions qu'il couvre (run filtré par section).
-    const run = this.activeRun();
-    const allowed = run ? new Set(run.results.map(r => r.itemId)) : null;
-    const groups = new Map<string, { path: string; pageTitle: string; folderId: string; items: FunctionItem[] }>();
-    for (const item of this.functions()) {
-      if (allowed && !allowed.has(item.id)) continue;
-      if (!groups.has(item.path)) groups.set(item.path, { path: item.path, pageTitle: item.pageTitle, folderId: item.folderId, items: [] });
-      groups.get(item.path)!.items.push(item);
+  // Runs (résumés) + matrice (runs complets avec résultats)
+  runs        = signal<TestRunSummary[]>([]);
+  loadingRuns = signal(false);
+  matrixRuns  = signal<MatrixRun[]>([]);
+  loadingMatrix = signal(false);
+
+  // Historique des mises à jour du référentiel
+  fnHistory        = signal<FnHistoryEntry[]>([]);
+  loadingHistory   = signal(false);
+  expandedHistory  = signal<Set<string>>(new Set<string>());
+
+  // ── Onglet Cahier : arbre hiérarchique (catégorie → sous-catégorie → section) ──
+  expandedItemIds   = signal<Set<string>>(new Set<string>());   // contenu (tâches) d'une fonction déplié
+  cahierExpanded    = signal<Set<string>>(new Set<string>());   // nœuds de l'arbre ouverts
+
+  // Recherche + filtre par état
+  searchQuery   = signal('');
+  searchFocused = signal(false);
+  statusFilter  = signal<'all' | 'tested' | 'untested' | 'ko'>('all');
+  favOnly       = signal(false);                       // filtre : favoris uniquement
+  favorites     = signal<Set<string>>(new Set<string>()); // folderId favoris
+  readonly statusFilters: { value: 'all' | 'tested' | 'untested' | 'ko'; label: string }[] = [
+    { value: 'all',      label: 'Toutes' },
+    { value: 'tested',   label: 'Testées' },
+    { value: 'untested', label: 'Non testées' },
+    { value: 'ko',       label: 'En erreur' },
+  ];
+
+  /** Filtrage actif (recherche, filtre d'état ou favoris) → affichage déplié des résultats. */
+  filtering = computed(() => this.searchQuery().trim().length > 0 || this.statusFilter() !== 'all' || this.favOnly());
+
+  isFavorite(folderId: string): boolean { return this.favorites().has(folderId); }
+
+  async loadFavorites() {
+    try {
+      const res = await fetch(`${API}/api/admin/tests/favorites`, { headers: this.authHeaders });
+      if (!res.ok) return;
+      const data = await res.json();
+      this.favorites.set(new Set(data.folderIds || []));
+    } catch { /* ignore */ }
+  }
+
+  async toggleFavorite(folderId: string, ev?: Event) {
+    ev?.stopPropagation();
+    const next = new Set(this.favorites());
+    const willFav = !next.has(folderId);
+    willFav ? next.add(folderId) : next.delete(folderId);
+    this.favorites.set(next);   // optimiste
+    try {
+      const res = await fetch(`${API}/api/admin/tests/favorites`, {
+        method: 'POST', headers: this.authHeaders,
+        body: JSON.stringify({ folderId, favorite: willFav })
+      });
+      if (res.ok) { const d = await res.json(); this.favorites.set(new Set(d.folderIds || [])); }
+    } catch { /* garde l'état optimiste */ }
+  }
+
+  private norm(s: string): string {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  /** Une fonction passe-t-elle le filtre d'état courant ? */
+  private matchesStatusId(itemId: string): boolean {
+    const f = this.statusFilter();
+    if (f === 'all') return true;
+    const st = this.funcStatus(itemId);
+    if (f === 'tested')   return st !== 'none';
+    if (f === 'untested') return st === 'none';
+    if (f === 'ko')       return st === 'ko';
+    return true;
+  }
+
+  /** IDs des fonctions qui passent recherche + filtre d'état. */
+  matchingItemIds = computed((): Set<string> => {
+    const q = this.norm(this.searchQuery().trim());
+    const favOnly = this.favOnly();
+    const favs = this.favorites();
+    const set = new Set<string>();
+    for (const fn of this.functions()) {
+      if (favOnly && !favs.has(fn.folderId)) continue;
+      if (!this.matchesStatusId(fn.id)) continue;
+      if (q) {
+        const hay = this.norm(`${fn.section} ${fn.pageTitle} ${fn.id} ${fn.content}`);
+        if (!hay.includes(q)) continue;
+      }
+      set.add(fn.id);
     }
-    return [...groups.values()];
+    return set;
   });
 
-  // ── Popup de lancement (nom + sélection de sections) ──
-  showLaunchPopup = signal(false);
-  launchName      = signal('');
+  /** Suggestions d'autocomplétion (max 8) à partir de la saisie. */
+  searchSuggestions = computed((): { id: string; section: string; pageTitle: string }[] => {
+    const q = this.norm(this.searchQuery().trim());
+    if (q.length < 1) return [];
+    const out: { id: string; section: string; pageTitle: string }[] = [];
+    const favOnly = this.favOnly();
+    const favs = this.favorites();
+    for (const fn of this.functions()) {
+      if (favOnly && !favs.has(fn.folderId)) continue;
+      if (!this.matchesStatusId(fn.id)) continue;
+      const hay = this.norm(`${fn.section} ${fn.pageTitle} ${fn.id}`);
+      if (hay.includes(q)) {
+        out.push({ id: fn.id, section: fn.section, pageTitle: fn.pageTitle });
+        if (out.length >= 8) break;
+      }
+    }
+    return out;
+  });
+
+  selectSuggestion(s: { section: string }) {
+    this.searchQuery.set(s.section);
+    this.searchFocused.set(false);
+  }
+
+  clearSearch() { this.searchQuery.set(''); this.searchFocused.set(false); }
+
+  // ── Génération/mise à jour des fonctions d'une section par IA ──
+  showGenPopup    = signal(false);
+  genFolderId     = signal('');
+  genSectionLabel = signal('');
+  genProvider     = signal('');
+  genModel        = signal('');
+  genPrompt       = signal('');
+  genWithComponents = signal(true);   // demander à l'IA de renseigner les composants liés
+  genRunning      = signal(false);
+  genDone         = signal(false);
+  genError        = signal('');
+  genResultMsg    = signal('');
+  genLog          = signal<{ stream: string; text: string }[]>([]);
+  genLastPrompt   = signal('');   // prompt envoyé à l'IA (pour l'historique)
+  genLastResponse = signal('');   // réponse brute de l'IA (pour l'historique)
+  private genEventSource: EventSource | null = null;
+
+  genModels = computed(() => {
+    const base = this.genProvider();
+    const list = this.configService.cliConfig().modelsList as Record<string, { value: string; label: string }[]>;
+    return list[base] || [];
+  });
+
+  private defaultGenInstructions(): string {
+    return [
+      "Analyse le code source de cette section (composants Angular, templates, routes serveur) et mets à jour",
+      "son cahier de recette : ajoute les fonctions à tester manquantes et corrige/complète celles qui sont",
+      "obsolètes, en respectant le système d'IDs hiérarchiques déjà en place (ne renumérote pas l'existant)."
+    ].join(' ');
+  }
+
+  /** Ouvre le popup de génération IA pour une section feuille. */
+  openGenPopup(folderId: string, label: string, ev?: Event) {
+    ev?.stopPropagation();
+    this.closeGenStream();
+    this.genFolderId.set(folderId);
+    this.genSectionLabel.set(label);
+    this.genRunning.set(false);
+    this.genDone.set(false);
+    this.genError.set('');
+    this.genResultMsg.set('');
+    this.genLog.set([]);
+    // Défauts provider/modèle depuis admin/config
+    const providers = this.aiProviders();
+    const header = this.configService.cliConfig().headerSelection;
+    const headerBase = (header.provider || '').split('-')[0];
+    const chosen = providers.find(p => p.baseId === headerBase) || providers[0];
+    this.genProvider.set(chosen?.baseId || '');
+    const models = this.genModels();
+    this.genModel.set(models.find(m => m.value === header.model)?.value || models[0]?.value || '');
+    this.genPrompt.set(this.defaultGenInstructions());
+    this.showGenPopup.set(true);
+  }
+
+  onGenProviderChange(base: string) {
+    this.genProvider.set(base);
+    this.genModel.set(this.genModels()[0]?.value || '');
+  }
+
+  closeGenPopup() {
+    this.closeGenStream();
+    this.genRunning.set(false);
+    this.showGenPopup.set(false);
+  }
+
+  private closeGenStream() {
+    if (this.genEventSource) { this.genEventSource.close(); this.genEventSource = null; }
+  }
+
+  private appendGenLog(stream: string, text: string) {
+    if (!text) return;
+    this.genLog.update(log => {
+      const next = [...log, { stream, text }];
+      return next.length > 500 ? next.slice(next.length - 500) : next;
+    });
+  }
+
+  /** Lance la génération IA : ouvre le flux SSE et met à jour le référentiel à la fin. */
+  confirmGen() {
+    if (!this.genProvider()) { this.genError.set('Aucun provider IA disponible — active un CLI dans admin/config'); return; }
+    this.closeGenStream();
+    this.genError.set('');
+    this.genDone.set(false);
+    this.genResultMsg.set('');
+    this.genLog.set([]);
+    this.genRunning.set(true);
+    const token = this.authService.getToken() || '';
+    const params = new URLSearchParams({
+      folderId: this.genFolderId(),
+      provider: this.genProvider(),
+      model: this.genModel(),
+      prompt: this.genPrompt().trim(),
+      components: this.genWithComponents() ? '1' : '0',
+      token,
+    });
+    const es = new EventSource(`${API}/api/admin/tests/generate-functions-stream?${params.toString()}`);
+    this.genEventSource = es;
+
+    es.addEventListener('start', (e: MessageEvent) => {
+      try { const d = JSON.parse(e.data); this.appendGenLog('info', `Analyse de la section ${d.folderId} (${d.provider} / ${d.model})…`); } catch { /* ignore */ }
+    });
+    es.addEventListener('ai-log', (e: MessageEvent) => {
+      try { const d = JSON.parse(e.data); this.appendGenLog(d.stream || 'stdout', d.text || ''); } catch { /* ignore */ }
+    });
+    es.addEventListener('ai-error', (e: MessageEvent) => {
+      try { const m = JSON.parse(e.data).message || 'Erreur IA'; this.genError.set(m); this.appendGenLog('error', m); } catch { /* ignore */ }
+    });
+    es.addEventListener('complete', (e: MessageEvent) => {
+      let d: any = {}; try { d = JSON.parse(e.data); } catch { /* ignore */ }
+      const proposals = (d.proposals || []) as Proposal[];
+      this.genLastPrompt.set(d.prompt || '');
+      this.genLastResponse.set(d.rawResponse || '');
+      this.genRunning.set(false);
+      this.genDone.set(true);
+      this.closeGenStream();
+      // Ouvre la revue : l'utilisateur valide chaque ajout/modif/suppression avant migration.
+      this.proposals.set(proposals);
+      const ap = new Set<number>();
+      proposals.forEach((p, i) => { if (p.op !== 'unchanged') ap.add(i); });
+      this.approvedIdx.set(ap);
+      this.reviewError.set('');
+      this.showGenPopup.set(false);
+      if (proposals.length === 0) { this.genResultMsg.set('Aucune proposition.'); return; }
+      this.showReviewPopup.set(true);
+    });
+    es.addEventListener('run-failed', (e: MessageEvent) => {
+      try { const m = JSON.parse(e.data).message || 'Échec de la génération'; this.genError.set(m); this.appendGenLog('error', m); } catch { /* ignore */ }
+      this.genRunning.set(false);
+      this.closeGenStream();
+    });
+    es.onerror = () => {
+      if (this.genRunning()) this.genError.set(this.genError() || 'Connexion au flux IA interrompue');
+      this.genRunning.set(false);
+      this.closeGenStream();
+    };
+  }
+
+  // ── Revue des propositions (validation avant migration) ──
+  showReviewPopup = signal(false);
+  proposals       = signal<Proposal[]>([]);
+  approvedIdx     = signal<Set<number>>(new Set<number>());
+  reviewApplying  = signal(false);
+  reviewError     = signal('');
+  expandedProp    = signal<Set<number>>(new Set<number>());
+
+  proposalCounts = computed(() => {
+    const c = { add: 0, modify: 0, delete: 0, unchanged: 0 };
+    for (const p of this.proposals()) (c as any)[p.op]++;
+    return c;
+  });
+
+  /** Nb de changements actionnables (hors unchanged) approuvés. */
+  approvedActionableCount = computed(() => {
+    const ap = this.approvedIdx();
+    let n = 0;
+    this.proposals().forEach((p, i) => { if (p.op !== 'unchanged' && ap.has(i)) n++; });
+    return n;
+  });
+
+  isApproved(i: number): boolean { return this.approvedIdx().has(i); }
+  toggleApprove(i: number) {
+    this.approvedIdx.update(s => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
+  }
+  isPropExpanded(i: number): boolean { return this.expandedProp().has(i); }
+  togglePropExpand(i: number) {
+    this.expandedProp.update(s => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
+  }
+
+  closeReview() { this.showReviewPopup.set(false); }
+
+  /** Construit la liste finale (décisions validées) et l'envoie au serveur. */
+  async applyProposals() {
+    const folderId = this.genFolderId();
+    const props = this.proposals();
+    const ap = this.approvedIdx();
+
+    // Décisions approuvées par ID existant + ajouts approuvés
+    const deletedIds = new Set<string>();
+    const modifiedById = new Map<string, Proposal>();
+    const adds: Proposal[] = [];
+    props.forEach((p, i) => {
+      const approved = ap.has(i);
+      if (p.op === 'delete' && approved && p.id) deletedIds.add(p.id);
+      else if (p.op === 'modify' && approved && p.id) modifiedById.set(p.id, p);
+      else if (p.op === 'add' && approved) adds.push(p);
+    });
+
+    // Diff pour l'historique (avec priorité + explication courte)
+    const changes = {
+      added: adds.map(a => ({
+        section: a.section, priority: a.priority || 'mineur',
+        explanation: this.contentSummary(a.content) || 'Nouvelle fonction de test',
+      })),
+      modified: [...modifiedById.values()].map(m => ({
+        id: m.id, section: m.section, priority: m.priority || 'mineur',
+        explanation: this.modifyExplanation(m),
+      })),
+      deleted: [...deletedIds].map(id => {
+        const p = props.find(x => x.op === 'delete' && x.id === id);
+        return { id, section: p?.section || '', priority: (p?.priority || 'mineur'),
+                 explanation: p ? (this.contentSummary(p.content) || 'Fonction retirée du référentiel') : 'Fonction retirée' };
+      }),
+    };
+
+    // Liste actuelle (ordre préservé), application des modifs/suppressions, puis ajouts
+    const current = this.functions().filter(f => f.folderId === folderId);
+    const final: { id?: string; section: string; content: string; components: string[]; priority: string }[] = [];
+    for (const it of current) {
+      if (deletedIds.has(it.id)) continue;
+      const mod = modifiedById.get(it.id);
+      if (mod) final.push({ id: it.id, section: mod.section, content: mod.content, components: mod.components || [], priority: mod.priority || it.priority || 'mineur' });
+      else final.push({ id: it.id, section: it.section, content: it.content, components: it.components || [], priority: it.priority || 'mineur' });
+    }
+    for (const a of adds) final.push({ section: a.section, content: a.content, components: a.components || [], priority: a.priority || 'mineur' });
+
+    // Libellé de l'IA ayant fait la mise à jour (provider + modèle)
+    const provLabel = this.aiProviders().find(p => p.baseId === this.genProvider())?.label || this.genProvider();
+    const modLabel  = this.genModels().find(m => m.value === this.genModel())?.label || this.genModel();
+    const updatedBy = [provLabel, modLabel].filter(Boolean).join(' / ');
+
+    this.reviewApplying.set(true);
+    this.reviewError.set('');
+    try {
+      const res = await fetch(`${API}/api/admin/tests/apply-functions`, {
+        method: 'POST', headers: this.authHeaders,
+        body: JSON.stringify({ folderId, functions: final, updatedBy, changes, aiPrompt: this.genLastPrompt(), aiResponse: this.genLastResponse() })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Échec application');
+      await this.loadFunctions(true);
+      await this.loadMatrix();
+      this.loadFnHistory();
+      this.genResultMsg.set('Migration appliquée.');
+      this.showReviewPopup.set(false);
+    } catch (e: any) {
+      this.reviewError.set(e.message || 'Échec application');
+    } finally {
+      this.reviewApplying.set(false);
+    }
+  }
+
+  /**
+   * Arbre des fonctions, en liste plate triée en pré-ordre (parent avant enfants),
+   * triée numériquement par ID hiérarchique (1, 1-1, 2, 2-1, 2-1-1…).
+   * L'ID des nœuds intermédiaires est déduit du folderId d'une feuille descendante
+   * (les segments du folderId correspondent à la profondeur du chemin).
+   */
+  cahierTree = computed((): CahierNode[] => {
+    const fns = this.functions();
+    if (fns.length === 0) return [];
+
+    // Items groupés par chemin (= dossier contenant un fonctions.md)
+    const byPath = new Map<string, FunctionItem[]>();
+    for (const fn of fns) {
+      if (!byPath.has(fn.path)) byPath.set(fn.path, []);
+      byPath.get(fn.path)!.push(fn);
+    }
+
+    // Tous les chemins, y compris les nœuds intermédiaires
+    const allPaths = new Set<string>();
+    for (const p of byPath.keys()) {
+      const parts = p.split('/');
+      for (let i = 1; i <= parts.length; i++) allPaths.add(parts.slice(0, i).join('/'));
+    }
+
+    const leafPaths = [...byPath.keys()];
+    const nodes: CahierNode[] = [...allPaths].map(p => {
+      const parts       = p.split('/');
+      const segCount    = parts.length;
+      const items       = byPath.get(p) || [];
+      const hasChildren = leafPaths.some(o => o !== p && o.startsWith(p + '/')) ||
+                          [...allPaths].some(o => o !== p && o.startsWith(p + '/'));
+      // folderId d'une feuille = ce nœud ou un descendant → tronqué à la profondeur du nœud
+      const leaf = items[0]?.folderId
+        ? items[0].folderId
+        : (byPath.get(leafPaths.find(o => o === p || o.startsWith(p + '/')) || '')?.[0]?.folderId || '');
+      const id = leaf ? leaf.split('-').slice(0, segCount).join('-') : p;
+      return {
+        depth: segCount - 1,
+        name: parts[parts.length - 1],
+        fullPath: p,
+        id,
+        pageTitle: items.length ? items[0].pageTitle : '',
+        items,
+        hasChildren,
+      };
+    });
+
+    // Tri en pré-ordre par segments numériques de l'ID
+    nodes.sort((a, b) => this.compareIds(a.id, b.id));
+    return nodes;
+  });
+
+  /** Comparaison numérique de deux IDs hiérarchiques ('2-1-5' vs '2-2'). */
+  private compareIds(a: string, b: string): number {
+    const pa = a.split('-').map(n => parseInt(n, 10));
+    const pb = b.split('-').map(n => parseInt(n, 10));
+    const len = Math.max(pa.length, pb.length);
+    for (let i = 0; i < len; i++) {
+      const va = pa[i] ?? -1, vb = pb[i] ?? -1;   // segment manquant = parent → avant
+      if (va !== vb) return va - vb;
+    }
+    return 0;
+  }
+
+  /**
+   * Arbre effectivement affiché : filtré par recherche + état si un filtre est actif,
+   * avec items réduits aux fonctions correspondantes ; sinon l'arbre complet.
+   */
+  visibleTree = computed((): CahierNode[] => {
+    const tree = this.cahierTree();
+    if (!this.filtering()) return tree;
+    const ids = this.matchingItemIds();
+    const visiblePaths = new Set<string>();
+    const itemsByPath = new Map<string, FunctionItem[]>();
+    for (const fn of this.functions()) {
+      if (!ids.has(fn.id)) continue;
+      if (!itemsByPath.has(fn.path)) itemsByPath.set(fn.path, []);
+      itemsByPath.get(fn.path)!.push(fn);
+      const parts = fn.path.split('/');
+      for (let i = 1; i <= parts.length; i++) visiblePaths.add(parts.slice(0, i).join('/'));
+    }
+    return tree
+      .filter(n => visiblePaths.has(n.fullPath))
+      .map(n => ({ ...n, items: itemsByPath.get(n.fullPath) || [] }));
+  });
+
+  /** Un nœud est visible si tous ses ancêtres sont dépliés (ou si un filtre est actif). */
+  isCahierNodeVisible(fullPath: string): boolean {
+    if (this.filtering()) return true;
+    const parts    = fullPath.split('/');
+    const expanded = this.cahierExpanded();
+    if (parts.length === 1) return true;
+    for (let i = 1; i < parts.length; i++) {
+      if (!expanded.has(parts.slice(0, i).join('/'))) return false;
+    }
+    return true;
+  }
+
+  isCahierExpanded(path: string): boolean { return this.cahierExpanded().has(path); }
+
+  toggleCahierNode(path: string) {
+    this.cahierExpanded.update(s => {
+      const next = new Set(s);
+      next.has(path) ? next.delete(path) : next.add(path);
+      return next;
+    });
+  }
+
+  expandAllCahier() { this.cahierExpanded.set(new Set(this.cahierTree().map(n => n.fullPath))); }
+  collapseAllCahier() { this.cahierExpanded.set(new Set<string>()); this.expandedItemIds.set(new Set<string>()); }
+
+  // ── Onglet Cahier : croisement avec les derniers résultats (couleurs / %) ──
+
+  /** Dernier état décidé (OK/KO) de chaque fonction, tous runs confondus. */
+  funcLatest = computed((): Map<string, { status: 'ok' | 'ko'; date: string }> => {
+    const map = new Map<string, { status: 'ok' | 'ko'; date: string }>();
+    for (const run of this.matrixRuns()) {
+      for (const r of run.results) {
+        if (r.status !== 'ok' && r.status !== 'ko') continue;
+        const prev = map.get(r.itemId);
+        if (!prev || new Date(run.startedAt) >= new Date(prev.date)) {
+          map.set(r.itemId, { status: r.status, date: run.startedAt });
+        }
+      }
+    }
+    return map;
+  });
+
+  /** Stats agrégées par chemin (chaque fonction remonte sur tous ses ancêtres). */
+  cahierStats = computed((): Map<string, NodeStat> => {
+    const latest = this.funcLatest();
+    const stats = new Map<string, NodeStat>();
+    const ensure = (p: string): NodeStat => {
+      let s = stats.get(p);
+      if (!s) { s = { total: 0, ok: 0, ko: 0, untested: 0, pct: null, lastDate: null }; stats.set(p, s); }
+      return s;
+    };
+    for (const fn of this.functions()) {
+      const lr = latest.get(fn.id);
+      const parts = fn.path.split('/');
+      for (let i = 1; i <= parts.length; i++) {
+        const s = ensure(parts.slice(0, i).join('/'));
+        s.total++;
+        if (lr?.status === 'ok') s.ok++;
+        else if (lr?.status === 'ko') s.ko++;
+        else s.untested++;
+        if (lr && (!s.lastDate || new Date(lr.date) > new Date(s.lastDate))) s.lastDate = lr.date;
+      }
+    }
+    for (const s of stats.values()) {
+      const decided = s.ok + s.ko;
+      s.pct = decided > 0 ? Math.round((s.ok / decided) * 100) : null;
+    }
+    return stats;
+  });
+
+  statOf(path: string): NodeStat | null { return this.cahierStats().get(path) || null; }
+
+  /** Couleur d'un nœud : rouge si au moins une fonction KO, vert si tout OK, gris si non testé. */
+  nodeColor(path: string): 'red' | 'green' | 'none' {
+    const s = this.statOf(path);
+    if (!s || s.ok + s.ko === 0) return 'none';
+    return s.ko > 0 ? 'red' : 'green';
+  }
+
+  /** Classe de fond pour l'en-tête d'un nœud selon son état. */
+  nodeHeaderClass(path: string, hasChildren: boolean): string {
+    const c = this.nodeColor(path);
+    if (c === 'red')   return 'border-l-4 border-l-red-500 bg-red-500/5 hover:bg-red-500/10';
+    if (c === 'green') return 'border-l-4 border-l-green-500 bg-green-500/5 hover:bg-green-500/10';
+    return hasChildren
+      ? 'border-l-4 border-l-transparent bg-light-surface dark:bg-surface hover:bg-light-surface/70 dark:hover:bg-white/5'
+      : 'border-l-4 border-l-transparent bg-light-surface/60 dark:bg-surface/60 hover:bg-light-surface dark:hover:bg-white/5';
+  }
+
+  /** Dernier état d'une fonction (pour la colonne État du tableau). */
+  funcStatus(itemId: string): 'ok' | 'ko' | 'none' {
+    return this.funcLatest().get(itemId)?.status || 'none';
+  }
+  funcDate(itemId: string): string | null { return this.funcLatest().get(itemId)?.date || null; }
+
+  /** Classe de fond d'une ligne de fonction selon son dernier état. */
+  rowStatusClass(itemId: string): string {
+    const st = this.funcStatus(itemId);
+    if (st === 'ok') return 'bg-green-500/5 hover:bg-green-500/10';
+    if (st === 'ko') return 'bg-red-500/5 hover:bg-red-500/10';
+    return 'hover:bg-light-surface dark:hover:bg-white/5';
+  }
+
+  /** Nombre d'« étapes » d'une fonction = nombre de puces (- …) dans son contenu. */
+  stepCount(content: string): number {
+    if (!content) return 0;
+    return (content.match(/^\s*-\s+/gm) || []).length;
+  }
+
+  /** Première ligne lisible du contenu (description courte), hors ligne « Composants ». */
+  contentSummary(content: string): string {
+    if (!content) return '';
+    const line = content.split('\n').map(l => l.trim())
+      .find(l => l && l !== '---' && !/^\s*[-*>]?\s*\*{0,2}composants?\*{0,2}\s*[:：]/i.test(l));
+    if (!line) return '';
+    return line.replace(/^-\s+/, '').replace(/\*\*/g, '').replace(/`/g, '');
+  }
+
+  /** Nom court d'un composant/fichier (dernier segment du chemin). */
+  shortComponent(p: string): string {
+    return (p || '').split(/[\\/]/).pop() || p;
+  }
+
+  isItemExpanded(id: string): boolean { return this.expandedItemIds().has(id); }
+  toggleItemExpand(id: string) {
+    this.expandedItemIds.update(s => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  // Rendu du contenu markdown en HTML simplifié (listes, gras, code inline)
+  renderContent(raw: string): string {
+    if (!raw) return '';
+    return raw
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`(.+?)`/g, '<code class="font-mono text-[10px] px-1 bg-white/10 rounded">$1</code>')
+      .replace(/^- (.+)$/gm, '<span class="flex gap-1"><span class="text-light-text-muted dark:text-white/30 flex-shrink-0">•</span><span>$1</span></span>')
+      .replace(/^\| (.+)$/gm, '<span class="text-light-text-muted dark:text-white/40 text-[10px]">| $1</span>')
+      .replace(/\n/g, '<br>');
+  }
+
+  // ── Onglet Exécution : configuration de lancement (inline) ──
+  runComment      = signal('');                       // nom / objectif (test ponctuel)
+  launchMode      = signal<'manual' | 'ai'>('ai');
   launchSelected  = signal<Set<string>>(new Set<string>());
+  runnerName      = signal('');
+
+  // Campagnes : tester une section (ponctuel) ou regrouper plusieurs sections dans une campagne (1 colonne en résultats)
+  campaignMode    = signal<'single' | 'campaign'>('single');
+  campaignTarget  = signal<string>('new');            // 'new' ou id d'une campagne existante
+  campaignName    = signal('');
+
+  /** Campagnes en cours (réutilisables pour y ajouter des sections). */
+  openCampaigns = computed(() => this.runs().filter(r => r.isCampaign && r.status === 'in_progress'));
+
+  aiProvider  = signal('');   // baseId : 'claude' | 'antigravity'
+  aiModel     = signal('');
+  aiPrompt    = signal('');   // consignes éditables (le format de retour est imposé serveur)
 
   /** Sections testables (dossiers feuilles avec fonctions), pour la sélection au lancement. */
   launchGroups = computed(() => {
@@ -125,11 +792,13 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
 
   launchSelectedCount = computed(() => this.launchSelected().size);
 
-  // ── Mode de lancement : manuel ou automatique (IA via Claude Code + Browser MCP) ──
-  launchMode  = signal<'manual' | 'ai'>('manual');
-  aiProvider  = signal('');   // baseId : 'claude' | 'antigravity'
-  aiModel     = signal('');
-  aiPrompt    = signal('');   // consignes éditables (le format de retour est imposé serveur)
+  /** Nombre de fonctions couvertes par la sélection courante. */
+  selectedFunctionsCount = computed(() => {
+    const sel = this.launchSelected();
+    const all = this.launchGroups();
+    if (sel.size === 0) return 0;
+    return all.filter(g => sel.has(g.folderId)).reduce((sum, g) => sum + g.count, 0);
+  });
 
   /** Providers CLI agentiques disponibles (depuis admin/config) — seuls pilotables via MCP. */
   aiProviders = computed(() => this.configService.cliConfig().availableProviders.filter(p => p.type === 'cli'));
@@ -141,115 +810,30 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
     return list[base] || [];
   });
 
-  /** Bloc "format de retour" imposé, affiché en lecture seule (exemple pour un retour constant). */
+  /** Bloc "format de retour" imposé, affiché en lecture seule. */
   aiFormatExample =
 `@@TEST_RESULT@@{"itemId":"<id>","status":"ok|ko|nd","note":"<observation courte>"}
 Exemple :
 @@TEST_RESULT@@{"itemId":"2-5-2-11-1","status":"ok","note":""}
 @@TEST_RESULT@@{"itemId":"2-5-2-11-2","status":"ko","note":"Le panneau ne s'affiche pas après clic"}`;
 
-  // État du run IA en cours (affichage progressif)
-  aiRunning  = signal(false);
-  aiProgress = signal<{ done: number; total: number }>({ done: 0, total: 0 });
-  aiError    = signal('');
-  // Journal live du travail de l'IA (stdout/stderr/info renvoyés au fil de l'eau)
-  aiLog      = signal<{ stream: string; text: string }[]>([]);
-  showAiLog  = signal(true);
-  private aiEventSource: EventSource | null = null;
+  // Run actif (campagne en cours dans l'onglet Exécution)
+  activeRun = signal<TestRunDetail | null>(null);
+  saving    = signal(false);
+  private saveDebounce: any = null;
 
-  // ── Popup de confirmation (annulation d'un run en cours / suppression) ──
-  confirmPopup = signal<{ kind: 'cancel' | 'delete'; runId: string; label: string } | null>(null);
-
-  // Référentiel de fonctions — arbre hiérarchique (dashboard)
-  showFunctionsTree  = signal(false);
-  treeExpandedPaths  = signal<Set<string>>(new Set<string>());
-  expandedItemIds    = signal<Set<string>>(new Set<string>());
-
-  flatTree = computed((): FlatTreeNode[] => {
-    const fns = this.functions();
-    if (fns.length === 0) return [];
-
-    // Grouper les items par path (= dossier contenant un fonctions.md)
-    const byPath = new Map<string, FunctionItem[]>();
-    for (const fn of fns) {
-      if (!byPath.has(fn.path)) byPath.set(fn.path, []);
-      byPath.get(fn.path)!.push(fn);
+  /** Fonctions du run actif, groupées par section (pour la liste OK/KO/ND). */
+  groupedFunctions = computed(() => {
+    const run = this.activeRun();
+    const allowed = run ? new Set(run.results.map(r => r.itemId)) : null;
+    const groups = new Map<string, { path: string; pageTitle: string; folderId: string; items: FunctionItem[] }>();
+    for (const item of this.functions()) {
+      if (allowed && !allowed.has(item.id)) continue;
+      if (!groups.has(item.path)) groups.set(item.path, { path: item.path, pageTitle: item.pageTitle, folderId: item.folderId, items: [] });
+      groups.get(item.path)!.items.push(item);
     }
-
-    // Collecter tous les chemins intermédiaires
-    const allPaths = new Set<string>();
-    for (const p of byPath.keys()) {
-      const parts = p.split('/');
-      for (let i = 1; i <= parts.length; i++) {
-        allPaths.add(parts.slice(0, i).join('/'));
-      }
-    }
-
-    return [...allPaths].sort().map(p => {
-      const depth      = p.split('/').length - 1;
-      const name       = p.split('/').pop()!;
-      const items      = byPath.get(p) || [];
-      const folderId   = items.length > 0 ? items[0].folderId : '';
-      const pageTitle  = items.length > 0 ? items[0].pageTitle : '';
-      const hasChildren = [...allPaths].some(other => other.startsWith(p + '/'));
-      return { depth, name, fullPath: p, folderId, pageTitle, items, hasChildren };
-    });
+    return [...groups.values()];
   });
-
-  isNodeVisible(fullPath: string): boolean {
-    const parts   = fullPath.split('/');
-    const expanded = this.treeExpandedPaths();
-    if (parts.length === 1) return true;
-    for (let i = 1; i < parts.length; i++) {
-      if (!expanded.has(parts.slice(0, i).join('/'))) return false;
-    }
-    return true;
-  }
-
-  isExpanded(path: string): boolean { return this.treeExpandedPaths().has(path); }
-
-  toggleTreeNode(path: string) {
-    this.treeExpandedPaths.update(s => {
-      const next = new Set(s);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
-  }
-
-  expandAll() {
-    // Inclut dossiers branch ET feuilles pour que les fonctions s'affichent aussi
-    const allPaths = this.flatTree().map(n => n.fullPath);
-    this.treeExpandedPaths.set(new Set(allPaths));
-  }
-
-  collapseAll() {
-    this.treeExpandedPaths.set(new Set<string>());
-    this.expandedItemIds.set(new Set<string>());
-  }
-
-  isItemExpanded(id: string): boolean { return this.expandedItemIds().has(id); }
-
-  toggleItemExpand(id: string) {
-    this.expandedItemIds.update(s => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  // Rendu du contenu markdown en HTML simplifié (listes, gras, code inline)
-  renderContent(raw: string): string {
-    if (!raw) return '';
-    return raw
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/`(.+?)`/g, '<code class="font-mono text-[10px] px-1 bg-white/10 rounded">$1</code>')
-      .replace(/^- (.+)$/gm, '<span class="flex gap-1"><span class="text-light-text-muted dark:text-white/30 flex-shrink-0">•</span><span>$1</span></span>')
-      .replace(/^\| (.+)$/gm, '<span class="text-light-text-muted dark:text-white/40 text-[10px]">| $1</span>')
-      .replace(/\n/g, '<br>');
-  }
 
   runnerProgress = computed(() => {
     const run = this.activeRun();
@@ -264,20 +848,209 @@ Exemple :
     return run.results.filter(r => r.status !== 'pending').length;
   });
 
-  // Detail
-  detailRun     = signal<TestRunDetail | null>(null);
-  detailFilter  = signal<'all' | 'ko'>('all');
-  loadingDetail = signal(false);
+  // ── État du run IA (affichage progressif) ──
+  aiRunning  = signal(false);
+  aiProgress = signal<{ done: number; total: number }>({ done: 0, total: 0 });
+  aiError    = signal('');
+  aiLog      = signal<{ stream: string; text: string }[]>([]);
+  showAiLog  = signal(true);
+  private aiEventSource: EventSource | null = null;
 
-  detailResultsSorted = computed(() => {
-    const run = this.detailRun();
-    if (!run) return [];
-    const order: Record<string, number> = { ko: 0, ok: 1, pending: 2 };
-    const list = this.detailFilter() === 'ko'
-      ? run.results.filter(r => r.status === 'ko')
-      : [...run.results];
-    return list.sort((a, b) => (order[a.status] ?? 2) - (order[b.status] ?? 2));
+  aiProgressPct = computed(() => {
+    const p = this.aiProgress();
+    return p.total > 0 ? Math.round((p.done / p.total) * 100) : 0;
   });
+
+  // ── Popup de confirmation (annulation d'un run en cours / suppression) ──
+  confirmPopup = signal<{ kind: 'cancel' | 'delete'; runId: string; label: string } | null>(null);
+
+  // ── Onglet Résultats : matrice pré-calculée ──
+  matrixData = computed((): { cols: MatrixCol[]; groups: MatrixGroup[] } => {
+    const runs = this.matrixRuns();
+    const fns  = this.functions();
+    if (runs.length === 0 || fns.length === 0) return { cols: [], groups: [] };
+
+    // Map runId -> (itemId -> result) pour des accès rapides
+    const maps = new Map<string, Map<string, { status: string; note: string | null; testedAt?: string | null }>>();
+    for (const r of runs) {
+      const m = new Map<string, { status: string; note: string | null; testedAt?: string | null }>();
+      for (const res of r.results) m.set(res.itemId, { status: res.status, note: res.note ?? null, testedAt: res.testedAt ?? null });
+      maps.set(r.id, m);
+    }
+
+    const cols: MatrixCol[] = runs.map(r => ({ run: r, score: this.scoreOf(r.stats.ok, r.stats.ko) }));
+
+    // Groupement des fonctions par section
+    const byPath = new Map<string, CahierGroup>();
+    for (const fn of fns) {
+      if (!byPath.has(fn.path)) byPath.set(fn.path, { path: fn.path, pageTitle: fn.pageTitle, folderId: fn.folderId, items: [] });
+      byPath.get(fn.path)!.items.push(fn);
+    }
+
+    const groups: MatrixGroup[] = [];
+    for (const g of byPath.values()) {
+      const scores: MatrixScore[] = runs.map(r => {
+        const m = maps.get(r.id)!;
+        let ok = 0, ko = 0;
+        for (const it of g.items) { const s = m.get(it.id)?.status; if (s === 'ok') ok++; else if (s === 'ko') ko++; }
+        return { runId: r.id, score: this.scoreOf(ok, ko) };
+      });
+      const rows: MatrixRow[] = g.items.map(it => ({
+        item: it,
+        cells: runs.map(r => {
+          const c = maps.get(r.id)!.get(it.id);
+          return { runId: r.id, status: c?.status || null, note: c?.note || null, testedAt: c?.testedAt || null };
+        })
+      }));
+      // Ne garder que les sections réellement couvertes par au moins un run
+      const covered = rows.some(row => row.cells.some(c => c.status !== null));
+      if (covered) groups.push({ path: g.path, pageTitle: g.pageTitle, folderId: g.folderId, scores, rows });
+    }
+
+    return { cols, groups };
+  });
+
+  // ── Onglet Résultats : accordéon + filtre KO ──
+  matrixCollapsed = signal<Set<string>>(new Set<string>());
+  matrixKoOnly    = signal(false);
+
+  /** Matrice après filtre KO (ne garde que les lignes/sections avec au moins un KO). */
+  filteredMatrix = computed((): { cols: MatrixCol[]; groups: MatrixGroup[] } => {
+    const m = this.matrixData();
+    if (!this.matrixKoOnly()) return m;
+    const groups = m.groups
+      .map(g => ({ ...g, rows: g.rows.filter(r => r.cells.some(c => c.status === 'ko')) }))
+      .filter(g => g.rows.length > 0);
+    return { cols: m.cols, groups };
+  });
+
+  isMatrixCollapsed(path: string): boolean { return this.matrixCollapsed().has(path); }
+  toggleMatrixSection(path: string) {
+    this.matrixCollapsed.update(s => { const n = new Set(s); n.has(path) ? n.delete(path) : n.add(path); return n; });
+  }
+  collapseAllMatrix() { this.matrixCollapsed.set(new Set(this.filteredMatrix().groups.map(g => g.path))); }
+  expandAllMatrix()   { this.matrixCollapsed.set(new Set<string>()); }
+
+  /** Dernière mise à jour des fonctions d'une section (depuis les items). */
+  matrixGroupUpdated(g: MatrixGroup): { updatedAt?: string; updatedBy?: string } {
+    const it = g.rows[0]?.item;
+    return { updatedAt: it?.updatedAt, updatedBy: it?.updatedBy };
+  }
+
+  // ── Priorités ──
+  readonly priorities: { value: Priority; label: string }[] = [
+    { value: 'mineur',   label: 'Mineur' },
+    { value: 'critique', label: 'Critique' },
+    { value: 'bloquant', label: 'Bloquant' },
+  ];
+
+  priorityLabel(p?: string): string {
+    return p === 'bloquant' ? 'Bloquant' : p === 'critique' ? 'Critique' : 'Mineur';
+  }
+  /** Couleur de texte selon la priorité : mineur bleu clair, critique jaune, bloquant rouge. */
+  priorityText(p?: string): string {
+    if (p === 'bloquant') return 'text-red-500';
+    if (p === 'critique') return 'text-yellow-400';
+    return 'text-sky-400';
+  }
+  /** Classe (badge) selon la priorité. */
+  priorityClass(p?: string): string {
+    if (p === 'bloquant') return 'bg-red-500/15 text-red-500 border border-red-500/30';
+    if (p === 'critique') return 'bg-yellow-400/15 text-yellow-400 border border-yellow-400/30';
+    return 'bg-sky-400/15 text-sky-400 border border-sky-400/30';
+  }
+  /** Classe pour le <select> de priorité : texte coloré + fond/bordure teintés. */
+  prioritySelectClass(p?: string): string {
+    if (p === 'bloquant') return 'text-red-500 bg-red-500/15 border border-red-500/40';
+    if (p === 'critique') return 'text-yellow-400 bg-yellow-400/15 border border-yellow-400/40';
+    return 'text-sky-400 bg-sky-400/15 border border-sky-400/40';
+  }
+
+  /** Édition manuelle de la priorité d'une fonction. */
+  async setPriority(itemId: string, priority: Priority) {
+    // Optimiste
+    this.functions.update(list => list.map(f => f.id === itemId ? { ...f, priority } : f));
+    try {
+      const res = await fetch(`${API}/api/admin/tests/function-priority`, {
+        method: 'POST', headers: this.authHeaders,
+        body: JSON.stringify({ itemId, priority })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        // Remplace les items de la section par les valeurs serveur
+        if (Array.isArray(d.items) && d.items.length) {
+          const folderId = d.items[0].folderId;
+          this.functions.update(list => [...list.filter(f => f.folderId !== folderId), ...d.items]);
+        }
+      }
+    } catch { /* garde l'optimiste */ }
+  }
+
+  // ── Seuils de validation (onglet Résultats) ──
+  critiqueThreshold = signal(15);
+  mineurThreshold   = signal(40);
+  savingSettings    = signal(false);
+
+  async loadSettings() {
+    try {
+      const res = await fetch(`${API}/api/admin/tests/settings`, { headers: this.authHeaders });
+      if (!res.ok) return;
+      const d = await res.json();
+      this.critiqueThreshold.set(d.critiqueThreshold ?? 15);
+      this.mineurThreshold.set(d.mineurThreshold ?? 40);
+    } catch { /* ignore */ }
+  }
+
+  private settingsDebounce: any = null;
+  saveSettings() {
+    if (this.settingsDebounce) clearTimeout(this.settingsDebounce);
+    this.savingSettings.set(true);
+    this.settingsDebounce = setTimeout(async () => {
+      try {
+        await fetch(`${API}/api/admin/tests/settings`, {
+          method: 'POST', headers: this.authHeaders,
+          body: JSON.stringify({ critiqueThreshold: this.critiqueThreshold(), mineurThreshold: this.mineurThreshold() })
+        });
+      } finally { this.savingSettings.set(false); }
+    }, 800);
+  }
+
+  /**
+   * Verdict de validation d'une section pour un run, selon les priorités :
+   * un KO bloquant invalide ; > seuil critique de KO critiques invalide ;
+   * > seuil mineur de KO mineurs invalide.
+   */
+  sectionVerdict(group: MatrixGroup, runId: string): { verdict: 'valid' | 'invalid' | null; reason: string } {
+    const statusByItem = new Map<string, string | null>();
+    for (const row of group.rows) {
+      const cell = row.cells.find(c => c.runId === runId);
+      statusByItem.set(row.item.id, cell?.status ?? null);
+    }
+    let decided = 0;
+    const tot = { mineur: 0, critique: 0, bloquant: 0 } as Record<Priority, number>;
+    const ko  = { mineur: 0, critique: 0, bloquant: 0 } as Record<Priority, number>;
+    for (const row of group.rows) {
+      const pr = (row.item.priority || 'mineur') as Priority;
+      const st = statusByItem.get(row.item.id);
+      if (st === 'ok' || st === 'ko') decided++;
+      tot[pr]++;
+      if (st === 'ko') ko[pr]++;
+    }
+    if (decided === 0) return { verdict: null, reason: 'Non testée' };
+    if (ko.bloquant > 0) return { verdict: 'invalid', reason: `${ko.bloquant} bloquant(s) KO` };
+    const cT = this.critiqueThreshold(), mT = this.mineurThreshold();
+    const critPct = tot.critique > 0 ? (ko.critique / tot.critique) * 100 : 0;
+    const minPct  = tot.mineur  > 0 ? (ko.mineur  / tot.mineur)  * 100 : 0;
+    if (critPct > cT) return { verdict: 'invalid', reason: `${Math.round(critPct)}% de critiques KO (> ${cT}%)` };
+    if (minPct  > mT) return { verdict: 'invalid', reason: `${Math.round(minPct)}% de mineurs KO (> ${mT}%)` };
+    return { verdict: 'valid', reason: 'Section valide' };
+  }
+
+  /** Score OK / (OK+KO) en %, ou null si rien de décidé. */
+  scoreOf(ok: number, ko: number): number | null {
+    const decided = ok + ko;
+    return decided > 0 ? Math.round((ok / decided) * 100) : null;
+  }
 
   private get authHeaders(): Record<string, string> {
     const token = this.authService.getToken();
@@ -289,10 +1062,27 @@ Exemple :
   ngOnInit() {
     const user = this.authService.currentUser();
     if (user) this.runnerName.set(user.username);
-    this.loadDashboard();
+    this.loadFunctions();
+    this.loadRuns();
+    this.loadMatrix();   // résultats nécessaires aux couleurs du Cahier
+    this.loadFavorites();
+    this.loadSettings();
   }
 
-  async loadDashboard() {
+  ngOnDestroy() { this.closeAiStream(); this.closeGenStream(); }
+
+  /** Changement d'onglet : (re)charge les données utiles à l'onglet. */
+  selectTab(tab: Tab) {
+    this.activeTab.set(tab);
+    if (tab === 'execution') {
+      if (this.aiProviders().length && !this.aiProvider()) this.initAiDefaults();
+      this.loadRuns();   // rafraîchit la liste des campagnes ouvertes
+    }
+    if (tab === 'resultats' || tab === 'cahier') this.loadMatrix();
+    if (tab === 'historique') this.loadFnHistory();
+  }
+
+  async loadRuns() {
     this.loadingRuns.set(true);
     this.runsError.set('');
     try {
@@ -300,7 +1090,6 @@ Exemple :
       if (!res.ok) throw new Error((await res.json()).error || 'Erreur chargement');
       const data = await res.json();
       this.runs.set(data.runs);
-      this.topKo.set(data.topKo);
     } catch (e: any) {
       this.runsError.set(e.message || 'Erreur');
     } finally {
@@ -308,27 +1097,82 @@ Exemple :
     }
   }
 
+  async loadMatrix() {
+    this.loadingMatrix.set(true);
+    try {
+      const res = await fetch(`${API}/api/admin/tests/matrix`, { headers: this.authHeaders });
+      if (!res.ok) throw new Error((await res.json()).error || 'Erreur chargement matrice');
+      const data = await res.json();
+      this.matrixRuns.set(data.runs);
+    } catch (e: any) {
+      this.runsError.set(e.message || 'Erreur');
+    } finally {
+      this.loadingMatrix.set(false);
+    }
+  }
+
+  async loadFnHistory() {
+    this.loadingHistory.set(true);
+    try {
+      const res = await fetch(`${API}/api/admin/tests/functions-history`, { headers: this.authHeaders });
+      if (!res.ok) throw new Error((await res.json()).error || 'Erreur chargement historique');
+      const data = await res.json();
+      this.fnHistory.set(data.entries || []);
+    } catch (e: any) {
+      this.runsError.set(e.message || 'Erreur');
+    } finally {
+      this.loadingHistory.set(false);
+    }
+  }
+
+  /** Explication courte d'une modification (ce qui a changé). */
+  private modifyExplanation(p: Proposal): string {
+    const parts: string[] = [];
+    if (this.norm(p.oldSection || '') !== this.norm(p.section)) parts.push('libellé');
+    if (this.norm(p.oldContent || '') !== this.norm(p.content)) parts.push('tâches');
+    if ((p.oldComponents || []).join('|') !== (p.components || []).join('|')) parts.push('composants');
+    if ((p.oldPriority || 'mineur') !== (p.priority || 'mineur')) parts.push(`priorité ${this.priorityLabel(p.oldPriority)} → ${this.priorityLabel(p.priority)}`);
+    return parts.length ? 'Modifié : ' + parts.join(', ') : 'Contenu mis à jour';
+  }
+
+  isHistoryExpanded(id: string): boolean { return this.expandedHistory().has(id); }
+  toggleHistory(id: string) {
+    this.expandedHistory.update(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  expandedHistoryAi = signal<Set<string>>(new Set<string>());
+  isHistoryAiExpanded(id: string): boolean { return this.expandedHistoryAi().has(id); }
+  toggleHistoryAi(id: string, ev?: Event) {
+    ev?.stopPropagation();
+    this.expandedHistoryAi.update(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  async loadFunctions(force = false) {
+    if (this.functions().length > 0 && !force) return;
+    this.loadingFunctions.set(true);
+    try {
+      const res = await fetch(`${API}/api/admin/tests/functions`, { headers: this.authHeaders });
+      if (!res.ok) throw new Error('Erreur chargement fonctions');
+      const data = await res.json();
+      this.functions.set(data.functions);
+      if (this.launchSelected().size === 0) this.selectAllLaunch();
+    } catch (e: any) {
+      this.runsError.set(e.message || 'Erreur chargement fonctions');
+    } finally {
+      this.loadingFunctions.set(false);
+    }
+  }
+
   async refreshFunctions() {
     this.functions.set([]);
     await fetch(`${API}/api/admin/tests/functions/refresh`, { method: 'POST', headers: this.authHeaders });
-    await this.loadFunctions();
+    await this.loadFunctions(true);
   }
 
-  /** Ouvre le popup de lancement : charge les fonctions, pré-sélectionne toutes les sections. */
-  async openLaunchPopup() {
-    await this.loadFunctions();
-    this.launchName.set('');
-    this.selectAllLaunch();
-    this.initAiDefaults();
-    this.runsError.set('');
-    this.showLaunchPopup.set(true);
-  }
-
-  closeLaunchPopup() { this.showLaunchPopup.set(false); }
+  // ── Configuration du lancement ──
 
   /** Valeurs par défaut du mode automatique (provider/modèle depuis admin/config, consignes). */
   private initAiDefaults() {
-    this.launchMode.set('manual');
     this.aiError.set('');
     const providers = this.aiProviders();
     const header = this.configService.cliConfig().headerSelection;
@@ -337,7 +1181,7 @@ Exemple :
     this.aiProvider.set(chosen?.baseId || '');
     const models = this.aiModels();
     this.aiModel.set(models.find(m => m.value === header.model)?.value || models[0]?.value || '');
-    this.aiPrompt.set(this.defaultAiInstructions());
+    if (!this.aiPrompt()) this.aiPrompt.set(this.defaultAiInstructions());
   }
 
   /** Quand le provider change, recaler le modèle sur le premier disponible. */
@@ -355,24 +1199,6 @@ Exemple :
     ].join(' ');
   }
 
-  /**
-   * Ouvre le popup de lancement (même composant) depuis un nœud du référentiel,
-   * avec la/les section(s) du nœud pré-cochée(s). Un nœud branche pré-coche toutes
-   * ses sous-sections testables ; un nœud feuille uniquement la sienne.
-   */
-  async openLaunchForNode(fullPath: string, ev?: Event) {
-    ev?.stopPropagation();
-    await this.loadFunctions();
-    this.launchName.set('');
-    const ids = this.flatTree()
-      .filter(n => n.folderId && (n.fullPath === fullPath || n.fullPath.startsWith(fullPath + '/')))
-      .map(n => n.folderId);
-    this.launchSelected.set(new Set(ids));
-    this.initAiDefaults();
-    this.runsError.set('');
-    this.showLaunchPopup.set(true);
-  }
-
   toggleLaunchSection(folderId: string) {
     this.launchSelected.update(s => {
       const n = new Set(s);
@@ -384,39 +1210,89 @@ Exemple :
   isLaunchSelected(folderId: string): boolean { return this.launchSelected().has(folderId); }
   selectAllLaunch() { this.launchSelected.set(new Set(this.launchGroups().map(g => g.folderId))); }
   clearLaunch()     { this.launchSelected.set(new Set<string>()); }
+  /** True quand toutes les sections sont sélectionnées (chip « Toutes »). */
+  allSelected = computed(() => {
+    const all = this.launchGroups();
+    return all.length > 0 && this.launchSelected().size === all.length;
+  });
 
-  /** Crée le run avec le nom et les sections sélectionnées (manuel ou automatique IA). */
+  /** Lance un test sur une section depuis l'onglet Cahier (pré-sélectionne + bascule sur Exécution). */
+  launchSectionFromCahier(folderId: string, ev?: Event) {
+    ev?.stopPropagation();
+    this.launchSelected.set(new Set([folderId]));
+    this.selectTab('execution');
+  }
+
+  /** Crée le run / ajoute à une campagne avec les sections sélectionnées (manuel ou IA). */
   async confirmLaunch() {
     const selected = [...this.launchSelected()];
     if (selected.length === 0) { this.runsError.set('Sélectionnez au moins une section'); return; }
     const isAi = this.launchMode() === 'ai';
     if (isAi && !this.aiProvider()) { this.runsError.set('Aucun provider IA disponible — active un CLI dans admin/config'); return; }
+    const isCampaign = this.campaignMode() === 'campaign';
+    const addToExisting = isCampaign && this.campaignTarget() !== 'new';
+    if (isCampaign && !addToExisting && !this.campaignName().trim()) { this.runsError.set('Donne un nom à la campagne'); return; }
     this.runsError.set('');
     try {
       const allIds = this.launchGroups().map(g => g.folderId);
-      // Toutes les sections cochées → [] (= toutes) ; sinon le sous-ensemble.
       const folderIds = selected.length === allIds.length ? [] : selected;
-      const res = await fetch(`${API}/api/admin/tests/runs`, {
-        method: 'POST', headers: this.authHeaders,
-        body: JSON.stringify({
-          tester: this.runnerName(),
-          name: this.launchName().trim() || null,
-          folderIds,
-          ...(isAi ? { mode: 'ai', aiProvider: this.aiProvider(), aiModel: this.aiModel(), prompt: this.aiPrompt().trim() } : {})
-        })
-      });
-      if (!res.ok) throw new Error((await res.json()).error || 'Erreur création run');
-      const run = await res.json();
+      let run: any;
+      if (addToExisting) {
+        // Ajoute les sections à une campagne existante
+        const res = await fetch(`${API}/api/admin/tests/runs/${this.campaignTarget()}/add-sections`, {
+          method: 'POST', headers: this.authHeaders,
+          body: JSON.stringify({ folderIds })
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Erreur ajout à la campagne');
+        run = await res.json();
+        // Pour un ajout IA, on conserve le provider/modèle/prompt choisis sur le run en mémoire
+        if (isAi) { run.mode = 'ai'; run.aiProvider = this.aiProvider(); run.aiModel = this.aiModel(); }
+      } else {
+        const res = await fetch(`${API}/api/admin/tests/runs`, {
+          method: 'POST', headers: this.authHeaders,
+          body: JSON.stringify({
+            tester: this.runnerName(),
+            name: isCampaign ? this.campaignName().trim() : (this.runComment().trim() || null),
+            folderIds,
+            ...(isCampaign ? { isCampaign: true } : {}),
+            ...(isAi ? { mode: 'ai', aiProvider: this.aiProvider(), aiModel: this.aiModel(), prompt: this.aiPrompt().trim() } : {})
+          })
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Erreur création run');
+        run = await res.json();
+      }
       this.activeRun.set(run);
-      this.showLaunchPopup.set(false);
-      this.view.set('runner');
+      this.expandedItemIds.set(new Set<string>());
       if (isAi) this.startAiRun(run.id);
     } catch (e: any) {
-      this.runsError.set(e.message || 'Erreur création run');
+      this.runsError.set(e.message || 'Erreur lancement');
     }
   }
 
-  /** Lance le test automatique IA : ouvre le flux SSE et applique les résultats au fur et à mesure. */
+  /** Enregistre la campagne sans la clôturer (reste ouverte pour ajouter d'autres sections). */
+  async saveAndExit() {
+    const run = this.activeRun();
+    if (!run) return;
+    this.closeAiStream();
+    this.aiRunning.set(false);
+    if (this.saveDebounce) clearTimeout(this.saveDebounce);
+    this.saving.set(true);
+    try {
+      await fetch(`${API}/api/admin/tests/runs/${run.id}`, {
+        method: 'PUT', headers: this.authHeaders,
+        body: JSON.stringify({ results: run.results })
+      });
+    } finally { this.saving.set(false); }
+    this.activeRun.set(null);
+    await this.loadRuns();
+    await this.loadMatrix();
+    // Recale la cible sur cette campagne pour enchaîner l'ajout d'une autre section
+    this.campaignMode.set('campaign');
+    this.campaignTarget.set(run.id);
+  }
+
+  // ── Run IA (SSE) ──
+
   startAiRun(runId: string) {
     this.closeAiStream();
     this.aiError.set('');
@@ -456,14 +1332,12 @@ Exemple :
       try { const m = JSON.parse(e.data).message || 'Échec du run IA'; this.aiError.set(m); this.appendAiLog('error', m); } catch { /* ignore */ }
       this.aiRunning.set(false); this.closeAiStream();
     });
-    // Erreur de connexion EventSource (executor coupé, etc.)
     es.onerror = () => {
       if (this.aiRunning()) this.aiError.set(this.aiError() || 'Connexion au flux IA interrompue');
       this.aiRunning.set(false); this.closeAiStream();
     };
   }
 
-  /** Ajoute une ligne au journal live de l'IA (borné à 500 lignes pour rester léger). */
   private appendAiLog(stream: string, text: string) {
     if (!text) return;
     this.aiLog.update(log => {
@@ -476,27 +1350,7 @@ Exemple :
     if (this.aiEventSource) { this.aiEventSource.close(); this.aiEventSource = null; }
   }
 
-  aiProgressPct = computed(() => {
-    const p = this.aiProgress();
-    return p.total > 0 ? Math.round((p.done / p.total) * 100) : 0;
-  });
-
-  ngOnDestroy() { this.closeAiStream(); }
-
-  async loadFunctions() {
-    if (this.functions().length > 0) return;
-    this.loadingFunctions.set(true);
-    try {
-      const res = await fetch(`${API}/api/admin/tests/functions`, { headers: this.authHeaders });
-      if (!res.ok) throw new Error('Erreur chargement fonctions');
-      const data = await res.json();
-      this.functions.set(data.functions);
-    } catch (e: any) {
-      this.runsError.set(e.message || 'Erreur chargement fonctions');
-    } finally {
-      this.loadingFunctions.set(false);
-    }
-  }
+  // ── Résultats manuels (OK / KO / ND) ──
 
   getResult(itemId: string): TestResult {
     const run = this.activeRun();
@@ -551,39 +1405,19 @@ Exemple :
       });
     } finally { this.saving.set(false); }
     this.activeRun.set(null);
-    await this.loadDashboard();
-    this.view.set('dashboard');
+    this.runComment.set('');
+    await this.loadRuns();
+    await this.loadMatrix();
+    this.activeTab.set('resultats');
   }
 
-  async openDetail(runId: string) {
-    this.loadingDetail.set(true);
-    this.detailFilter.set('all');
-    this.view.set('detail');
-    await this.loadFunctions();
-    try {
-      const res = await fetch(`${API}/api/admin/tests/runs/${runId}`, { headers: this.authHeaders });
-      if (!res.ok) throw new Error('Erreur chargement run');
-      this.detailRun.set(await res.json());
-    } catch (e: any) {
-      this.runsError.set(e.message || 'Erreur');
-      this.view.set('dashboard');
-    } finally { this.loadingDetail.set(false); }
-  }
+  // ── Confirmation (annulation / suppression) ──
 
-  resumeRun() {
-    const run = this.detailRun();
-    if (!run) return;
-    this.activeRun.set(run);
-    this.view.set('runner');
-  }
-
-  /** Demande confirmation d'annulation du run en cours (abandon = suppression). */
   askCancelRun() {
     const run = this.activeRun();
     if (run) this.confirmPopup.set({ kind: 'cancel', runId: run.id, label: run.name || run.tester });
   }
 
-  /** Demande confirmation de suppression d'un run (terminé ou en cours). */
   askDeleteRun(runId: string, label: string, ev?: Event) {
     ev?.stopPropagation();
     this.confirmPopup.set({ kind: 'delete', runId, label });
@@ -591,7 +1425,6 @@ Exemple :
 
   cancelConfirm() { this.confirmPopup.set(null); }
 
-  /** Exécute l'action confirmée (annulation ou suppression) : supprime le run côté serveur. */
   async confirmAction() {
     const c = this.confirmPopup();
     if (!c) return;
@@ -602,24 +1435,23 @@ Exemple :
     } finally {
       this.confirmPopup.set(null);
     }
-    if (c.kind === 'cancel') this.activeRun.set(null);
-    if (this.view() !== 'dashboard') { this.detailRun.set(null); this.view.set('dashboard'); }
-    await this.loadDashboard();
+    if (c.kind === 'cancel') { this.activeRun.set(null); this.runComment.set(''); }
+    await this.loadRuns();
+    await this.loadMatrix();
   }
+
+  // ── Divers ──
 
   getFunctionLabel(itemId: string): string {
     const fn = this.functions().find(f => f.id === itemId);
     return fn ? `${fn.pageTitle} — ${fn.section}` : itemId;
   }
 
-  /** Contenu markdown (liste des tâches à tester) d'une fonction par son ID. */
   getFunctionContent(itemId: string): string {
     return this.functions().find(f => f.id === itemId)?.content || '';
   }
 
-  copyId(id: string) {
-    navigator.clipboard.writeText(id).catch(() => {});
-  }
+  copyId(id: string) { navigator.clipboard.writeText(id).catch(() => {}); }
 
   /** Ouvre, dans l'explorateur de fichiers local, le dossier contenant le fonctions.md. */
   async openFolder(relPath: string, ev?: Event) {
@@ -641,9 +1473,9 @@ Exemple :
     return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
-  getStatusIcon(status: string): string {
-    if (status === 'ok') return 'check_circle';
-    if (status === 'ko') return 'cancel';
-    return 'radio_button_unchecked';
+  /** Date courte pour les en-têtes de colonnes de la matrice (jj/mm hh:mm). */
+  formatDateShort(iso: string | undefined | null): string {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
 }

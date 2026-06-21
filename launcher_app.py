@@ -51,7 +51,7 @@ sys.excepthook = _log_exception
 threading.excepthook = _log_thread_exception
 
 SERVICES = [
-    {'id': 'api',      'name': 'API',      'port': 3001, 'cmd': 'node server/server-data.js',                                  'color': '#10b981'},
+    {'id': 'api',      'name': 'API',      'port': 3001, 'cmd': 'node --watch server/server-data.js',                          'color': '#10b981'},
     {'id': 'agent',    'name': 'Agent',    'port': 3003, 'cmd': 'node server/server-agent.js',                                 'color': '#6366f1'},
     {'id': 'portail',  'name': 'Portail',  'port': 4202, 'cmd': 'npx nx serve portail',                                        'color': '#f59e0b'},
     {'id': 'projets',  'name': 'Projets',  'port': 4203, 'cmd': 'npx nx serve projets',                                        'color': '#3b82f6'},
