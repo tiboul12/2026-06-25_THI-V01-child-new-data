@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-428",
+      "version": "B-0.297",
+      "date": "2026-06-21T15:30:00.000Z",
+      "type": "config",
+      "commitType": "AMELIORATION",
+      "scope": ["system", "data"],
+      "features": "system:claude-directives,portail:admin/tests|cahier",
+      "title": "CLAUDE.md — directive tag [modification] sur fonctions après changement de code",
+      "description": "Ajout d'une règle obligatoire dans CLAUDE.md : après chaque modification de fichier de code, vérifier si le composant est référencé dans les tests pré-programmés (via champ Composants des fonctions.md ou table de correspondance), et ajouter le tag [modification] devant le libellé du heading ## concerné. Mise à jour de fonctions.md admin/tests : ajout du filtre 'À retester' dans 2-1-5-1 et nouvelle section 2-1-5-15 décrivant le mécanisme complet (détection, tag, retrait automatique, champ needsRetest, visuel cahier).",
+      "files": [
+        "CLAUDE.md",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu rajoute dans .claude.md du projet une directive qui indique qu'a chaque modification de code, le système regarde si un component qui à été modifié est inclus dans l'un des tests pré-programmer. Si c'est le cas cela doit ajouter devant le titre du test un tag \"modification\" pour indiqué au système que la section doit être à nouveau testé. Il faudra aussi rajouté un filtre pour ce cas pour l'admin/test/cahier de recette.",
+      "startedAt": "2026-06-21T15:20:00.000Z",
+      "completedAt": "2026-06-21T15:30:00.000Z"
+    },
+    {
       "id": "mod-427",
       "version": "B-0.296",
       "date": "2026-06-21T14:20:00.000Z",

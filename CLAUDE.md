@@ -205,6 +205,31 @@ Question 3 : "Titre du commit ?"
 
 ---
 
+## Règle obligatoire : Tag `[modification]` sur les fonctions impactées par un changement de code
+
+**Après chaque modification d'un fichier de code** (composant Angular, service, template, route Express), vérifier si ce fichier est référencé dans les tests pré-programmés et tagger les fonctions concernées.
+
+### Procédure
+
+1. **Détecter les fonctions impactées** — deux méthodes complémentaires :
+   - **Méthode exacte** : chercher dans tous les `tests/fonctions/**/fonctions.md` les lignes `- **Composants:**` contenant le nom du fichier modifié (correspondance partielle sur le nom de fichier ou le chemin).
+   - **Méthode structurelle** : utiliser la table "Composant → fonctions.md" ci-dessus pour identifier le `fonctions.md` dont la portée couvre le composant modifié.
+
+2. **Ajouter le tag `[modification]`** sur chaque heading `##` impacté :
+   - Avant : `## \`2-5-2-3-4\` — Onglets de mode`
+   - Après  : `## \`2-5-2-3-4\` — [modification] Onglets de mode`
+   - Ne pas dupliquer si le tag est déjà présent.
+
+3. **Ne pas retirer le tag manuellement** — il sera retiré par le serveur lors de l'enregistrement d'un résultat de test (OK ou KO) postérieur à la date de modification.
+
+### Règle de parsing côté serveur (à implémenter)
+
+- `parseFonctionsMd` détecte `[modification]` dans le libellé → expose `needsRetest: true` sur la fonction.
+- Le tag `[modification]` est retiré du heading quand le serveur enregistre un résultat (OK/KO) via `POST /api/admin/tests/runs/:id`.
+- **Filtre "À retester"** disponible dans l'onglet Cahier de recette (s'ajoute à `Toutes / Testées / Non testées / En erreur`) : affiche uniquement les fonctions dont `needsRetest: true`.
+
+---
+
 ## Règle obligatoire : IDs de fonctions testables
 
 Chaque `##` heading dans un `fonctions.md` est une fonction testable avec un **ID unique hiérarchique**.

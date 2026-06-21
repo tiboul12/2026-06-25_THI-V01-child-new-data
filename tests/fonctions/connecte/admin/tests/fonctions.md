@@ -19,7 +19,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Hiérarchie & tri** : arbre reconstruit depuis les chemins des `fonctions.md`. Les nœuds sont triés **numériquement par ID hiérarchique** en pré-ordre (`1`, `1-1`, `2`, `2-1`, `2-1-1`, …). L'ID d'un nœud intermédiaire est déduit du `folderId` d'une feuille descendante (segments tronqués à la profondeur du nœud).
   - **Accordéon** : au 1er niveau seules les catégories racines (`1` non-connecte, `2` connecte) sont visibles ; clic sur un nœud déplie/replie ses enfants. Boutons globaux "Tout ouvrir" / "Tout fermer".
   - **Recherche** (champ avec icône loupe) : filtre l'arbre sur le libellé, le `pageTitle`, l'`ID` et le contenu des fonctions (insensible aux accents/casse). **Autocomplétion** : dropdown de max 8 suggestions (icône d'état + ID + section + page) ; clic → applique la section comme filtre. Bouton ✕ pour vider.
-  - **Filtre d'état** : `Toutes` / `Testées` / `Non testées` / `En erreur` (KO) — masque les sections/fonctions hors critère.
+  - **Filtre d'état** : `Toutes` / `Testées` / `Non testées` / `En erreur` (KO) / `À retester` — masque les sections/fonctions hors critère. Le filtre `À retester` affiche uniquement les fonctions dont le heading contient le tag `[modification]` (champ `needsRetest: true`), indiquant que le code source a été modifié depuis le dernier test.
   - **Favoris** : bouton étoile (`star`/`star_border`) sur chaque section feuille → (dé)marque en favori (POST `/api/admin/tests/favorites { folderId, favorite }`, persistant). Chip filtre **« Favoris »** (★) pour n'afficher que les sections favorites. Chargé via GET `/api/admin/tests/favorites`.
   - Quand une recherche ou un filtre est actif, l'arbre se déplie automatiquement sur les résultats ; message "Aucun résultat" si vide.
   - **Nœud** : chevron, badge ID cliquable (copie), icône (`folder`/`folder_open` pour une catégorie, `description` pour une section feuille), nom (`pageTitle` ou nom du dossier), compteur de fonctions, bouton "Lancer un test sur cette section" (sur une feuille → pré-coche la section + bascule Exécution), bouton "Ouvrir le dossier local" (POST `/api/admin/tests/open-folder { path }`).
@@ -222,6 +222,22 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - `scanAllFunctions()` lit `_user-created.json` et injecte `userCreated: true` sur chaque `FunctionItem` du dossier concerné.
   - Badge visible dans le **Cahier** (nœud feuille), dans l'onglet **Résultats** (en-tête de groupe matrice) et l'onglet **Exécution** (en-tête de groupe runner).
   - Méthode `isSectionUserCreated(folderId)` : retourne `true` si au moins un item de ce dossier a `userCreated: true`.
+
+## `2-1-5-15` — Détection automatique des fonctions à retester après modification de code
+
+- **Déclencheur** : après chaque modification de code (composant Angular, service, template, route Express) par Claude Code, le système vérifie si le fichier modifié est référencé dans les tests pré-programmés.
+- **Sources de détection** :
+  - **Méthode exacte** : lignes `- **Composants:** …` dans les `fonctions.md` contenant le nom ou chemin du fichier modifié.
+  - **Méthode structurelle** : table de correspondance Composant → `fonctions.md` dans CLAUDE.md.
+- **Tag `[modification]`** : ajouté par Claude Code directement dans le heading `##` du `fonctions.md` concerné, entre le tiret long et le libellé.
+  - Format : `## \`2-5-2-3-4\` — [modification] Onglets de mode`
+  - Non dupliqué si déjà présent.
+- **Champ serveur** : `parseFonctionsMd` détecte `[modification]` → expose `needsRetest: true` sur la fonction.
+- **Retrait automatique** : le serveur retire le tag `[modification]` du heading lors de l'enregistrement d'un résultat (OK/KO) postérieur à la date de modification.
+- **Filtre "À retester"** dans l'onglet Cahier de recette : voir `2-1-5-1`.
+- **Visuel** : dans le Cahier, les fonctions taguées affichent un badge ambre "À retester" dans la colonne État ; les nœuds parents remontent un indicateur si au moins une fonction enfant a `needsRetest: true`.
+
+---
 
 ## `2-1-5-13` — Onglet Site Map graphique
 
