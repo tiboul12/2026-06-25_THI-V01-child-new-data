@@ -651,10 +651,17 @@ app.get('/api/config/keys', (req, res) => {
         const userConfig = typeof _rawCfg === 'string' ? (() => { try { return JSON.parse(_rawCfg); } catch { return {}; } })() : _rawCfg;
         const apiKeys = userConfig.apiKeys || {};
         const cliConfig = userConfig.cliConfig || {};
+        const globalCli = globalConf.cliConfig || {};
 
+        // Providers CLI actifs = capacité de la machine (conf.json global) UNION choix utilisateur.
+        // Les CLI agentiques (claude/agy) sont installés au niveau machine, pas par utilisateur :
+        // sans fallback global, un user sans cliConfig ne verrait jamais Antigravity.
         let activeProviders = cliConfig.activeProviders;
         if (!activeProviders && cliConfig.activeProvider) activeProviders = [cliConfig.activeProvider];
         if (!activeProviders) activeProviders = [];
+        if (Array.isArray(globalCli.activeProviders)) {
+            activeProviders = [...new Set([...activeProviders, ...globalCli.activeProviders])];
+        }
 
         // Outils externes activés par l'utilisateur (stockés dans son config en DB)
         const userEnabledTools = userConfig.enabledTools || {};
@@ -665,8 +672,8 @@ app.get('/api/config/keys', (req, res) => {
             cliConfig: {
                 activeProviders,
                 enabledModels: {
-                    claude: cliConfig.enabledModels?.claude || [],
-                    antigravity: cliConfig.enabledModels?.antigravity || []
+                    claude: cliConfig.enabledModels?.claude || globalCli.enabledModels?.claude || [],
+                    antigravity: cliConfig.enabledModels?.antigravity || globalCli.enabledModels?.antigravity || []
                 },
                 headerSelection: {
                     provider: cliConfig.headerSelection?.provider || '',
@@ -7824,6 +7831,10 @@ app.get('/api/admin/tests/runs', (req, res) => {
         startedAt:   run.startedAt,
         completedAt: run.completedAt,
         status:      run.status,
+        mode:        run.mode || 'manual',
+        aiProvider:  run.aiProvider || null,
+        aiModel:     run.aiModel || null,
+        aiState:     run.aiState || null,
         stats:       computeRunStats(run)
     }));
     res.json({ runs, topKo: computeTopKo(data.runs) });
@@ -7834,7 +7845,7 @@ app.post('/api/admin/tests/runs', (req, res) => {
     const user = getSessionUser(req);
     if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
     if (!_functionItemsCache) _functionItemsCache = scanAllFunctions();
-    const { name, tester, folderIds } = req.body;
+    const { name, tester, folderIds, mode, aiProvider, aiModel, prompt } = req.body;
     // Filtrage optionnel par sections (folderIds) : un run peut ne couvrir qu'une partie
     // du référentiel. Liste vide ou absente = toutes les fonctions.
     let items = _functionItemsCache;
@@ -7848,6 +7859,9 @@ app.post('/api/admin/tests/runs', (req, res) => {
         tester:    tester || user.username || 'admin',
         startedAt: new Date().toISOString(),
         status:    'in_progress',
+        // Mode 'ai' : run testé automatiquement par Claude Code / Antigravity via Browser MCP.
+        mode:      mode === 'ai' ? 'ai' : 'manual',
+        ...(mode === 'ai' ? { aiProvider: aiProvider || null, aiModel: aiModel || null, aiState: 'idle', prompt: prompt || null } : {}),
         results:   items.map(item => ({ itemId: item.id, status: 'pending' }))
     };
     const data = testsAdminLoad();
@@ -7909,6 +7923,267 @@ app.delete('/api/admin/tests/runs/:id', (req, res) => {
     if (data.runs.length === before) return res.status(404).json({ error: 'Run introuvable' });
     testsAdminSave(data);
     res.json({ ok: true });
+});
+
+// Compose le prompt de test automatique : consignes (éditables) + format imposé + liste des fonctions.
+function buildAiTestPrompt(run, items, editableInstructions) {
+    const intro = (editableInstructions || '').trim() || [
+        "Tu es un testeur QA. L'application Worganic est ouverte et CONNECTÉE dans le navigateur",
+        "(onglet piloté via l'extension Browser MCP). Utilise les outils du navigateur pour tester",
+        "réellement chaque fonctionnalité listée ci-dessous d'après ses tâches, puis renvoie l'état",
+        "de chaque test au fur et à mesure."
+    ].join(' ');
+
+    const fnList = items.map(it => {
+        const tasks = (it.content || '').trim();
+        return `### ${it.id} — ${it.section} (${it.pageTitle})\n${tasks || '(pas de détail)'}`;
+    }).join('\n\n');
+
+    // Bloc format IMPOSÉ (jamais éditable) → garantit un parsing fiable côté serveur.
+    const format = [
+        '',
+        '---',
+        'FORMAT DE RETOUR (OBLIGATOIRE) :',
+        'Pour CHAQUE fonction, dès que tu l\'as testée, émets EXACTEMENT une ligne, au fur et à mesure :',
+        '@@TEST_RESULT@@{"itemId":"<id>","status":"ok|ko|nd","note":"<observation courte>"}',
+        'Exemple :',
+        '@@TEST_RESULT@@{"itemId":"2-5-2-11-1","status":"ok","note":""}',
+        '@@TEST_RESULT@@{"itemId":"2-5-2-11-2","status":"ko","note":"Le panneau tableur ne s\'affiche pas après clic"}',
+        'Règles : status ok=conforme, ko=bug constaté, nd=non testable. note brève (< 200 caractères).',
+        'N\'émets rien d\'autre sur ces lignes sentinelles. Émets-les progressivement, pas toutes à la fin.',
+        ''
+    ].join('\n');
+
+    return `${intro}\n\n## Fonctions à tester (${items.length})\n\n${fnList}\n${format}`;
+}
+
+// ── Antigravity (agy) : échange par FICHIER ────────────────────────────────────
+// agy -p n'écrit jamais sur stdout (print mode = modifications de fichiers uniquement). On lui
+// fait donc lire un fichier de tâches et ÉCRIRE les @@TEST_RESULT@@ dans un fichier de sortie,
+// que le serveur poll. Prompt directif (sinon agy "répond" au lieu d'écrire).
+
+/** Détail des fonctions, écrit dans un fichier que agy lira (garde le prompt court). */
+function buildAntigravityTaskSpec(items) {
+    const fnList = items.map(it => {
+        const tasks = (it.content || '').trim();
+        return `### ${it.id} — ${it.section} (Page: ${it.pageTitle})\n${tasks || '(Pas de détail de scénario)'}`;
+    }).join('\n\n');
+    return `Liste des fonctions à tester (${items.length}) :\n\n${fnList}\n`;
+}
+
+/** Prompt court et DIRECTIF passé à agy : lire le fichier de tâches, écrire les résultats dans le fichier de sortie. */
+function buildAntigravityPrompt(taskFile, outFile, count, editableInstructions) {
+    const tf = taskFile.replace(/\\/g, '/');
+    const of = outFile.replace(/\\/g, '/');
+    const intro = (editableInstructions || '').trim()
+        || "Tu es un testeur QA d'élite. L'application Worganic est lancée et configurée (les serveurs tournent).";
+    return `${intro}
+
+Étape 1 — Lis le fichier de tâches : ${tf}
+   Il décrit ${count} fonctionnalité(s) à tester, chacune avec son identifiant et ses scénarios.
+
+Étape 2 — Évalue RÉELLEMENT chaque fonctionnalité : via tes outils navigateur/MCP si disponibles, sinon par requêtes API locales et/ou LECTURE DU CODE SOURCE du projet (composants Angular, routes serveur). Détermine un verdict pour CHAQUE fonction.
+
+Étape 3 — TA SEULE LIVRAISON : utilise ton OUTIL D'ÉCRITURE DE FICHIER pour écrire dans ${of}.
+   N'écris RIEN dans ta réponse texte — tout passe par ce fichier.
+   Pour CHAQUE fonction, ajoute (append) une ligne au format EXACT, dès qu'elle est évaluée (pas à la fin) :
+   @@TEST_RESULT@@{"itemId":"<id>","status":"ok|ko|nd","note":"<courte note>"}
+   Si tu ne peux pas trancher une fonction, écris quand même sa ligne avec status "nd". Ne mets rien d'autre sur ces lignes.
+
+Règles de statut : "ok" = opérationnelle et conforme ; "ko" = bug/anomalie ; "nd" = non déterminable.
+COMMENCE MAINTENANT et assure-toi d'écrire les ${count} ligne(s) dans le fichier.`;
+}
+
+// GET /api/admin/tests/runs/:id/ai-stream — lance le test automatique via Claude Code / Antigravity
+// (executor local + Browser MCP) et streame les résultats au fur et à mesure (SSE). Auth via ?token=.
+app.get('/api/admin/tests/runs/:id/ai-stream', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+
+    const data = testsAdminLoad();
+    const run  = data.runs.find(r => r.id === req.params.id);
+    if (!run) return res.status(404).json({ error: 'Run introuvable' });
+
+    if (!_functionItemsCache) _functionItemsCache = scanAllFunctions();
+    const runItemIds = new Set(run.results.map(r => r.itemId));
+    const items = _functionItemsCache.filter(it => runItemIds.has(it.id));
+
+    // SSE (événements nommés, consommés par EventSource côté client)
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    const sse = (event, payload) => { if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`); };
+
+    // Persiste un résultat IA dans runs.json (merge comme le PUT) et renvoie les stats à jour.
+    const persistResult = (itemId, status, note) => {
+        const d = testsAdminLoad();
+        const r = d.runs.find(x => x.id === run.id);
+        if (!r) return null;
+        const existing = r.results.find(x => x.itemId === itemId);
+        if (!existing) return null;
+        existing.status   = status;
+        existing.note     = note || '';
+        existing.testedAt = new Date().toISOString();
+        if (r.aiState !== 'running') r.aiState = 'running';
+        testsAdminSave(d);
+        return computeRunStats(r);
+    };
+
+    const provider = run.aiProvider || 'claude';
+    const isAgy    = provider === 'antigravity' || provider === 'agy';
+    // Modèle par défaut selon le provider : agy → 'default' (utilise son modèle configuré),
+    // sinon un modèle Claude. Évite de passer un modèle Claude à agy.
+    const model    = run.aiModel || (isAgy ? 'default' : 'claude-sonnet-4-6');
+
+    // Résultats déjà émis (dédup) — partagé entre le parsing stdout (Claude) et le poll fichier (agy).
+    const seen = new Set();
+
+    // Antigravity : échange par fichier (agy n'écrit pas sur stdout). On prépare un fichier de
+    // tâches (lu par agy) et un fichier de sortie (écrit par agy, poll par le serveur).
+    let prompt = buildAiTestPrompt(run, items, run.prompt);
+    let cwdToSend, agyOutFile = null, agyDir = null, agyPoller = null;
+    if (isAgy) {
+        try {
+            agyDir = path.join(BASE_DIR, 'tests-admin', 'ai-runs', run.id);
+            fs.mkdirSync(agyDir, { recursive: true });
+            const taskFile = path.join(agyDir, 'taches.md');
+            agyOutFile = path.join(agyDir, 'resultats.txt');
+            fs.writeFileSync(taskFile, buildAntigravityTaskSpec(items), 'utf8');
+            fs.writeFileSync(agyOutFile, '', 'utf8');
+            prompt = buildAntigravityPrompt(taskFile, agyOutFile, items.length, run.prompt);
+            cwdToSend = PROJECT_ROOT;   // agy a besoin de la racine pour lire le code source
+        } catch (e) {
+            sse('run-failed', { message: `Préparation des fichiers Antigravity impossible : ${e.message}` });
+            return res.end();
+        }
+    }
+
+    sse('start', { total: items.length, provider, model });
+    // Marque le run "running"
+    { const d = testsAdminLoad(); const r = d.runs.find(x => x.id === run.id); if (r) { r.aiState = 'running'; testsAdminSave(d); } }
+
+    // Lit une ligne @@TEST_RESULT@@ (depuis stdout Claude OU le fichier agy), persiste et émet le SSE.
+    const ingestResultLine = (line) => {
+        const i = line.indexOf('@@TEST_RESULT@@');
+        if (i === -1) return false;
+        let obj; try { obj = JSON.parse(line.slice(i + '@@TEST_RESULT@@'.length).trim()); } catch { return false; }
+        if (!obj || !obj.itemId || seen.has(obj.itemId) || !runItemIds.has(obj.itemId)) return false;
+        seen.add(obj.itemId);
+        const status = obj.status === 'ok' ? 'ok' : obj.status === 'ko' ? 'ko' : 'pending';
+        const stats = persistResult(obj.itemId, status, obj.note);
+        sse('case-result', { itemId: obj.itemId, status, note: obj.note || '', stats, done: seen.size, total: items.length });
+        return true;
+    };
+
+    // Poll du fichier de sortie agy → émet les nouveaux résultats au fil de l'eau.
+    const pollAgyFile = () => {
+        if (!agyOutFile) return;
+        let content = '';
+        try { content = fs.readFileSync(agyOutFile, 'utf8'); } catch { return; }
+        for (const line of content.split('\n')) ingestResultLine(line);
+    };
+    if (isAgy) agyPoller = setInterval(pollAgyFile, 1500);
+    const stopPoller = () => { if (agyPoller) { clearInterval(agyPoller); agyPoller = null; } };
+
+    // Appel SSE à l'executor local (port 3002) — Claude Code / agy pilotent le navigateur via Browser MCP.
+    const http = require('http');
+    const body = JSON.stringify({ stepId: run.id, content: prompt, provider, model, cwd: cwdToSend });
+    const apiReq = http.request({
+        hostname: 'localhost', port: 3002, path: '/execute-prompt', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (apiRes) => {
+        let sseBuf = '';   // buffer du flux SSE de l'executor
+        let lineBuf = '';  // buffer des lignes stdout (pour repérer les sentinelles)
+        let logLines = 0;  // nb de lignes de travail reçues de l'executor (diagnostic)
+
+        // Si l'executor ne répond pas en SSE (ex: 400/500 JSON), on remonte l'erreur au lieu
+        // d'afficher un faux "terminé". On collecte le corps et on signale l'échec.
+        if (apiRes.statusCode !== 200) {
+            let errBody = '';
+            apiRes.on('data', c => { errBody += c.toString(); });
+            apiRes.on('end', () => {
+                stopPoller();
+                const d = testsAdminLoad(); const r = d.runs.find(x => x.id === run.id);
+                if (r) { r.aiState = 'error'; testsAdminSave(d); }
+                sse('run-failed', { message: `Executor a répondu HTTP ${apiRes.statusCode} : ${errBody.slice(0, 500) || '(corps vide)'}` });
+                res.end();
+            });
+            return;
+        }
+
+        // Traite une ligne stdout : soit une sentinelle de résultat (Claude), soit du log de
+        // travail (raisonnement de l'IA) renvoyé en direct au client via l'événement `ai-log`.
+        const handleStdoutLine = (line) => {
+            if (ingestResultLine(line)) return;   // sentinelle @@TEST_RESULT@@ (dédup via `seen`)
+            const text = line.replace(/\r$/, '');
+            if (text.trim()) sse('ai-log', { stream: 'stdout', text });
+        };
+        const onStdout = (text) => {
+            lineBuf += text;
+            let idx;
+            while ((idx = lineBuf.indexOf('\n')) !== -1) {
+                handleStdoutLine(lineBuf.slice(0, idx));
+                lineBuf = lineBuf.slice(idx + 1);
+            }
+        };
+
+        apiRes.on('data', (chunk) => {
+            sseBuf += chunk.toString();
+            const parts = sseBuf.split('\n');
+            sseBuf = parts.pop() ?? '';
+            for (const line of parts) {
+                if (!line.startsWith('data:')) continue;
+                let evt; try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+                if (evt.type === 'stdout' && evt.message) { logLines++; onStdout(evt.message); }
+                else if (evt.type === 'stderr' && evt.message) {
+                    const t = evt.message.replace(/\r?\n$/, '');
+                    if (t.trim()) { logLines++; sse('ai-log', { stream: 'stderr', text: t }); }
+                }
+                else if ((evt.type === 'info' || evt.type === 'start') && evt.message) {
+                    const t = evt.message.replace(/\r?\n$/, '');
+                    if (t.trim()) { logLines++; sse('ai-log', { stream: 'info', text: t }); }
+                }
+                else if (evt.type === 'end' && evt.message) {
+                    const t = evt.message.replace(/\r?\n$/, '');
+                    if (t.trim()) sse('ai-log', { stream: 'info', text: t });
+                }
+                else if (evt.type === 'error') sse('ai-error', { message: evt.message || 'Erreur IA' });
+            }
+        });
+        apiRes.on('end', () => {
+            if (lineBuf) handleStdoutLine(lineBuf);
+            if (isAgy) pollAgyFile();   // lecture finale du fichier de résultats agy
+            stopPoller();
+            const d = testsAdminLoad(); const r = d.runs.find(x => x.id === run.id);
+            if (r) { r.aiState = 'done'; testsAdminSave(d); }
+            // Diagnostic : l'IA n'a renvoyé aucun résultat.
+            if (seen.size === 0) {
+                let msg;
+                if (isAgy) {
+                    msg = "Antigravity n'a écrit aucun résultat dans le fichier. Vérifie qu'agy est authentifié (agy models doit lister des modèles) et qu'il a accès aux outils pour tester (Browser MCP, ou au moins le code source).";
+                } else {
+                    msg = logLines === 0
+                        ? "Aucune sortie reçue de l'IA. Vérifie que l'executor (port 3002) lance bien Claude Code (CLI installé) et que le provider/modèle sont valides."
+                        : "L'IA s'est exécutée mais n'a renvoyé aucun résultat @@TEST_RESULT@@. Vérifie que l'extension Browser MCP est connectée à l'onglet de l'app (claude mcp list) et que l'onglet est ouvert et connecté.";
+                }
+                sse('ai-log', { stream: 'error', text: msg });
+            }
+            sse('complete', { done: seen.size, total: items.length, logLines, stats: r ? computeRunStats(r) : null });
+            res.end();
+        });
+    });
+    apiReq.on('error', (e) => {
+        stopPoller();
+        const d = testsAdminLoad(); const r = d.runs.find(x => x.id === run.id);
+        if (r) { r.aiState = 'error'; testsAdminSave(d); }
+        sse('run-failed', { message: `Executor injoignable (port 3002) : ${e.message}. Lance l'executor et configure Browser MCP.` });
+        res.end();
+    });
+    apiReq.write(body);
+    apiReq.end();
+
+    req.on('close', () => { stopPoller(); try { apiReq.destroy(); } catch {} });
 });
 
 // ============================================================

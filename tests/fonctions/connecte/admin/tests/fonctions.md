@@ -92,3 +92,25 @@ Accès : admin uniquement
   - **Annuler un test en cours** : abandon = DELETE du run → retour dashboard
   - **Supprimer un test** (depuis la liste ou le détail) : DELETE → retour dashboard
   - Boutons : "Retour" (annule) / "Abandonner" ou "Supprimer" (confirme)
+
+---
+
+## `2-1-5-7` — Mode automatique (test IA via Claude Code + Browser MCP)
+
+- **Toggle Manuel / Automatique (IA)** dans le popup de lancement.
+- **Mode IA** :
+  - **Sélecteur IA** : providers CLI agentiques actifs dans admin/config (Claude Code, Antigravity) — depuis `ConfigService.cliConfig().availableProviders` (type `cli`)
+  - **Sélecteur Modèle** : `modelsList[baseId]` du provider choisi
+  - **Consignes éditables** (textarea) : intro du prompt, modifiable
+  - **Format de retour imposé** (lecture seule) : exemple `@@TEST_RESULT@@{"itemId":…,"status":"ok|ko|nd","note":…}` pour un retour constant
+  - **Lancer avec l'IA** : POST `/runs { mode:'ai', aiProvider, aiModel, prompt, folderIds }`
+- **Exécution** : `GET /api/admin/tests/runs/:id/ai-stream` (SSE, auth `?token=`) construit le prompt (consignes + format imposé + liste des fonctions), appelle l'executor local `/execute-prompt` (Claude Code / agy pilotent le navigateur via l'extension **Browser MCP**), parse les lignes `@@TEST_RESULT@@`, persiste chaque résultat et ré-émet en SSE (`start`, `case-result`, `ai-log`, `complete`, `ai-error`, `run-failed`).
+- **Deux mécanismes de capture selon le provider** :
+  - **Claude** : émet les `@@TEST_RESULT@@` sur **stdout** → le serveur parse le flux stdout de l'executor.
+  - **Antigravity (`agy`)** : `agy -p` n'écrit **jamais** sur stdout (print mode = modifications de fichiers). Le serveur écrit un **fichier de tâches** (lu par agy) + un **fichier de sortie** sous `data/tests-admin/ai-runs/<runId>/`, envoie un prompt directif (agy ÉCRIT les `@@TEST_RESULT@@` dans le fichier via son outil d'écriture), et **poll ce fichier** toutes les 1,5 s pour émettre les `case-result`. L'executor spawn agy **directement** (pas `cmd /c`, chemin résolu via `where agy`), `cwd` = racine projet. Voir aussi le CLI `tests/run-recette-cli.js` (même approche).
+- **Retours en direct (`ai-log`)** : tout le stdout/stderr/info de l'IA (hors lignes sentinelles) est forwardé en temps réel via l'événement SSE `ai-log` `{ stream, text }`. Le serveur n'avale plus le raisonnement de l'IA. (Antigravity étant muet sur stdout, le journal live est plus pauvre — les résultats arrivent via le fichier.)
+- **Runner IA** : bannière « Claude Code teste… (X/Y) » + spinner pendant `aiRunning`, résultats remplis **progressivement** ; à la fin → « Tests IA terminés — à revoir » (revue manuelle puis Terminer).
+- **Journal live** (panneau « Retours en direct de l'IA », collapsible, sous la bannière) : affiche au fil de l'eau les lignes `ai-log`, les verdicts (`case-result`) et les messages début/fin/erreur. Coloration par flux (stdout/stderr/info/result/error), auto-scroll vers le bas, borné à 500 lignes, compteur de lignes, réinitialisé à chaque lancement.
+- **Dashboard** : badge **IA** sur les runs automatiques.
+- **Pré-requis** : extension **Browser MCP** installée + enregistrée auprès de Claude Code (`claude mcp add`), onglet de l'app **connecté** relié à Browser MCP, executor (port 3002) lancé.
+- **Champs run** : `mode:'ai'`, `aiProvider`, `aiModel`, `aiState` (`idle|running|done|error`), `prompt`.

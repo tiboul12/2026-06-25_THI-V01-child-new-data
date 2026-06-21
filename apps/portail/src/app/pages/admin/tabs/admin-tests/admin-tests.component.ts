@@ -1,7 +1,7 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
-import { AuthService } from '@worganic/portail-core/data-access';
+import { AuthService, ConfigService } from '@worganic/portail-core/data-access';
 import { environment } from '../../../../../environments/environment';
 
 const API = environment.apiDataUrl;
@@ -29,6 +29,12 @@ interface TestRunSummary {
   startedAt: string; completedAt?: string;
   status: 'in_progress' | 'completed';
   stats: RunStats;
+  // Mode automatique (IA via Claude Code + Browser MCP)
+  mode?: 'manual' | 'ai';
+  aiProvider?: string | null;
+  aiModel?: string | null;
+  aiState?: 'idle' | 'running' | 'done' | 'error';
+  prompt?: string | null;
 }
 
 interface TestRunDetail extends TestRunSummary { results: TestResult[]; }
@@ -53,8 +59,21 @@ type View = 'dashboard' | 'runner' | 'detail';
   imports: [FormsModule, NgClass],
   templateUrl: './admin-tests.component.html',
 })
-export class AdminTestsComponent implements OnInit {
+export class AdminTestsComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
+  private configService = inject(ConfigService);
+
+  // Conteneur du journal IA — pour auto-scroll en bas à chaque nouvelle ligne.
+  @ViewChild('aiLogBox') aiLogBox?: ElementRef<HTMLDivElement>;
+
+  constructor() {
+    // Auto-scroll du journal live vers le bas dès qu'une ligne est ajoutée.
+    effect(() => {
+      this.aiLog();
+      const el = this.aiLogBox?.nativeElement;
+      if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+    });
+  }
 
   view = signal<View>('dashboard');
 
@@ -105,6 +124,38 @@ export class AdminTestsComponent implements OnInit {
   });
 
   launchSelectedCount = computed(() => this.launchSelected().size);
+
+  // ── Mode de lancement : manuel ou automatique (IA via Claude Code + Browser MCP) ──
+  launchMode  = signal<'manual' | 'ai'>('manual');
+  aiProvider  = signal('');   // baseId : 'claude' | 'antigravity'
+  aiModel     = signal('');
+  aiPrompt    = signal('');   // consignes éditables (le format de retour est imposé serveur)
+
+  /** Providers CLI agentiques disponibles (depuis admin/config) — seuls pilotables via MCP. */
+  aiProviders = computed(() => this.configService.cliConfig().availableProviders.filter(p => p.type === 'cli'));
+
+  /** Modèles disponibles pour le provider IA sélectionné. */
+  aiModels = computed(() => {
+    const base = this.aiProvider();
+    const list = this.configService.cliConfig().modelsList as Record<string, { value: string; label: string }[]>;
+    return list[base] || [];
+  });
+
+  /** Bloc "format de retour" imposé, affiché en lecture seule (exemple pour un retour constant). */
+  aiFormatExample =
+`@@TEST_RESULT@@{"itemId":"<id>","status":"ok|ko|nd","note":"<observation courte>"}
+Exemple :
+@@TEST_RESULT@@{"itemId":"2-5-2-11-1","status":"ok","note":""}
+@@TEST_RESULT@@{"itemId":"2-5-2-11-2","status":"ko","note":"Le panneau ne s'affiche pas après clic"}`;
+
+  // État du run IA en cours (affichage progressif)
+  aiRunning  = signal(false);
+  aiProgress = signal<{ done: number; total: number }>({ done: 0, total: 0 });
+  aiError    = signal('');
+  // Journal live du travail de l'IA (stdout/stderr/info renvoyés au fil de l'eau)
+  aiLog      = signal<{ stream: string; text: string }[]>([]);
+  showAiLog  = signal(true);
+  private aiEventSource: EventSource | null = null;
 
   // ── Popup de confirmation (annulation d'un run en cours / suppression) ──
   confirmPopup = signal<{ kind: 'cancel' | 'delete'; runId: string; label: string } | null>(null);
@@ -268,11 +319,41 @@ export class AdminTestsComponent implements OnInit {
     await this.loadFunctions();
     this.launchName.set('');
     this.selectAllLaunch();
+    this.initAiDefaults();
     this.runsError.set('');
     this.showLaunchPopup.set(true);
   }
 
   closeLaunchPopup() { this.showLaunchPopup.set(false); }
+
+  /** Valeurs par défaut du mode automatique (provider/modèle depuis admin/config, consignes). */
+  private initAiDefaults() {
+    this.launchMode.set('manual');
+    this.aiError.set('');
+    const providers = this.aiProviders();
+    const header = this.configService.cliConfig().headerSelection;
+    const headerBase = (header.provider || '').split('-')[0];
+    const chosen = providers.find(p => p.baseId === headerBase) || providers[0];
+    this.aiProvider.set(chosen?.baseId || '');
+    const models = this.aiModels();
+    this.aiModel.set(models.find(m => m.value === header.model)?.value || models[0]?.value || '');
+    this.aiPrompt.set(this.defaultAiInstructions());
+  }
+
+  /** Quand le provider change, recaler le modèle sur le premier disponible. */
+  onAiProviderChange(base: string) {
+    this.aiProvider.set(base);
+    this.aiModel.set(this.aiModels()[0]?.value || '');
+  }
+
+  private defaultAiInstructions(): string {
+    return [
+      "Tu es un testeur QA. L'application Worganic est ouverte et CONNECTÉE dans le navigateur",
+      "(onglet piloté via l'extension Browser MCP). Utilise les outils du navigateur pour tester",
+      "réellement chaque fonctionnalité listée d'après ses tâches, puis renvoie l'état de chaque",
+      "test au fur et à mesure (un résultat par fonction, sans attendre la fin)."
+    ].join(' ');
+  }
 
   /**
    * Ouvre le popup de lancement (même composant) depuis un nœud du référentiel,
@@ -287,6 +368,7 @@ export class AdminTestsComponent implements OnInit {
       .filter(n => n.folderId && (n.fullPath === fullPath || n.fullPath.startsWith(fullPath + '/')))
       .map(n => n.folderId);
     this.launchSelected.set(new Set(ids));
+    this.initAiDefaults();
     this.runsError.set('');
     this.showLaunchPopup.set(true);
   }
@@ -303,10 +385,12 @@ export class AdminTestsComponent implements OnInit {
   selectAllLaunch() { this.launchSelected.set(new Set(this.launchGroups().map(g => g.folderId))); }
   clearLaunch()     { this.launchSelected.set(new Set<string>()); }
 
-  /** Crée le run avec le nom et les sections sélectionnées. */
+  /** Crée le run avec le nom et les sections sélectionnées (manuel ou automatique IA). */
   async confirmLaunch() {
     const selected = [...this.launchSelected()];
     if (selected.length === 0) { this.runsError.set('Sélectionnez au moins une section'); return; }
+    const isAi = this.launchMode() === 'ai';
+    if (isAi && !this.aiProvider()) { this.runsError.set('Aucun provider IA disponible — active un CLI dans admin/config'); return; }
     this.runsError.set('');
     try {
       const allIds = this.launchGroups().map(g => g.folderId);
@@ -314,17 +398,90 @@ export class AdminTestsComponent implements OnInit {
       const folderIds = selected.length === allIds.length ? [] : selected;
       const res = await fetch(`${API}/api/admin/tests/runs`, {
         method: 'POST', headers: this.authHeaders,
-        body: JSON.stringify({ tester: this.runnerName(), name: this.launchName().trim() || null, folderIds })
+        body: JSON.stringify({
+          tester: this.runnerName(),
+          name: this.launchName().trim() || null,
+          folderIds,
+          ...(isAi ? { mode: 'ai', aiProvider: this.aiProvider(), aiModel: this.aiModel(), prompt: this.aiPrompt().trim() } : {})
+        })
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Erreur création run');
       const run = await res.json();
       this.activeRun.set(run);
       this.showLaunchPopup.set(false);
       this.view.set('runner');
+      if (isAi) this.startAiRun(run.id);
     } catch (e: any) {
       this.runsError.set(e.message || 'Erreur création run');
     }
   }
+
+  /** Lance le test automatique IA : ouvre le flux SSE et applique les résultats au fur et à mesure. */
+  startAiRun(runId: string) {
+    this.closeAiStream();
+    this.aiError.set('');
+    this.aiLog.set([]);
+    this.aiRunning.set(true);
+    this.aiProgress.set({ done: 0, total: this.activeRun()?.results.length || 0 });
+    const token = this.authService.getToken() || '';
+    const es = new EventSource(`${API}/api/admin/tests/runs/${runId}/ai-stream?token=${encodeURIComponent(token)}`);
+    this.aiEventSource = es;
+
+    es.addEventListener('start', (e: MessageEvent) => {
+      const d = JSON.parse(e.data); this.aiProgress.set({ done: 0, total: d.total });
+      this.appendAiLog('info', `Démarrage du test IA — ${d.total} fonction(s) à vérifier (${d.provider || ''} / ${d.model || ''})`);
+    });
+    es.addEventListener('ai-log', (e: MessageEvent) => {
+      try { const d = JSON.parse(e.data); this.appendAiLog(d.stream || 'stdout', d.text || ''); } catch { /* ignore */ }
+    });
+    es.addEventListener('case-result', (e: MessageEvent) => {
+      const d = JSON.parse(e.data);
+      const run = this.activeRun();
+      if (run) {
+        const results = run.results.map(r => r.itemId === d.itemId ? { ...r, status: d.status, note: d.note } : r);
+        this.activeRun.set({ ...run, results });
+      }
+      this.aiProgress.set({ done: d.done, total: d.total });
+      const verdict = d.status === 'ok' ? 'OK' : d.status === 'ko' ? 'KO' : 'ND';
+      this.appendAiLog('result', `[${verdict}] ${d.itemId}${d.note ? ' — ' + d.note : ''} (${d.done}/${d.total})`);
+    });
+    es.addEventListener('ai-error', (e: MessageEvent) => {
+      try { const m = JSON.parse(e.data).message || 'Erreur IA'; this.aiError.set(m); this.appendAiLog('error', m); } catch { /* ignore */ }
+    });
+    es.addEventListener('complete', (e: MessageEvent) => {
+      try { const d = JSON.parse(e.data); this.appendAiLog('info', `Test IA terminé — ${d.done}/${d.total} fonction(s) traitée(s).`); } catch { /* ignore */ }
+      this.aiRunning.set(false); this.closeAiStream();
+    });
+    es.addEventListener('run-failed', (e: MessageEvent) => {
+      try { const m = JSON.parse(e.data).message || 'Échec du run IA'; this.aiError.set(m); this.appendAiLog('error', m); } catch { /* ignore */ }
+      this.aiRunning.set(false); this.closeAiStream();
+    });
+    // Erreur de connexion EventSource (executor coupé, etc.)
+    es.onerror = () => {
+      if (this.aiRunning()) this.aiError.set(this.aiError() || 'Connexion au flux IA interrompue');
+      this.aiRunning.set(false); this.closeAiStream();
+    };
+  }
+
+  /** Ajoute une ligne au journal live de l'IA (borné à 500 lignes pour rester léger). */
+  private appendAiLog(stream: string, text: string) {
+    if (!text) return;
+    this.aiLog.update(log => {
+      const next = [...log, { stream, text }];
+      return next.length > 500 ? next.slice(next.length - 500) : next;
+    });
+  }
+
+  private closeAiStream() {
+    if (this.aiEventSource) { this.aiEventSource.close(); this.aiEventSource = null; }
+  }
+
+  aiProgressPct = computed(() => {
+    const p = this.aiProgress();
+    return p.total > 0 ? Math.round((p.done / p.total) * 100) : 0;
+  });
+
+  ngOnDestroy() { this.closeAiStream(); }
 
   async loadFunctions() {
     if (this.functions().length > 0) return;
@@ -383,6 +540,8 @@ export class AdminTestsComponent implements OnInit {
   async completeRun() {
     const run = this.activeRun();
     if (!run) return;
+    this.closeAiStream();
+    this.aiRunning.set(false);
     if (this.saveDebounce) clearTimeout(this.saveDebounce);
     this.saving.set(true);
     try {
@@ -436,6 +595,7 @@ export class AdminTestsComponent implements OnInit {
   async confirmAction() {
     const c = this.confirmPopup();
     if (!c) return;
+    if (c.kind === 'cancel') { this.closeAiStream(); this.aiRunning.set(false); }
     if (this.saveDebounce) clearTimeout(this.saveDebounce);
     try {
       await fetch(`${API}/api/admin/tests/runs/${c.runId}`, { method: 'DELETE', headers: this.authHeaders });
