@@ -155,9 +155,7 @@
                       {{ node.hasChildren ? ((isCahierExpanded(node.fullPath) || filtering()) ? 'folder_open' : 'folder') : 'description' }}
                     </span>
                     <!-- Nom -->
-                    <span [ngClass]="node.depth === 0
-                            ? 'text-sm font-bold text-light-text dark:text-white'
-                            : 'text-sm font-semibold text-light-text dark:text-white'">{{ node.pageTitle || node.name }}</span>
+                    <span [ngClass]="nodeTitleClass(node.fullPath, node.depth)">{{ node.pageTitle || node.name }}</span>
                     @if (node.items.length > 0) {
                       <span class="text-xs text-light-text-muted dark:text-white/30">({{ node.items.length }})</span>
                     }
@@ -971,6 +969,327 @@
           </div>
         }
       }
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- ── ONGLET SITE MAP ──────────────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'sitemap') {
+    <div class="pt-4">
+
+      <!-- Barre d'outils -->
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+
+        <!-- Zoom -->
+        <div class="flex items-center gap-1 border border-light-border dark:border-white/10 rounded-lg px-1 py-1 bg-light-surface dark:bg-surface">
+          <button (click)="sitemapZoomOut()"
+                  class="w-7 h-7 flex items-center justify-center rounded text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:bg-light-border dark:hover:bg-white/10 transition-all font-bold text-base">−</button>
+          <span class="text-xs font-mono text-light-text dark:text-white/70 w-10 text-center select-none">{{ (sitemapZoom() * 100).toFixed(0) }}%</span>
+          <button (click)="sitemapZoomIn()"
+                  class="w-7 h-7 flex items-center justify-center rounded text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:bg-light-border dark:hover:bg-white/10 transition-all font-bold text-base">+</button>
+          <button (click)="sitemapZoomReset()" title="Réinitialiser le zoom"
+                  class="w-7 h-7 flex items-center justify-center rounded text-light-text-muted dark:text-white/50 hover:text-light-primary dark:hover:text-primary hover:bg-light-border dark:hover:bg-white/10 transition-all">
+            <span class="material-symbols-outlined text-sm">center_focus_strong</span>
+          </button>
+        </div>
+
+        <div class="h-5 w-px bg-light-border dark:bg-white/10"></div>
+
+        <!-- Filtre par section du cahier -->
+        <select [value]="smFolderFilter()"
+                (change)="smFolderFilter.set($any($event.target).value); smSectionOnly.set(false)"
+                class="text-xs px-2 py-1.5 rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white dark:[color-scheme:dark] focus:outline-none focus:border-light-primary dark:focus:border-primary max-w-[260px]">
+          <option value="">Toutes les sections</option>
+          @for (g of smSections(); track g.folderId) {
+            <option [value]="g.folderId">{{ g.pageTitle }} / {{ g.section }}</option>
+          }
+        </select>
+
+        @if (smFolderFilter()) {
+          <!-- Badge section sélectionnée -->
+          <span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400">
+            <span class="material-symbols-outlined text-xs">filter_alt</span>
+            {{ smSectionLabel() }}
+            <button (click)="smFolderFilter.set(''); smSectionOnly.set(false)"
+                    class="ml-0.5 hover:text-white transition-colors">
+              <span class="material-symbols-outlined text-xs">close</span>
+            </button>
+          </span>
+
+          <!-- Voir seulement cette section -->
+          <button (click)="toggleSmSectionOnly()"
+                  [ngClass]="smSectionOnly()
+                    ? 'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-indigo-500 bg-indigo-500/15 text-indigo-300 font-semibold transition-all'
+                    : 'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:border-indigo-500/50 hover:text-indigo-300 transition-all'">
+            <span class="material-symbols-outlined text-sm">visibility</span>
+            {{ smSectionOnly() ? 'Voir tout' : 'Voir seulement cette section' }}
+          </button>
+        }
+
+        <span class="flex-1"></span>
+
+        <!-- Légende -->
+        <div class="flex items-center gap-3 text-[10px] text-light-text-muted dark:text-white/40 flex-wrap">
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-sky-500 bg-sky-500/10 inline-block"></span>Public</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-indigo-500 bg-indigo-500/10 inline-block"></span>Connecté</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-amber-500 bg-amber-500/10 inline-block"></span>Admin</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-emerald-500 bg-emerald-500/10 inline-block"></span>App Projets</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-violet-500 bg-violet-500/10 inline-block"></span>Widget</span>
+          <span class="h-3 w-px bg-light-border dark:bg-white/10"></span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-green-400 inline-block"></span>Connexion</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-amber-400 inline-block"></span>Cross-app</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-indigo-400 inline-block"></span>Nav</span>
+          <span class="flex items-center gap-1"><span class="w-4 border-t-2 border-dashed border-violet-400 inline-block"></span>Relation</span>
+        </div>
+      </div>
+
+      <!-- Conteneur principal : carte SVG + volet latéral -->
+      <div class="flex gap-3" style="height:72vh">
+
+        <!-- Zone SVG interactive -->
+        <div #sitemapContainer
+             class="flex-1 relative border border-light-border dark:border-white/10 rounded-xl overflow-hidden bg-[#060b14] select-none"
+             (mousedown)="smMouseDown($event)"
+             (mousemove)="smMouseMove($event)"
+             (mouseup)="smMouseUp()"
+             (mouseleave)="smMouseUp()"
+             [style.cursor]="smDragging ? 'grabbing' : 'grab'">
+
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <!-- Marqueur flèche nav (indigo) -->
+              <marker id="sm-arrow-nav" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M 0 0 L 0 6 L 8 3 z" fill="#818cf8"/>
+              </marker>
+              <!-- Marqueur flèche auth (vert) -->
+              <marker id="sm-arrow-auth" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M 0 0 L 0 6 L 8 3 z" fill="#34d399"/>
+              </marker>
+              <!-- Marqueur flèche cross-app (orange) -->
+              <marker id="sm-arrow-cross-app" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M 0 0 L 0 6 L 8 3 z" fill="#f59e0b"/>
+              </marker>
+              <!-- Marqueur flèche relation (violet) -->
+              <marker id="sm-arrow-relation" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M 0 0 L 0 6 L 8 3 z" fill="#a78bfa"/>
+              </marker>
+              <!-- Grille de fond -->
+              <pattern id="sm-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff08" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+
+            <!-- Fond grille -->
+            <rect width="100%" height="100%" fill="url(#sm-grid)"/>
+
+            <!-- Groupe principal avec transform pan/zoom -->
+            <g [attr.transform]="smTransform()">
+
+              <!-- ── Groupes (zones encadrées) ── -->
+              @for (grp of smVisibleGroups(); track grp.id) {
+                <rect [attr.x]="grp.x" [attr.y]="grp.y"
+                      [attr.width]="grp.w" [attr.height]="grp.h"
+                      [attr.fill]="grp.fill" [attr.stroke]="grp.stroke"
+                      stroke-width="1.5" rx="14" ry="14" stroke-dasharray="6 3"/>
+                <rect [attr.x]="grp.x + 10" [attr.y]="grp.y - 11"
+                      [attr.width]="grp.label.length * 7 + 16" height="22"
+                      [attr.fill]="'#060b14'" [attr.stroke]="grp.stroke"
+                      stroke-width="1" rx="6"/>
+                <text [attr.x]="grp.x + 18" [attr.y]="grp.y + 5"
+                      [attr.fill]="grp.stroke"
+                      font-size="11" font-weight="600" font-family="Inter, sans-serif">{{ grp.label }}</text>
+              }
+
+              <!-- ── Arêtes ── -->
+              @for (edge of smEdges; track edge.id) {
+                <path [attr.d]="smEdgePath(edge)"
+                      fill="none"
+                      [attr.stroke]="smEdgeColor(edge.type)"
+                      stroke-width="2"
+                      [attr.stroke-dasharray]="smEdgeDashed(edge.type) ? '5 4' : null"
+                      [attr.marker-end]="'url(#sm-arrow-' + edge.type + ')'"
+                      stroke-opacity="0.75"/>
+                @if (edge.label) {
+                  <rect [attr.x]="smEdgeMidX(edge) - edge.label.length * 4 - 4"
+                        [attr.y]="smEdgeMidY(edge) - 9"
+                        [attr.width]="edge.label.length * 8 + 8" height="16"
+                        fill="#060b14" rx="4"/>
+                  <text [attr.x]="smEdgeMidX(edge)" [attr.y]="smEdgeMidY(edge) + 4"
+                        text-anchor="middle" [attr.fill]="smEdgeColor(edge.type)"
+                        font-size="10" font-family="Inter, monospace">{{ edge.label }}</text>
+                }
+              }
+
+              <!-- ── Nœuds ── -->
+              @for (node of smVisibleNodes(); track node.id) {
+                <g data-smnode="1"
+                   style="cursor:pointer"
+                   [attr.opacity]="smNodeOpacity(node.id)"
+                   (click)="clickSmNode(node, $event)">
+                  <!-- Fond du nœud -->
+                  <rect [attr.x]="node.x" [attr.y]="node.y"
+                        [attr.width]="node.w" [attr.height]="node.h"
+                        [attr.fill]="smNodeFill(node.kind)"
+                        [attr.stroke]="smNodeSelected(node.id) ? '#ffffff' : (smNodeHighlighted(node.id) ? '#ffffff' : smNodeStroke(node.kind))"
+                        [attr.stroke-width]="smNodeSelected(node.id) ? 2.5 : (smNodeHighlighted(node.id) ? 2 : 1.5)"
+                        rx="10" ry="10"/>
+
+                  <!-- Badge port (coin sup-droit) -->
+                  <rect [attr.x]="node.x + node.w - 46" [attr.y]="node.y + 7"
+                        width="38" height="14" rx="6"
+                        [attr.fill]="smNodeStroke(node.kind)" fill-opacity="0.15"
+                        [attr.stroke]="smNodeStroke(node.kind)" stroke-opacity="0.4" stroke-width="0.8"/>
+                  <text [attr.x]="node.x + node.w - 27" [attr.y]="node.y + 18"
+                        text-anchor="middle" [attr.fill]="smNodeStroke(node.kind)"
+                        font-size="9" font-family="Inter, monospace" font-weight="600">{{ ':' + node.port }}</text>
+
+                  <!-- Label principal -->
+                  <text [attr.x]="node.x + 14" [attr.y]="node.y + 26"
+                        [attr.fill]="smNodeTextColor(node.kind)"
+                        font-size="13" font-weight="700" font-family="Inter, sans-serif">{{ node.label }}</text>
+
+                  <!-- URL -->
+                  <text [attr.x]="node.x + 14" [attr.y]="node.y + 44"
+                        [attr.fill]="smNodeStroke(node.kind)"
+                        font-size="10" font-family="monospace" fill-opacity="0.75">{{ node.url }}</text>
+
+                  <!-- Tabs (si node.tabs) — affiché sous l'URL -->
+                  @if (node.tabs) {
+                    @for (tab of node.tabs; track tab; let ti = $index) {
+                      <rect [attr.x]="node.x + 14" [attr.y]="node.y + 54 + ti * 33"
+                            [attr.width]="node.w - 28" height="26"
+                            rx="5"
+                            [attr.fill]="smNodeStroke(node.kind)" fill-opacity="0.07"
+                            [attr.stroke]="smNodeStroke(node.kind)" stroke-opacity="0.15" stroke-width="0.7"/>
+                      <text [attr.x]="node.x + 24" [attr.y]="node.y + 71 + ti * 33"
+                            [attr.fill]="smNodeTextColor(node.kind)"
+                            font-size="10" font-family="Inter, sans-serif" fill-opacity="0.85">{{ tab }}</text>
+                    }
+                  }
+                </g>
+              }
+
+            </g>
+          </svg>
+
+          <!-- Aide (bas de la carte) -->
+          <div class="absolute bottom-2 left-3 text-[10px] text-white/20 pointer-events-none select-none">
+            Molette : zoom · Cliquer-glisser : déplacer · Cliquer sur un nœud : détails
+          </div>
+        </div>
+
+        <!-- Volet latéral : détails du nœud sélectionné -->
+        @if (selectedSmNode(); as node) {
+          <div class="w-72 flex-shrink-0 flex flex-col border border-light-border dark:border-white/10 rounded-xl overflow-hidden bg-light-surface dark:bg-surface">
+
+            <!-- En-tête nœud -->
+            <div class="px-4 py-3 border-b border-light-border dark:border-white/10"
+                 [style.border-left]="'4px solid ' + smNodeStroke(node.kind)">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="text-sm font-bold text-light-text dark:text-white">{{ node.label }}</div>
+                  <div class="font-mono text-xs mt-0.5" [style.color]="smNodeStroke(node.kind)">{{ node.url }}</div>
+                </div>
+                <button (click)="selectedSmNode.set(null)"
+                        class="p-1 rounded text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors flex-shrink-0">
+                  <span class="material-symbols-outlined text-base">close</span>
+                </button>
+              </div>
+              <!-- Badges type + port -->
+              <div class="flex items-center gap-2 mt-2">
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full font-semibold border" [ngClass]="smKindBadgeClass(node.kind)">
+                  {{ smKindLabel(node.kind) }}
+                </span>
+                <span class="font-mono text-[9px] px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/50">port {{ node.port }}</span>
+              </div>
+            </div>
+
+            <!-- Contenu scrollable -->
+            <div class="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-xs">
+
+              <!-- Description -->
+              @if (node.description) {
+                <p class="text-light-text-muted dark:text-white/55 leading-relaxed">{{ node.description }}</p>
+              }
+
+              <!-- Lien vers la page (sauf widget embarqué) -->
+              @if (smNodeHasPage(node)) {
+                <a [href]="smNodePageUrl(node)" target="_blank" rel="noopener"
+                   class="flex items-center gap-1.5 text-xs text-light-primary dark:text-primary hover:opacity-80 transition-opacity">
+                  <span class="material-symbols-outlined text-sm">open_in_new</span>
+                  Ouvrir la page
+                </a>
+              } @else {
+                <div class="flex items-center gap-1.5 text-xs text-light-text-muted dark:text-white/40">
+                  <span class="material-symbols-outlined text-sm">widgets</span>
+                  Widget embarqué (pas de route propre)
+                </div>
+              }
+
+              <!-- Composants Angular -->
+              @if (node.components.length) {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Composants Angular ({{ node.components.length }})</div>
+                  <div class="flex flex-col gap-1">
+                    @for (c of node.components; track c) {
+                      <div class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-indigo-500/8 border border-indigo-500/15">
+                        <span class="material-symbols-outlined text-[11px] text-indigo-400">code</span>
+                        <span class="font-mono text-[10px] text-indigo-300 truncate" [title]="c">{{ c }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Onglets -->
+              @if (node.tabs?.length) {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Onglets ({{ node.tabs!.length }})</div>
+                  <div class="flex flex-wrap gap-1">
+                    @for (t of node.tabs!; track t) {
+                      <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60">{{ t }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Sections du cahier de recette liées -->
+              @if (node.cahierPaths?.length) {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Sections du cahier de recette</div>
+                  <div class="flex flex-col gap-1">
+                    @for (p of node.cahierPaths!; track p) {
+                      <div class="font-mono text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/50 truncate" [title]="p">{{ p }}</div>
+                    }
+                  </div>
+                </div>
+              }
+
+            </div>
+
+            <!-- Pied : filtrer par ce nœud -->
+            <div class="px-4 py-3 border-t border-light-border dark:border-white/10 space-y-1.5">
+              @if (node.cahierPaths?.length) {
+                <button (click)="smFolderFilter.set(''); smSectionOnly.set(false)"
+                        class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+                  <span class="material-symbols-outlined text-sm">layers</span>Voir toutes les sections
+                </button>
+              }
+            </div>
+
+          </div>
+        }
+
+        <!-- Placeholder volet latéral vide -->
+        @if (!selectedSmNode()) {
+          <div class="w-72 flex-shrink-0 flex flex-col items-center justify-center border border-light-border dark:border-white/10 rounded-xl text-center px-6 gap-3">
+            <span class="material-symbols-outlined text-3xl text-light-text-muted dark:text-white/20">touch_app</span>
+            <p class="text-xs text-light-text-muted dark:text-white/30 leading-relaxed">Clique sur un nœud de la carte pour voir les détails : composants, onglets, URL, sections du cahier de recette associées.</p>
+          </div>
+        }
+      </div>
+
     </div>
   }
 

@@ -720,6 +720,30 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
 
   statOf(path: string): NodeStat | null { return this.cahierStats().get(path) || null; }
 
+  /** Ensemble des chemins (et leurs ancêtres) dont au moins une fonction a été mise à jour par l'IA. */
+  aiUpdatedPaths = computed((): Set<string> => {
+    const paths = new Set<string>();
+    for (const fn of this.functions()) {
+      if (!fn.updatedAt) continue;
+      const parts = fn.path.split('/');
+      for (let i = 1; i <= parts.length; i++) paths.add(parts.slice(0, i).join('/'));
+    }
+    return paths;
+  });
+
+  /** True si la section a été optimisée par l'IA ET n'a jamais été testée. */
+  nodeIsAiOptimized(path: string): boolean {
+    return this.aiUpdatedPaths().has(path) && this.nodeColor(path) === 'none';
+  }
+
+  /** Classe CSS complète du libellé d'un nœud du cahier : bleu si IA-optimisé non testé, blanc sinon. */
+  nodeTitleClass(path: string, depth: number): string {
+    const base = `text-sm ${depth === 0 ? 'font-bold' : 'font-semibold'}`;
+    return this.nodeIsAiOptimized(path)
+      ? `${base} text-sky-400`
+      : `${base} text-light-text dark:text-white`;
+  }
+
   /** Couleur d'un nœud : rouge si au moins une fonction KO, vert si tout OK, gris si non testé. */
   nodeColor(path: string): 'red' | 'green' | 'none' {
     const s = this.statOf(path);

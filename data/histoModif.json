@@ -1,6 +1,26 @@
 {
   "modifications": [
     {
+      "id": "mod-425",
+      "version": "B-0.296",
+      "date": "2026-06-21T13:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|cahier",
+      "title": "Cahier — titre en bleu si section IA-optimisée non testée",
+      "description": "Ajout de aiUpdatedPaths (computed, propage le flag updatedAt sur tous les ancêtres), nodeIsAiOptimized (AI-mis-à-jour ET non testé) et nodeTitleClass (retourne text-sky-400 si optimisé non testé, text-light-text dark:text-white sinon). Le [ngClass] du libellé de section dans le cahier utilise nodeTitleClass.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans la page /admin/tests/cahier dans chaque section si celle ci à été optimisé par l'IA (et non testé) la couleur du texte doit être en bleu laissé en blanc si non optimisé",
+      "startedAt": "2026-06-21T13:25:00.000Z",
+      "completedAt": "2026-06-21T13:30:00.000Z"
+    },
+    {
       "id": "mod-424",
       "version": "B-0.296",
       "date": "2026-06-21T13:10:00.000Z",
