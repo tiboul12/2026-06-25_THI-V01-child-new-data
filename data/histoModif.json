@@ -1,6 +1,50 @@
 {
   "modifications": [
     {
+      "id": "mod-427",
+      "version": "B-0.296",
+      "date": "2026-06-21T14:20:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:admin/tests|cahier|resultats|execution,server:user-created",
+      "title": "Admin/Tests — tag 'Personnalisée' sur les sections créées à la demande",
+      "description": "Fichier _user-created.json (liste de folderIds) créé dans tests/fonctions/ au moment du create-section. scanAllFunctions() lit ce fichier et injecte userCreated:true sur les FunctionItems correspondants. Méthode isSectionUserCreated(folderId) dans le composant. Badge violet (person_add, 'Personnalisée') ajouté : dans le cahier (nœud feuille), dans l'en-tête de groupe de l'onglet Résultats, dans l'onglet Exécution.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "lorsqu'une section de test comme Projet/edition/titre à été créé sur la demande d'un utilisateur, ajoute un tag à coté du titre pour l'indiqué et aussi sur le titre de la page résultat",
+      "startedAt": "2026-06-21T14:05:00.000Z",
+      "completedAt": "2026-06-21T14:20:00.000Z"
+    },
+    {
+      "id": "mod-426",
+      "version": "B-0.296",
+      "date": "2026-06-21T14:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:admin/tests|cahier,server:create-section",
+      "title": "Admin/Tests — bouton Créer section + popup + endpoint serveur",
+      "description": "Bouton 'Nouvelle section' (indigo, add_circle) dans la barre Admin › Tests. Popup avec champs : section parente (dropdown cahierTree), slug kebab-case, titre, objectif/précisions, provider/modèle IA, checkbox composants. Flux : POST /api/admin/tests/create-section (crée dossier + fonctions.md + entrée registry avec ID hiérarchique calculé) → refreshFunctions → ouvre le popup de génération pré-rempli avec les instructions de création (différentes des instructions de mise à jour) + objectif utilisateur.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "Dans la section admin/tests ajoute un bouton pour affiché une nouvelle fonction, celle ci doit créé un form pour indiqué les tests à créé par l'IA, exemple je veux que l'IA me crait une section de tests destiné à testé toutes les modifications sur un texte dans le menu projet/Edition... on doit pouvoir aussi choisir l'IA et le model et un prompt de base doit être ajouté au précision donnée dans le form pour créé les fonctions de tests comme cela fonctionne déjà lors de création de tests",
+      "startedAt": "2026-06-21T13:35:00.000Z",
+      "completedAt": "2026-06-21T14:00:00.000Z"
+    },
+    {
       "id": "mod-425",
       "version": "B-0.296",
       "date": "2026-06-21T13:30:00.000Z",
@@ -10586,6 +10630,27 @@
       "prompt": "l'affichage des prioritées n'est pas bonne, la couleur est ok mais pas le texte",
       "startedAt": "2026-06-21T14:52:55.057Z",
       "completedAt": "2026-06-21T14:52:55.057Z"
+    },
+    {
+      "id": "mod-441",
+      "version": "B-0.295",
+      "date": "2026-06-21T17:39:40.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "data"
+      ],
+      "features": "system:tests",
+      "title": "Generation des propositions de tests pour la section edition de titre/sections (2-5-2-12)",
+      "description": "Generation de 8 fonctions de tests exhaustives couvrant la creation standard, la scission au curseur, la creation depuis la structure, la promotion/retrogradation de niveau, la suppression avec fusion, le renommage, le filtrage contextuel du menu slash, et les validations du dialogue de creation.",
+      "files": [
+        "data/tests-admin/gen-runs/2-5-2-12-1782063523130/proposals.json"
+      ],
+      "ai": "Antigravity",
+      "model": "Gemini 3.5 Flash (Medium)",
+      "prompt": "Tu es un ingénieur QA. Crée les fonctions de tests pour une NOUVELLE section — aucune fonction existante à conserver, tout est à créer depuis zéro. Analyse le code source correspondant au chemin de section (composants Angular, templates, routes Express), puis génère des fonctions testables concrètes et exhaustives couvrant tous les comportements clés de la page ou du composant concerné. Si un objectif est précisé ci-dessous, priorise les aspects mentionnés. ...",
+      "startedAt": "2026-06-21T17:38:47.000Z",
+      "completedAt": "2026-06-21T17:39:40.000Z"
     }
   ]
 }

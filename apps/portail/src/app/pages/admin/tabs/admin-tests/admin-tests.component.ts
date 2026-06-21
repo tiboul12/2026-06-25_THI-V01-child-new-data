@@ -19,6 +19,7 @@ interface FunctionItem {
   priority?: 'mineur' | 'critique' | 'bloquant';
   updatedAt?: string;      // date de dernière mise à jour IA de la section
   updatedBy?: string;      // IA ayant mis à jour la section
+  userCreated?: boolean;   // section créée à la demande utilisateur via le popup
 }
 
 type Priority = 'mineur' | 'critique' | 'bloquant';
@@ -467,6 +468,24 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
   reviewError     = signal('');
   expandedProp    = signal<Set<number>>(new Set<number>());
 
+  // ── Création d'une nouvelle section de tests ──
+  showCreateSectionPopup = signal(false);
+  csParentPath     = signal('');
+  csSlug           = signal('');
+  csTitle          = signal('');
+  csDesc           = signal('');
+  csProvider       = signal('');
+  csModel          = signal('');
+  csWithComponents = signal(true);
+  csRunning        = signal(false);
+  csError          = signal('');
+
+  csModels = computed(() => {
+    const base = this.csProvider();
+    const list = this.configService.cliConfig().modelsList as Record<string, { value: string; label: string }[]>;
+    return list[base] || [];
+  });
+
   proposalCounts = computed(() => {
     const c = { add: 0, modify: 0, delete: 0, unchanged: 0 };
     for (const p of this.proposals()) (c as any)[p.op]++;
@@ -559,6 +578,101 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
       this.reviewError.set(e.message || 'Échec application');
     } finally {
       this.reviewApplying.set(false);
+    }
+  }
+
+  /** Libellé indenté d'un nœud pour le sélecteur de section parente. */
+  csNodeLabel(node: CahierNode): string {
+    return ' '.repeat(node.depth * 3) + (node.pageTitle || node.name) + ' — ' + node.fullPath;
+  }
+
+  openCreateSectionPopup() {
+    const providers = this.aiProviders();
+    const header = this.configService.cliConfig().headerSelection;
+    const headerBase = (header.provider || '').split('-')[0];
+    const chosen = providers.find(p => p.baseId === headerBase) || providers[0];
+    this.csProvider.set(chosen?.baseId || '');
+    const models = this.csModels();
+    this.csModel.set(models.find(m => m.value === header.model)?.value || models[0]?.value || '');
+    this.csParentPath.set('');
+    this.csSlug.set('');
+    this.csTitle.set('');
+    this.csDesc.set('');
+    this.csWithComponents.set(true);
+    this.csRunning.set(false);
+    this.csError.set('');
+    this.showCreateSectionPopup.set(true);
+  }
+
+  closeCreateSectionPopup() {
+    if (this.csRunning()) return;
+    this.showCreateSectionPopup.set(false);
+  }
+
+  onCsProviderChange(base: string) {
+    this.csProvider.set(base);
+    this.csModel.set(this.csModels()[0]?.value || '');
+  }
+
+  private defaultCreateSectionInstructions(): string {
+    return [
+      "Tu es un ingénieur QA. Crée les fonctions de tests pour une NOUVELLE section — aucune fonction",
+      "existante à conserver, tout est à créer depuis zéro. Analyse le code source correspondant au",
+      "chemin de section (composants Angular, templates, routes Express), puis génère des fonctions",
+      "testables concrètes et exhaustives couvrant tous les comportements clés de la page ou du",
+      "composant concerné. Si un objectif est précisé ci-dessous, priorise les aspects mentionnés."
+    ].join(' ');
+  }
+
+  async confirmCreateSection() {
+    const slug = this.csSlug().trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    if (!slug || !this.csTitle().trim()) {
+      this.csError.set('Le nom (slug) et le titre sont requis');
+      return;
+    }
+    if (!this.csProvider()) {
+      this.csError.set('Aucun provider IA disponible — active un CLI dans admin/config');
+      return;
+    }
+    this.csRunning.set(true);
+    this.csError.set('');
+    try {
+      const res = await fetch(`${API}/api/admin/tests/create-section`, {
+        method: 'POST', headers: this.authHeaders,
+        body: JSON.stringify({ parentPath: this.csParentPath() || null, slug, pageTitle: this.csTitle().trim() })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Erreur création');
+      const data = await res.json();
+
+      // Recharge le référentiel pour inclure la nouvelle section
+      await this.refreshFunctions();
+
+      // Pré-remplit le popup de génération avec les instructions de création
+      const desc = this.csDesc().trim();
+      const instructions = desc
+        ? `${this.defaultCreateSectionInstructions()}\n\nObjectif / précisions :\n${desc}`
+        : this.defaultCreateSectionInstructions();
+
+      this.genFolderId.set(data.folderId);
+      this.genSectionLabel.set(data.pageTitle);
+      this.genProvider.set(this.csProvider());
+      this.genModel.set(this.csModel());
+      this.genWithComponents.set(this.csWithComponents());
+      this.genPrompt.set(instructions);
+      this.genRunning.set(false);
+      this.genDone.set(false);
+      this.genError.set('');
+      this.genResultMsg.set('');
+      this.genLog.set([]);
+      this.genLastPrompt.set('');
+      this.genLastResponse.set('');
+
+      this.showCreateSectionPopup.set(false);
+      this.csRunning.set(false);
+      this.showGenPopup.set(true);
+    } catch (e: any) {
+      this.csError.set(e.message || 'Erreur création section');
+      this.csRunning.set(false);
     }
   }
 
@@ -734,6 +848,11 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
   /** True si la section a été optimisée par l'IA ET n'a jamais été testée. */
   nodeIsAiOptimized(path: string): boolean {
     return this.aiUpdatedPaths().has(path) && this.nodeColor(path) === 'none';
+  }
+
+  /** True si la section (folderId) a été créée à la demande utilisateur. */
+  isSectionUserCreated(folderId: string): boolean {
+    return this.functions().some(f => f.folderId === folderId && f.userCreated);
   }
 
   /** Classe CSS complète du libellé d'un nœud du cahier : bleu si IA-optimisé non testé, blanc sinon. */

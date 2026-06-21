@@ -7645,6 +7645,7 @@ const ADMIN_TESTS_FAV_FILE    = path.join(ADMIN_TESTS_RUNS_DIR, 'favorites.json'
 const ADMIN_TESTS_SETTINGS_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'settings.json');
 const FONCTIONS_DIR         = path.join(__dirname, '..', 'tests', 'fonctions');
 const FONCTIONS_REGISTRY    = path.join(FONCTIONS_DIR, '_registry.json');
+const USER_CREATED_FILE     = path.join(FONCTIONS_DIR, '_user-created.json');
 
 function loadFonctionsRegistry() {
     try {
@@ -7834,6 +7835,15 @@ function scanAllFunctions() {
     }
 
     walk(FONCTIONS_DIR, '');
+
+    // Marquer les sections créées sur demande utilisateur
+    let userCreated = [];
+    try { if (fs.existsSync(USER_CREATED_FILE)) userCreated = JSON.parse(fs.readFileSync(USER_CREATED_FILE, 'utf8')); } catch {}
+    if (userCreated.length) {
+        const ucSet = new Set(userCreated);
+        for (const it of items) { if (ucSet.has(it.folderId)) it.userCreated = true; }
+    }
+
     return items;
 }
 
@@ -8634,6 +8644,71 @@ app.post('/api/admin/tests/apply-functions', (req, res) => {
         console.error('[admin-tests apply-functions] error:', e.message);
         res.status(500).json({ error: 'Échec écriture du fonctions.md: ' + e.message });
     }
+});
+
+// POST /api/admin/tests/create-section — crée une nouvelle section dans le registre des fonctions
+app.post('/api/admin/tests/create-section', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const { parentPath, slug, pageTitle } = req.body;
+    if (!slug || !pageTitle) return res.status(400).json({ error: 'slug et pageTitle requis' });
+    if (!/^[a-z0-9-]+$/.test(slug)) return res.status(400).json({ error: 'Slug invalide (lettres minuscules, chiffres, tirets uniquement)' });
+
+    const registry = loadFonctionsRegistry();
+    const newRelPath = parentPath ? `${parentPath}/${slug}` : slug;
+
+    // Vérifier l'unicité du chemin
+    if (Object.values(registry).includes(newRelPath)) {
+        const existingId = Object.keys(registry).find(k => registry[k] === newRelPath);
+        return res.status(409).json({ error: `Section "${newRelPath}" déjà existante (ID ${existingId})` });
+    }
+
+    // Trouver l'ID du parent
+    let parentId = null;
+    if (parentPath) {
+        parentId = Object.keys(registry).find(k => registry[k] === parentPath) || null;
+        if (!parentId) return res.status(400).json({ error: `Chemin parent non trouvé dans le registre : ${parentPath}` });
+    }
+
+    // Trouver les IDs frères (enfants directs du parent)
+    const prefix = parentId ? parentId + '-' : null;
+    const siblingIds = Object.keys(registry).filter(id => {
+        if (!prefix) return !id.includes('-');
+        if (!id.startsWith(prefix)) return false;
+        return !id.slice(prefix.length).includes('-');
+    });
+
+    // Calcul du prochain indice disponible
+    const usedNs = siblingIds.map(id => parseInt(id.split('-').pop(), 10)).filter(n => !isNaN(n));
+    const nextN = usedNs.length > 0 ? Math.max(...usedNs) + 1 : 1;
+    const newId = parentId ? `${parentId}-${nextN}` : `${nextN}`;
+
+    // Créer le dossier et le fonctions.md initial
+    const fullDir = path.join(FONCTIONS_DIR, newRelPath);
+    fs.mkdirSync(fullDir, { recursive: true });
+    fs.writeFileSync(path.join(fullDir, 'fonctions.md'), `# ${pageTitle}\n`, 'utf8');
+
+    // Mettre à jour le registry (trié par ID hiérarchique)
+    registry[newId] = newRelPath;
+    const sorted = {};
+    Object.keys(registry).sort((a, b) => {
+        const pa = a.split('-').map(Number), pb = b.split('-').map(Number);
+        for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+            const va = pa[i] ?? -1, vb = pb[i] ?? -1;
+            if (va !== vb) return va - vb;
+        }
+        return 0;
+    }).forEach(k => { sorted[k] = registry[k]; });
+    fs.writeFileSync(FONCTIONS_REGISTRY, JSON.stringify(sorted, null, 2), 'utf8');
+
+    // Enregistrer comme section créée sur demande utilisateur
+    let ucList = [];
+    try { if (fs.existsSync(USER_CREATED_FILE)) ucList = JSON.parse(fs.readFileSync(USER_CREATED_FILE, 'utf8')); } catch {}
+    if (!ucList.includes(newId)) { ucList.push(newId); fs.writeFileSync(USER_CREATED_FILE, JSON.stringify(ucList, null, 2), 'utf8'); }
+
+    _functionItemsCache = null;
+
+    res.json({ folderId: newId, path: newRelPath, pageTitle });
 });
 
 // GET /api/admin/tests/functions-history — historique des mises à jour du référentiel (récent → ancien).

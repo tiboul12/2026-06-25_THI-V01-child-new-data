@@ -193,6 +193,36 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Seuils modifiables** dans la barre d'outils de l'onglet Résultats (2 champs %), persistés : GET/POST `/api/admin/tests/settings { critiqueThreshold, mineurThreshold }`.
 - **Affichage** : la cellule de score de section devient verte (✓ valide) ou rouge (✗ invalide) avec le %, infobulle = raison de l'invalidation.
 
+## `2-1-5-14` — Créer une nouvelle section de tests avec l'IA
+
+- **Bouton "Nouvelle section"** (indigo, icône `add_circle`) dans la barre en haut à droite d'Admin › Tests, visible en permanence (tous onglets).
+- **Popup "Nouvelle section de tests"** : formulaire de création avant génération IA.
+  - **Section parente** : dropdown listant tous les nœuds de `cahierTree()` (catégories et sections existantes), libellé indenté (`csNodeLabel`) incluant `fullPath`. Option "— Racine —" pour créer au premier niveau.
+  - **Nom de section** (`slug`, `font-mono`) : kebab-case, normalisé à la soumission (`trim + lowercase + replace(/[^a-z0-9-]/g, '-')`).
+  - **Titre de la page** : libellé affiché dans le cahier de recette.
+  - **Objectif / précisions** : champ libre ajouté automatiquement au prompt de base lors de la génération.
+  - **Provider IA + Modèle** : sélecteurs identiques à ceux du popup de génération (pré-remplis depuis `headerSelection` d'admin/config).
+  - **Checkbox "Composants liés"** : idem génération classique.
+  - **Bouton "Créer & Générer avec l'IA"** : désactivé si slug ou titre vide ou provider absent. Spinner pendant la création.
+  - **Annuler** : fermeture sans modification (bouton ✕ ou "Annuler" ; interdit si `csRunning`).
+- **Flux de création** (`confirmCreateSection()`) :
+  1. POST `/api/admin/tests/create-section { parentPath, slug, pageTitle }` → crée le dossier `tests/fonctions/<parentPath>/<slug>/`, un `fonctions.md` minimal, et une entrée dans `_registry.json` (ID hiérarchique calculé : enfant suivant du parent, ou prochain ID racine si pas de parent).
+  2. Recharge le référentiel (`refreshFunctions()`).
+  3. Pré-remplit le popup de génération (`showGenPopup`) avec : `folderId`, `pageTitle`, provider/modèle choisis, prompt = `defaultCreateSectionInstructions()` + objectif utilisateur.
+  4. Ferme le popup de création et ouvre le popup de génération existant.
+- **Serveur POST `/api/admin/tests/create-section`** :
+  - Valide `slug` (regex `[a-z0-9-]+`), `pageTitle` requis.
+  - Vérifie l'unicité du chemin dans le registry (409 si doublon).
+  - Exige que `parentPath` soit dans le registry (400 sinon).
+  - Calcule le prochain ID (max des frères + 1, ou 1 si aucun frère).
+  - Crée dossier + `fonctions.md` (`# <pageTitle>\n`) + met à jour `_registry.json` (trié numériquement).
+  - Enregistre le `folderId` dans `tests/fonctions/_user-created.json` (tableau JSON persistant).
+  - Invalide `_functionItemsCache` (côté serveur).
+- **Tag "Personnalisée"** (badge violet, icône `person_add`) affiché sur les sections créées via ce flux :
+  - `scanAllFunctions()` lit `_user-created.json` et injecte `userCreated: true` sur chaque `FunctionItem` du dossier concerné.
+  - Badge visible dans le **Cahier** (nœud feuille), dans l'onglet **Résultats** (en-tête de groupe matrice) et l'onglet **Exécution** (en-tête de groupe runner).
+  - Méthode `isSectionUserCreated(folderId)` : retourne `true` si au moins un item de ce dossier a `userCreated: true`.
+
 ## `2-1-5-13` — Onglet Site Map graphique
 
 - **5e onglet "Site Map"** (`account_tree`) dans la barre Admin › Tests.
