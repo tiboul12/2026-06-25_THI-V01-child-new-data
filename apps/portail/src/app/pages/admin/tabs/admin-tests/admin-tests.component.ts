@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, effect, ViewChild, ElementRef, DestroyRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect, untracked, ViewChild, ElementRef, DestroyRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -24,6 +24,16 @@ interface FunctionItem {
 }
 
 type Priority = 'mineur' | 'critique' | 'bloquant';
+
+// Dernier test décidé d'une fonction issu d'un run précédent (affiché dans le runner).
+interface PrevTest {
+  status: 'ok' | 'ko';
+  date: string;
+  tester: string;
+  runName: string | null;
+  isCampaign: boolean;
+  mode: 'manual' | 'ai';
+}
 
 interface TestResult {
   itemId: string;
@@ -191,6 +201,12 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
       const el = this.genLogBox?.nativeElement;
       if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
     });
+    // Réinitialise les overrides "afficher toute la section" quand le filtre/recherche change.
+    // NB : on ne lit pas forceFullPaths ici (sinon toggler une section relancerait l'effet et l'annulerait).
+    effect(() => {
+      this.statusFilter(); this.searchQuery(); this.favOnly();
+      untracked(() => { if (this.forceFullPaths().size) this.forceFullPaths.set(new Set<string>()); });
+    }, { allowSignalWrites: true });
   }
 
   readonly tabs: { id: Tab; label: string; icon: string }[] = [
@@ -222,6 +238,7 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
   // ── Onglet Cahier : arbre hiérarchique (catégorie → sous-catégorie → section) ──
   expandedItemIds   = signal<Set<string>>(new Set<string>());   // contenu (tâches) d'une fonction déplié
   cahierExpanded    = signal<Set<string>>(new Set<string>());   // nœuds de l'arbre ouverts
+  forceFullPaths    = signal<Set<string>>(new Set<string>());   // sections affichées en entier malgré un filtre actif
 
   // Recherche + filtre par état
   searchQuery   = signal('');
@@ -401,6 +418,12 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
   onGenProviderChange(base: string) {
     this.genProvider.set(base);
     this.genModel.set(this.genModels()[0]?.value || '');
+    this.persistAiSelection(base, this.genModel());
+  }
+
+  onGenModelChange(model: string) {
+    this.genModel.set(model);
+    this.persistAiSelection(this.genProvider(), model);
   }
 
   closeGenPopup() {
@@ -633,6 +656,12 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
   onCsProviderChange(base: string) {
     this.csProvider.set(base);
     this.csModel.set(this.csModels()[0]?.value || '');
+    this.persistAiSelection(base, this.csModel());
+  }
+
+  onCsModelChange(model: string) {
+    this.csModel.set(model);
+    this.persistAiSelection(this.csProvider(), model);
   }
 
   private defaultCreateSectionInstructions(): string {
@@ -778,9 +807,11 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
       const parts = fn.path.split('/');
       for (let i = 1; i <= parts.length; i++) visiblePaths.add(parts.slice(0, i).join('/'));
     }
+    const forced = this.forceFullPaths();
     return tree
       .filter(n => visiblePaths.has(n.fullPath))
-      .map(n => ({ ...n, items: itemsByPath.get(n.fullPath) || [] }));
+      // Section forcée « entière » → items complets (n.items de l'arbre non filtré) ; sinon sous-ensemble filtré.
+      .map(n => ({ ...n, items: forced.has(n.fullPath) ? n.items : (itemsByPath.get(n.fullPath) || []) }));
   });
 
   /** Un nœud est visible si tous ses ancêtres sont dépliés (ou si un filtre est actif). */
@@ -805,6 +836,29 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Clic sur l'en-tête d'un nœud. Si un filtre est actif et que c'est une section feuille,
+   *  on bascule l'affichage complet de la section (toutes ses fonctions, malgré le filtre). */
+  onCahierNodeClick(node: CahierNode) {
+    if (this.filtering() && !node.hasChildren) {
+      this.toggleSectionFull(node.fullPath);
+      return;
+    }
+    this.toggleCahierNode(node.fullPath);
+  }
+
+  toggleSectionFull(path: string) {
+    this.forceFullPaths.update(s => {
+      const next = new Set(s);
+      next.has(path) ? next.delete(path) : next.add(path);
+      return next;
+    });
+  }
+
+  /** Une section affiche-t-elle toutes ses fonctions en surcharge du filtre courant ? */
+  isSectionForcedFull(path: string): boolean {
+    return this.filtering() && this.forceFullPaths().has(path);
+  }
+
   expandAllCahier() { this.cahierExpanded.set(new Set(this.cahierTree().map(n => n.fullPath))); }
   collapseAllCahier() { this.cahierExpanded.set(new Set<string>()); this.expandedItemIds.set(new Set<string>()); }
 
@@ -824,6 +878,49 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
     }
     return map;
   });
+
+  /** Dernier état décidé (OK/KO) issu des runs PRÉCÉDENTS (hors run en cours) — pour comparer à la décision actuelle.
+   *  Inclut le testeur, la date réelle du test, et le nom/mode de la campagne. */
+  funcPrevious = computed((): Map<string, PrevTest> => {
+    const activeId = this.activeRun()?.id;
+    const map = new Map<string, PrevTest>();
+    for (const run of this.matrixRuns()) {
+      if (activeId && run.id === activeId) continue;   // ignore le run en cours de remplissage
+      for (const r of run.results) {
+        if (r.status !== 'ok' && r.status !== 'ko') continue;
+        const when = r.testedAt || run.startedAt;        // date réelle du test si dispo
+        const prev = map.get(r.itemId);
+        if (!prev || new Date(when) >= new Date(prev.date)) {
+          map.set(r.itemId, {
+            status: r.status, date: when,
+            tester: run.tester || '', runName: run.name ?? null,
+            isCampaign: !!run.isCampaign, mode: run.mode,
+          });
+        }
+      }
+    }
+    return map;
+  });
+
+  /** État du dernier test précédent d'une fonction (null si jamais testée auparavant). */
+  prevResult(itemId: string): PrevTest | null {
+    return this.funcPrevious().get(itemId) || null;
+  }
+
+  /** Libellé du testeur précédent (repli sur « IA » pour un run automatique sans nom). */
+  prevTesterLabel(p: PrevTest): string {
+    return p.tester || (p.mode === 'ai' ? 'IA' : '—');
+  }
+
+  /** Évolution entre le dernier test précédent et la décision en cours : 'fixed' (KO→OK), 'regressed' (OK→KO), sinon null. */
+  resultTrend(itemId: string): 'fixed' | 'regressed' | null {
+    const prev = this.funcPrevious().get(itemId);
+    const cur = this.getResult(itemId).status;
+    if (!prev || (cur !== 'ok' && cur !== 'ko')) return null;
+    if (prev.status === 'ko' && cur === 'ok') return 'fixed';
+    if (prev.status === 'ok' && cur === 'ko') return 'regressed';
+    return null;
+  }
 
   /** Stats agrégées par chemin (chaque fonction remonte sur tous ses ancêtres). */
   cahierStats = computed((): Map<string, NodeStat> => {
@@ -1762,10 +1859,22 @@ Exemple :
     if (!this.aiPrompt()) this.aiPrompt.set(this.defaultAiInstructions());
   }
 
-  /** Quand le provider change, recaler le modèle sur le premier disponible. */
+  /** Persiste le couple provider/modèle (partagé via headerSelection) pour le retrouver dans tous les formulaires IA. */
+  private persistAiSelection(provider: string, model: string) {
+    if (provider) this.configService.saveHeaderSelection(provider, model || '');
+  }
+
+  /** Quand le provider change, recaler le modèle sur le premier disponible + mémoriser le choix. */
   onAiProviderChange(base: string) {
     this.aiProvider.set(base);
     this.aiModel.set(this.aiModels()[0]?.value || '');
+    this.persistAiSelection(base, this.aiModel());
+  }
+
+  /** Mémorise le modèle choisi dans le formulaire d'exécution. */
+  onAiModelChange(model: string) {
+    this.aiModel.set(model);
+    this.persistAiSelection(this.aiProvider(), model);
   }
 
   private defaultAiInstructions(): string {
@@ -1839,6 +1948,8 @@ Exemple :
         if (!res.ok) throw new Error((await res.json()).error || 'Erreur création run');
         run = await res.json();
       }
+      // Charge la matrice pour disposer des résultats des tests précédents (affichés à gauche des boutons).
+      await this.loadMatrix();
       this.activeRun.set(run);
       this.expandedItemIds.set(new Set<string>());
       if (isAi) this.startAiRun(run.id);

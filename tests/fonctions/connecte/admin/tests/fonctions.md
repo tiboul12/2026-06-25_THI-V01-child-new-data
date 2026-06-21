@@ -22,6 +22,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Filtre d'état** : `Toutes` / `Testées` / `Non testées` / `En erreur` (KO) / `À retester` — masque les sections/fonctions hors critère. Le filtre `À retester` affiche uniquement les fonctions dont le heading contient le tag `[modification]` (champ `needsRetest: true`), indiquant que le code source a été modifié depuis le dernier test.
   - **Favoris** : bouton étoile (`star`/`star_border`) sur chaque section feuille → (dé)marque en favori (POST `/api/admin/tests/favorites { folderId, favorite }`, persistant). Chip filtre **« Favoris »** (★) pour n'afficher que les sections favorites. Chargé via GET `/api/admin/tests/favorites`.
   - Quand une recherche ou un filtre est actif, l'arbre se déplie automatiquement sur les résultats ; message "Aucun résultat" si vide.
+  - **Surcharge « afficher toute la section »** : sous un filtre actif, une section feuille n'affiche que ses fonctions correspondantes. **Cliquer sur le titre de la section** bascule l'affichage de **toutes** ses fonctions (malgré le filtre) ; re-cliquer ré-applique le filtre (`onCahierNodeClick` → `toggleSectionFull`, signal `forceFullPaths`). Badge bleu **« Tout »** affiché tant que la surcharge est active. Réinitialisé automatiquement dès que le filtre/recherche change.
   - **Nœud** : chevron, badge ID cliquable (copie), icône (`folder`/`folder_open` pour une catégorie, `description` pour une section feuille), nom (`pageTitle` ou nom du dossier), compteur de fonctions, bouton "Lancer un test sur cette section" (sur une feuille → pré-coche la section + bascule Exécution), bouton "Ouvrir le dossier local" (POST `/api/admin/tests/open-folder { path }`).
   - **Tableau des fonctions** (déplié sur une section feuille) : colonnes `#` / `Action / Titre` / `ID` / `Étapes` / `Priorité` / `État`.
     - Action / Titre : libellé de la fonction (`section`) + résumé (1re ligne du contenu).
@@ -44,6 +45,9 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Par item** :
   - Badge ID cliquable (copie presse-papiers via `navigator.clipboard`).
   - Libellé de la section, dépliable → contenu markdown des tâches.
+  - **État du dernier test précédent** (à gauche des boutons) : pastille `OK`/`KO` (verte/rouge) + label « préc. », issue du dernier run décidé **hors run en cours** (`funcPrevious` = `funcLatest` excluant `activeRun.id`). Absente si la fonction n'a jamais été testée. La matrice est rechargée au lancement du run pour fiabiliser cet historique.
+    - **Sous la pastille** : nom du **testeur** (icône `person` ; `IA` + icône `smart_toy` pour un run automatique) + **date** du test (`testedAt` réel si dispo), et, si le run était une **campagne**, son **nom** (icône `campaign`). Infobulle complète au survol (statut + testeur + date + campagne).
+  - **Flèche de tendance** entre l'état précédent et la décision en cours (`resultTrend`) : `trending_up` vert si **corrigé** (KO→OK), `trending_down` rouge si **régression** (OK→KO).
   - 3 boutons : **OK** (vert) / **KO** (rouge) / **ND** (gris).
   - Si KO → champ note optionnel.
 - **Auto-save** : debounce 2 s → PUT `/api/admin/tests/runs/:id { results }`.
@@ -116,6 +120,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Mode IA** :
   - **Sélecteur IA** : providers CLI agentiques actifs dans admin/config (Claude Code, Antigravity) — depuis `ConfigService.cliConfig().availableProviders` (type `cli`).
   - **Sélecteur Modèle** : `modelsList[baseId]` du provider choisi.
+  - **Mémorisation du choix** : tout changement de provider ou de modèle (formulaire d'exécution, popup de génération, popup nouvelle section) est **persisté** via `ConfigService.saveHeaderSelection(provider, model)` (`headerSelection`, partagé avec le sélecteur IA du header). Tous les formulaires IA se ré-initialisent depuis ce choix (`onAiModelChange` / `onGenModelChange` / `onCsModelChange` + `persistAiSelection`), de sorte que la dernière IA/modèle utilisée est proposée par défaut au prochain test.
   - **Consignes éditables** (textarea) : intro du prompt, modifiable.
   - **Format de retour imposé** (lecture seule) : exemple `@@TEST_RESULT@@{"itemId":…,"status":"ok|ko|nd","note":…}` pour un retour constant.
   - **Lancer l'analyse IA** : POST `/runs { mode:'ai', aiProvider, aiModel, prompt, folderIds }`.

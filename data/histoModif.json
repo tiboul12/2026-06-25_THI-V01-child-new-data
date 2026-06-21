@@ -1,6 +1,90 @@
 {
   "modifications": [
     {
+      "id": "mod-435",
+      "version": "B-0.298",
+      "date": "2026-06-21T21:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|ia|persistance",
+      "title": "Admin/Tests — mémorisation du provider/modèle IA entre les formulaires",
+      "description": "Quand un provider IA et un modèle sont sélectionnés dans un formulaire (exécution, génération, nouvelle section), le choix est persisté via ConfigService.saveHeaderSelection (headerSelection, partagé avec le sélecteur du header). Helper persistAiSelection + handlers onAiModelChange / onGenModelChange / onCsModelChange, et persistance ajoutée aux onXxxProviderChange. Tous les formulaires IA se ré-initialisant déjà depuis headerSelection, la dernière IA/modèle utilisée est désormais proposée par défaut au prochain test.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "si une IA et un model est selectionné, il faut le gardé en mémoire pour les prochaines demande dans les form",
+      "startedAt": "2026-06-21T21:10:00.000Z",
+      "completedAt": "2026-06-21T21:30:00.000Z"
+    },
+    {
+      "id": "mod-434",
+      "version": "B-0.298",
+      "date": "2026-06-21T21:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|execution|runner",
+      "title": "Admin/Tests — testeur, date et campagne sous l'état du test précédent",
+      "description": "Enrichissement de l'affichage de l'état du dernier test précédent dans le runner (mod-432). funcPrevious renvoie désormais un PrevTest { status, date (testedAt réel), tester, runName, isCampaign, mode }. Sous la pastille OK/KO : nom du testeur (icône person ; 'IA' + smart_toy pour un run automatique via prevTesterLabel), date du test, et nom de la campagne (icône campaign) si isCampaign. Infobulle complète. Bloc passé en colonne (items-end).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lors d'un nouveau test en dessous d'un status d'une fonction déjà testé ajoute le nom de l'utilisateur qui à fait le test et la date du test, voir le nom de la campagne si c'est une campagne",
+      "startedAt": "2026-06-21T20:40:00.000Z",
+      "completedAt": "2026-06-21T21:00:00.000Z"
+    },
+    {
+      "id": "mod-433",
+      "version": "B-0.298",
+      "date": "2026-06-21T20:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|cahier|filtre",
+      "title": "Admin/Tests — clic sur titre de section affiche toute la section malgré le filtre",
+      "description": "Dans le Cahier de recette, sous un filtre actif (En erreur, etc.) une section feuille n'affiche que ses fonctions correspondantes. Cliquer sur le titre de la section bascule l'affichage complet de toutes ses fonctions (forceFullPaths signal + onCahierNodeClick/toggleSectionFull), re-cliquer ré-applique le filtre. visibleTree honore l'override (items complets de l'arbre non filtré). Badge bleu 'Tout' tant que la surcharge est active. Effet de reset (untracked) qui vide forceFullPaths quand statusFilter/searchQuery/favOnly change.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je selectionne un filtre \"En erreur\" ou autre filtre et que ne s'affiche que certain element d'une section, si je clique sur le titre d'une section, toute la section doit s'affiché (et inversement)",
+      "startedAt": "2026-06-21T20:00:00.000Z",
+      "completedAt": "2026-06-21T20:30:00.000Z"
+    },
+    {
+      "id": "mod-432",
+      "version": "B-0.298",
+      "date": "2026-06-21T19:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|execution|runner",
+      "title": "Admin/Tests — état du dernier test précédent affiché dans le runner",
+      "description": "Dans l'onglet Exécution, à gauche des boutons OK/KO/ND, affichage de l'état du dernier test décidé issu des runs précédents (computed funcPrevious = funcLatest excluant activeRun.id). Pastille OK/KO verte/rouge + label 'préc.' + infobulle (statut + date). Flèche de tendance (resultTrend) : trending_up vert si corrigé (KO→OK), trending_down rouge si régression (OK→KO). loadMatrix() appelé au lancement du run pour fiabiliser l'historique. Permet de constater visuellement si un test a été corrigé ou est devenu négatif.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsqu'on lance un nouveau test il y a les boutons d'état OK/KO/Non décidé, si les fonctions ont déjà été testé précédemment, il faudrait affiché l'état du dernier test effectué sur la gauche des boutons actuel afin de pouvoir constaté si un ancien test à été corrigé ou si contrairement un test positif est devenu négatif.",
+      "startedAt": "2026-06-21T19:00:00.000Z",
+      "completedAt": "2026-06-21T19:30:00.000Z"
+    },
+    {
       "id": "mod-431",
       "version": "B-0.298",
       "date": "2026-06-21T18:30:00.000Z",
