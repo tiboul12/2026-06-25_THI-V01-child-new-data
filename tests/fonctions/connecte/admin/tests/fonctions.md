@@ -8,7 +8,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 
 ---
 
-## `2-1-5-1` — Navigation par onglets + Onglet Cahier de recette
+## `2-1-5-1` — [modification] Navigation par onglets + Onglet Cahier de recette
 
 - **Barre d'onglets** : Cahier de recette (`checklist`) / Exécution (`play_circle`) / Résultats (`bar_chart`) / Historique (`history`) / Site Map (`account_tree`).
 - **URL par sous-onglet** : chaque onglet a une URL directe — `/admin/tests/cahier`, `/admin/tests/execution`, `/admin/tests/resultats`, `/admin/tests/historique`, `/admin/tests/sitemap`. Navigation par URL directe ou via le navigateur (retour arrière) possible.
@@ -223,7 +223,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - Badge visible dans le **Cahier** (nœud feuille), dans l'onglet **Résultats** (en-tête de groupe matrice) et l'onglet **Exécution** (en-tête de groupe runner).
   - Méthode `isSectionUserCreated(folderId)` : retourne `true` si au moins un item de ce dossier a `userCreated: true`.
 
-## `2-1-5-15` — Détection automatique des fonctions à retester après modification de code
+## `2-1-5-15` — [modification] Détection automatique des fonctions à retester après modification de code
 
 - **Déclencheur** : après chaque modification de code (composant Angular, service, template, route Express) par Claude Code, le système vérifie si le fichier modifié est référencé dans les tests pré-programmés.
 - **Sources de détection** :
@@ -232,10 +232,10 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Tag `[modification]`** : ajouté par Claude Code directement dans le heading `##` du `fonctions.md` concerné, entre le tiret long et le libellé.
   - Format : `## \`2-5-2-3-4\` — [modification] Onglets de mode`
   - Non dupliqué si déjà présent.
-- **Champ serveur** : `parseFonctionsMd` détecte `[modification]` → expose `needsRetest: true` sur la fonction.
-- **Retrait automatique** : le serveur retire le tag `[modification]` du heading lors de l'enregistrement d'un résultat (OK/KO) postérieur à la date de modification.
-- **Filtre "À retester"** dans l'onglet Cahier de recette : voir `2-1-5-1`.
-- **Visuel** : dans le Cahier, les fonctions taguées affichent un badge ambre "À retester" dans la colonne État ; les nœuds parents remontent un indicateur si au moins une fonction enfant a `needsRetest: true`.
+- **Champ serveur** : `parseFonctionsMd` détecte `[modification]` après le tiret long → expose `needsRetest: true` et retire le tag du libellé affiché. `writeFonctionsMd` réinjecte le tag tant que `needsRetest` reste vrai (survie aux éditions de priorité et aux générations IA `apply-functions`).
+- **Retrait automatique** : `PUT /api/admin/tests/runs/:id` appelle `clearModificationTagForItems(itemIds)` pour chaque fonction décidée (OK/KO) → le tag disparaît du heading. Il reste donc tant que la section n'a pas été retestée.
+- **Filtre "À retester"** dans l'onglet Cahier de recette (5e chip d'état) : voir `2-1-5-1`. N'affiche que les fonctions `needsRetest: true`.
+- **Visuel** : badge ambre **« Modification »** (icône `edit_note`) affiché (1) sur l'en-tête de nœud de section si ≥1 fonction enfant a `needsRetest` (`isSectionNeedsRetest(folderId)`), et (2) devant le libellé de chaque fonction taguée dans le tableau (`item.needsRetest`).
 
 ---
 

@@ -1,6 +1,53 @@
 {
   "modifications": [
     {
+      "id": "mod-431",
+      "version": "B-0.298",
+      "date": "2026-06-21T18:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["server", "portail", "data", "system"],
+      "features": "server:tests-needsRetest,portail:admin/tests|cahier|filtre,system:claude-directives",
+      "title": "Tests — tag [modification] fonctionnel : parsing, filtre À retester, badge, retrait au test",
+      "description": "Implémentation complète du mécanisme needsRetest. Serveur : parseFonctionsMd détecte/retire [modification] → needsRetest; writeFonctionsMd réinjecte le tag (préservé sur édition priorité + apply-functions); helper clearModificationTagForItems appelé par PUT runs/:id pour lever le tag des fonctions décidées OK/KO. Client admin-tests : champ needsRetest, 5e filtre 'À retester', badge ambre Modification sur nœud de section (isSectionNeedsRetest) et devant chaque fonction taguée. Tags posés sur les sections impactées par mod-430 (barre de style) : section 2-5-3 'Projet/Edition/bar de style' (fonctions 2-5-3-1 à 2-5-3-9) + toolbar 2-5-2-3-5 / 2-5-2-3-9 ; et auto-tag de 2-1-5-1 / 2-1-5-15 (composant admin-tests modifié). CLAUDE.md : directive actualisée (mécanisme implémenté) + nouvelle règle de rapport de fin de prompt (composants modifiés & tests liés). Inclut au passage les sections de tests créées par la session Antigravity (registry 2-5-2-12 + 2-5-3, _user-created).",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/toolbar/fonctions.md",
+        "tests/fonctions/connecte/projets/prrojet-edition-bar-de-style/fonctions.md",
+        "tests/fonctions/_registry.json",
+        "tests/fonctions/_user-created.json",
+        "CLAUDE.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "la modification impact la barre de style qui est testé dans admin/test : \"Projet/Edition/bar de style\" il devrait donc y avoir un tag qui indique que cette section à été impacté par des modifications, je ne vois pas non plus le filtre pour affiché les tests impacté. Lorsque un tests à été impacté le tag reste tant que la section n'a pas été mise à jour et tester. Verifi que claude.md à bien les informations pour vérifié les component impacté et les tests lié, et rajoute qu'a la fin de chaque prompt executé il doit indiqué la liste des component modifié et si il y a des tests lié et lesquel.",
+      "startedAt": "2026-06-21T17:30:00.000Z",
+      "completedAt": "2026-06-21T18:30:00.000Z"
+    },
+    {
+      "id": "mod-430",
+      "version": "B-0.298",
+      "date": "2026-06-21T17:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|barre-style|zones-colorees",
+      "title": "Éditeur — barre de style colorée par zone",
+      "description": "Les boutons de la barre de style (modes Code et Visu) sont regroupés en zones colorées identifiées par un fond semi-transparent : history (gris), format B/I/U/S (indigo), title T▾ (violet), blocks listes/lien/image (vert), align (ambre), size A/A (orange), color/highlight (rouge), clear (gris), extras code-block/tableau/hr (bleu ciel). Les séparateurs `__sep` entre groupes sont remplacés par les zones flex. Padding et gap ajustés sur `--docked`.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.scss"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "modifi la couleur de la bar de style par zone",
+      "startedAt": "2026-06-21T16:30:00.000Z",
+      "completedAt": "2026-06-21T17:00:00.000Z"
+    },
+    {
       "id": "mod-429",
       "version": "B-0.298",
       "date": "2026-06-21T16:00:00.000Z",

@@ -1597,6 +1597,28 @@
     border-top: 0;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
     backdrop-filter: blur(4px);
+    gap: 3px;
+    padding: 3px 6px;
+  }
+
+  // ── Zones colorées de la barre de style ───────────────────────
+  .tb-zone {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px 3px;
+    border-radius: 5px;
+    flex-shrink: 0;
+
+    &--history { background: rgba(148, 163, 184, 0.14); }
+    &--format  { background: rgba(99, 102, 241, 0.20); }
+    &--title   { background: rgba(139, 92, 246, 0.18); }
+    &--blocks  { background: rgba(16, 185, 129, 0.17); }
+    &--align   { background: rgba(245, 158, 11, 0.17); }
+    &--size    { background: rgba(249, 115, 22, 0.15); }
+    &--color   { background: rgba(239, 68, 68, 0.17); }
+    &--clear   { background: rgba(148, 163, 184, 0.10); }
+    &--extras  { background: rgba(56, 189, 248, 0.15); }
   }
 }
 

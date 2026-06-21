@@ -220,13 +220,39 @@ Question 3 : "Titre du commit ?"
    - Après  : `## \`2-5-2-3-4\` — [modification] Onglets de mode`
    - Ne pas dupliquer si le tag est déjà présent.
 
-3. **Ne pas retirer le tag manuellement** — il sera retiré par le serveur lors de l'enregistrement d'un résultat de test (OK ou KO) postérieur à la date de modification.
+3. **Ne pas retirer le tag manuellement** — il est retiré automatiquement par le serveur lors de l'enregistrement d'un résultat de test (OK ou KO). Le tag reste donc tant que la section n'a pas été retestée.
 
-### Règle de parsing côté serveur (à implémenter)
+### Mécanisme côté serveur (implémenté — `server/server-data.js`)
 
-- `parseFonctionsMd` détecte `[modification]` dans le libellé → expose `needsRetest: true` sur la fonction.
-- Le tag `[modification]` est retiré du heading quand le serveur enregistre un résultat (OK/KO) via `POST /api/admin/tests/runs/:id`.
-- **Filtre "À retester"** disponible dans l'onglet Cahier de recette (s'ajoute à `Toutes / Testées / Non testées / En erreur`) : affiche uniquement les fonctions dont `needsRetest: true`.
+- `parseFonctionsMd` détecte `[modification]` juste après le tiret long → expose `needsRetest: true` et retire le tag du libellé affiché.
+- `writeFonctionsMd` **réinjecte** `[modification]` quand `needsRetest` est vrai → le tag survit aux réécritures (édition de priorité, génération IA `apply-functions`).
+- `clearModificationTagForItems(itemIds)` retire le tag du heading ; appelé par `PUT /api/admin/tests/runs/:id` pour chaque fonction décidée (OK/KO).
+
+### Côté UI (Admin › Tests › Cahier de recette)
+
+- **Filtre « À retester »** dans la barre de filtres d'état (`Toutes / Testées / Non testées / En erreur / À retester`) → n'affiche que les fonctions `needsRetest: true`.
+- **Badge ambre « Modification »** affiché sur le nœud de section (si ≥1 fonction à retester) et devant le libellé de chaque fonction taguée.
+
+### Rapport obligatoire en fin de prompt — composants modifiés & tests liés
+
+**À la fin de chaque prompt** (juste avant le workflow de validation), afficher un récapitulatif :
+
+1. **Composants modifiés** : la liste des fichiers de code modifiés pendant le prompt.
+2. **Tests liés** : pour chacun, indiquer s'il existe des fonctions de test référençant ce fichier (via `Composants:` ou la table de correspondance) et **lesquelles** (ID + libellé), ou « aucun test lié ».
+3. **Tags posés** : la liste des fonctions sur lesquelles le tag `[modification]` a été ajouté.
+
+Format suggéré :
+
+```
+Composants modifiés & tests liés :
+- apps/.../projet-editor-zone.component.html
+    → 2-5-2-3-5 (Barre de formatage mode Code) [tag posé]
+    → 2-5-2-3-9 (Menus déroulants barre de formatage) [tag posé]
+- server/server-data.js
+    → aucun test lié
+```
+
+Si aucun fichier de code n'a été modifié (doc/config uniquement), l'indiquer en une ligne.
 
 ---
 

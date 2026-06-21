@@ -20,6 +20,7 @@ interface FunctionItem {
   updatedAt?: string;      // date de dernière mise à jour IA de la section
   updatedBy?: string;      // IA ayant mis à jour la section
   userCreated?: boolean;   // section créée à la demande utilisateur via le popup
+  needsRetest?: boolean;   // tag [modification] : code impacté, à retester
 }
 
 type Priority = 'mineur' | 'critique' | 'bloquant';
@@ -225,18 +226,37 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
   // Recherche + filtre par état
   searchQuery   = signal('');
   searchFocused = signal(false);
-  statusFilter  = signal<'all' | 'tested' | 'untested' | 'ko'>('all');
+  statusFilter  = signal<'all' | 'tested' | 'untested' | 'ko' | 'modified'>('all');
   favOnly       = signal(false);                       // filtre : favoris uniquement
   favorites     = signal<Set<string>>(new Set<string>()); // folderId favoris
-  readonly statusFilters: { value: 'all' | 'tested' | 'untested' | 'ko'; label: string }[] = [
+  readonly statusFilters: { value: 'all' | 'tested' | 'untested' | 'ko' | 'modified'; label: string }[] = [
     { value: 'all',      label: 'Toutes' },
     { value: 'tested',   label: 'Testées' },
     { value: 'untested', label: 'Non testées' },
     { value: 'ko',       label: 'En erreur' },
+    { value: 'modified', label: 'À retester' },
   ];
 
   /** Filtrage actif (recherche, filtre d'état ou favoris) → affichage déplié des résultats. */
   filtering = computed(() => this.searchQuery().trim().length > 0 || this.statusFilter() !== 'all' || this.favOnly());
+
+  /** Index id → fonction, pour des lookups O(1). */
+  private funcsById = computed((): Map<string, FunctionItem> => {
+    const m = new Map<string, FunctionItem>();
+    for (const fn of this.functions()) m.set(fn.id, fn);
+    return m;
+  });
+
+  /** Une fonction est-elle taguée [modification] (à retester) ? */
+  funcNeedsRetest(itemId: string): boolean {
+    return !!this.funcsById().get(itemId)?.needsRetest;
+  }
+
+  /** Au moins une fonction de la section (folderId) est-elle à retester ? */
+  isSectionNeedsRetest(folderId: string): boolean {
+    for (const fn of this.functions()) { if (fn.folderId === folderId && fn.needsRetest) return true; }
+    return false;
+  }
 
   isFavorite(folderId: string): boolean { return this.favorites().has(folderId); }
 
@@ -276,6 +296,7 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
     if (f === 'tested')   return st !== 'none';
     if (f === 'untested') return st === 'none';
     if (f === 'ko')       return st === 'ko';
+    if (f === 'modified') return this.funcNeedsRetest(itemId);
     return true;
   }
 

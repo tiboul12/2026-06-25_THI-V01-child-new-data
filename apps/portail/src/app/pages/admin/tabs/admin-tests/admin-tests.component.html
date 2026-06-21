@@ -167,6 +167,12 @@
                         <span class="material-symbols-outlined" style="font-size:10px">person_add</span>Personnalisée
                       </span>
                     }
+                    @if (node.items.length > 0 && isSectionNeedsRetest(node.items[0].folderId)) {
+                      <span title="Du code lié a été modifié — section à retester"
+                            class="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30 flex-shrink-0">
+                        <span class="material-symbols-outlined" style="font-size:10px">edit_note</span>Modification
+                      </span>
+                    }
                     @if (node.items.length > 0) {
                       <span class="text-xs text-light-text-muted dark:text-white/30">({{ node.items.length }})</span>
                     }
@@ -253,7 +259,13 @@
                                 <span class="material-symbols-outlined text-xs text-light-text-muted dark:text-white/30 flex-shrink-0 mt-0.5 transition-transform duration-100"
                                       [style.transform]="isItemExpanded(item.id) ? 'rotate(90deg)' : 'rotate(0deg)'">chevron_right</span>
                                 <div class="min-w-0">
-                                  <div class="font-medium text-light-text dark:text-white leading-snug break-words">{{ item.section }}</div>
+                                  <div class="font-medium text-light-text dark:text-white leading-snug break-words">
+                                    @if (item.needsRetest) {
+                                      <span title="Du code lié a été modifié — à retester"
+                                            class="inline-flex items-center gap-0.5 align-middle mr-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30">
+                                        <span class="material-symbols-outlined" style="font-size:10px">edit_note</span>Modification
+                                      </span>
+                                    }{{ item.section }}</div>
                                   @if (contentSummary(item.content)) {
                                     <div class="text-[11px] text-light-text-muted dark:text-white/40 mt-0.5 leading-snug break-words">{{ contentSummary(item.content) }}</div>
                                   }
