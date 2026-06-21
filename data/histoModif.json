@@ -1,6 +1,28 @@
 {
   "modifications": [
     {
+      "id": "mod-429",
+      "version": "B-0.298",
+      "date": "2026-06-21T16:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["projets"],
+      "features": "projets:editor|zone-code|zone-preview|barre-style",
+      "title": "Éditeur — Annuler/Refaire (Ctrl+Z / Ctrl+Y) dans la barre de style",
+      "description": "Ajout des boutons Annuler (undo) et Refaire (redo) en première position dans la barre de style des modes Code et Édition (Visu). Mode Code : pile custom (codeUndoStack/codeRedoStack, max 200 entrées) — snapshot avant chaque action toolbar (insertAt, codeClearFormat) et debounce 800 ms sur la frappe ; Ctrl+Z/Y interceptés dans onTextareaKeydown. Mode Visu : document.execCommand('undo'/'redo') natif contenteditable ; Ctrl+Y intercepté dans onVisuSectionKeydown.",
+      "files": [
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.ts",
+        "apps/projets/src/app/pages/projet-editor/components/projet-editor-zone/projet-editor-zone.component.html",
+        "tests/fonctions/connecte/projets/editor/zone-code/fonctions.md",
+        "tests/fonctions/connecte/projets/editor/zone-preview/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "dans le menu projet/edition je voudrais que tu rajoute une option retour en arrière ou refaire comme control Z et control Y comme sur un editeur de texte. biensur rajoute les icones dans la barre de style en premier",
+      "startedAt": "2026-06-21T15:40:00.000Z",
+      "completedAt": "2026-06-21T16:00:00.000Z"
+    },
+    {
       "id": "mod-428",
       "version": "B-0.297",
       "date": "2026-06-21T15:30:00.000Z",

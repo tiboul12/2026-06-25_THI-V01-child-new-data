@@ -693,6 +693,10 @@
            Affichée uniquement dans la vue « Avec style » (showCssInCode). -->
       @if (showCssInCode()) {
       <div class="visu-format-toolbar visu-format-toolbar--docked">
+          <!-- Undo / Redo -->
+          <button [disabled]="!canCodeUndo" (mousedown)="$event.preventDefault(); codeUndo()" title="Annuler (Ctrl+Z)"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">undo</span></button>
+          <button [disabled]="!canCodeRedo" (mousedown)="$event.preventDefault(); codeRedo()" title="Refaire (Ctrl+Y)"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">redo</span></button>
+          <div class="visu-format-toolbar__sep"></div>
           <button [class.is-active]="codeActiveStyles['bold']" (mousedown)="$event.preventDefault(); toggleCodeStyle('bold', '**')" title="Gras"><b>B</b></button>
           <button [class.is-active]="codeActiveStyles['italic']" (mousedown)="$event.preventDefault(); toggleCodeStyle('italic', '*')" title="Italique"><i>I</i></button>
           <button [class.is-active]="codeActiveStyles['underline']" (mousedown)="$event.preventDefault(); toggleCodeStyle('underline', '<u>', '</u>')" title="Souligné"><u>U</u></button>
@@ -1147,6 +1151,10 @@
 
         <!-- Barre de formatage permanente (haut de zone, mode Edition) -->
         <div class="visu-format-toolbar visu-format-toolbar--docked">
+            <!-- Undo / Redo -->
+            <button (mousedown)="$event.preventDefault(); visuUndo()" title="Annuler (Ctrl+Z)"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">undo</span></button>
+            <button (mousedown)="$event.preventDefault(); visuRedo()" title="Refaire (Ctrl+Y)"><span class="material-symbols-outlined" style="font-size:14px;line-height:1">redo</span></button>
+            <div class="visu-format-toolbar__sep"></div>
             <button [class.is-active]="visuActiveFormats['bold']" (mousedown)="$event.preventDefault(); applyVisuFormat('bold')" title="Gras"><b>B</b></button>
             <button [class.is-active]="visuActiveFormats['italic']" (mousedown)="$event.preventDefault(); applyVisuFormat('italic')" title="Italique"><i>I</i></button>
             <button [class.is-active]="visuActiveFormats['underline']" (mousedown)="$event.preventDefault(); applyVisuFormat('underline')" title="Souligné"><u>U</u></button>
