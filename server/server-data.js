@@ -7640,6 +7640,9 @@ app.delete('/api/collab/:projetId/nodes/:nodeId/lock', async (req, res) => {
 
 const ADMIN_TESTS_RUNS_DIR  = path.join(BASE_DIR, 'tests-admin');
 const ADMIN_TESTS_RUNS_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'runs.json');
+const ADMIN_TESTS_FNHIST_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'functions-history.json');
+const ADMIN_TESTS_FAV_FILE    = path.join(ADMIN_TESTS_RUNS_DIR, 'favorites.json');
+const ADMIN_TESTS_SETTINGS_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'settings.json');
 const FONCTIONS_DIR         = path.join(__dirname, '..', 'tests', 'fonctions');
 const FONCTIONS_REGISTRY    = path.join(FONCTIONS_DIR, '_registry.json');
 
@@ -7675,6 +7678,22 @@ function testsAdminId() {
     return `trun-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+// Historique des mises à jour du référentiel de fonctions (générations IA appliquées).
+function fnHistoryLoad() {
+    try {
+        if (fs.existsSync(ADMIN_TESTS_FNHIST_FILE)) return JSON.parse(fs.readFileSync(ADMIN_TESTS_FNHIST_FILE, 'utf8'));
+    } catch (e) { console.error('[ADMIN-TESTS] fn-history load error:', e); }
+    return { entries: [] };
+}
+
+function fnHistorySave(data) {
+    try {
+        fs.mkdirSync(ADMIN_TESTS_RUNS_DIR, { recursive: true });
+        fs.writeFileSync(ADMIN_TESTS_FNHIST_FILE, JSON.stringify(data, null, 2), 'utf8');
+        return true;
+    } catch (e) { console.error('[ADMIN-TESTS] fn-history save error:', e); return false; }
+}
+
 function computeRunStats(run) {
     const total   = run.results.length;
     const ok      = run.results.filter(r => r.status === 'ok').length;
@@ -7698,6 +7717,41 @@ function computeTopKo(runs) {
         .map(([itemId, count]) => ({ itemId, count }));
 }
 
+// Extrait les composants/fichiers liés d'une fonction depuis sa ligne « Composants: `a`, `b` ».
+function extractFunctionComponents(content) {
+    const out = [];
+    for (const line of (content || '').split('\n')) {
+        const m = line.match(/^\s*[-*>]?\s*\*{0,2}composants?\*{0,2}\s*[:：]\s*(.+)$/i);
+        if (!m) continue;
+        for (let part of m[1].split(/[,;]/)) {
+            part = part.replace(/[`*]/g, '').trim();
+            if (part) out.push(part);
+        }
+    }
+    return [...new Set(out)];
+}
+
+// Priorités valides d'une fonction de test.
+const TEST_PRIORITIES = ['mineur', 'critique', 'bloquant'];
+function normalizePriority(v) {
+    let s = (v || '').toString().toLowerCase().trim()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '');   // sans accents
+    if (!s) return 'mineur';
+    // Synonymes FR/EN et formes fléchies → priorité canonique
+    if (/^(bloqu|block|critical-block|p0|sev0|sev-0)/.test(s) || s === 'critique-bloquant') return 'bloquant';
+    if (/^(critiq|critic|major|majeur|haut|high|importante?|p1|sev1|sev-1)/.test(s)) return 'critique';
+    if (/^(mineur|minor|faible|low|bas|secondaire|p2|p3|sev2|sev-2)/.test(s)) return 'mineur';
+    return TEST_PRIORITIES.includes(s) ? s : 'mineur';
+}
+// Extrait la priorité d'une fonction depuis sa ligne « Priorité: critique ».
+function extractFunctionPriority(content) {
+    for (const line of (content || '').split('\n')) {
+        const m = line.match(/^\s*[-*>]?\s*\*{0,2}priorit[ée]\*{0,2}\s*[:：]\s*(.+)$/i);
+        if (m) return normalizePriority(m[1].replace(/[`*]/g, ''));
+    }
+    return 'mineur';
+}
+
 function parseFonctionsMd(relPath, content, pathToId) {
     const lines      = content.split('\n');
     let pageTitle    = '';
@@ -7706,6 +7760,8 @@ function parseFonctionsMd(relPath, content, pathToId) {
     let fallbackIdx  = 0;
     let currentItem  = null;
     let contentLines = [];
+    let metaUpdatedAt = '';
+    let metaUpdatedBy = '';
 
     const flushItem = () => {
         if (currentItem) {
@@ -7715,6 +7771,9 @@ function parseFonctionsMd(relPath, content, pathToId) {
                 .join('\n')
                 .trim();
             currentItem.content = cleaned;
+            // Composants liés (ligne convention « Composants: `chemin`, … »)
+            currentItem.components = extractFunctionComponents(cleaned);
+            currentItem.priority = extractFunctionPriority(cleaned);
             items.push(currentItem);
         }
         currentItem  = null;
@@ -7722,6 +7781,12 @@ function parseFonctionsMd(relPath, content, pathToId) {
     };
 
     for (const line of lines) {
+        const mm = line.match(/<!--\s*worganic:meta\s+([^>]*?)-->/);
+        if (mm) {
+            const a = mm[1].match(/updatedAt="([^"]*)"/); if (a) metaUpdatedAt = a[1];
+            const b = mm[1].match(/updatedBy="([^"]*)"/); if (b) metaUpdatedBy = b[1];
+            continue;
+        }
         if (line.startsWith('# ') && !pageTitle) {
             pageTitle = line.slice(2).trim();
         } else if (line.startsWith('## ')) {
@@ -7737,6 +7802,10 @@ function parseFonctionsMd(relPath, content, pathToId) {
         }
     }
     flushItem();
+    // Métadonnées de mise à jour (date + IA) au niveau de la section → attachées à chaque item
+    if (metaUpdatedAt || metaUpdatedBy) {
+        for (const it of items) { it.updatedAt = metaUpdatedAt; it.updatedBy = metaUpdatedBy; }
+    }
     return items;
 }
 
@@ -7832,6 +7901,7 @@ app.get('/api/admin/tests/runs', (req, res) => {
         completedAt: run.completedAt,
         status:      run.status,
         mode:        run.mode || 'manual',
+        isCampaign:  !!run.isCampaign,
         aiProvider:  run.aiProvider || null,
         aiModel:     run.aiModel || null,
         aiState:     run.aiState || null,
@@ -7840,12 +7910,33 @@ app.get('/api/admin/tests/runs', (req, res) => {
     res.json({ runs, topKo: computeTopKo(data.runs) });
 });
 
+// GET /api/admin/tests/matrix — tous les runs AVEC leurs résultats (pour la vue matrice "Résultats")
+app.get('/api/admin/tests/matrix', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const data = testsAdminLoad();
+    // Ordre chronologique (du plus ancien au plus récent) pour l'affichage en colonnes.
+    const runs = [...data.runs].map(run => ({
+        id:          run.id,
+        name:        run.name || null,
+        tester:      run.tester,
+        startedAt:   run.startedAt,
+        completedAt: run.completedAt || null,
+        status:      run.status,
+        mode:        run.mode || 'manual',
+        isCampaign:  !!run.isCampaign,
+        stats:       computeRunStats(run),
+        results:     run.results.map(r => ({ itemId: r.itemId, status: r.status, note: r.note || null, testedAt: r.testedAt || null }))
+    }));
+    res.json({ runs });
+});
+
 // POST /api/admin/tests/runs — crée un nouveau run
 app.post('/api/admin/tests/runs', (req, res) => {
     const user = getSessionUser(req);
     if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
     if (!_functionItemsCache) _functionItemsCache = scanAllFunctions();
-    const { name, tester, folderIds, mode, aiProvider, aiModel, prompt } = req.body;
+    const { name, tester, folderIds, mode, aiProvider, aiModel, prompt, isCampaign } = req.body;
     // Filtrage optionnel par sections (folderIds) : un run peut ne couvrir qu'une partie
     // du référentiel. Liste vide ou absente = toutes les fonctions.
     let items = _functionItemsCache;
@@ -7859,15 +7950,44 @@ app.post('/api/admin/tests/runs', (req, res) => {
         tester:    tester || user.username || 'admin',
         startedAt: new Date().toISOString(),
         status:    'in_progress',
+        // Campagne : run au long cours, on y ajoute des sections au fil du temps (1 seule colonne en résultats).
+        ...(isCampaign ? { isCampaign: true } : {}),
         // Mode 'ai' : run testé automatiquement par Claude Code / Antigravity via Browser MCP.
         mode:      mode === 'ai' ? 'ai' : 'manual',
         ...(mode === 'ai' ? { aiProvider: aiProvider || null, aiModel: aiModel || null, aiState: 'idle', prompt: prompt || null } : {}),
-        results:   items.map(item => ({ itemId: item.id, status: 'pending' }))
+        results:   items.map(item => ({ itemId: item.id, status: 'pending', folderId: item.folderId }))
     };
     const data = testsAdminLoad();
     data.runs.push(newRun);
     testsAdminSave(data);
     res.json({ ...newRun, stats: computeRunStats(newRun) });
+});
+
+// POST /api/admin/tests/runs/:id/add-sections { folderIds } — ajoute des sections à une campagne.
+// Les fonctions déjà présentes ne sont pas réinitialisées ; seules les nouvelles sont ajoutées en 'pending'.
+app.post('/api/admin/tests/runs/:id/add-sections', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    if (!_functionItemsCache) _functionItemsCache = scanAllFunctions();
+    const data = testsAdminLoad();
+    const run  = data.runs.find(r => r.id === req.params.id);
+    if (!run) return res.status(404).json({ error: 'Run introuvable' });
+
+    const { folderIds } = req.body || {};
+    let items = _functionItemsCache;
+    if (Array.isArray(folderIds) && folderIds.length > 0) {
+        const set = new Set(folderIds);
+        items = items.filter(item => set.has(item.folderId));
+    }
+    const existing = new Set(run.results.map(r => r.itemId));
+    let added = 0;
+    for (const item of items) {
+        if (!existing.has(item.id)) { run.results.push({ itemId: item.id, status: 'pending', folderId: item.folderId }); added++; }
+    }
+    run.status = 'in_progress';
+    if (run.completedAt) run.completedAt = null;
+    testsAdminSave(data);
+    res.json({ ...run, stats: computeRunStats(run), added });
 });
 
 // GET /api/admin/tests/runs/:id — détail complet d'un run
@@ -8006,7 +8126,11 @@ app.get('/api/admin/tests/runs/:id/ai-stream', (req, res) => {
 
     if (!_functionItemsCache) _functionItemsCache = scanAllFunctions();
     const runItemIds = new Set(run.results.map(r => r.itemId));
-    const items = _functionItemsCache.filter(it => runItemIds.has(it.id));
+    // L'IA ne teste que les fonctions encore en attente (utile pour les campagnes : on ajoute
+    // des sections petit à petit et on ne re-teste pas ce qui est déjà décidé). Si tout est
+    // déjà décidé, on retombe sur l'ensemble du run.
+    const pendingIds = new Set(run.results.filter(r => r.status === 'pending').map(r => r.itemId));
+    const items = _functionItemsCache.filter(it => (pendingIds.size > 0 ? pendingIds.has(it.id) : runItemIds.has(it.id)));
 
     // SSE (événements nommés, consommés par EventSource côté client)
     res.setHeader('Content-Type', 'text/event-stream');
@@ -8184,6 +8308,444 @@ app.get('/api/admin/tests/runs/:id/ai-stream', (req, res) => {
     apiReq.end();
 
     req.on('close', () => { stopPoller(); try { apiReq.destroy(); } catch {} });
+});
+
+// Compose le prompt qui demande à l'IA agentique d'analyser le code d'une section
+// et de PROPOSER (dans un fichier JSON) la liste cible des fonctions à tester. Aucune
+// modification directe du fonctions.md : la migration est validée par l'utilisateur ensuite.
+function buildProposeFunctionsPrompt(relPath, folderId, existingContent, editableInstructions, withComponents, outFile) {
+    const of = outFile.replace(/\\/g, '/');
+    const componentsField = withComponents
+        ? ', "components": ["chemin/relatif/fichier.ts", "…"]'
+        : '';
+    const componentsRule = withComponents
+        ? "\n- \`components\` : liste des fichiers source qui implémentent la fonction (composant Angular, template, route serveur Express…), chemins relatifs à la racine du repo."
+        : "\n- N'ajoute PAS de champ \`components\`.";
+    const intro = (editableInstructions || '').trim() || [
+        "Tu es un ingénieur QA. Analyse le code source de l'application Worganic correspondant à la section ci-dessous",
+        "(composants Angular, templates, routes serveur Express) et propose la liste à jour des fonctions à tester :",
+        "ajoute les fonctions manquantes et corrige/complète celles qui sont obsolètes, pour refléter le comportement réel du code."
+    ].join(' ');
+
+    return `${intro}
+
+## Section ciblée
+- Dossier : \`tests/fonctions/${relPath}/\`  — folderId : \`${folderId}\`
+
+## Code à analyser
+Repère et lis le(s) composant(s) / routes correspondant à cette section (déduis-les depuis le chemin
+\`${relPath}\` et la table de correspondance de CLAUDE.md, ex: \`connecte/admin/xxx\` ↦ \`apps/portail/src/app/pages/admin/...\`).
+Base-toi sur le CODE RÉEL (entrées/sorties, boutons, appels API, états) pour décrire des fonctions testables concrètes.
+
+## Ta SEULE livraison : un fichier JSON
+Utilise ton OUTIL D'ÉCRITURE DE FICHIER pour écrire dans : ${of}
+N'écris RIEN dans ta réponse texte — tout passe par ce fichier.
+Écris un tableau JSON décrivant la liste COMPLÈTE et cible des fonctions de cette section :
+\`\`\`json
+[
+  { "id": "${folderId}-1", "section": "Libellé de la fonction", "tasks": "- vérification 1\\n- vérification 2", "priority": "critique"${componentsField} },
+  { "section": "Nouvelle fonction (sans id = à créer)", "tasks": "- …", "priority": "mineur"${componentsField} }
+]
+\`\`\`
+Règles :
+- Pour une fonction DÉJÀ existante (présente dans le contenu de référence ci-dessous), RÉUTILISE son \`id\` exact.
+- Pour une NOUVELLE fonction, OMETS le champ \`id\` (le serveur en attribuera un).
+- Une fonction existante que tu juges à supprimer : ne la mets simplement PAS dans le tableau.
+- \`section\` = libellé court ; \`tasks\` = puces markdown (\`- …\`) des vérifications.
+- \`priority\` (OBLIGATOIRE, à ÉVALUER fonction par fonction — n'utilise PAS \`mineur\` par défaut) : exactement l'une des valeurs \`bloquant\`, \`critique\`, \`mineur\`.
+    • \`bloquant\` : un échec rend la section/app inutilisable ou bloque l'utilisateur — ex : formulaire de **connexion**/**inscription**, **paiement**, **enregistrement/sauvegarde** des données, **chargement** d'une page principale, **authentification/sécurité**, suppression de données.
+    • \`critique\` : fonctionnalité importante du métier dont l'échec dégrade fortement l'usage sans tout bloquer — ex : filtres, recherche, édition, navigation principale, calculs/affichages clés.
+    • \`mineur\` : confort, cas secondaire, esthétique — ex : tooltip, animation, libellé, tri d'appoint, état vide.
+  Répartis réellement les priorités : une section a typiquement un mélange des trois.${componentsRule}
+- N'invente pas d'\`id\` pour les nouvelles fonctions.
+
+## Contenu actuel du fichier (référence : IDs et libellés existants)
+\`\`\`markdown
+${(existingContent || '(fichier vide)').slice(0, 12000)}
+\`\`\`
+COMMENCE MAINTENANT et écris le tableau JSON complet dans le fichier.`;
+}
+
+// Normalise un texte pour comparaison (espaces/retours/accents/casse).
+function _normCmp(s) {
+    return (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, ' ').trim();
+}
+
+// Supprime les lignes méta (« Composants: … », « Priorité: … ») d'un contenu markdown.
+function stripComponentsLine(content) {
+    return (content || '').split('\n')
+        .filter(l => !/^\s*[-*>]?\s*\*{0,2}composants?\*{0,2}\s*[:：]/i.test(l)
+                  && !/^\s*[-*>]?\s*\*{0,2}priorit[ée]\*{0,2}\s*[:：]/i.test(l))
+        .join('\n').trim();
+}
+
+// Lit le JSON de propositions écrit par l'IA (tolère les fences ```json).
+function readProposalsJson(file) {
+    let raw = '';
+    try { raw = fs.readFileSync(file, 'utf8'); } catch { return null; }
+    if (!raw.trim()) return null;
+    let txt = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const start = txt.indexOf('['), end = txt.lastIndexOf(']');
+    if (start === -1 || end === -1 || end < start) return null;
+    try { return JSON.parse(txt.slice(start, end + 1)); } catch { return null; }
+}
+
+// Calcule le diff entre les fonctions actuelles et les propositions de l'IA.
+function computeFunctionProposals(folderId, currentItems, proposed) {
+    const current = currentItems.map(it => ({
+        id: it.id, section: it.section,
+        content: stripComponentsLine(it.content),
+        components: it.components || [],
+        priority: it.priority || 'mineur',
+    }));
+    const byId = new Map(current.map(c => [c.id, c]));
+    const bySection = new Map(current.map(c => [_normCmp(c.section), c]));
+    const matched = new Set();
+    const out = [];
+
+    for (const p of (proposed || [])) {
+        if (!p || (!p.section && !p.tasks)) continue;
+        const section = (p.section || '').toString().trim();
+        const content = stripComponentsLine((p.tasks || '').toString());
+        const components = Array.isArray(p.components) ? p.components.map(c => c.toString().trim()).filter(Boolean) : [];
+        const priority = normalizePriority(p.priority);
+        let found = (p.id && byId.get(p.id)) || bySection.get(_normCmp(section));
+        if (found && !matched.has(found.id)) {
+            matched.add(found.id);
+            const same = _normCmp(found.section) === _normCmp(section)
+                && _normCmp(found.content) === _normCmp(content)
+                && found.components.join('|') === components.join('|')
+                && found.priority === priority;
+            out.push({
+                op: same ? 'unchanged' : 'modify',
+                id: found.id, section, content, components, priority,
+                oldSection: found.section, oldContent: found.content, oldComponents: found.components, oldPriority: found.priority,
+            });
+        } else {
+            out.push({ op: 'add', id: null, section, content, components, priority });
+        }
+    }
+    // Fonctions actuelles absentes des propositions → suppression
+    for (const c of current) {
+        if (!matched.has(c.id)) {
+            out.push({ op: 'delete', id: c.id, section: c.section, content: c.content, components: c.components, priority: c.priority });
+        }
+    }
+    const order = { modify: 0, add: 1, delete: 2, unchanged: 3 };
+    out.sort((a, b) => (order[a.op] - order[b.op]));
+    return out;
+}
+
+// Écrit un fonctions.md à partir d'une liste de fonctions (assigne les IDs manquants).
+function writeFonctionsMd(relPath, folderId, pageTitle, functions, meta) {
+    const mdFull = path.join(FONCTIONS_DIR, relPath, 'fonctions.md');
+    let maxN = 0;
+    for (const f of functions) {
+        const m = (f.id || '').match(new RegExp('^' + folderId.replace(/[-]/g, '\\-') + '-(\\d+)$'));
+        if (m) maxN = Math.max(maxN, parseInt(m[1], 10));
+    }
+    const lines = [];
+    if (pageTitle) { lines.push(`# ${pageTitle}`, ''); }
+    // Métadonnées de mise à jour (date + IA) — commentaire HTML non rendu, reparsé au scan.
+    if (meta && (meta.updatedAt || meta.updatedBy)) {
+        const esc = (s) => (s || '').toString().replace(/"/g, "'");
+        lines.push(`<!-- worganic:meta updatedAt="${esc(meta.updatedAt)}" updatedBy="${esc(meta.updatedBy)}" -->`, '');
+    }
+    for (const f of functions) {
+        let id = f.id;
+        if (!id) id = `${folderId}-${++maxN}`;
+        const section = (f.section || '').toString().trim() || 'Fonction';
+        let body = stripComponentsLine((f.content || '').toString());
+        const comps = Array.isArray(f.components) ? f.components.map(c => c.toString().trim()).filter(Boolean) : [];
+        const priority = normalizePriority(f.priority);
+        lines.push('---', '', `## \`${id}\` — ${section}`, '');
+        if (body) lines.push(body);
+        lines.push(`- **Priorité:** ${priority}`);
+        if (comps.length) lines.push(`- **Composants:** ${comps.map(c => '`' + c + '`').join(', ')}`);
+        lines.push('');
+    }
+    fs.mkdirSync(path.dirname(mdFull), { recursive: true });
+    fs.writeFileSync(mdFull, lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n', 'utf8');
+    return mdFull;
+}
+
+// GET /api/admin/tests/generate-functions-stream — l'IA analyse le code et PROPOSE la liste cible (fichier JSON).
+// Le serveur calcule le diff (ajout/modif/suppression) et renvoie les propositions ; aucune écriture du fonctions.md ici.
+app.get('/api/admin/tests/generate-functions-stream', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+
+    const folderId = (req.query.folderId || '').toString();
+    const registry = loadFonctionsRegistry();
+    const relPath  = registry[folderId];
+    if (!folderId || !relPath) return res.status(400).json({ error: 'folderId inconnu' });
+
+    const provider = (req.query.provider || 'claude').toString();
+    const isAgy    = provider === 'antigravity' || provider === 'agy';
+    const model    = (req.query.model || '').toString() || (isAgy ? 'default' : 'claude-sonnet-4-6');
+    const instructions = (req.query.prompt || '').toString();
+    const withComponents = req.query.components === '1' || req.query.components === 'true';
+
+    const mdFull = path.join(FONCTIONS_DIR, relPath, 'fonctions.md');
+    let existingContent = '';
+    try { if (fs.existsSync(mdFull)) existingContent = fs.readFileSync(mdFull, 'utf8'); } catch { /* ignore */ }
+
+    // Fichier de sortie pour les propositions de l'IA (lu/écrit par l'IA puis par le serveur).
+    let outFile, outDir;
+    try {
+        outDir  = path.join(BASE_DIR, 'tests-admin', 'gen-runs', `${folderId}-${Date.now()}`);
+        fs.mkdirSync(outDir, { recursive: true });
+        outFile = path.join(outDir, 'proposals.json');
+        fs.writeFileSync(outFile, '', 'utf8');
+    } catch (e) {
+        res.status(500).json({ error: 'Préparation du fichier de propositions impossible: ' + e.message });
+        return;
+    }
+
+    // SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    const sse = (event, payload) => { if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`); };
+
+    const prompt = buildProposeFunctionsPrompt(relPath, folderId, existingContent, instructions, withComponents, outFile);
+
+    sse('start', { folderId, relPath, provider, model });
+
+    const http = require('http');
+    const body = JSON.stringify({ stepId: `genfn-${folderId}-${Date.now()}`, content: prompt, provider, model, cwd: PROJECT_ROOT });
+    const apiReq = http.request({
+        hostname: 'localhost', port: 3002, path: '/execute-prompt', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (apiRes) => {
+        let sseBuf = '';
+        let logLines = 0;
+
+        if (apiRes.statusCode !== 200) {
+            let errBody = '';
+            apiRes.on('data', c => { errBody += c.toString(); });
+            apiRes.on('end', () => {
+                sse('run-failed', { message: `Executor a répondu HTTP ${apiRes.statusCode} : ${errBody.slice(0, 500) || '(corps vide)'}` });
+                res.end();
+            });
+            return;
+        }
+
+        apiRes.on('data', (chunk) => {
+            sseBuf += chunk.toString();
+            const parts = sseBuf.split('\n');
+            sseBuf = parts.pop() ?? '';
+            for (const line of parts) {
+                if (!line.startsWith('data:')) continue;
+                let evt; try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+                if (evt.type === 'stdout' && evt.message) { logLines++; const t = evt.message.replace(/\r?\n$/, ''); if (t.trim()) sse('ai-log', { stream: 'stdout', text: t }); }
+                else if (evt.type === 'stderr' && evt.message) { const t = evt.message.replace(/\r?\n$/, ''); if (t.trim()) { logLines++; sse('ai-log', { stream: 'stderr', text: t }); } }
+                else if ((evt.type === 'info' || evt.type === 'start' || evt.type === 'end') && evt.message) { const t = evt.message.replace(/\r?\n$/, ''); if (t.trim()) sse('ai-log', { stream: 'info', text: t }); }
+                else if (evt.type === 'error') sse('ai-error', { message: evt.message || 'Erreur IA' });
+            }
+        });
+        apiRes.on('end', () => {
+            // Lit les propositions écrites par l'IA et calcule le diff (sans toucher au fonctions.md).
+            if (!_functionItemsCache) { try { _functionItemsCache = scanAllFunctions(); } catch { _functionItemsCache = []; } }
+            const currentItems = _functionItemsCache.filter(it => it.folderId === folderId);
+            let rawResponse = '';
+            try { rawResponse = fs.readFileSync(outFile, 'utf8'); } catch { /* ignore */ }
+            const proposed = readProposalsJson(outFile);
+            if (!proposed) {
+                sse('run-failed', { message: "L'IA n'a écrit aucune proposition exploitable dans le fichier JSON. Vérifie que le CLI est installé/authentifié et qu'il peut écrire des fichiers.", prompt, rawResponse: rawResponse.slice(0, 30000) });
+                return res.end();
+            }
+            const proposals = computeFunctionProposals(folderId, currentItems, proposed);
+            // Renvoie l'échange IA complet (prompt + réponse brute) pour analyse / historique.
+            sse('complete', { folderId, proposals, logLines, prompt, rawResponse: rawResponse.slice(0, 30000) });
+            res.end();
+        });
+    });
+    apiReq.on('error', (e) => {
+        sse('run-failed', { message: `Executor injoignable (port 3002) : ${e.message}. Lance l'executor.` });
+        res.end();
+    });
+    apiReq.write(body);
+    apiReq.end();
+
+    req.on('close', () => { try { apiReq.destroy(); } catch {} });
+});
+
+// POST /api/admin/tests/apply-functions — applique la liste validée par l'utilisateur (réécrit le fonctions.md).
+app.post('/api/admin/tests/apply-functions', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const { folderId, functions, updatedBy, changes, aiPrompt, aiResponse } = req.body || {};
+    const registry = loadFonctionsRegistry();
+    const relPath  = registry[folderId];
+    if (!folderId || !relPath) return res.status(400).json({ error: 'folderId inconnu' });
+    if (!Array.isArray(functions)) return res.status(400).json({ error: 'functions manquant' });
+
+    // Récupère le titre de page existant (ligne # …) pour le conserver.
+    const mdFull = path.join(FONCTIONS_DIR, relPath, 'fonctions.md');
+    let pageTitle = '';
+    try {
+        if (fs.existsSync(mdFull)) {
+            const first = fs.readFileSync(mdFull, 'utf8').split('\n').find(l => l.startsWith('# '));
+            if (first) pageTitle = first.slice(2).trim();
+        }
+    } catch { /* ignore */ }
+    if (!pageTitle && _functionItemsCache) {
+        const any = (_functionItemsCache.find(it => it.folderId === folderId));
+        if (any) pageTitle = any.pageTitle;
+    }
+
+    try {
+        const now = new Date().toISOString();
+        const meta = { updatedAt: now, updatedBy: (updatedBy || 'IA').toString() };
+        writeFonctionsMd(relPath, folderId, pageTitle, functions, meta);
+        _functionItemsCache = null;
+        const items = scanAllFunctions().filter(it => it.folderId === folderId);
+
+        // Historique : enregistre la mise à jour (diff fourni par le client)
+        const c = changes || {};
+        const norm = (arr) => Array.isArray(arr) ? arr.map(x => ({
+            id: x.id || null,
+            section: (x.section || '').toString(),
+            priority: normalizePriority(x.priority),
+            explanation: (x.explanation || '').toString().slice(0, 300),
+        })) : [];
+        const added = norm(c.added), modified = norm(c.modified), deleted = norm(c.deleted);
+        if (added.length || modified.length || deleted.length) {
+            const hist = fnHistoryLoad();
+            hist.entries.push({
+                id: `fnh-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                date: now,
+                folderId, path: relPath, pageTitle,
+                updatedBy: meta.updatedBy,
+                added, modified, deleted,
+                counts: { added: added.length, modified: modified.length, deleted: deleted.length },
+                total: items.length,
+                aiPrompt: (aiPrompt || '').toString().slice(0, 40000),
+                aiResponse: (aiResponse || '').toString().slice(0, 40000),
+            });
+            fnHistorySave(hist);
+        }
+
+        res.json({ ok: true, total: items.length, items });
+    } catch (e) {
+        console.error('[admin-tests apply-functions] error:', e.message);
+        res.status(500).json({ error: 'Échec écriture du fonctions.md: ' + e.message });
+    }
+});
+
+// GET /api/admin/tests/functions-history — historique des mises à jour du référentiel (récent → ancien).
+app.get('/api/admin/tests/functions-history', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const hist = fnHistoryLoad();
+    res.json({ entries: [...(hist.entries || [])].reverse() });
+});
+
+// Favoris de sections (étoiles) — stockage simple par folderId.
+function favLoad() {
+    try {
+        if (fs.existsSync(ADMIN_TESTS_FAV_FILE)) {
+            const d = JSON.parse(fs.readFileSync(ADMIN_TESTS_FAV_FILE, 'utf8'));
+            return Array.isArray(d.folderIds) ? d.folderIds : [];
+        }
+    } catch (e) { console.error('[ADMIN-TESTS] favorites load error:', e); }
+    return [];
+}
+function favSave(folderIds) {
+    try {
+        fs.mkdirSync(ADMIN_TESTS_RUNS_DIR, { recursive: true });
+        fs.writeFileSync(ADMIN_TESTS_FAV_FILE, JSON.stringify({ folderIds }, null, 2), 'utf8');
+        return true;
+    } catch (e) { console.error('[ADMIN-TESTS] favorites save error:', e); return false; }
+}
+
+// ── Réglages de validation (seuils de priorité) ──
+function testsSettingsLoad() {
+    const def = { critiqueThreshold: 15, mineurThreshold: 40 };
+    try {
+        if (fs.existsSync(ADMIN_TESTS_SETTINGS_FILE)) {
+            return { ...def, ...JSON.parse(fs.readFileSync(ADMIN_TESTS_SETTINGS_FILE, 'utf8')) };
+        }
+    } catch (e) { console.error('[ADMIN-TESTS] settings load error:', e); }
+    return def;
+}
+function testsSettingsSave(s) {
+    try {
+        fs.mkdirSync(ADMIN_TESTS_RUNS_DIR, { recursive: true });
+        fs.writeFileSync(ADMIN_TESTS_SETTINGS_FILE, JSON.stringify(s, null, 2), 'utf8');
+        return true;
+    } catch (e) { console.error('[ADMIN-TESTS] settings save error:', e); return false; }
+}
+
+// GET /api/admin/tests/settings — seuils de validation.
+app.get('/api/admin/tests/settings', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    res.json(testsSettingsLoad());
+});
+
+// POST /api/admin/tests/settings { critiqueThreshold, mineurThreshold } — modifie les seuils.
+app.post('/api/admin/tests/settings', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const cur = testsSettingsLoad();
+    const clamp = (v, d) => { const n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : d; };
+    const next = {
+        critiqueThreshold: clamp(req.body?.critiqueThreshold, cur.critiqueThreshold),
+        mineurThreshold:   clamp(req.body?.mineurThreshold, cur.mineurThreshold),
+    };
+    testsSettingsSave(next);
+    res.json(next);
+});
+
+// POST /api/admin/tests/function-priority { itemId, priority } — modifie la priorité d'une fonction.
+app.post('/api/admin/tests/function-priority', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const { itemId, priority } = req.body || {};
+    if (!itemId) return res.status(400).json({ error: 'itemId requis' });
+    if (!_functionItemsCache) { try { _functionItemsCache = scanAllFunctions(); } catch { _functionItemsCache = []; } }
+    const item = _functionItemsCache.find(it => it.id === itemId);
+    if (!item) return res.status(404).json({ error: 'Fonction introuvable' });
+    const relPath = item.path, folderId = item.folderId, pageTitle = item.pageTitle;
+    const groupItems = _functionItemsCache.filter(it => it.folderId === folderId);
+    const meta = (groupItems[0] && groupItems[0].updatedAt)
+        ? { updatedAt: groupItems[0].updatedAt, updatedBy: groupItems[0].updatedBy } : null;
+    const functions = groupItems.map(it => ({
+        id: it.id, section: it.section, content: it.content, components: it.components || [],
+        priority: it.id === itemId ? normalizePriority(priority) : (it.priority || 'mineur'),
+    }));
+    try {
+        writeFonctionsMd(relPath, folderId, pageTitle, functions, meta);
+        _functionItemsCache = null;
+        const items = scanAllFunctions().filter(it => it.folderId === folderId);
+        res.json({ ok: true, items });
+    } catch (e) {
+        res.status(500).json({ error: 'Échec écriture: ' + e.message });
+    }
+});
+
+// GET /api/admin/tests/favorites — liste des folderId favoris.
+app.get('/api/admin/tests/favorites', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    res.json({ folderIds: favLoad() });
+});
+
+// POST /api/admin/tests/favorites { folderId, favorite } — (dé)marque une section en favori.
+app.post('/api/admin/tests/favorites', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const { folderId, favorite } = req.body || {};
+    if (!folderId) return res.status(400).json({ error: 'folderId requis' });
+    const set = new Set(favLoad());
+    if (favorite) set.add(folderId); else set.delete(folderId);
+    const folderIds = [...set];
+    favSave(folderIds);
+    res.json({ folderIds });
 });
 
 // ============================================================
