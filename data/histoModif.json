@@ -1,6 +1,89 @@
 {
   "modifications": [
     {
+      "id": "mod-424",
+      "version": "B-0.296",
+      "date": "2026-06-21T13:10:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/projets",
+      "title": "Admin/Projets — routing sous-onglets (/admin/projets/:subtab)",
+      "description": "AdminProjetsComponent : ajout de ActivatedRoute, DestroyRef et takeUntilDestroyed. switchSubTab navigue vers /admin/projets/:subtab via activateSubTabInternal. Subscription route.params dans ngOnInit : redirect vers /admin/projets/projets si pas de subtab, activation réactive sinon. Nœud adm-projets mis à jour dans le sitemap.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-projets/admin-projets.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "idem pour admin/projets/",
+      "startedAt": "2026-06-21T13:05:00.000Z",
+      "completedAt": "2026-06-21T13:10:00.000Z"
+    },
+    {
+      "id": "mod-423",
+      "version": "B-0.296",
+      "date": "2026-06-21T12:50:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests",
+      "title": "Admin/Tests — routing sous-onglets (/admin/tests/:subtab)",
+      "description": "Ajout de la route /admin/:tab/:subtab dans base-routes.ts. AdminTestsComponent injecte Router, ActivatedRoute et DestroyRef ; selectTab navigue vers /admin/tests/:subtab et activateTabInternal gère la logique d'activation. La subscription à route.params (takeUntilDestroyed) active le bon sous-onglet au chargement direct via URL et au retour arrière navigateur. /admin/tests sans subtab redirige vers /admin/tests/cahier. URL du nœud adm-tests mis à jour dans le sitemap.",
+      "files": [
+        "apps/portail/src/app/base-routes.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "cela fonctionne pour les page de niveau 2 (admin) mais il faut aussi pour les niveaux plus bas comme tests/cahierderectte test/execution test/resultats etc",
+      "startedAt": "2026-06-21T12:40:00.000Z",
+      "completedAt": "2026-06-21T12:50:00.000Z"
+    },
+    {
+      "id": "mod-422",
+      "version": "B-0.296",
+      "date": "2026-06-21T12:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin|sitemap",
+      "title": "Admin — routing par segments de chemin (/admin/:tab)",
+      "description": "Conversion du routing des onglets admin de queryParams (?tab=xxx) vers des segments de path (/admin/xxx). Ajout de la route /admin/:tab dans base-routes.ts. L'AdminComponent utilise désormais route.params (réactif via takeUntilDestroyed) et setTab navigue vers /admin/:tab. Rétrocompatibilité : les anciennes URLs ?tab=xxx sont redirigées automatiquement. Les URLs admin dans le sitemap sont mises à jour vers le nouveau format.",
+      "files": [
+        "apps/portail/src/app/base-routes.ts",
+        "apps/portail/src/app/pages/admin/admin.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que chaque page soi accessible via une url spécifique , change déjà toutes la partie admin",
+      "startedAt": "2026-06-21T12:25:00.000Z",
+      "completedAt": "2026-06-21T12:30:00.000Z"
+    },
+    {
+      "id": "mod-421",
+      "version": "B-0.296",
+      "date": "2026-06-21T10:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin/tests|sitemap",
+      "title": "Admin/Tests : onglet Site Map graphique interactif",
+      "description": "Ajout d'un 5e onglet 'Site Map' dans Admin > Tests. Carte SVG interactive reflétant le parcours réel de l'utilisateur : groupes encadrés (Public, App connectée avec menu Documents/Projets/Admin, Admin avec ses onglets réels du registry, App Projets :4203, Widgets embarqués), nœuds cliquables par page (composants Angular réels, onglets, URL, lien d'ouverture), arêtes de navigation (connexion/nav/cross-app) ET relations fonctionnelles en pointillés (Méga-outils Trello → Éditeur de projet, Admin Outils → widgets, Config admin → Config user). Zoom molette + pan, volet latéral de détails, filtre par section du cahier de recette avec highlight et mode 'voir seulement cette section'.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-sonnet-4-6",
+      "prompt": "je voudrais que tu rajoute dans la section admin/test une sous section \"site Map\". Cette section doit affiché graphiquement l'ensemble des pages du site avec les différents éléments qui s'y attache. On doit pouvoir voir les liaisons entre les différentes pages, la liste des components qui compose chaque page (avec un volet qui affiche les components quand on clique sur une page), les adresses des pages (avec lien vers les pages). le graphique général de la page (capture ou graphique en svg). Tu doit avoir un zoom et dezoom pour voir tous le site ou juste des section, certaine sertaine section doivent être encadré pour comprendre les différentes partie du système. On doit pouvoir selectionné une section dans le cahier de recette pour que l'IA puisse analysé cette section et amélioré le site map général et un bouton pour juste voir la section selectionné (au format graphique). En conclusion je veux que tu crais une section graphique de la siteMap avec un max d'info",
+      "startedAt": "2026-06-21T10:00:00.000Z",
+      "completedAt": "2026-06-21T10:30:00.000Z"
+    },
+    {
       "id": "mod-420",
       "version": "B-0.294",
       "date": "2026-06-21T00:36:00.000Z",

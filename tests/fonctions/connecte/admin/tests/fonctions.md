@@ -10,7 +10,8 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 
 ## `2-1-5-1` — Navigation par onglets + Onglet Cahier de recette
 
-- **Barre d'onglets** : Cahier de recette (`checklist`) / Exécution (`play_circle`) / Résultats (`bar_chart`).
+- **Barre d'onglets** : Cahier de recette (`checklist`) / Exécution (`play_circle`) / Résultats (`bar_chart`) / Historique (`history`) / Site Map (`account_tree`).
+- **URL par sous-onglet** : chaque onglet a une URL directe — `/admin/tests/cahier`, `/admin/tests/execution`, `/admin/tests/resultats`, `/admin/tests/historique`, `/admin/tests/sitemap`. Navigation par URL directe ou via le navigateur (retour arrière) possible.
   - L'onglet actif est souligné (border + texte primary).
   - À l'activation : Exécution initialise les défauts IA ; Résultats charge la matrice (GET `/api/admin/tests/matrix`).
 - **Bouton "Rafraîchir le référentiel"** (en haut à droite, toutes vues) : POST `/api/admin/tests/functions/refresh` → invalide le cache serveur puis recharge.
@@ -191,3 +192,29 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - sinon valide (si au moins une fonction décidée ; sinon « non testée »).
 - **Seuils modifiables** dans la barre d'outils de l'onglet Résultats (2 champs %), persistés : GET/POST `/api/admin/tests/settings { critiqueThreshold, mineurThreshold }`.
 - **Affichage** : la cellule de score de section devient verte (✓ valide) ou rouge (✗ invalide) avec le %, infobulle = raison de l'invalidation.
+
+## `2-1-5-13` — Onglet Site Map graphique
+
+- **5e onglet "Site Map"** (`account_tree`) dans la barre Admin › Tests.
+- **Carte SVG interactive** reflétant le **parcours réel de l'utilisateur** (et non un simple listing de routes), avec pan/zoom.
+  - **Groupes encadrés** (pointillés colorés, label) = parties du système : `Public :4202`, `App connectée :4202` (menu Documents · Projets · Admin), `Admin` (onglets, réservé admin), `App Projets :4203`, `Outils & widgets embarqués`.
+  - **Nœuds cliquables** par page : fond coloré selon le type (`public` sky / `protected` indigo / `admin` ambre / `projets` émeraude / `widget` violet), label + URL + badge port.
+  - **Structure réelle du menu** : les entrées de navigation (Documents, Projets→:4203, Historique conditionnel, Config, Déploiements, Admin) sont des nœuds dans le groupe « App connectée ».
+  - **Onglets Admin réels** (ordre du registry) en nœuds dans le groupe Admin : Projets, Utilisateurs, Déploiement, Config, Thème, Méga-outils, Mémo, Outils, Tests.
+  - **Onglets internes** affichés sous l'URL pour les pages tabulées (Éditeur de projet, onglet Tests).
+  - **Arêtes dirigées** (Bézier) : navigation `connexion` (vert), `cross-app` (orange), `nav` (indigo) ; **relations fonctionnelles** en pointillés violet (`relation`) entre éléments — ex : `Méga-outils → Éditeur de projet` (Trello instancié dans l'admin, utilisé dans l'éditeur), `Outils → widgets` (visibilité TchatIA/Tickets/Cahier), `Outils → Historique` (active l'entrée de menu), `Config (admin) → Config (user)` (même composant), `Admin Projets → Liste projets`.
+- **Zoom et déplacement** :
+  - **Molette** : zoom in/out (min 15%, max 250%).
+  - **Cliquer-glisser** sur le fond : pan.
+  - **Barre d'outils** : boutons `−` / `+` / reset (`center_focus_strong`), % de zoom courant.
+- **Volet latéral** (clic sur un nœud) :
+  - Label, URL, badges (type + port), description (rôle dans le parcours).
+  - Liste des **composants Angular** réels du nœud.
+  - Liste des **onglets** (si page tabulée).
+  - Liste des **chemins du cahier de recette** associés.
+  - Bouton « Ouvrir la page » (`http://localhost:<port><url>`) ou mention « Widget embarqué » si pas de route propre.
+- **Filtre par section du cahier de recette** :
+  - Dropdown listant toutes les sections (mêmes données que l'onglet Exécution).
+  - Section sélectionnée → nœuds liés mis en surbrillance (autres en opacité réduite) + chip avec ✕.
+  - **Bouton "Voir seulement cette section"** : masque les nœuds/groupes non liés à la section.
+- Composants : `AdminTestsComponent` (onglet `sitemap`), données statiques `smGroups`, `smNodes`, `smEdges` dans le TS (à maintenir à jour avec les routes/onglets réels).

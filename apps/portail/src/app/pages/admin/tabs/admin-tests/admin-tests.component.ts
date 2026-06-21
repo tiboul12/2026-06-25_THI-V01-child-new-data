@@ -1,4 +1,6 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, effect, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect, ViewChild, ElementRef, DestroyRef } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { AuthService, ConfigService } from '@worganic/portail-core/data-access';
@@ -105,7 +107,7 @@ interface NodeStat {
   lastDate: string | null;  // date du dernier test décidé
 }
 
-type Tab = 'cahier' | 'execution' | 'resultats' | 'historique';
+type Tab = 'cahier' | 'execution' | 'resultats' | 'historique' | 'sitemap';
 
 interface FnHistoryEntry {
   id: string;
@@ -130,6 +132,33 @@ interface FnHistoryChange {
   explanation?: string;
 }
 
+// ── Site Map ──
+type SmKind = 'public' | 'protected' | 'admin' | 'projets' | 'widget';
+interface SitemapNode {
+  id: string;
+  label: string;
+  url: string;        // route (commence par '/') ou 'embed' pour un widget
+  port: 4202 | 4203;
+  kind: SmKind;
+  groupId: string;
+  x: number; y: number; w: number; h: number;
+  components: string[];
+  tabs?: string[];
+  description?: string;
+  cahierPaths?: string[];
+}
+interface SitemapEdge {
+  id: string;
+  from: string; to: string;
+  label?: string;
+  type: 'nav' | 'auth' | 'cross-app' | 'relation';
+}
+interface SitemapGroup {
+  id: string; label: string;
+  x: number; y: number; w: number; h: number;
+  stroke: string; fill: string;
+}
+
 @Component({
   selector: 'app-admin-tests',
   standalone: true,
@@ -139,10 +168,14 @@ interface FnHistoryChange {
 export class AdminTestsComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private configService = inject(ConfigService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Conteneur du journal IA — pour auto-scroll en bas à chaque nouvelle ligne.
   @ViewChild('aiLogBox') aiLogBox?: ElementRef<HTMLDivElement>;
   @ViewChild('genLogBox') genLogBox?: ElementRef<HTMLDivElement>;
+  @ViewChild('sitemapContainer') sitemapContainerRef?: ElementRef<HTMLDivElement>;
 
   constructor() {
     // Auto-scroll du journal live vers le bas dès qu'une ligne est ajoutée.
@@ -163,6 +196,7 @@ export class AdminTestsComponent implements OnInit, OnDestroy {
     { id: 'execution',  label: 'Exécution',         icon: 'play_circle' },
     { id: 'resultats',  label: 'Résultats',         icon: 'bar_chart' },
     { id: 'historique', label: 'Historique',        icon: 'history' },
+    { id: 'sitemap',    label: 'Site Map',           icon: 'account_tree' },
   ];
 
   activeTab = signal<Tab>('cahier');
@@ -1059,6 +1093,363 @@ Exemple :
     return h;
   }
 
+  // ── Site Map — données statiques (reflète le parcours réel de l'utilisateur) ──
+
+  readonly smGroups: SitemapGroup[] = [
+    { id: 'public',  label: 'Public — :4202 (non connecté)',                 x: 20,   y: 60,  w: 300,  h: 372, stroke: '#0ea5e9', fill: '#0ea5e90a' },
+    { id: 'app',     label: 'App connectée — :4202  ·  menu : Documents · Projets · Admin', x: 360, y: 60, w: 360, h: 560, stroke: '#6366f1', fill: '#6366f10a' },
+    { id: 'admin',   label: 'Admin — réservé admin (onglets)',               x: 760,  y: 60,  w: 340,  h: 824, stroke: '#f59e0b', fill: '#f59e0b0d' },
+    { id: 'projets', label: 'App Projets — :4203',                            x: 1140, y: 60,  w: 480,  h: 624, stroke: '#10b981', fill: '#10b9810a' },
+    { id: 'widgets', label: 'Outils & widgets embarqués (visibilité pilotée par Admin › Outils)', x: 20, y: 912, w: 1080, h: 178, stroke: '#8b5cf6', fill: '#8b5cf60a' },
+  ];
+
+  readonly smNodes: SitemapNode[] = [
+    // ── Public ──
+    { id: 'landing', label: 'Landing', url: '/', port: 4202, kind: 'public', groupId: 'public',
+      x: 44, y: 104, w: 252, h: 60,
+      components: ['LandingComponent'],
+      description: "Page d'accueil publique — connexion / présentation. Point d'entrée vers l'app connectée.",
+      cahierPaths: ['non-connecte/landing'] },
+    { id: 'cahier-doc', label: 'Doc · Cahier recette', url: '/cahier-recette-doc', port: 4202, kind: 'public', groupId: 'public',
+      x: 44, y: 178, w: 252, h: 56,
+      components: ['CahierRecetteDocComponent'],
+      description: 'Page de documentation publique du widget Cahier de recette.',
+      cahierPaths: ['connecte/outils/cahier-recette'] },
+    { id: 'tchat-doc', label: 'Doc · TchatIA', url: '/tchat-ia-doc', port: 4202, kind: 'public', groupId: 'public',
+      x: 44, y: 248, w: 252, h: 56,
+      components: ['TchatIaDocComponent'],
+      description: 'Page de documentation publique du widget TchatIA.',
+      cahierPaths: ['connecte/outils/tchat-ia'] },
+    { id: 'ticket-doc', label: 'Doc · Ticket widget', url: '/ticket-widget-doc', port: 4202, kind: 'public', groupId: 'public',
+      x: 44, y: 318, w: 252, h: 56,
+      components: ['TicketWidgetDocComponent'],
+      description: 'Page de documentation publique du widget de tickets.',
+      cahierPaths: ['connecte/outils/tickets'] },
+
+    // ── App connectée (entrées du menu de navigation) ──
+    { id: 'documents', label: 'Documents', url: '/documents', port: 4202, kind: 'protected', groupId: 'app',
+      x: 384, y: 110, w: 312, h: 60,
+      components: ['DocumentsComponent'],
+      description: 'Entrée de menu « Documents » — gestion des documents de l’utilisateur.',
+      cahierPaths: [] },
+    { id: 'projets-nav', label: 'Projets (→ app :4203)', url: '/projets', port: 4203, kind: 'protected', groupId: 'app',
+      x: 384, y: 184, w: 312, h: 60,
+      components: ['NavComponent'],
+      description: "Entrée de menu « Projets » (data/child/nav.json). Bascule vers l'app Projets (port 4203) en passant le token + thème par l'URL.",
+      cahierPaths: ['connecte/projets'] },
+    { id: 'historique', label: 'Historique actions', url: '/wo-action-history', port: 4202, kind: 'protected', groupId: 'app',
+      x: 384, y: 258, w: 312, h: 60,
+      components: ['WoActionHistoryComponent'],
+      description: "Entrée de menu conditionnelle — affichée seulement si activée dans Admin › Outils (woActionHistoryNavEnabled).",
+      cahierPaths: [] },
+    { id: 'config', label: 'Configuration', url: '/config', port: 4202, kind: 'protected', groupId: 'app',
+      x: 384, y: 332, w: 312, h: 60,
+      components: ['ConfigComponent'],
+      description: 'Configuration de l’utilisateur (même composant que l’onglet Admin › Config).',
+      cahierPaths: ['connecte/config'] },
+    { id: 'deployments', label: 'Déploiements', url: '/deployments', port: 4202, kind: 'protected', groupId: 'app',
+      x: 384, y: 406, w: 312, h: 60,
+      components: ['DeploymentsComponent'],
+      description: 'Historique des déploiements et bannière de mise à jour.',
+      cahierPaths: ['connecte/deploiements'] },
+    { id: 'admin', label: 'Admin', url: '/admin', port: 4202, kind: 'admin', groupId: 'app',
+      x: 384, y: 480, w: 312, h: 60,
+      components: ['AdminComponent', 'AdminTabsRegistryService'],
+      description: "Entrée de menu « Admin » (rouge, admin uniquement). Ouvre le panneau d'administration à onglets.",
+      cahierPaths: ['connecte/admin'] },
+
+    // ── Admin : onglets (ordre réel du registry) ──
+    { id: 'adm-projets', label: 'Projets', url: '/admin/projets/projets', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 110, w: 300, h: 64,
+      tabs: ['/admin/projets/projets', '/admin/projets/ia-instructions'],
+      components: ['AdminProjetsComponent'],
+      description: 'Onglet Admin › Projets — 2 sous-onglets : liste projets et instructions IA.',
+      cahierPaths: ['connecte/admin/projets'] },
+    { id: 'adm-users', label: 'Utilisateurs', url: '/admin/users', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 188, w: 300, h: 64,
+      components: ['AdminUsersComponent'],
+      description: 'Onglet Admin › Utilisateurs — comptes et rôles (data/config/users.json).',
+      cahierPaths: ['connecte/admin/utilisateurs'] },
+    { id: 'adm-deploy', label: 'Déploiement', url: '/admin/deploiement', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 266, w: 300, h: 64,
+      components: ['AdminDeploymentsComponent'],
+      description: 'Onglet Admin › Déploiement — enregistrements de versions, alertes de MAJ.',
+      cahierPaths: ['connecte/admin/deploiements'] },
+    { id: 'adm-config', label: 'Config', url: '/admin/config', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 344, w: 300, h: 64,
+      components: ['ConfigComponent'],
+      description: 'Onglet Admin › Config — pilote la visibilité du header IA et des entrées de menu.',
+      cahierPaths: ['connecte/admin/config'] },
+    { id: 'adm-theme', label: 'Thème', url: '/admin/theme', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 422, w: 300, h: 64,
+      components: ['AdminThemeComponent'],
+      description: 'Onglet Admin › Thème — personnalisation des couleurs (data/child/theme.json).',
+      cahierPaths: ['connecte/admin/theme'] },
+    { id: 'adm-mega', label: 'Méga-outils', url: '/admin/mega-outils', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 500, w: 300, h: 64,
+      components: ['AdminMegaOutilsComponent', 'TrelloAdminComponent'],
+      description: "Onglet Admin › Méga-outils — gère les instances Trello partagées entre projets. Bouton « Ouvrir dans l'éditeur » → app Projets.",
+      cahierPaths: [] },
+    { id: 'adm-memo', label: 'Mémo', url: '/admin/memo', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 578, w: 300, h: 64,
+      components: ['AdminMemoComponent'],
+      description: 'Onglet Admin › Mémo — notes / aide-mémoire internes.',
+      cahierPaths: [] },
+    { id: 'adm-outils', label: 'Outils', url: '/admin/tools', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 656, w: 300, h: 64,
+      components: ['AdminToolsComponent'],
+      description: "Onglet Admin › Outils — visibilité et widgets flottants par outil (TchatIA, Tickets, Cahier de recette, Historique).",
+      cahierPaths: [] },
+    { id: 'adm-tests', label: 'Tests', url: '/admin/tests/cahier', port: 4202, kind: 'admin', groupId: 'admin',
+      x: 780, y: 734, w: 300, h: 64,
+      tabs: ['/admin/tests/cahier', '/admin/tests/execution', '/admin/tests/resultats', '/admin/tests/historique', '/admin/tests/sitemap'],
+      components: ['AdminTestsComponent'],
+      description: 'Onglet Admin › Tests — 5 sous-onglets accessibles chacun via URL directe (/admin/tests/:subtab).',
+      cahierPaths: ['connecte/admin/tests'] },
+
+    // ── App Projets (:4203) ──
+    { id: 'proj-list', label: 'Liste des projets', url: '/projets', port: 4203, kind: 'projets', groupId: 'projets',
+      x: 1164, y: 110, w: 432, h: 64,
+      components: ['ProjetsComponent'],
+      description: 'Accueil de l’app Projets — grille des projets, création, ouverture.',
+      cahierPaths: ['connecte/projets/accueil'] },
+    { id: 'proj-editor', label: 'Éditeur de projet', url: '/projets/:id', port: 4203, kind: 'projets', groupId: 'projets',
+      x: 1164, y: 196, w: 432, h: 480,
+      tabs: ['Toolbar', 'Sidebar', 'Zone Code', 'Zone Structure', 'Zone Preview', 'Conversation', 'Historique', 'Commentaires F6', 'Outil Édition', 'Outil Agenda', 'Outil Tests', 'Méga-outil Trello', 'Méga-outil Tableau'],
+      components: ['ProjetEditorComponent', 'ProjetToolbarComponent', 'ProjetSidebarComponent', 'ProjetEditorZoneComponent', 'ProjetConversationComponent', 'ProjetHistoryComponent', 'CommentsDrawerComponent', 'EditionOutilComponent', 'AgendaOutilComponent', 'TestsOutilComponent'],
+      description: "Éditeur de projet HTML/CSS/JS avec IA. Intègre les méga-outils (Trello, Tableau) instanciés depuis Admin › Méga-outils.",
+      cahierPaths: ['connecte/projets/editor'] },
+
+    // ── Widgets embarqués ──
+    { id: 'w-tchat', label: 'TchatIA', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
+      x: 60, y: 962, w: 300, h: 70,
+      components: ['TchatIaComponent'],
+      description: "Widget de chat IA embarquable. Visibilité pilotée par Admin › Outils. Documenté sur /tchat-ia-doc.",
+      cahierPaths: ['connecte/outils/tchat-ia'] },
+    { id: 'w-tickets', label: 'Tickets', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
+      x: 400, y: 962, w: 300, h: 70,
+      components: ['TicketWidgetComponent'],
+      description: 'Widget de tickets flottant. Visibilité pilotée par Admin › Outils. Documenté sur /ticket-widget-doc.',
+      cahierPaths: ['connecte/outils/tickets'] },
+    { id: 'w-cahier', label: 'Cahier de recette', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
+      x: 740, y: 962, w: 300, h: 70,
+      components: ['CahierRecetteComponent'],
+      description: 'Widget Cahier de recette flottant. Visibilité pilotée par Admin › Outils. Documenté sur /cahier-recette-doc.',
+      cahierPaths: ['connecte/outils/cahier-recette'] },
+  ];
+
+  readonly smEdges: SitemapEdge[] = [
+    // Parcours de navigation
+    { id: 'e-login',     from: 'landing',     to: 'documents',   label: 'connexion', type: 'auth' },
+    { id: 'e-nav-proj',  from: 'projets-nav', to: 'proj-list',   label: ':4203',     type: 'cross-app' },
+    { id: 'e-nav-admin', from: 'admin',       to: 'adm-projets', label: 'ouvre',     type: 'nav' },
+    { id: 'e-proj-edit', from: 'proj-list',   to: 'proj-editor',                     type: 'nav' },
+    // Relations fonctionnelles (dépendances entre éléments)
+    { id: 'r-mega-edit',  from: 'adm-mega',   to: 'proj-editor', label: 'Trello dans l’éditeur', type: 'relation' },
+    { id: 'r-out-tchat',  from: 'adm-outils', to: 'w-tchat',     label: 'visibilité', type: 'relation' },
+    { id: 'r-out-ticket', from: 'adm-outils', to: 'w-tickets',                        type: 'relation' },
+    { id: 'r-out-cahier', from: 'adm-outils', to: 'w-cahier',                         type: 'relation' },
+    { id: 'r-out-hist',   from: 'adm-outils', to: 'historique',  label: 'active menu', type: 'relation' },
+    { id: 'r-cfg-config', from: 'adm-config', to: 'config',      label: 'même composant', type: 'relation' },
+    { id: 'r-projets',    from: 'adm-projets',to: 'proj-list',   label: 'gère', type: 'relation' },
+  ];
+
+  // ── Site Map — signals & état ──
+
+  sitemapZoom        = signal(0.6);
+  sitemapPan         = signal({ x: 10, y: 10 });
+  selectedSmNode     = signal<SitemapNode | null>(null);
+  smFolderFilter     = signal('');
+  smSectionOnly      = signal(false);
+  smDragging = false;
+  private smDragStart = { x: 0, y: 0, px: 0, py: 0 };
+  private smWheelCleanup?: () => void;
+
+  smTransform = computed(() => {
+    const z = this.sitemapZoom();
+    const p = this.sitemapPan();
+    return `translate(${p.x},${p.y}) scale(${z})`;
+  });
+
+  smHighlightedIds = computed((): Set<string> => {
+    const fid = this.smFolderFilter();
+    if (!fid) return new Set();
+    const fn = this.functions().find(f => f.folderId === fid);
+    const path = fn?.path ?? '';
+    if (!path) return new Set();
+    const ids = new Set<string>();
+    for (const n of this.smNodes) {
+      if (n.cahierPaths?.some(p => path === p || path.startsWith(p + '/') || p.startsWith(path + '/'))) {
+        ids.add(n.id);
+      }
+    }
+    return ids;
+  });
+
+  smVisibleNodes = computed((): SitemapNode[] => {
+    if (!this.smSectionOnly() || !this.smFolderFilter()) return this.smNodes;
+    const ids = this.smHighlightedIds();
+    return this.smNodes.filter(n => ids.has(n.id));
+  });
+
+  smVisibleGroups = computed((): SitemapGroup[] => {
+    if (!this.smSectionOnly() || !this.smFolderFilter()) return this.smGroups;
+    const nodeIds = this.smHighlightedIds();
+    const groupIds = new Set(this.smNodes.filter(n => nodeIds.has(n.id)).map(n => n.groupId));
+    return this.smGroups.filter(g => groupIds.has(g.id) || this.smNodes.some(n => nodeIds.has(n.id) && n.groupId === g.id));
+  });
+
+  smSections = computed(() => this.launchGroups());
+
+  sitemapZoomIn()    { this.sitemapZoom.update(z => Math.min(2.5, +(z + 0.1).toFixed(1))); }
+  sitemapZoomOut()   { this.sitemapZoom.update(z => Math.max(0.15, +(z - 0.1).toFixed(1))); }
+  sitemapZoomReset() { this.sitemapZoom.set(0.6); this.sitemapPan.set({ x: 10, y: 10 }); }
+
+  smMouseDown(e: MouseEvent) {
+    const tgt = e.target as Element;
+    if (tgt.closest('[data-smnode]')) return;
+    this.smDragging = true;
+    const p = this.sitemapPan();
+    this.smDragStart = { x: e.clientX, y: e.clientY, px: p.x, py: p.y };
+    e.preventDefault();
+  }
+
+  smMouseMove(e: MouseEvent) {
+    if (!this.smDragging) return;
+    this.sitemapPan.set({
+      x: this.smDragStart.px + (e.clientX - this.smDragStart.x),
+      y: this.smDragStart.py + (e.clientY - this.smDragStart.y),
+    });
+  }
+
+  smMouseUp() { this.smDragging = false; }
+
+  clickSmNode(node: SitemapNode, e: MouseEvent) {
+    e.stopPropagation();
+    this.selectedSmNode.update(n => n?.id === node.id ? null : node);
+  }
+
+  private attachSmWheel() {
+    const el = this.sitemapContainerRef?.nativeElement;
+    if (!el || this.smWheelCleanup) return;
+    const h = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.1 : -0.1;
+      this.sitemapZoom.update(z => Math.min(2.5, Math.max(0.15, +(z + delta).toFixed(2))));
+    };
+    el.addEventListener('wheel', h, { passive: false });
+    this.smWheelCleanup = () => el.removeEventListener('wheel', h);
+  }
+
+  smNodeFill(kind: string): string {
+    if (kind === 'admin')     return '#1f0f00';
+    if (kind === 'protected') return '#0e0b1f';
+    if (kind === 'projets')   return '#04130d';
+    if (kind === 'widget')    return '#130b1f';
+    return '#071828';
+  }
+  smNodeStroke(kind: string): string {
+    if (kind === 'admin')     return '#d97706';
+    if (kind === 'protected') return '#6366f1';
+    if (kind === 'projets')   return '#10b981';
+    if (kind === 'widget')    return '#8b5cf6';
+    return '#0284c7';
+  }
+  smNodeTextColor(kind: string): string {
+    if (kind === 'admin')     return '#fbbf24';
+    if (kind === 'protected') return '#a5b4fc';
+    if (kind === 'projets')   return '#34d399';
+    if (kind === 'widget')    return '#c4b5fd';
+    return '#38bdf8';
+  }
+  smKindLabel(kind: string): string {
+    if (kind === 'admin')     return 'Admin only';
+    if (kind === 'protected') return 'Connecté';
+    if (kind === 'projets')   return 'App Projets';
+    if (kind === 'widget')    return 'Widget embarqué';
+    return 'Public';
+  }
+  smKindBadgeClass(kind: string): string {
+    if (kind === 'admin')     return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+    if (kind === 'protected') return 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30';
+    if (kind === 'projets')   return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+    if (kind === 'widget')    return 'bg-violet-500/15 text-violet-400 border-violet-500/30';
+    return 'bg-sky-500/15 text-sky-400 border-sky-500/30';
+  }
+  smNodeSelected(id: string): boolean { return this.selectedSmNode()?.id === id; }
+  smNodeHighlighted(id: string): boolean {
+    const fid = this.smFolderFilter();
+    if (!fid) return false;
+    return this.smHighlightedIds().has(id);
+  }
+  smNodeOpacity(id: string): number {
+    if (!this.smFolderFilter()) return 1;
+    return this.smHighlightedIds().has(id) ? 1 : 0.25;
+  }
+
+  smEdgePath(edge: SitemapEdge): string {
+    const from = this.smNodes.find(n => n.id === edge.from);
+    const to   = this.smNodes.find(n => n.id === edge.to);
+    if (!from || !to) return '';
+    const fx = from.x + from.w / 2;
+    const fy = from.y + from.h / 2;
+    const tx = to.x + to.w / 2;
+    const ty = to.y + to.h / 2;
+    const dx = tx - fx;
+    const dy = ty - fy;
+    let x1: number, y1: number, x2: number, y2: number;
+    if (Math.abs(dx) > Math.abs(dy) * 0.7) {
+      if (dx > 0) { x1 = from.x + from.w; y1 = from.y + from.h / 2; x2 = to.x; y2 = to.y + to.h / 2; }
+      else         { x1 = from.x;           y1 = from.y + from.h / 2; x2 = to.x + to.w; y2 = to.y + to.h / 2; }
+      const cx = (x1 + x2) / 2;
+      return `M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`;
+    } else {
+      if (dy > 0) { x1 = from.x + from.w / 2; y1 = from.y + from.h; x2 = to.x + to.w / 2; y2 = to.y; }
+      else         { x1 = from.x + from.w / 2; y1 = from.y;           x2 = to.x + to.w / 2; y2 = to.y + to.h; }
+      const cy = (y1 + y2) / 2;
+      return `M ${x1} ${y1} C ${x1} ${cy} ${x2} ${cy} ${x2} ${y2}`;
+    }
+  }
+
+  smEdgeMidX(edge: SitemapEdge): number {
+    const from = this.smNodes.find(n => n.id === edge.from);
+    const to   = this.smNodes.find(n => n.id === edge.to);
+    if (!from || !to) return 0;
+    return (from.x + from.w / 2 + to.x + to.w / 2) / 2;
+  }
+  smEdgeMidY(edge: SitemapEdge): number {
+    const from = this.smNodes.find(n => n.id === edge.from);
+    const to   = this.smNodes.find(n => n.id === edge.to);
+    if (!from || !to) return 0;
+    return (from.y + from.h / 2 + to.y + to.h / 2) / 2;
+  }
+
+  smEdgeColor(type: string): string {
+    if (type === 'auth')      return '#34d399';
+    if (type === 'cross-app') return '#f59e0b';
+    if (type === 'relation')  return '#a78bfa';
+    return '#818cf8';
+  }
+
+  /** True si l'arête est une relation fonctionnelle (tracée en pointillés). */
+  smEdgeDashed(type: string): boolean { return type === 'relation'; }
+
+  /** True si le nœud pointe vers une vraie route ouvrable (pas un widget embarqué). */
+  smNodeHasPage(node: SitemapNode): boolean { return node.url.startsWith('/'); }
+
+  smNodePageUrl(node: SitemapNode): string {
+    return `http://localhost:${node.port}${node.url}`;
+  }
+
+  toggleSmSectionOnly() { this.smSectionOnly.update(v => !v); }
+
+  smSectionLabel(): string {
+    const fid = this.smFolderFilter();
+    if (!fid) return '';
+    const g = this.launchGroups().find(x => x.folderId === fid);
+    return g ? `${g.pageTitle} / ${g.section}` : fid;
+  }
+
   ngOnInit() {
     const user = this.authService.currentUser();
     if (user) this.runnerName.set(user.username);
@@ -1067,19 +1458,42 @@ Exemple :
     this.loadMatrix();   // résultats nécessaires aux couleurs du Cahier
     this.loadFavorites();
     this.loadSettings();
+
+    // Routing par segment : /admin/tests/:subtab (réagit aussi au retour arrière navigateur)
+    this.route.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const subtab = params['subtab'] as Tab;
+      if (!subtab) {
+        this.router.navigate(['/admin', 'tests', 'cahier'], { replaceUrl: true });
+        return;
+      }
+      if (this.tabs.some(t => t.id === subtab) && subtab !== this.activeTab()) {
+        this.activateTabInternal(subtab);
+      }
+    });
   }
 
-  ngOnDestroy() { this.closeAiStream(); this.closeGenStream(); }
+  ngOnDestroy() { this.closeAiStream(); this.closeGenStream(); this.smWheelCleanup?.(); }
 
-  /** Changement d'onglet : (re)charge les données utiles à l'onglet. */
+  /** Changement d'onglet : met à jour l'URL puis active l'onglet. */
   selectTab(tab: Tab) {
+    this.activateTabInternal(tab);
+    this.router.navigate(['/admin', 'tests', tab]);
+  }
+
+  /** Active un onglet sans naviguer (utilisé par la subscription de route). */
+  private activateTabInternal(tab: Tab) {
+    if (tab !== 'sitemap' && this.smWheelCleanup) {
+      this.smWheelCleanup();
+      this.smWheelCleanup = undefined;
+    }
     this.activeTab.set(tab);
     if (tab === 'execution') {
       if (this.aiProviders().length && !this.aiProvider()) this.initAiDefaults();
-      this.loadRuns();   // rafraîchit la liste des campagnes ouvertes
+      this.loadRuns();
     }
     if (tab === 'resultats' || tab === 'cahier') this.loadMatrix();
     if (tab === 'historique') this.loadFnHistory();
+    if (tab === 'sitemap') setTimeout(() => this.attachSmWheel(), 50);
   }
 
   async loadRuns() {

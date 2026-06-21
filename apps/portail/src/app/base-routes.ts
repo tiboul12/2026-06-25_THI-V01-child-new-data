@@ -39,6 +39,16 @@ export const BASE_ROUTES: Routes = [
     loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent)
   },
   {
+    path: 'admin/:tab',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent)
+  },
+  {
+    path: 'admin/:tab/:subtab',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent)
+  },
+  {
     path: 'wo-action-history',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/user/wo-action-history/wo-action-history.component').then(m => m.WoActionHistoryComponent)

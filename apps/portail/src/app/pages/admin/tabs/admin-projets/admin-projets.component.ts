@@ -1,7 +1,8 @@
-import { Component, OnInit, Output, EventEmitter, signal, inject } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, signal, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { navigateToProjets } from '../../../../shared/utils/navigate-to-projets';
 import { ProjectService, Project } from '@worganic/portail-core/data-access';
 import { ProjectFilesService } from '@worganic/portail-core/data-access';
@@ -62,6 +63,9 @@ export class AdminProjetsComponent implements OnInit {
   private woHistory = inject(WoActionHistoryService);
   private documentService = inject(DocumentService);
 
+  private route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor(
     private projectService: ProjectService,
     private projectFilesService: ProjectFilesService,
@@ -71,6 +75,18 @@ export class AdminProjetsComponent implements OnInit {
 
   ngOnInit() {
     this.loadProjects();
+
+    // Routing par segment : /admin/projets/:subtab
+    this.route.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const subtab = params['subtab'] as 'projets' | 'ia-instructions';
+      if (!subtab) {
+        this.router.navigate(['/admin', 'projets', 'projets'], { replaceUrl: true });
+        return;
+      }
+      if ((subtab === 'projets' || subtab === 'ia-instructions') && subtab !== this.activeSubTab()) {
+        this.activateSubTabInternal(subtab);
+      }
+    });
   }
 
   async loadProjects() {
@@ -149,6 +165,11 @@ export class AdminProjetsComponent implements OnInit {
   }
 
   async switchSubTab(tab: 'projets' | 'ia-instructions') {
+    this.activateSubTabInternal(tab);
+    this.router.navigate(['/admin', 'projets', tab]);
+  }
+
+  private async activateSubTabInternal(tab: 'projets' | 'ia-instructions') {
     this.activeSubTab.set(tab);
     if (tab === 'ia-instructions') await this.loadIaDocuments();
   }

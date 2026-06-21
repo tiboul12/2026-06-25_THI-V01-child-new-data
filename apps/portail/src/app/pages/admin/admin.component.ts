@@ -1,6 +1,7 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, DestroyRef } from '@angular/core';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '@worganic/portail-core/data-access';
 import { AdminUsersComponent } from './tabs/admin-users/admin-users.component';
 import { AdminDeploymentsComponent } from './tabs/admin-deployments/admin-deployments.component';
@@ -27,8 +28,9 @@ const BASE_ADMIN_TABS: AdminTabDef[] = [
 })
 export class AdminComponent implements OnInit {
   readonly tabsRegistry = inject(AdminTabsRegistryService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  activeTab     = signal<string>('users');
+  activeTab     = signal<string>('projets');
   usersCount    = signal(0);
   helpCount     = signal(0);
   versionStatus = signal<any>(null);
@@ -48,20 +50,27 @@ export class AdminComponent implements OnInit {
 
     this.tabsRegistry.registerBase(BASE_ADMIN_TABS);
 
-    const params = this.route.snapshot.queryParamMap;
-    const tab = params.get('tab') || 'projets';
-    const editId = params.get('editId');
-
-    this.activeTab.set(tab);
-
-    if (!params.get('tab')) {
-      this.router.navigate([], { queryParams: { tab }, replaceUrl: true });
+    // Redirige les anciennes URLs queryParam (/admin?tab=xxx) vers le format path (/admin/xxx)
+    const qpTab = this.route.snapshot.queryParamMap.get('tab');
+    if (qpTab) {
+      this.router.navigate(['/admin', qpTab], { replaceUrl: true });
+      return;
     }
+
+    // Abonnement réactif aux changements de segment de route (inclut le chargement initial)
+    this.route.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const tab = params['tab'] || 'projets';
+      this.activeTab.set(tab);
+      // Pas de segment → redirige vers l'onglet par défaut
+      if (!params['tab']) {
+        this.router.navigate(['/admin', 'projets'], { replaceUrl: true });
+      }
+    });
   }
 
   setTab(tab: string) {
     this.activeTab.set(tab);
-    this.router.navigate([], { queryParams: { tab }, replaceUrl: true });
+    this.router.navigate(['/admin', tab]);
   }
 
   getBadge(tabId: string): number | null {
