@@ -7644,6 +7644,7 @@ const ADMIN_TESTS_FNHIST_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'functions-histo
 const ADMIN_TESTS_FAV_FILE    = path.join(ADMIN_TESTS_RUNS_DIR, 'favorites.json');
 const ADMIN_TESTS_SETTINGS_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'settings.json');
 const ADMIN_TESTS_SITEMAP_FILE  = path.join(ADMIN_TESTS_RUNS_DIR, 'sitemap-layout.json');
+const ADMIN_TESTS_SITEMAP_VERSIONS_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'sitemap-versions.json');
 const FONCTIONS_DIR         = path.join(__dirname, '..', 'tests', 'fonctions');
 const FONCTIONS_REGISTRY    = path.join(FONCTIONS_DIR, '_registry.json');
 const USER_CREATED_FILE     = path.join(FONCTIONS_DIR, '_user-created.json');
@@ -8457,6 +8458,127 @@ function computeFunctionProposals(folderId, currentItems, proposed) {
     return out;
 }
 
+// ── Mise à jour de la Site Map par IA ──
+
+// Prompt : l'agent lit la Site Map actuelle + le code réel + histoModif.json,
+// puis écrit dans proposals.json un tableau d'opérations (add/modify/delete) par élément.
+function buildSitemapUpdatePrompt(runDir, instructions, scope) {
+    const cur = path.join(runDir, 'current-sitemap.json').replace(/\\/g, '/');
+    const out = path.join(runDir, 'proposals.json').replace(/\\/g, '/');
+    const intro = (instructions || '').trim() || [
+        "Tu mets à jour la cartographie (Site Map) de l'application Worganic pour refléter l'état RÉEL du code.",
+        "Compare la Site Map actuelle au code source et à l'historique des modifications, puis propose les ajouts,",
+        "modifications et suppressions d'éléments (nœuds = pages/composants, zones = regroupements, liaisons = relations)."
+    ].join(' ');
+    const scopeBlock = (scope && scope.groupId) ? `
+
+## PÉRIMÈTRE RESTREINT — une seule zone
+Tu ne dois proposer des changements QUE pour la zone « ${scope.label || scope.groupId} » (groupId = \`${scope.groupId}\`).
+- N'inclus QUE : les nœuds dont \`groupId\` === \`${scope.groupId}\`, la zone elle-même, et les liaisons entre nœuds de cette zone.
+- Tout nouveau nœud DOIT avoir \`groupId\` = \`${scope.groupId}\`.
+- N'inclus AUCUNE opération concernant d'autres zones ou leurs nœuds.` : '';
+
+    return `${intro}${scopeBlock}
+
+## Site Map actuelle (version de référence)
+Lis le fichier JSON : ${cur}
+Il contient { nodes:[...], groups:[...], edges:[...] }. Chaque nœud a un id, label, url, port, kind
+('public'|'protected'|'admin'|'projets'|'widget'), groupId, components[], tabs?[], description, cahierPaths?[].
+
+## À analyser pour détecter les évolutions
+1. Le CODE RÉEL du dépôt :
+   - routes Angular (\`apps/portail/src/app/**/*.routes.ts\`, \`app.routes.ts\`), entrées de menu (\`data/child/nav.json\`),
+   - onglets Admin (registre des onglets), composants des pages (\`apps/portail/src/app/pages/...\`, \`apps/projets/...\`),
+   - table de correspondance de \`CLAUDE.md\` (chemins de sections ↦ composants).
+2. L'historique : \`data/histoModif.json\` (fonctionnalités récemment ajoutées/modifiées/supprimées).
+
+## Ta SEULE livraison : un fichier JSON
+Utilise ton OUTIL D'ÉCRITURE DE FICHIER pour écrire dans : ${out}
+N'écris RIEN dans ta réponse texte — tout passe par ce fichier.
+Écris un tableau JSON d'opérations :
+\`\`\`json
+[
+  { "op": "add", "kind": "node", "id": null,
+    "data": { "label": "Nom", "url": "/route", "port": 4202, "kind": "admin",
+              "groupId": "admin", "components": ["apps/portail/.../x.component.ts"],
+              "tabs": [], "description": "…", "cahierPaths": ["connecte/admin/x"] },
+    "reason": "Pourquoi (ex: nouvelle page détectée dans app.routes)" },
+  { "op": "modify", "kind": "node", "id": "adm-tests",
+    "data": { "label": "Tests", "url": "/admin/tests/cahier", "tabs": ["…"], "components": ["…"], "description": "…" },
+    "reason": "Onglet ajouté / composant renommé" },
+  { "op": "delete", "kind": "node", "id": "vieux-noeud", "reason": "Page supprimée du code" },
+  { "op": "add", "kind": "group", "id": null, "data": { "label": "Nouvelle zone" }, "reason": "…" },
+  { "op": "add", "kind": "edge", "id": null, "data": { "from": "adm-x", "to": "proj-list", "type": "relation", "label": "…" }, "reason": "…" }
+]
+\`\`\`
+Règles :
+- \`op\` ∈ add | modify | delete ; \`kind\` ∈ node | group | edge.
+- Pour modify/delete : RÉUTILISE l'\`id\` EXACT de l'élément existant (depuis la Site Map actuelle).
+- Pour add : \`id\` = null (le client en attribuera un).
+- NE FOURNIS PAS de coordonnées (x/y/w/h) : le placement est géré par l'application.
+- \`node.kind\` ∈ public | protected | admin | projets | widget. \`edge.type\` ∈ nav | auth | cross-app | relation.
+- Pour modify, ne mets dans \`data\` que les champs à changer (les autres sont conservés).
+- N'inclus QUE de vraies évolutions par rapport au code. Si rien ne change pour un élément, ne l'inclus pas.
+- \`reason\` : courte justification factuelle (1 phrase).
+
+COMMENCE MAINTENANT : lis ${cur}, analyse le code + l'historique, puis écris le tableau JSON dans ${out}.`;
+}
+
+// Valide/normalise les opérations écrites par l'IA et enrichit modify/delete du "before".
+// Si scope.groupId est fourni, ne conserve que les ops appartenant à cette zone.
+function computeSitemapProposals(currentSitemap, proposed, scope) {
+    const nodes = Array.isArray(currentSitemap?.nodes) ? currentSitemap.nodes : [];
+    const groups = Array.isArray(currentSitemap?.groups) ? currentSitemap.groups : [];
+    const edges = Array.isArray(currentSitemap?.edges) ? currentSitemap.edges : [];
+    const byId = {
+        node: new Map(nodes.map(n => [n.id, n])),
+        group: new Map(groups.map(g => [g.id, g])),
+        edge: new Map(edges.map(e => [e.id, e])),
+    };
+    const nodeGroupOf = new Map(nodes.map(n => [n.id, n.groupId]));
+    const scopeId = (scope && scope.groupId) ? scope.groupId : null;
+    const inScope = (kind, op, data, before) => {
+        if (!scopeId) return true;
+        if (kind === 'node') {
+            if (op === 'add') return (data.groupId || '') === scopeId;
+            return before && before.groupId === scopeId;
+        }
+        if (kind === 'group') return op !== 'add' && before && before.id === scopeId;
+        if (kind === 'edge') {
+            const e = op === 'add' ? data : before;
+            return e && nodeGroupOf.get(e.from) === scopeId && nodeGroupOf.get(e.to) === scopeId;
+        }
+        return false;
+    };
+    const NODE_KINDS = new Set(['public', 'protected', 'admin', 'projets', 'widget']);
+    const EDGE_TYPES = new Set(['nav', 'auth', 'cross-app', 'relation']);
+    const out = [];
+    for (const p of (proposed || [])) {
+        if (!p || typeof p !== 'object') continue;
+        const op = ['add', 'modify', 'delete'].includes(p.op) ? p.op : null;
+        const kind = ['node', 'group', 'edge'].includes(p.kind) ? p.kind : null;
+        if (!op || !kind) continue;
+        const data = (p.data && typeof p.data === 'object') ? p.data : {};
+        if (kind === 'node' && data.kind && !NODE_KINDS.has(data.kind)) delete data.kind;
+        if (kind === 'edge' && data.type && !EDGE_TYPES.has(data.type)) delete data.type;
+        const reason = (p.reason || '').toString().slice(0, 300);
+        if (op === 'add') {
+            if (scopeId && kind === 'node') data.groupId = scopeId; // force le rattachement à la zone
+            if (!inScope(kind, op, data, null)) continue;
+            out.push({ op, kind, id: null, data, reason });
+        } else {
+            const id = (p.id || '').toString();
+            const before = id ? byId[kind].get(id) : null;
+            if (!before) continue; // id inconnu → ignore (sécurité)
+            if (!inScope(kind, op, data, before)) continue;
+            out.push({ op, kind, id, data: op === 'modify' ? data : {}, before, reason });
+        }
+    }
+    const order = { modify: 0, add: 1, delete: 2 };
+    out.sort((a, b) => (order[a.op] - order[b.op]));
+    return out;
+}
+
 // Écrit un fonctions.md à partir d'une liste de fonctions (assigne les IDs manquants).
 // Retire le tag [modification] du heading des fonctions listées (après un test enregistré).
 // Édition ciblée du markdown (ne reformate pas le reste du fichier). Invalide le cache si modifié.
@@ -8816,6 +8938,24 @@ function sitemapLayoutSave(layout) {
     } catch (e) { console.error('[ADMIN-TESTS] sitemap layout save error:', e); return false; }
 }
 
+// ── Versions (snapshots) de la Site Map ──
+function sitemapVersionsLoad() {
+    try {
+        if (fs.existsSync(ADMIN_TESTS_SITEMAP_VERSIONS_FILE)) {
+            const d = JSON.parse(fs.readFileSync(ADMIN_TESTS_SITEMAP_VERSIONS_FILE, 'utf8'));
+            return Array.isArray(d.versions) ? d.versions : [];
+        }
+    } catch (e) { console.error('[ADMIN-TESTS] sitemap versions load error:', e); }
+    return [];
+}
+function sitemapVersionsSave(versions) {
+    try {
+        fs.mkdirSync(ADMIN_TESTS_RUNS_DIR, { recursive: true });
+        fs.writeFileSync(ADMIN_TESTS_SITEMAP_VERSIONS_FILE, JSON.stringify({ versions }, null, 2), 'utf8');
+        return true;
+    } catch (e) { console.error('[ADMIN-TESTS] sitemap versions save error:', e); return false; }
+}
+
 // GET /api/admin/tests/settings — seuils de validation.
 app.get('/api/admin/tests/settings', (req, res) => {
     const user = getSessionUser(req);
@@ -8908,6 +9048,158 @@ app.put('/api/admin/tests/sitemap-layout', (req, res) => {
     };
     if (!sitemapLayoutSave(layout)) return res.status(500).json({ error: 'Échec écriture' });
     res.json({ ok: true, updatedAt: layout.updatedAt, updatedBy: layout.updatedBy });
+});
+
+// GET /api/admin/tests/sitemap-versions — liste des versions (métadonnées, sans le layout).
+app.get('/api/admin/tests/sitemap-versions', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const versions = sitemapVersionsLoad().map(({ layout, ...meta }) => meta);
+    res.json({ versions });
+});
+
+// POST /api/admin/tests/sitemap-versions { name, layout } — enregistre une version (snapshot).
+app.post('/api/admin/tests/sitemap-versions', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const name = (req.body?.name || '').toString().trim();
+    if (!name) return res.status(400).json({ error: 'Nom requis' });
+    const layout = (req.body?.layout && typeof req.body.layout === 'object') ? req.body.layout : sitemapLayoutLoad();
+    const versions = sitemapVersionsLoad();
+    const v = {
+        id: 'smv-' + Date.now().toString(36),
+        name,
+        createdAt: new Date().toISOString(),
+        createdBy: user.username || user.email || 'admin',
+        layout,
+    };
+    versions.unshift(v);
+    if (!sitemapVersionsSave(versions)) return res.status(500).json({ error: 'Échec écriture' });
+    const { layout: _omit, ...meta } = v;
+    res.json(meta);
+});
+
+// GET /api/admin/tests/sitemap-versions/:id — une version complète (avec layout).
+app.get('/api/admin/tests/sitemap-versions/:id', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const v = sitemapVersionsLoad().find(x => x.id === req.params.id);
+    if (!v) return res.status(404).json({ error: 'Version introuvable' });
+    res.json(v);
+});
+
+// DELETE /api/admin/tests/sitemap-versions/:id — supprime une version.
+app.delete('/api/admin/tests/sitemap-versions/:id', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const versions = sitemapVersionsLoad();
+    const next = versions.filter(x => x.id !== req.params.id);
+    if (next.length === versions.length) return res.status(404).json({ error: 'Version introuvable' });
+    if (!sitemapVersionsSave(next)) return res.status(500).json({ error: 'Échec écriture' });
+    res.json({ ok: true });
+});
+
+// POST /api/admin/tests/sitemap-update/prepare { sitemap, instructions } — prépare un run IA.
+app.post('/api/admin/tests/sitemap-update/prepare', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const sitemap = (req.body?.sitemap && typeof req.body.sitemap === 'object') ? req.body.sitemap : null;
+    if (!sitemap) return res.status(400).json({ error: 'sitemap requis' });
+    try {
+        const runId = `sm-${Date.now()}`;
+        const runDir = path.join(BASE_DIR, 'tests-admin', 'sitemap-runs', runId);
+        fs.mkdirSync(runDir, { recursive: true });
+        fs.writeFileSync(path.join(runDir, 'current-sitemap.json'), JSON.stringify(sitemap, null, 2), 'utf8');
+        fs.writeFileSync(path.join(runDir, 'proposals.json'), '', 'utf8');
+        fs.writeFileSync(path.join(runDir, 'instructions.txt'), (req.body?.instructions || '').toString(), 'utf8');
+        const scope = (req.body?.scope && typeof req.body.scope === 'object' && req.body.scope.groupId) ? req.body.scope : null;
+        fs.writeFileSync(path.join(runDir, 'scope.json'), JSON.stringify(scope), 'utf8');
+        res.json({ runId });
+    } catch (e) {
+        res.status(500).json({ error: 'Préparation impossible: ' + e.message });
+    }
+});
+
+// GET /api/admin/tests/sitemap-update-stream?runId&provider&model — l'IA propose les évolutions (SSE).
+app.get('/api/admin/tests/sitemap-update-stream', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+
+    const runId = (req.query.runId || '').toString();
+    if (!runId || !/^sm-\d+$/.test(runId)) return res.status(400).json({ error: 'runId invalide' });
+    const runDir = path.join(BASE_DIR, 'tests-admin', 'sitemap-runs', runId);
+    const curFile = path.join(runDir, 'current-sitemap.json');
+    const outFile = path.join(runDir, 'proposals.json');
+    if (!fs.existsSync(curFile)) return res.status(404).json({ error: 'Run introuvable' });
+
+    const provider = (req.query.provider || 'claude').toString();
+    const isAgy    = provider === 'antigravity' || provider === 'agy';
+    const model    = (req.query.model || '').toString() || (isAgy ? 'default' : 'claude-sonnet-4-6');
+    let instructions = '';
+    try { instructions = fs.readFileSync(path.join(runDir, 'instructions.txt'), 'utf8'); } catch { /* ignore */ }
+    let scope = null;
+    try { scope = JSON.parse(fs.readFileSync(path.join(runDir, 'scope.json'), 'utf8')); } catch { /* ignore */ }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    const sse = (event, payload) => { if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`); };
+
+    const prompt = buildSitemapUpdatePrompt(runDir, instructions, scope);
+    sse('start', { runId, provider, model });
+
+    const http = require('http');
+    const body = JSON.stringify({ stepId: `smupd-${runId}`, content: prompt, provider, model, cwd: PROJECT_ROOT });
+    const apiReq = http.request({
+        hostname: 'localhost', port: 3002, path: '/execute-prompt', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (apiRes) => {
+        let sseBuf = '';
+        let logLines = 0;
+        if (apiRes.statusCode !== 200) {
+            let errBody = '';
+            apiRes.on('data', c => { errBody += c.toString(); });
+            apiRes.on('end', () => {
+                sse('run-failed', { message: `Executor a répondu HTTP ${apiRes.statusCode} : ${errBody.slice(0, 500) || '(corps vide)'}` });
+                res.end();
+            });
+            return;
+        }
+        apiRes.on('data', (chunk) => {
+            sseBuf += chunk.toString();
+            const parts = sseBuf.split('\n');
+            sseBuf = parts.pop() ?? '';
+            for (const line of parts) {
+                if (!line.startsWith('data:')) continue;
+                let evt; try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+                if (evt.type === 'stdout' && evt.message) { logLines++; const t = evt.message.replace(/\r?\n$/, ''); if (t.trim()) sse('ai-log', { stream: 'stdout', text: t }); }
+                else if (evt.type === 'stderr' && evt.message) { const t = evt.message.replace(/\r?\n$/, ''); if (t.trim()) { logLines++; sse('ai-log', { stream: 'stderr', text: t }); } }
+                else if ((evt.type === 'info' || evt.type === 'start' || evt.type === 'end') && evt.message) { const t = evt.message.replace(/\r?\n$/, ''); if (t.trim()) sse('ai-log', { stream: 'info', text: t }); }
+                else if (evt.type === 'error') sse('ai-error', { message: evt.message || 'Erreur IA' });
+            }
+        });
+        apiRes.on('end', () => {
+            let current = {};
+            try { current = JSON.parse(fs.readFileSync(curFile, 'utf8')); } catch { /* ignore */ }
+            let rawResponse = '';
+            try { rawResponse = fs.readFileSync(outFile, 'utf8'); } catch { /* ignore */ }
+            const proposed = readProposalsJson(outFile);
+            if (!proposed) {
+                sse('run-failed', { message: "L'IA n'a écrit aucune proposition exploitable dans le fichier JSON. Vérifie que le CLI est installé/authentifié et qu'il peut écrire des fichiers.", prompt, rawResponse: rawResponse.slice(0, 30000) });
+                return res.end();
+            }
+            const proposals = computeSitemapProposals(current, proposed, scope);
+            sse('complete', { runId, proposals, logLines, prompt, rawResponse: rawResponse.slice(0, 30000) });
+            res.end();
+        });
+    });
+    apiReq.on('error', (e) => {
+        sse('run-failed', { message: `Executor injoignable (port 3002) : ${e.message}. Lance l'executor.` });
+        res.end();
+    });
+    apiReq.write(body);
+    apiReq.end();
 });
 
 // ============================================================

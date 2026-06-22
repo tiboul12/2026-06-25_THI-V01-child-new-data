@@ -10987,6 +10987,170 @@
       "prompt": "les modification dans le sitemap doivent être sauvegardé et partagé (via bdd ou autre) afin que les autres users puissent voir les modification de la sitemap",
       "startedAt": "2026-06-22T02:50:00.000Z",
       "completedAt": "2026-06-22T03:15:00.000Z"
+    },
+    {
+      "id": "mod-449",
+      "version": "B-0.304",
+      "date": "2026-06-22T03:40:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : selection/deplacement des zones imbriquees (z-order des poignees)",
+      "description": "Correction : les zones de capture des aretes (pointer-events stroke, 14px) etaient dessinees au-dessus des bordures/etiquettes des zones et interceptaient les clics, empechant de selectionner/deplacer une zone (surtout imbriquee ou traversee par des liaisons). Le rendu des zones est scinde en deux couches : visuel (cadre/etiquette, pointer-events none) sous les aretes, et poignees interactives (bordure cliquable, etiquette, redimensionnement) rendues APRES les aretes et les noeuds.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je n'aqrrive pas à selectionné et deplacer une zone dans une zone",
+      "startedAt": "2026-06-22T03:20:00.000Z",
+      "completedAt": "2026-06-22T03:45:00.000Z"
+    },
+    {
+      "id": "mod-450",
+      "version": "B-0.304",
+      "date": "2026-06-22T04:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : interactions des volets (les clics/molette n'agissent plus sur la carte)",
+      "description": "Correction : les volets de details (noeud / arete / zone) sont des enfants du conteneur de carte ; leurs evenements souris et molette remontaient vers les handlers de pan/zoom (le clic sur le popup deplacait la carte, la molette zoomait au lieu de scroller le contenu). Ajout de stopPropagation sur mousedown/mouseup/wheel a la racine des trois volets.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je n'arrive pas à modifié ou à utilisé le popup d'infos, si je clique dessus cela influs sur la sitemap et pas le popup et son contenu",
+      "startedAt": "2026-06-22T03:50:00.000Z",
+      "completedAt": "2026-06-22T04:05:00.000Z"
+    },
+    {
+      "id": "mod-451",
+      "version": "B-0.304",
+      "date": "2026-06-22T04:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map : systeme de versions (enregistrer / lister / charger / supprimer)",
+      "description": "Ajout d'un systeme de versions (snapshots) de la Site Map. Cote serveur : data/tests-admin/sitemap-versions.json + endpoints GET/POST/GET:id/DELETE:id sur /api/admin/tests/sitemap-versions (admin requis). Cote client : bouton Versions ouvrant un popup pour enregistrer l'etat courant sous un nom, lister les versions (nom/date/auteur), charger une version (applique a la carte et diffuse comme disposition courante partagee) et supprimer une version.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "pourrais tu ajouter dans le système de site map une fonction de version avec enregistrement, liste des versions, affichage des différentes version et suppression des versions afin de pouvoir faire évolué le site map",
+      "startedAt": "2026-06-22T04:10:00.000Z",
+      "completedAt": "2026-06-22T04:35:00.000Z"
+    },
+    {
+      "id": "mod-452",
+      "version": "B-0.304",
+      "date": "2026-06-22T05:10:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map : creer une version par IA (mise a jour auto avec revue)",
+      "description": "Nouveau bouton 'Creer une version par IA' dans le popup Versions. L'utilisateur choisit l'IA et le modele ; l'agent CLI (via executor 3002) lit la Site Map actuelle + le code reel (routes, composants, onglets) + data/histoModif.json et ecrit un JSON d'operations (ajout/modif/suppression) sur noeuds/zones/liaisons. Le serveur valide et enrichit du before, le client affiche une revue avec cases a cocher (before->after, justification) avant application. A la validation : ops appliquees (placement auto des nouveaux elements), diffusion (persistLayout) et enregistrement automatique d'une version 'MAJ IA — date'. Serveur : POST /api/admin/tests/sitemap-update/prepare + GET /api/admin/tests/sitemap-update-stream (SSE), reutilisant le pattern de generation des fonctions de test.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je voudrais que tu rajoute un bouton pour créé une nouvelle version de la site map en partant de la version actuel et en mettant à jour suivant les améléliorations ou mdofication effectué sur le site. On doit pouvoir choisir l'IA et le model utilisé. L'IA doit prendre en compte la version actuel et indiqué les modifications à effectué (ajout/modif/suppression) sur chaque élément avant de les appliquer. Propose moi des solutions avant de les appliquer.",
+      "startedAt": "2026-06-22T04:40:00.000Z",
+      "completedAt": "2026-06-22T05:15:00.000Z"
+    },
+    {
+      "id": "mod-453",
+      "version": "B-0.304",
+      "date": "2026-06-22T05:40:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map : mise a jour IA restreinte a une zone selectionnee",
+      "description": "Le volet d'edition d'une zone propose un bouton 'Nouvelle version par IA (cette zone)' reutilisant le flux de mise a jour IA mais restreint a la zone selectionnee. Un scope { groupId, label } est transmis : cote serveur le prompt impose de ne proposer des ops que pour cette zone et computeSitemapProposals filtre les ops hors-perimetre (noeuds dont groupId=zone, la zone elle-meme, liaisons internes ; les ajouts de noeud sont forces sur la zone). Le popup de config affiche le perimetre et la version creee est nommee 'MAJ IA (<zone>) — date'.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "ajoute une option pour modifié seulement une zone, on selectionne une zone et dans le popup de la zone un bouton pour demandé la création d'une nouvelle version via IA mais uniquement pour cette zone.",
+      "startedAt": "2026-06-22T05:20:00.000Z",
+      "completedAt": "2026-06-22T05:45:00.000Z"
+    },
+    {
+      "id": "mod-454",
+      "version": "B-0.304",
+      "date": "2026-06-22T06:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : toute liaison editable/supprimable (base comprise) et recreable",
+      "description": "Avant, seules les liaisons ajoutees etaient supprimables de facon persistante ; les liaisons de base etaient recreees depuis le code au rechargement (modifs de libelle/type perdues). Desormais la liste complete des liaisons est persistee (edgesAll) : toute liaison (base ou personnalisee) est pleinement editable (libelle, type, accroche, courbure), supprimable durablement et recreable via le mode Liaison. applySmLayout/loadInitialSmEdges utilisent edgesAll prioritairement (repli base+custom pour l'ancien format), buildLayoutObject l'ecrit, et deleteSelectedEdge ne filtre plus sur isCustomEdge.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "on doit pouvoir modifié une liaison avec tous les éléments et pas seulement ceux ajouté, ainsi une liaison créé à l'origine doit pouvoir être supprimé et recréé",
+      "startedAt": "2026-06-22T05:50:00.000Z",
+      "completedAt": "2026-06-22T06:05:00.000Z"
+    },
+    {
+      "id": "mod-455",
+      "version": "B-0.304",
+      "date": "2026-06-22T06:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : liaisons noeud<->zone, zone<->zone, zone<->noeud",
+      "description": "Les extremites d'une liaison peuvent desormais etre un noeud OU une zone. La geometrie des aretes est calculee sur une 'boite' resolue (smBoxOf : noeud ou zone), smEdgeLayout lit noeuds + zones et suit leurs deplacements/redimensionnements. Le mode Liaison accepte le clic sur la bordure/etiquette d'une zone (smGroupMouseDown route vers handleLinkClick en mode liaison), avec surbrillance rose de la zone source et curseur crosshair. buildEdgeGeometry/smSideAnchor/smAutoSides/isEdgeSide generalises aux boites.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "on doit pouvoir relié un composant à une zone ou une zone à une zone ou une zone à un composant",
+      "startedAt": "2026-06-22T06:10:00.000Z",
+      "completedAt": "2026-06-22T06:35:00.000Z"
     }
   ]
 }
