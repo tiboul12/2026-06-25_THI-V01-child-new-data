@@ -258,6 +258,21 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Molette** : zoom in/out (min 15%, max 250%).
   - **Cliquer-glisser** sur le fond : pan.
   - **Barre d'outils** : boutons `−` / `+` / reset (`center_focus_strong`), % de zoom courant.
+- **Déplacement des nœuds (drag & drop)** :
+  - Glisser un nœud le repositionne ; les **liaisons suivent** le déplacement en temps réel (positions recalculées).
+  - Un clic sans mouvement (< 3px) ouvre/ferme le volet de détails ; au-delà, c'est un déplacement.
+  - La disposition (nœuds + zones) est **persistée en localStorage** (`wo_sitemap_layout_v2`) et survit au rechargement.
+  - Bouton **« Disposition »** (`restart_alt`) dans la barre d'outils : restaure la disposition par défaut (nœuds + zones).
+- **Déplacement & redimensionnement des zones (groupes)** :
+  - Glisser la **bordure** (le contour réagit, l'intérieur reste libre pour le pan) ou l'**étiquette** de la zone la déplace ; **tous les nœuds internes suivent** du même delta.
+  - **Poignée de redimensionnement** (coin bas-droit, `nwse-resize`) : agrandit/réduit la zone (min 160×120 px). Les nœuds ne bougent pas au redimensionnement.
+- **Multi-sélection & alignement de nœuds** :
+  - **Ctrl/Maj+clic** ajoute/retire un nœud de la multi-sélection (contour cyan épais). Un clic simple réinitialise la sélection.
+  - Glisser un nœud déjà multi-sélectionné **déplace tout le groupe** ensemble.
+  - **Barre d'alignement** (visible dès 2 nœuds) : aligner gauche / centre vertical / droite, haut / milieu horizontal / bas ; **répartir** horizontalement/verticalement (dès 3 nœuds) ; bouton « Effacer la sélection ».
+- **Créer / lancer un test depuis un nœud** (volet de détails) :
+  - **« Lancer »** (vert, `play_circle`) sur chaque section de test liée → pré-sélectionne la section et bascule sur l'onglet Exécution.
+  - **« Créer une section de test ici »** (indigo, `add`) → ouvre le popup de création pré-rempli (section parente = chemin du nœud, titre/slug d'après le label).
 - **Carte en pleine largeur** : la zone SVG occupe toute la largeur disponible ; le volet de détails s'affiche en **overlay** (coin haut-droit) au clic sur un nœud, sans réduire la largeur de la carte.
 - **Lisibilité des liaisons** : chaque arête est tracée avec un **halo sombre** sous le trait coloré (la liaison reste lisible quand elle survole un nœud), une courbure de Bézier plus ample, et son libellé posé **sur la courbe** (point à t=0.5) dans une pastille bordée de la couleur de l'arête.
 - **Volet latéral** (clic sur un nœud) :
@@ -270,4 +285,4 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - Dropdown listant toutes les sections (mêmes données que l'onglet Exécution).
   - Section sélectionnée → nœuds liés mis en surbrillance (autres en opacité réduite) + chip avec ✕.
   - **Bouton "Voir seulement cette section"** : masque les nœuds/groupes non liés à la section.
-- Composants : `AdminTestsComponent` (onglet `sitemap`), données statiques `smGroups`, `smNodes`, `smEdges` dans le TS (à maintenir à jour avec les routes/onglets réels).
+- Composants : `AdminTestsComponent` (onglet `sitemap`), données par défaut `SM_BASE_GROUPS`, `SM_BASE_NODES`, `smEdges` dans le TS ; signaux `smGroups`/`smNodes` pour la disposition éditable (à maintenir à jour avec les routes/onglets réels).

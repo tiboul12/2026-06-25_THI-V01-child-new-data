@@ -1356,7 +1356,7 @@ Exemple :
 
   // ── Site Map — données statiques (reflète le parcours réel de l'utilisateur) ──
 
-  readonly smGroups: SitemapGroup[] = [
+  private readonly SM_BASE_GROUPS: SitemapGroup[] = [
     { id: 'public',  label: 'Public — :4202 (non connecté)',                 x: 20,   y: 60,  w: 300,  h: 372, stroke: '#0ea5e9', fill: '#0ea5e90a' },
     { id: 'app',     label: 'App connectée — :4202  ·  menu : Documents · Projets · Admin', x: 360, y: 60, w: 360, h: 560, stroke: '#6366f1', fill: '#6366f10a' },
     { id: 'admin',   label: 'Admin — réservé admin (onglets)',               x: 760,  y: 60,  w: 340,  h: 824, stroke: '#f59e0b', fill: '#f59e0b0d' },
@@ -1364,7 +1364,7 @@ Exemple :
     { id: 'widgets', label: 'Outils & widgets embarqués (visibilité pilotée par Admin › Outils)', x: 20, y: 912, w: 1080, h: 178, stroke: '#8b5cf6', fill: '#8b5cf60a' },
   ];
 
-  readonly smNodes: SitemapNode[] = [
+  private readonly SM_BASE_NODES: SitemapNode[] = [
     // ── Public ──
     { id: 'landing', label: 'Landing', url: '/', port: 4202, kind: 'public', groupId: 'public',
       x: 44, y: 104, w: 252, h: 60,
@@ -1515,11 +1515,49 @@ Exemple :
     { id: 'r-projets',    from: 'adm-projets',to: 'proj-list',   label: 'gère', type: 'relation' },
   ];
 
+  /** Clé localStorage de la disposition personnalisée (nœuds + zones) de la Site Map. */
+  private readonly SM_LAYOUT_KEY = 'wo_sitemap_layout_v2';
+
+  /** Nœuds de la carte, déplaçables — positions persistées en localStorage. */
+  smNodes = signal<SitemapNode[]>(this.loadInitialSmNodes());
+  /** Zones (groupes), déplaçables et redimensionnables — géométrie persistée. */
+  smGroups = signal<SitemapGroup[]>(this.loadInitialSmGroups());
+
+  /** Lit la disposition sauvegardée. */
+  private readSmLayout(): { nodes?: Record<string, { x: number; y: number }>; groups?: Record<string, { x: number; y: number; w: number; h: number }> } {
+    try {
+      const raw = localStorage.getItem(this.SM_LAYOUT_KEY);
+      if (raw) return JSON.parse(raw) || {};
+    } catch { /* ignore */ }
+    return {};
+  }
+
+  /** Applique les positions sauvegardées sur les nœuds par défaut. */
+  private loadInitialSmNodes(): SitemapNode[] {
+    const saved = this.readSmLayout().nodes || {};
+    return this.SM_BASE_NODES.map(n => {
+      const p = saved[n.id];
+      return p ? { ...n, x: p.x, y: p.y } : { ...n };
+    });
+  }
+
+  /** Applique la géométrie sauvegardée sur les zones par défaut. */
+  private loadInitialSmGroups(): SitemapGroup[] {
+    const saved = this.readSmLayout().groups || {};
+    return this.SM_BASE_GROUPS.map(g => {
+      const s = saved[g.id];
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h } : { ...g };
+    });
+  }
+
   // ── Site Map — signals & état ──
 
   sitemapZoom        = signal(0.6);
   sitemapPan         = signal({ x: 10, y: 10 });
   selectedSmNode     = signal<SitemapNode | null>(null);
+  /** Sélection multiple de nœuds (Ctrl/Maj+clic) pour alignement / déplacement groupé. */
+  smMultiSelect      = signal<Set<string>>(new Set());
+  smMultiCount       = computed(() => this.smMultiSelect().size);
   smFolderFilter     = signal('');
   smSectionOnly      = signal(false);
   smDragging = false;
@@ -1539,7 +1577,7 @@ Exemple :
     const path = fn?.path ?? '';
     if (!path) return new Set();
     const ids = new Set<string>();
-    for (const n of this.smNodes) {
+    for (const n of this.smNodes()) {
       if (n.cahierPaths?.some(p => path === p || path.startsWith(p + '/') || p.startsWith(path + '/'))) {
         ids.add(n.id);
       }
@@ -1548,19 +1586,50 @@ Exemple :
   });
 
   smVisibleNodes = computed((): SitemapNode[] => {
-    if (!this.smSectionOnly() || !this.smFolderFilter()) return this.smNodes;
+    if (!this.smSectionOnly() || !this.smFolderFilter()) return this.smNodes();
     const ids = this.smHighlightedIds();
-    return this.smNodes.filter(n => ids.has(n.id));
+    return this.smNodes().filter(n => ids.has(n.id));
   });
 
   smVisibleGroups = computed((): SitemapGroup[] => {
-    if (!this.smSectionOnly() || !this.smFolderFilter()) return this.smGroups;
+    const groups = this.smGroups();
+    if (!this.smSectionOnly() || !this.smFolderFilter()) return groups;
     const nodeIds = this.smHighlightedIds();
-    const groupIds = new Set(this.smNodes.filter(n => nodeIds.has(n.id)).map(n => n.groupId));
-    return this.smGroups.filter(g => groupIds.has(g.id) || this.smNodes.some(n => nodeIds.has(n.id) && n.groupId === g.id));
+    const nodes = this.smNodes();
+    const groupIds = new Set(nodes.filter(n => nodeIds.has(n.id)).map(n => n.groupId));
+    return groups.filter(g => groupIds.has(g.id) || nodes.some(n => nodeIds.has(n.id) && n.groupId === g.id));
   });
 
   smSections = computed(() => this.launchGroups());
+
+  /** Sections du cahier de recette réellement liées au nœud sélectionné (avec folderId résolu). */
+  smSelectedSections = computed((): { folderId: string; path: string; pageTitle: string; section: string; count: number }[] => {
+    const node = this.selectedSmNode();
+    const cps = node?.cahierPaths;
+    if (!cps || cps.length === 0) return [];
+    const byFolder = new Map<string, { folderId: string; path: string; pageTitle: string; section: string; count: number }>();
+    for (const fn of this.functions()) {
+      if (!cps.some(cp => fn.path === cp || fn.path.startsWith(cp + '/'))) continue;
+      let g = byFolder.get(fn.folderId);
+      if (!g) {
+        g = { folderId: fn.folderId, path: fn.path, pageTitle: fn.pageTitle, section: fn.path.split('/').pop() || fn.path, count: 0 };
+        byFolder.set(fn.folderId, g);
+      }
+      g.count++;
+    }
+    return [...byFolder.values()];
+  });
+
+  /** Ouvre le popup de création de section pré-rempli depuis le nœud sélectionné. */
+  openCreateSectionFromNode() {
+    const node = this.selectedSmNode();
+    this.openCreateSectionPopup();
+    this.csParentPath.set(node?.cahierPaths?.[0] || '');
+    if (node) {
+      this.csTitle.set(node.label);
+      this.csSlug.set(node.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+    }
+  }
 
   sitemapZoomIn()    { this.sitemapZoom.update(z => Math.min(2.5, +(z + 0.1).toFixed(1))); }
   sitemapZoomOut()   { this.sitemapZoom.update(z => Math.max(0.15, +(z - 0.1).toFixed(1))); }
@@ -1575,7 +1644,49 @@ Exemple :
     e.preventDefault();
   }
 
+  // ── Déplacement des nœuds (drag & drop) ──
+  private smNodeDrag: {
+    id: string; sx: number; sy: number; ox: number; oy: number; moved: boolean;
+    additive: boolean;
+    group: Map<string, { x: number; y: number }> | null;  // positions d'origine si déplacement groupé
+  } | null = null;
+
+  /** Début de déplacement d'un nœud (ou clic simple → sélection si pas de mouvement). */
+  smNodeMouseDown(node: SitemapNode, e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    const additive = e.ctrlKey || e.metaKey || e.shiftKey;
+    const sel = this.smMultiSelect();
+    // Déplacement groupé si on saisit (sans modificateur) un nœud déjà dans une multi-sélection
+    let group: Map<string, { x: number; y: number }> | null = null;
+    if (!additive && sel.has(node.id) && sel.size >= 2) {
+      group = new Map();
+      for (const n of this.smNodes()) if (sel.has(n.id)) group.set(n.id, { x: n.x, y: n.y });
+    }
+    this.smNodeDrag = { id: node.id, sx: e.clientX, sy: e.clientY, ox: node.x, oy: node.y, moved: false, additive, group };
+  }
+
   smMouseMove(e: MouseEvent) {
+    // Déplacement / redimensionnement d'une zone en cours
+    if (this.smGroupDrag) { this.applyGroupDrag(e); return; }
+    // Déplacement d'un nœud en cours
+    if (this.smNodeDrag) {
+      const d = this.smNodeDrag;
+      const z = this.sitemapZoom();
+      const ddx = (e.clientX - d.sx) / z;
+      const ddy = (e.clientY - d.sy) / z;
+      if (Math.abs(e.clientX - d.sx) > 3 || Math.abs(e.clientY - d.sy) > 3) d.moved = true;
+      if (d.group) {
+        // Déplacement groupé : tous les nœuds sélectionnés suivent du même delta
+        this.smNodes.update(ns => ns.map(n => {
+          const o = d.group!.get(n.id);
+          return o ? { ...n, x: Math.round(o.x + ddx), y: Math.round(o.y + ddy) } : n;
+        }));
+      } else {
+        this.updateNodePos(d.id, Math.round(d.ox + ddx), Math.round(d.oy + ddy));
+      }
+      return;
+    }
     if (!this.smDragging) return;
     this.sitemapPan.set({
       x: this.smDragStart.px + (e.clientX - this.smDragStart.x),
@@ -1583,11 +1694,189 @@ Exemple :
     });
   }
 
-  smMouseUp() { this.smDragging = false; }
+  smMouseUp() {
+    if (this.smGroupDrag) {
+      if (this.smGroupDrag.moved) this.persistLayout();
+      this.smGroupDrag = null;
+      return;
+    }
+    if (this.smNodeDrag) {
+      const d = this.smNodeDrag;
+      if (!d.moved) {
+        const id = d.id;
+        if (d.additive) {
+          // Ctrl/Maj+clic → (dé)sélectionne dans la multi-sélection
+          let added = false;
+          this.smMultiSelect.update(s => {
+            const n = new Set(s);
+            if (n.has(id)) n.delete(id); else { n.add(id); added = true; }
+            return n;
+          });
+          if (added) {
+            const node = this.smNodes().find(n => n.id === id) ?? null;
+            if (node) this.selectedSmNode.set(node);
+          }
+        } else {
+          // Clic simple → sélection unique (réinitialise la multi-sélection)
+          const node = this.smNodes().find(n => n.id === id) ?? null;
+          if (this.selectedSmNode()?.id === id) {
+            this.selectedSmNode.set(null);
+            this.smMultiSelect.set(new Set());
+          } else {
+            this.selectedSmNode.set(node);
+            this.smMultiSelect.set(new Set([id]));
+          }
+        }
+      } else {
+        this.persistLayout();
+      }
+      this.smNodeDrag = null;
+      return;
+    }
+    this.smDragging = false;
+  }
 
-  clickSmNode(node: SitemapNode, e: MouseEvent) {
+  smNodeMultiSelected(id: string): boolean { return this.smMultiSelect().has(id); }
+  clearMultiSelect() { this.smMultiSelect.set(new Set()); }
+
+  /** Liste des nœuds actuellement multi-sélectionnés. */
+  private selectedNodesList(): SitemapNode[] {
+    const sel = this.smMultiSelect();
+    return this.smNodes().filter(n => sel.has(n.id));
+  }
+
+  private patchNodes(patches: { id: string; x?: number; y?: number }[]) {
+    const map = new Map(patches.map(p => [p.id, p]));
+    this.smNodes.update(ns => ns.map(n => {
+      const p = map.get(n.id);
+      return p ? { ...n, x: p.x ?? n.x, y: p.y ?? n.y } : n;
+    }));
+  }
+
+  /** Aligne les nœuds multi-sélectionnés selon un bord ou un centre commun. */
+  alignSelected(mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') {
+    const nodes = this.selectedNodesList();
+    if (nodes.length < 2) return;
+    let patches: { id: string; x?: number; y?: number }[] = [];
+    switch (mode) {
+      case 'left': {
+        const x = Math.min(...nodes.map(n => n.x));
+        patches = nodes.map(n => ({ id: n.id, x }));
+        break;
+      }
+      case 'right': {
+        const r = Math.max(...nodes.map(n => n.x + n.w));
+        patches = nodes.map(n => ({ id: n.id, x: r - n.w }));
+        break;
+      }
+      case 'hcenter': {
+        const cx = nodes.reduce((s, n) => s + n.x + n.w / 2, 0) / nodes.length;
+        patches = nodes.map(n => ({ id: n.id, x: Math.round(cx - n.w / 2) }));
+        break;
+      }
+      case 'top': {
+        const y = Math.min(...nodes.map(n => n.y));
+        patches = nodes.map(n => ({ id: n.id, y }));
+        break;
+      }
+      case 'bottom': {
+        const b = Math.max(...nodes.map(n => n.y + n.h));
+        patches = nodes.map(n => ({ id: n.id, y: b - n.h }));
+        break;
+      }
+      case 'vcenter': {
+        const cy = nodes.reduce((s, n) => s + n.y + n.h / 2, 0) / nodes.length;
+        patches = nodes.map(n => ({ id: n.id, y: Math.round(cy - n.h / 2) }));
+        break;
+      }
+    }
+    this.patchNodes(patches);
+    this.persistLayout();
+  }
+
+  /** Répartit les nœuds sélectionnés à intervalles égaux (≥ 3 nœuds). */
+  distributeSelected(axis: 'h' | 'v') {
+    const nodes = this.selectedNodesList();
+    if (nodes.length < 3) return;
+    const sorted = [...nodes].sort((a, b) => axis === 'h' ? a.x - b.x : a.y - b.y);
+    const first = sorted[0], last = sorted[sorted.length - 1];
+    if (axis === 'h') {
+      const start = first.x + first.w / 2, end = last.x + last.w / 2;
+      const step = (end - start) / (sorted.length - 1);
+      this.patchNodes(sorted.map((n, i) => ({ id: n.id, x: Math.round(start + step * i - n.w / 2) })));
+    } else {
+      const start = first.y + first.h / 2, end = last.y + last.h / 2;
+      const step = (end - start) / (sorted.length - 1);
+      this.patchNodes(sorted.map((n, i) => ({ id: n.id, y: Math.round(start + step * i - n.h / 2) })));
+    }
+    this.persistLayout();
+  }
+
+  /** Met à jour la position d'un nœud (immuable → les arêtes recalculent automatiquement). */
+  private updateNodePos(id: string, x: number, y: number) {
+    this.smNodes.update(nodes => nodes.map(n => n.id === id ? { ...n, x, y } : n));
+  }
+
+  /** Persiste la disposition complète (nœuds + zones) en localStorage. */
+  private persistLayout() {
+    try {
+      const nodes: Record<string, { x: number; y: number }> = {};
+      for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y };
+      const groups: Record<string, { x: number; y: number; w: number; h: number }> = {};
+      for (const g of this.smGroups()) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h };
+      localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify({ nodes, groups }));
+    } catch { /* ignore */ }
+  }
+
+  /** Restaure la disposition par défaut (nœuds + zones). */
+  resetSmLayout() {
+    try { localStorage.removeItem(this.SM_LAYOUT_KEY); } catch { /* ignore */ }
+    this.smNodes.set(this.SM_BASE_NODES.map(n => ({ ...n })));
+    this.smGroups.set(this.SM_BASE_GROUPS.map(g => ({ ...g })));
+    this.smMultiSelect.set(new Set());
+  }
+
+  // ── Déplacement / redimensionnement des zones (groupes) ──
+  private readonly SM_GROUP_MIN_W = 160;
+  private readonly SM_GROUP_MIN_H = 120;
+  private smGroupDrag: {
+    id: string; mode: 'move' | 'resize'; sx: number; sy: number; moved: boolean;
+    og: { x: number; y: number; w: number; h: number };
+    on: Map<string, { x: number; y: number }>;
+  } | null = null;
+
+  /** Début de déplacement (mode 'move') ou redimensionnement (mode 'resize') d'une zone. */
+  smGroupMouseDown(group: SitemapGroup, mode: 'move' | 'resize', e: MouseEvent) {
     e.stopPropagation();
-    this.selectedSmNode.update(n => n?.id === node.id ? null : node);
+    e.preventDefault();
+    const on = new Map<string, { x: number; y: number }>();
+    for (const n of this.smNodes()) if (n.groupId === group.id) on.set(n.id, { x: n.x, y: n.y });
+    this.smGroupDrag = {
+      id: group.id, mode, sx: e.clientX, sy: e.clientY, moved: false,
+      og: { x: group.x, y: group.y, w: group.w, h: group.h }, on,
+    };
+  }
+
+  private applyGroupDrag(e: MouseEvent) {
+    const d = this.smGroupDrag!;
+    const z = this.sitemapZoom();
+    const ddx = (e.clientX - d.sx) / z;
+    const ddy = (e.clientY - d.sy) / z;
+    if (Math.abs(e.clientX - d.sx) > 3 || Math.abs(e.clientY - d.sy) > 3) d.moved = true;
+
+    if (d.mode === 'move') {
+      const nx = Math.round(d.og.x + ddx), ny = Math.round(d.og.y + ddy);
+      this.smGroups.update(gs => gs.map(g => g.id === d.id ? { ...g, x: nx, y: ny } : g));
+      // Déplace tous les nœuds internes du même delta
+      this.smNodes.update(ns => ns.map(n => {
+        const o = d.on.get(n.id);
+        return o ? { ...n, x: Math.round(o.x + ddx), y: Math.round(o.y + ddy) } : n;
+      }));
+    } else {
+      const nw = Math.max(this.SM_GROUP_MIN_W, Math.round(d.og.w + ddx));
+      const nh = Math.max(this.SM_GROUP_MIN_H, Math.round(d.og.h + ddy));
+      this.smGroups.update(gs => gs.map(g => g.id === d.id ? { ...g, w: nw, h: nh } : g));
+    }
   }
 
   private attachSmWheel() {
@@ -1656,9 +1945,10 @@ Exemple :
    */
   smEdgeLayout = computed((): Map<string, { path: string; midX: number; midY: number }> => {
     const m = new Map<string, { path: string; midX: number; midY: number }>();
+    const nodes = this.smNodes();
     for (const edge of this.smEdges) {
-      const from = this.smNodes.find(n => n.id === edge.from);
-      const to   = this.smNodes.find(n => n.id === edge.to);
+      const from = nodes.find(n => n.id === edge.from);
+      const to   = nodes.find(n => n.id === edge.to);
       if (!from || !to) continue;
       m.set(edge.id, this.buildEdgeGeometry(from, to));
     }

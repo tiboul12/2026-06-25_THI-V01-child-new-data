@@ -10848,6 +10848,75 @@
       "prompt": "dans la section admin/tests/ Site map, agrandi la zone d'affichage de la site map pour quelle prenne toute la largeur de la page et améliore l'affichage des liaisons qui sont illisible",
       "startedAt": "2026-06-22T00:00:00.000Z",
       "completedAt": "2026-06-22T00:05:00.000Z"
+    },
+    {
+      "id": "mod-443",
+      "version": "B-0.301",
+      "date": "2026-06-22T00:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : noeuds deplacables + creer/lancer un test depuis un noeud",
+      "description": "Les noeuds de la Site Map sont desormais deplacables par drag & drop (les liaisons suivent en temps reel via recalcul), avec persistance des positions en localStorage et bouton de reinitialisation de la disposition. Le volet de details d'un noeud propose : un bouton Lancer sur chaque section de test liee (pre-selection + bascule onglet Execution) et un bouton Creer une section de test ici (popup pre-rempli avec section parente, titre et slug deduits du noeud).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je voudrais que tu améliore la site map, on doit pouvoir deplacer les différents éléments et les liaison doivent suivre les déplacements. Lorsqu'on selectionne une zone ou une sous zone on doit pouvoir créé à partir de la zone selectionné une nouvelle section de test. On doit aussi pouvoir lancer un test sur la section de test lié à la zone selectionné",
+      "startedAt": "2026-06-22T00:10:00.000Z",
+      "completedAt": "2026-06-22T00:35:00.000Z"
+    },
+    {
+      "id": "mod-444",
+      "version": "B-0.301",
+      "date": "2026-06-22T01:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : zones deplacables et redimensionnables (noeuds internes suivent)",
+      "description": "Les zones (groupes) de la Site Map deviennent editables : on les deplace en glissant leur bordure (pointer-events:stroke, l'interieur reste libre pour le pan) ou leur etiquette, et tous les noeuds internes suivent du meme delta. Une poignee au coin bas-droit permet de redimensionner la zone (min 160x120). smGroups passe en signal, geometrie persistee en localStorage (cle unifiee wo_sitemap_layout_v2 avec les positions des noeuds) et restauree par le bouton Disposition.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "on peux deplacer un element exemple Projets, mais on doit aussi pouvoir deplacer une zone, exemple Public, lorsqu'on deplace une zone, tous les elements interne doit être deplacer avec la zone, on doit pouvoir agrandir ou réduire les zones.",
+      "startedAt": "2026-06-22T00:40:00.000Z",
+      "completedAt": "2026-06-22T01:05:00.000Z"
+    },
+    {
+      "id": "mod-445",
+      "version": "B-0.301",
+      "date": "2026-06-22T01:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : multi-selection de noeuds et alignement / repartition",
+      "description": "Multi-selection des noeuds via Ctrl/Maj+clic (contour cyan), avec deplacement groupe en glissant un noeud deja selectionne. Nouvelle barre d'alignement (visible des 2 noeuds) : aligner gauche/centre-X/droite et haut/centre-Y/bas, repartition horizontale/verticale a intervalles egaux (des 3 noeuds), et bouton effacer. Les positions resultantes sont persistees dans la disposition.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "on doit pouvoir selectionné plusieurs elements et les centré ensemble",
+      "startedAt": "2026-06-22T01:10:00.000Z",
+      "completedAt": "2026-06-22T01:35:00.000Z"
     }
   ]
 }
