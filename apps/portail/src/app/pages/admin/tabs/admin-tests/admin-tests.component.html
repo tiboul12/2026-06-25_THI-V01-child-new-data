@@ -1084,6 +1084,13 @@
           {{ smLinkMode() ? (smLinkSource() ? 'Choisir la cible…' : 'Choisir la source…') : 'Liaison' }}
         </button>
 
+        <!-- Versions de la Site Map -->
+        <button (click)="openSmVersions()" title="Versions de la Site Map"
+                class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:border-light-primary dark:hover:border-primary transition-all">
+          <span class="material-symbols-outlined text-sm">history</span>
+          Versions
+        </button>
+
         <!-- Barre d'alignement (multi-sélection : Ctrl/Maj+clic) -->
         @if (smMultiCount() >= 2) {
           <div class="flex items-center gap-1 border border-cyan-500/40 bg-cyan-500/10 rounded-lg px-1.5 py-1">
@@ -1207,42 +1214,24 @@
             <!-- Groupe principal avec transform pan/zoom -->
             <g [attr.transform]="smTransform()">
 
-              <!-- ── Groupes (zones encadrées) — déplaçables & redimensionnables ── -->
+              <!-- ── Groupes (zones) — couche VISUELLE (non interactive) ── -->
               @for (grp of smVisibleGroups(); track grp.id) {
                 <!-- Cadre visible -->
                 <rect [attr.x]="grp.x" [attr.y]="grp.y"
                       [attr.width]="grp.w" [attr.height]="grp.h"
-                      [attr.fill]="grp.fill" [attr.stroke]="grp.stroke"
-                      [attr.stroke-width]="selectedSmGroupId() === grp.id ? 2.5 : 1.5"
-                      rx="14" ry="14"
-                      [attr.stroke-dasharray]="selectedSmGroupId() === grp.id ? null : '6 3'"/>
-                <!-- Zone de saisie de la bordure (seul le contour réagit → l'intérieur reste libre) -->
-                <rect data-smnode="1"
-                      [attr.x]="grp.x" [attr.y]="grp.y"
-                      [attr.width]="grp.w" [attr.height]="grp.h"
-                      fill="none" stroke="transparent" stroke-width="12"
-                      rx="14" ry="14" style="cursor:move; pointer-events:stroke"
-                      (mousedown)="smGroupMouseDown(grp, 'move', $event)"/>
-                <!-- Étiquette (poignée de déplacement) -->
-                <rect data-smnode="1"
-                      [attr.x]="grp.x + 10" [attr.y]="grp.y - 11"
+                      [attr.fill]="grp.fill"
+                      [attr.stroke]="smIsLinkSourceGroup(grp.id) ? '#f472b6' : grp.stroke"
+                      [attr.stroke-width]="smIsLinkSourceGroup(grp.id) ? 3 : (selectedSmGroupId() === grp.id ? 2.5 : 1.5)"
+                      rx="14" ry="14" style="pointer-events:none"
+                      [attr.stroke-dasharray]="(smIsLinkSourceGroup(grp.id) || selectedSmGroupId() === grp.id) ? null : '6 3'"/>
+                <!-- Étiquette (fond + texte, visuel) -->
+                <rect [attr.x]="grp.x + 10" [attr.y]="grp.y - 11"
                       [attr.width]="grp.label.length * 7 + 16" height="22"
                       [attr.fill]="'#060b14'" [attr.stroke]="grp.stroke"
-                      stroke-width="1" rx="6" style="cursor:move"
-                      (mousedown)="smGroupMouseDown(grp, 'move', $event)"/>
+                      stroke-width="1" rx="6" style="pointer-events:none"/>
                 <text [attr.x]="grp.x + 18" [attr.y]="grp.y + 5"
-                      [attr.fill]="grp.stroke" style="cursor:move; pointer-events:none"
+                      [attr.fill]="grp.stroke" style="pointer-events:none"
                       font-size="11" font-weight="600" font-family="Inter, sans-serif">{{ grp.label }}</text>
-                <!-- Poignée de redimensionnement (coin bas-droit) -->
-                <rect data-smnode="1"
-                      [attr.x]="grp.x + grp.w - 16" [attr.y]="grp.y + grp.h - 16"
-                      width="16" height="16" rx="4"
-                      [attr.fill]="grp.stroke" fill-opacity="0.25"
-                      [attr.stroke]="grp.stroke" stroke-opacity="0.7" stroke-width="1"
-                      style="cursor:nwse-resize"
-                      (mousedown)="smGroupMouseDown(grp, 'resize', $event)"/>
-                <path [attr.d]="'M ' + (grp.x + grp.w - 12) + ' ' + (grp.y + grp.h - 4) + ' L ' + (grp.x + grp.w - 4) + ' ' + (grp.y + grp.h - 12) + ' M ' + (grp.x + grp.w - 8) + ' ' + (grp.y + grp.h - 4) + ' L ' + (grp.x + grp.w - 4) + ' ' + (grp.y + grp.h - 8)"
-                      [attr.stroke]="grp.stroke" stroke-width="1.2" stroke-opacity="0.9" fill="none" style="pointer-events:none"/>
               }
 
               <!-- ── Arêtes ── -->
@@ -1288,6 +1277,17 @@
                             style="cursor:grab"
                             (mousedown)="smEdgeHandleMouseDown(edge.id, $event)"/>
                   }
+                }
+              }
+
+              <!-- ── Cibles de liaison sur les ZONES (mode liaison) : surface pleine cliquable.
+                   Placée avant les nœuds → les nœuds restent cliquables au-dessus, l'espace vide de la zone cible la zone. -->
+              @if (smLinkMode()) {
+                @for (grp of smVisibleGroups(); track grp.id) {
+                  <rect data-smnode="1"
+                        [attr.x]="grp.x" [attr.y]="grp.y" [attr.width]="grp.w" [attr.height]="grp.h"
+                        rx="14" ry="14" fill="transparent" style="cursor:crosshair; pointer-events:fill"
+                        (mousedown)="smGroupMouseDown(grp, 'move', $event)"/>
                 }
               }
 
@@ -1340,17 +1340,45 @@
                 </g>
               }
 
+              <!-- ── Groupes (zones) — couche INTERACTIVE (au-dessus des arêtes/nœuds) ── -->
+              @for (grp of smVisibleGroups(); track grp.id) {
+                <!-- Saisie de la bordure (seul le contour réagit → l'intérieur reste libre) -->
+                <rect data-smnode="1"
+                      [attr.x]="grp.x" [attr.y]="grp.y"
+                      [attr.width]="grp.w" [attr.height]="grp.h"
+                      fill="none" stroke="transparent" stroke-width="14"
+                      rx="14" ry="14" style="pointer-events:stroke" [style.cursor]="smLinkMode() ? 'crosshair' : 'move'"
+                      (mousedown)="smGroupMouseDown(grp, 'move', $event)"/>
+                <!-- Étiquette (poignée de déplacement / sélection) -->
+                <rect data-smnode="1"
+                      [attr.x]="grp.x + 10" [attr.y]="grp.y - 11"
+                      [attr.width]="grp.label.length * 7 + 16" height="22"
+                      fill="transparent" rx="6" [style.cursor]="smLinkMode() ? 'crosshair' : 'move'"
+                      (mousedown)="smGroupMouseDown(grp, 'move', $event)"/>
+                <!-- Poignée de redimensionnement (coin bas-droit) -->
+                <rect data-smnode="1"
+                      [attr.x]="grp.x + grp.w - 16" [attr.y]="grp.y + grp.h - 16"
+                      width="16" height="16" rx="4"
+                      [attr.fill]="grp.stroke" fill-opacity="0.25"
+                      [attr.stroke]="grp.stroke" stroke-opacity="0.7" stroke-width="1"
+                      style="cursor:nwse-resize"
+                      (mousedown)="smGroupMouseDown(grp, 'resize', $event)"/>
+                <path [attr.d]="'M ' + (grp.x + grp.w - 12) + ' ' + (grp.y + grp.h - 4) + ' L ' + (grp.x + grp.w - 4) + ' ' + (grp.y + grp.h - 12) + ' M ' + (grp.x + grp.w - 8) + ' ' + (grp.y + grp.h - 4) + ' L ' + (grp.x + grp.w - 4) + ' ' + (grp.y + grp.h - 8)"
+                      [attr.stroke]="grp.stroke" stroke-width="1.2" stroke-opacity="0.9" fill="none" style="pointer-events:none"/>
+              }
+
             </g>
           </svg>
 
           <!-- Aide (bas de la carte) -->
           <div class="absolute bottom-2 left-3 text-[10px] text-white/20 pointer-events-none select-none">
-            Molette : zoom · Glisser le fond : vue · Glisser nœud/zone : repositionner · Clic : sélection · Ctrl/Maj+clic : multi-sélection · « Zone » : ajouter · « Liaison » : relier deux nœuds
+            Molette : zoom · Glisser le fond : vue · Glisser nœud/zone : repositionner · Clic : sélection · Ctrl/Maj+clic : multi-sélection · « Zone » : ajouter · « Liaison » : relier deux éléments (nœud ou zone)
           </div>
 
           <!-- Volet latéral : détails du nœud sélectionné (overlay sur la carte) -->
           @if (selectedSmNode(); as node) {
-          <div class="absolute top-3 right-3 bottom-3 w-72 flex flex-col border border-light-border dark:border-white/10 rounded-xl overflow-hidden bg-light-surface dark:bg-surface shadow-2xl">
+          <div class="absolute top-3 right-3 bottom-3 w-72 flex flex-col border border-light-border dark:border-white/10 rounded-xl overflow-hidden bg-light-surface dark:bg-surface shadow-2xl"
+               (mousedown)="$event.stopPropagation()" (mouseup)="$event.stopPropagation()" (wheel)="$event.stopPropagation()">
 
             <!-- En-tête nœud -->
             <div class="px-4 py-3 border-b border-light-border dark:border-white/10"
@@ -1376,6 +1404,14 @@
 
             <!-- Contenu scrollable -->
             <div class="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-xs">
+
+              <!-- Titre éditable -->
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Titre</div>
+                <input type="text" [value]="node.label"
+                       (input)="renameSelectedNode($any($event.target).value)"
+                       class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-xs focus:outline-none focus:border-light-primary dark:focus:border-primary" />
+              </div>
 
               <!-- Description -->
               @if (node.description) {
@@ -1476,12 +1512,13 @@
 
           <!-- Volet latéral : édition d'une arête sélectionnée -->
           @if (selectedSmEdge(); as edge) {
-          <div class="absolute top-3 right-3 w-72 flex flex-col border border-cyan-500/40 rounded-xl overflow-hidden bg-light-surface dark:bg-surface shadow-2xl">
+          <div class="absolute top-3 right-3 w-72 flex flex-col border border-cyan-500/40 rounded-xl overflow-hidden bg-light-surface dark:bg-surface shadow-2xl"
+               (mousedown)="$event.stopPropagation()" (mouseup)="$event.stopPropagation()" (wheel)="$event.stopPropagation()">
             <div class="px-4 py-3 border-b border-light-border dark:border-white/10" style="border-left:4px solid #22d3ee">
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
                   <div class="text-sm font-bold text-light-text dark:text-white">Liaison</div>
-                  <div class="font-mono text-[11px] mt-0.5 text-cyan-400 truncate">{{ edge.from }} → {{ edge.to }}</div>
+                  <div class="text-[11px] mt-0.5 text-cyan-400 truncate">{{ smEdgeEndLabel(edge.from) }} → {{ smEdgeEndLabel(edge.to) }}</div>
                 </div>
                 <button (click)="selectedSmEdgeId.set(null)"
                         class="p-1 rounded text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors flex-shrink-0">
@@ -1550,12 +1587,10 @@
                       class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
                 <span class="material-symbols-outlined text-sm">restart_alt</span>Tracé automatique
               </button>
-              @if (isCustomEdge(edge.id)) {
-                <button (click)="deleteSelectedEdge()"
-                        class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all">
-                  <span class="material-symbols-outlined text-sm">delete</span>Supprimer la liaison
-                </button>
-              }
+              <button (click)="deleteSelectedEdge()"
+                      class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all">
+                <span class="material-symbols-outlined text-sm">delete</span>Supprimer la liaison
+              </button>
             </div>
           </div>
           }
@@ -1563,7 +1598,8 @@
           <!-- Volet latéral : édition d'une zone sélectionnée -->
           @if (selectedSmGroup(); as grp) {
           <div class="absolute top-3 right-3 w-72 flex flex-col border rounded-xl overflow-hidden bg-light-surface dark:bg-surface shadow-2xl"
-               [style.border-color]="grp.stroke">
+               [style.border-color]="grp.stroke"
+               (mousedown)="$event.stopPropagation()" (mouseup)="$event.stopPropagation()" (wheel)="$event.stopPropagation()">
             <div class="px-4 py-3 border-b border-light-border dark:border-white/10" [style.border-left]="'4px solid ' + grp.stroke">
               <div class="flex items-start justify-between gap-2">
                 <div class="text-sm font-bold text-light-text dark:text-white">Zone</div>
@@ -1594,6 +1630,11 @@
                   }
                 </div>
               </div>
+              <!-- Mise à jour IA de cette zone -->
+              <button (click)="openSmAiUpdate(grp.id)"
+                      class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 transition-all">
+                <span class="material-symbols-outlined text-sm">auto_fix_high</span>Nouvelle version par IA (cette zone)
+              </button>
               <p class="text-[10px] text-light-text-muted dark:text-white/30 leading-relaxed">
                 Glisse la bordure pour déplacer la zone (les nœuds et zones contenus suivent), la poignée bas-droite pour la redimensionner. Dépose un nœud dans une zone pour l'y inclure.
               </p>
@@ -1612,6 +1653,212 @@
         </div>
       </div>
 
+    </div>
+  }
+
+  <!-- ── POPUP : Versions de la Site Map ── -->
+  @if (showSmVersions()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div class="w-full max-w-lg bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-2xl shadow-xl flex flex-col max-h-[85vh]">
+        <!-- En-tête -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-light-border dark:border-white/10">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-light-primary dark:text-primary">history</span>
+            <h3 class="text-base font-bold text-light-text dark:text-white">Versions de la Site Map</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <button (click)="openSmAiUpdate()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 transition-all">
+              <span class="material-symbols-outlined text-sm">auto_fix_high</span>Créer une version par IA
+            </button>
+            <button (click)="closeSmVersions()"
+                    class="p-1.5 rounded-lg text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface dark:hover:bg-white/5 transition-all">
+              <span class="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Enregistrer la version courante -->
+        <div class="px-5 py-4 border-b border-light-border dark:border-white/10">
+          <label class="block text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Enregistrer l'état actuel</label>
+          <div class="flex items-center gap-2">
+            <input type="text" [value]="smVersionName()" (input)="smVersionName.set($any($event.target).value)"
+                   (keyup.enter)="saveSmVersion()" [disabled]="smVersionsBusy()"
+                   placeholder="Nom de la version (ex : v1 — refonte admin)"
+                   class="flex-1 px-3 py-2 text-sm rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white focus:outline-none focus:border-light-primary dark:focus:border-primary disabled:opacity-50" />
+            <button (click)="saveSmVersion()" [disabled]="smVersionsBusy()"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 transition-all disabled:opacity-50">
+              <span class="material-symbols-outlined text-sm">save</span>Enregistrer
+            </button>
+          </div>
+          @if (smVersionsError()) {
+            <p class="text-[11px] text-red-400 mt-1.5">{{ smVersionsError() }}</p>
+          }
+        </div>
+
+        <!-- Liste des versions -->
+        <div class="flex-1 overflow-y-auto px-5 py-4">
+          @if (smVersions().length === 0) {
+            <p class="text-xs text-light-text-muted dark:text-white/40 text-center py-6">Aucune version enregistrée pour le moment.</p>
+          } @else {
+            <div class="flex flex-col gap-2">
+              @for (v of smVersions(); track v.id) {
+                <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold text-light-text dark:text-white truncate">{{ v.name }}</div>
+                    <div class="text-[10px] text-light-text-muted dark:text-white/40">{{ v.createdAt | date:'dd/MM/yyyy HH:mm' }} · {{ v.createdBy }}</div>
+                  </div>
+                  <div class="flex items-center gap-1 flex-shrink-0">
+                    <button (click)="loadSmVersion(v.id)" [disabled]="smVersionsBusy()" title="Charger cette version"
+                            class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-all disabled:opacity-50">
+                      <span class="material-symbols-outlined text-[13px]">restore</span>Charger
+                    </button>
+                    <button (click)="deleteSmVersion(v.id)" [disabled]="smVersionsBusy()" title="Supprimer cette version"
+                            class="p-1 rounded-md border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50">
+                      <span class="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="px-5 py-3 border-t border-light-border dark:border-white/10">
+          <p class="text-[10px] text-light-text-muted dark:text-white/30 leading-relaxed">
+            « Charger » applique la version à la carte et la diffuse comme disposition courante (visible par tous les admins).
+          </p>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── POPUP : Mise à jour de la Site Map par IA (configuration) ── -->
+  @if (showSmAiPopup()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div class="w-full max-w-2xl bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-2xl shadow-xl flex flex-col max-h-[88vh]">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-light-border dark:border-white/10">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-indigo-400">auto_fix_high</span>
+            <h3 class="text-base font-bold text-light-text dark:text-white truncate">
+              {{ smAiScopeLabel() ? 'Mettre à jour la zone « ' + smAiScopeLabel() + ' » par IA' : 'Mettre à jour la Site Map par IA' }}
+            </h3>
+          </div>
+          <button (click)="closeSmAiPopup()" class="p-1.5 rounded-lg text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface dark:hover:bg-white/5 transition-all">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <div class="px-5 py-4 overflow-y-auto space-y-4">
+          @if (aiProviders().length === 0) {
+            <div class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+              Aucun provider CLI agentique actif. Active Claude Code (ou Antigravity) dans <strong>Admin › Config › IA</strong>.
+            </div>
+          } @else {
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">IA</label>
+                <select [value]="smAiProvider()" (change)="onSmAiProviderChange($any($event.target).value)" [disabled]="smAiRunning()"
+                        class="w-full px-2 py-2 text-sm rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white dark:[color-scheme:dark] focus:outline-none focus:border-light-primary dark:focus:border-primary disabled:opacity-50">
+                  @for (p of aiProviders(); track p.value) { <option [value]="p.baseId">{{ p.label }}</option> }
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Modèle</label>
+                <select [value]="smAiModel()" (change)="onSmAiModelChange($any($event.target).value)" [disabled]="smAiRunning()"
+                        class="w-full px-2 py-2 text-sm rounded-lg bg-light-surface dark:bg-surface border border-light-border dark:border-white/10 text-light-text dark:text-white dark:[color-scheme:dark] focus:outline-none focus:border-light-primary dark:focus:border-primary disabled:opacity-50">
+                  @if (smAiModels().length === 0) { <option value="">(défaut)</option> }
+                  @for (m of smAiModels(); track m.value) { <option [value]="m.value">{{ m.label }}</option> }
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-semibold uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Consignes (éditables)</label>
+              <textarea [value]="smAiPrompt()" (input)="smAiPrompt.set($any($event.target).value)" rows="4" [disabled]="smAiRunning()"
+                        class="w-full px-3 py-2 text-xs rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white focus:outline-none focus:border-light-primary dark:focus:border-primary resize-y disabled:opacity-50"></textarea>
+              <p class="text-[10px] text-light-text-muted dark:text-white/40 mt-1">
+                L'IA lit la Site Map actuelle + le code (routes, composants, onglets) + <span class="font-mono">data/histoModif.json</span>, et propose les ajouts/modifs/suppressions à valider.
+              </p>
+            </div>
+          }
+
+          @if (smAiError()) {
+            <div class="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">{{ smAiError() }}</div>
+          }
+          @if (smAiLog().length) {
+            <div class="rounded-lg border border-light-border dark:border-white/10 bg-black/40 p-2 max-h-48 overflow-y-auto font-mono text-[10px] leading-relaxed">
+              @for (l of smAiLog(); track $index) {
+                <div [ngClass]="l.stream === 'stderr' ? 'text-red-400' : (l.stream === 'info' ? 'text-cyan-400' : 'text-white/60')">{{ l.text }}</div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="px-5 py-4 border-t border-light-border dark:border-white/10 flex items-center justify-end gap-2">
+          <button (click)="closeSmAiPopup()" [disabled]="smAiRunning()"
+                  class="px-3 py-2 text-sm rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/60 hover:text-light-text dark:hover:text-white transition-all disabled:opacity-50">Annuler</button>
+          <button (click)="confirmSmAiUpdate()" [disabled]="smAiRunning() || aiProviders().length === 0"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition-all disabled:opacity-50">
+            <span class="material-symbols-outlined text-sm">{{ smAiRunning() ? 'hourglass_top' : 'search' }}</span>
+            {{ smAiRunning() ? 'Analyse en cours…' : 'Analyser' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── POPUP : Revue des propositions IA de la Site Map ── -->
+  @if (showSmAiReview()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div class="w-full max-w-2xl bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-2xl shadow-xl flex flex-col max-h-[88vh]">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-light-border dark:border-white/10">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-indigo-400">rule</span>
+            <h3 class="text-base font-bold text-light-text dark:text-white">Propositions de mise à jour ({{ smAiApprovedCount() }}/{{ smAiProposals().length }})</h3>
+          </div>
+          <button (click)="closeSmAiReview()" class="p-1.5 rounded-lg text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white hover:bg-light-surface dark:hover:bg-white/5 transition-all">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-5 py-4 space-y-2">
+          @for (p of smAiProposals(); track $index) {
+            <label class="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-light-border dark:border-white/10 cursor-pointer hover:border-indigo-500/40 transition-all"
+                   [class.opacity-50]="!isSmAiApproved($index)">
+              <input type="checkbox" [checked]="isSmAiApproved($index)" (change)="toggleSmAiApprove($index)" class="mt-0.5 accent-indigo-500" />
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[9px] px-1.5 py-0.5 rounded-full font-semibold border" [ngClass]="smAiOpClass(p.op)">{{ smAiOpLabel(p.op) }}</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60">{{ smAiKindLabel(p.kind) }}</span>
+                  <span class="text-sm font-semibold text-light-text dark:text-white truncate">{{ p.data?.label || p.before?.label || p.data?.from || p.before?.from || p.id }}</span>
+                </div>
+                @if (p.op === 'modify' && p.before) {
+                  <div class="text-[11px] text-light-text-muted dark:text-white/50 mt-1">
+                    <span class="line-through opacity-60">{{ p.before.label || p.before.url || p.before.type }}</span>
+                    <span class="mx-1">→</span>
+                    <span class="text-amber-300">{{ p.data?.label || p.data?.url || p.data?.type || '(champs mis à jour)' }}</span>
+                  </div>
+                } @else if (p.op === 'add' && p.data?.url) {
+                  <div class="font-mono text-[10px] text-light-text-muted dark:text-white/40 mt-0.5">{{ p.data.url }}</div>
+                }
+                @if (p.reason) { <div class="text-[11px] text-light-text-muted dark:text-white/45 mt-1 italic">{{ p.reason }}</div> }
+              </div>
+            </label>
+          }
+        </div>
+
+        <div class="px-5 py-4 border-t border-light-border dark:border-white/10 flex items-center justify-between gap-2">
+          <p class="text-[10px] text-light-text-muted dark:text-white/30">Les éléments cochés seront appliqués puis enregistrés comme nouvelle version.</p>
+          <div class="flex items-center gap-2">
+            <button (click)="closeSmAiReview()" class="px-3 py-2 text-sm rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/60 hover:text-light-text dark:hover:text-white transition-all">Annuler</button>
+            <button (click)="applySmAiProposals()" [disabled]="smAiApprovedCount() === 0"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-all disabled:opacity-50">
+              <span class="material-symbols-outlined text-sm">check</span>Appliquer ({{ smAiApprovedCount() }})
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   }
 

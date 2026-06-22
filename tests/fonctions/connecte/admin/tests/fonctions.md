@@ -275,24 +275,42 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Côté d'accroche** de chaque extrémité (départ / arrivée) : haut / bas / gauche / droite ; par défaut, choix automatique selon la position des nœuds.
   - **Courbure** : boutons « − Courber » / « Courber + » ou glisser la **poignée cyan** au milieu de la liaison (décalage perpendiculaire des points de contrôle).
   - **Libellé** et **type** (nav / auth / cross-app / relation) éditables dans le volet.
+  - **Toute liaison est pleinement éditable et supprimable** (base ou personnalisée) : la liste complète des liaisons est persistée (`edgesAll`), donc une liaison d'origine peut être supprimée (elle ne réapparaît pas au rechargement) puis recréée via le mode « Liaison ».
   - Bouton **« Tracé automatique »** : réinitialise l'arête (supprime ses overrides).
   - Côtés + courbure sont **persistés** dans la disposition (`wo_sitemap_layout_v2`, clé `edges`).
 - **Ajout de zones, inclusion, liaisons (édition de la carte)** :
   - Bouton **« Zone »** : ajoute une nouvelle zone (sélectionnée → volet d'édition : libellé, couleur dans une palette, suppression). Les zones de base ne sont pas supprimables.
   - **Inclusion d'un élément** : déposer un nœud à l'intérieur d'une zone le rattache à cette zone (`groupId`) → il suit ses déplacements. La plus petite zone contenant le centre l'emporte (nesting).
   - **Inclusion d'une zone** : déplacer une zone déplace aussi les zones entièrement contenues et leurs nœuds.
-  - Bouton **« Liaison »** (mode) : cliquer le nœud source (surbrillance rose) puis la cible crée une nouvelle liaison (éditable / supprimable).
+  - Les **poignées des zones** (bordure cliquable, étiquette, redimensionnement) sont rendues dans une **couche interactive au-dessus des arêtes et des nœuds** : une zone imbriquée reste sélectionnable/déplaçable même quand des liaisons la traversent.
+  - Bouton **« Liaison »** (mode) : cliquer la source (surbrillance rose) puis la cible crée une nouvelle liaison (éditable / supprimable). Une extrémité peut être **un nœud OU une zone** → on peut relier nœud↔zone, zone↔zone, zone↔nœud. La géométrie des arêtes est calculée sur la « boîte » de l'élément (nœud ou zone) et suit ses déplacements/redimensionnements.
+  - **Ciblage facile d'une zone** : en mode liaison, toute la surface de la zone est cliquable comme extrémité (les nœuds restent prioritaires au-dessus) ; on n'est pas obligé de viser la bordure ou l'étiquette.
   - Zones et liaisons personnalisées sont **persistées** (`customGroups`, `customEdges`) ; le bouton « Disposition » les supprime (retour à l'état par défaut).
 - **Disposition partagée (serveur)** :
   - La disposition complète (positions/zones/liaisons/overrides) est enregistrée **côté serveur** (`data/tests-admin/sitemap-layout.json`) via `PUT /api/admin/tests/sitemap-layout` (débouncé ~600 ms), et chargée au démarrage via `GET …/sitemap-layout` → **tous les admins voient les mêmes modifications**.
   - Le localStorage (`wo_sitemap_layout_v2`) sert de **cache local / repli hors-ligne**.
   - La réinitialisation (« Disposition ») est elle aussi partagée (écrit l'état par défaut côté serveur).
+- **Versions (snapshots) de la Site Map** :
+  - Bouton **« Versions »** (`history`) → popup de gestion des versions.
+  - **Enregistrer l'état actuel** sous un nom → snapshot complet de la disposition courante.
+  - **Liste** des versions (nom, date, auteur).
+  - **Charger** une version (`restore`) : l'applique à la carte et la diffuse comme disposition courante (partagée).
+  - **Supprimer** une version.
+  - Stockage serveur : `data/tests-admin/sitemap-versions.json` ; endpoints `GET / POST / GET :id / DELETE :id` sur `/api/admin/tests/sitemap-versions`.
+- **Créer une version par IA (mise à jour automatique)** :
+  - Bouton **« Créer une version par IA »** (dans le popup Versions) → popup de config : choix **IA** + **modèle** (providers CLI) et consignes éditables.
+  - L'IA lit la **Site Map actuelle** + le **code réel** (routes, composants, onglets) + **`data/histoModif.json`**, puis écrit un JSON d'**opérations** (ajout / modification / suppression) sur les **nœuds, zones et liaisons**.
+  - **Popup de revue** : chaque proposition est cochable (badge op + type, before→after, justification) → rien n'est appliqué sans validation.
+  - À l'application : ops cochées appliquées (placement auto des nouveaux éléments), diffusion (`persistLayout`) **et** enregistrement automatique d'une version **« MAJ IA — <date> »**.
+  - Serveur : `POST /api/admin/tests/sitemap-update/prepare` (écrit le run) + `GET …/sitemap-update-stream` (SSE, exécute l'agent CLI via l'executor port 3002). Prérequis : executor lancé + provider CLI actif.
+  - **Restreint à une zone** : le volet d'édition d'une zone propose **« Nouvelle version par IA (cette zone) »** → même flux mais l'IA ne propose des changements QUE pour cette zone (nœuds dont `groupId` = la zone, la zone elle-même, liaisons internes). Le `scope` est transmis au serveur (filtrage + consigne de prompt) ; la version créée est nommée `MAJ IA (<zone>) — <date>`.
 - **Créer / lancer un test depuis un nœud** (volet de détails) :
   - **« Lancer »** (vert, `play_circle`) sur chaque section de test liée → pré-sélectionne la section et bascule sur l'onglet Exécution.
   - **« Créer une section de test ici »** (indigo, `add`) → ouvre le popup de création pré-rempli (section parente = chemin du nœud, titre/slug d'après le label).
 - **Carte en pleine largeur** : la zone SVG occupe toute la largeur disponible ; le volet de détails s'affiche en **overlay** (coin haut-droit) au clic sur un nœud, sans réduire la largeur de la carte.
 - **Lisibilité des liaisons** : chaque arête est tracée avec un **halo sombre** sous le trait coloré (la liaison reste lisible quand elle survole un nœud), une courbure de Bézier plus ample, et son libellé posé **sur la courbe** (point à t=0.5) dans une pastille bordée de la couleur de l'arête.
 - **Volet latéral** (clic sur un nœud) :
+  - **Titre éditable** : champ « Titre » modifiant le libellé du nœud (persisté dans la disposition, override `label`).
   - Label, URL, badges (type + port), description (rôle dans le parcours).
   - Liste des **composants Angular** réels du nœud.
   - Liste des **onglets** (si page tabulée).

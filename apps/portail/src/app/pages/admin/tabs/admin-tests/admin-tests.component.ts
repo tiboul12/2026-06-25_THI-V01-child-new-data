@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, signal, computed, inject, effect, untrack
 import { Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { NgClass } from '@angular/common';
+import { NgClass, DatePipe } from '@angular/common';
 import { AuthService, ConfigService } from '@worganic/portail-core/data-access';
 import { environment } from '../../../../../environments/environment';
 
@@ -172,12 +172,20 @@ interface SitemapGroup {
 }
 type SmSide = 'left' | 'right' | 'top' | 'bottom';
 interface SmEdgeOverride { fromSide?: SmSide; toSide?: SmSide; bend?: number; }
+interface SmAiProposal {
+  op: 'add' | 'modify' | 'delete';
+  kind: 'node' | 'group' | 'edge';
+  id: string | null;
+  data?: any;
+  before?: any;
+  reason?: string;
+}
 interface SmEdgeGeo { path: string; midX: number; midY: number; perpX: number; perpY: number; }
 
 @Component({
   selector: 'app-admin-tests',
   standalone: true,
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, NgClass, DatePipe],
   templateUrl: './admin-tests.component.html',
 })
 export class AdminTestsComponent implements OnInit, OnDestroy {
@@ -1530,11 +1538,12 @@ Exemple :
 
   /** Lit la disposition sauvegardée. */
   private readSmLayout(): {
-    nodes?: Record<string, { x: number; y: number; groupId?: string }>;
+    nodes?: Record<string, { x: number; y: number; groupId?: string; label?: string }>;
     groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string }>;
     edges?: Record<string, SmEdgeOverride>;
     customGroups?: SitemapGroup[];
     customEdges?: SitemapEdge[];
+    edgesAll?: SitemapEdge[];
   } {
     try {
       const raw = localStorage.getItem(this.SM_LAYOUT_KEY);
@@ -1548,7 +1557,7 @@ Exemple :
     const saved = this.readSmLayout().nodes || {};
     return this.SM_BASE_NODES.map(n => {
       const p = saved[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label } : { ...n };
     });
   }
 
@@ -1568,9 +1577,11 @@ Exemple :
     return [...base, ...custom];
   }
 
-  /** Liaisons par défaut + liaisons personnalisées. */
+  /** Liaisons : liste complète persistée si présente (toute liaison éditable/supprimable), sinon base + custom. */
   private loadInitialSmEdges(): SitemapEdge[] {
-    const custom = (this.readSmLayout().customEdges || []).map(e => ({ ...e }));
+    const layout = this.readSmLayout();
+    if (Array.isArray(layout.edgesAll) && layout.edgesAll.length) return layout.edgesAll.map(e => ({ ...e }));
+    const custom = (layout.customEdges || []).map(e => ({ ...e }));
     return [...this.SM_BASE_EDGES.map(e => ({ ...e })), ...custom];
   }
 
@@ -1591,6 +1602,12 @@ Exemple :
   /** Mode création de liaison + nœud source en attente. */
   smLinkMode         = signal(false);
   smLinkSource       = signal<string | null>(null);
+  /** Versions (snapshots) de la Site Map. */
+  showSmVersions     = signal(false);
+  smVersions         = signal<{ id: string; name: string; createdAt: string; createdBy: string }[]>([]);
+  smVersionName      = signal('');
+  smVersionsBusy     = signal(false);
+  smVersionsError    = signal('');
   /** Arête sélectionnée (édition côté d'accroche / courbure) + ses overrides. */
   selectedSmEdgeId   = signal<string | null>(null);
   smEdgeOverrides    = signal<Record<string, SmEdgeOverride>>(this.loadInitialEdgeOverrides());
@@ -1814,6 +1831,15 @@ Exemple :
     this.smDragging = false;
   }
 
+  /** Renomme le nœud sélectionné (persisté). */
+  renameSelectedNode(label: string) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, label } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+
   smNodeMultiSelected(id: string): boolean { return this.smMultiSelect().has(id); }
   clearMultiSelect() { this.smMultiSelect.set(new Set()); }
 
@@ -1897,8 +1923,8 @@ Exemple :
 
   /** Construit l'objet disposition (nœuds + zones + liaisons, base & personnalisées). */
   private buildLayoutObject() {
-    const nodes: Record<string, { x: number; y: number; groupId?: string }> = {};
-    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId };
+    const nodes: Record<string, { x: number; y: number; groupId?: string; label?: string }> = {};
+    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId, label: n.label };
 
     const baseGroupIds = new Set(this.SM_BASE_GROUPS.map(g => g.id));
     const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string }> = {};
@@ -1910,8 +1936,10 @@ Exemple :
 
     const baseEdgeIds = new Set(this.SM_BASE_EDGES.map(e => e.id));
     const customEdges = this.smEdges().filter(e => !baseEdgeIds.has(e.id)).map(e => ({ ...e }));
+    // Liste complète des liaisons (base + custom, avec modifs/suppressions) → toute liaison éditable & persistée
+    const edgesAll = this.smEdges().map(e => ({ ...e }));
 
-    return { nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges };
+    return { nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges, edgesAll };
   }
 
   /** Applique un objet disposition (chargé du serveur ou du cache) sur les signaux. */
@@ -1919,7 +1947,7 @@ Exemple :
     const savedNodes = layout?.nodes || {};
     this.smNodes.set(this.SM_BASE_NODES.map(n => {
       const p = savedNodes[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label } : { ...n };
     }));
     const savedGroups = layout?.groups || {};
     const base = this.SM_BASE_GROUPS.map(g => {
@@ -1928,8 +1956,12 @@ Exemple :
     });
     const customGroups = Array.isArray(layout?.customGroups) ? layout.customGroups.map((g: SitemapGroup) => ({ ...g })) : [];
     this.smGroups.set([...base, ...customGroups]);
-    const customEdges = Array.isArray(layout?.customEdges) ? layout.customEdges.map((e: SitemapEdge) => ({ ...e })) : [];
-    this.smEdges.set([...this.SM_BASE_EDGES.map(e => ({ ...e })), ...customEdges]);
+    if (Array.isArray(layout?.edgesAll) && layout.edgesAll.length) {
+      this.smEdges.set(layout.edgesAll.map((e: SitemapEdge) => ({ ...e })));
+    } else {
+      const customEdges = Array.isArray(layout?.customEdges) ? layout.customEdges.map((e: SitemapEdge) => ({ ...e })) : [];
+      this.smEdges.set([...this.SM_BASE_EDGES.map(e => ({ ...e })), ...customEdges]);
+    }
     this.smEdgeOverrides.set(layout?.edges || {});
   }
 
@@ -1963,6 +1995,280 @@ Exemple :
         try { localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
       }
     } catch { /* ignore */ }
+  }
+
+  // ── Versions (snapshots) de la Site Map ──
+  async openSmVersions() {
+    this.showSmVersions.set(true);
+    this.smVersionName.set('');
+    this.smVersionsError.set('');
+    await this.loadSmVersionsList();
+  }
+  closeSmVersions() { this.showSmVersions.set(false); }
+
+  private async loadSmVersionsList() {
+    try {
+      const res = await fetch(`${API}/api/admin/tests/sitemap-versions`, { headers: this.authHeaders });
+      if (!res.ok) return;
+      const d = await res.json();
+      this.smVersions.set(Array.isArray(d.versions) ? d.versions : []);
+    } catch { /* ignore */ }
+  }
+
+  /** Enregistre l'état courant comme nouvelle version. */
+  async saveSmVersion() {
+    const name = this.smVersionName().trim();
+    if (!name) { this.smVersionsError.set('Donne un nom à la version'); return; }
+    this.smVersionsBusy.set(true);
+    this.smVersionsError.set('');
+    try {
+      const res = await fetch(`${API}/api/admin/tests/sitemap-versions`, {
+        method: 'POST', headers: this.authHeaders,
+        body: JSON.stringify({ name, layout: this.buildLayoutObject() }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Échec enregistrement');
+      this.smVersionName.set('');
+      await this.loadSmVersionsList();
+    } catch (e: any) { this.smVersionsError.set(e.message || 'Échec enregistrement'); }
+    finally { this.smVersionsBusy.set(false); }
+  }
+
+  /** Charge une version : l'applique à la carte et la diffuse comme disposition courante. */
+  async loadSmVersion(id: string) {
+    this.smVersionsBusy.set(true);
+    this.smVersionsError.set('');
+    try {
+      const res = await fetch(`${API}/api/admin/tests/sitemap-versions/${id}`, { headers: this.authHeaders });
+      if (!res.ok) throw new Error('Version introuvable');
+      const v = await res.json();
+      if (v?.layout) { this.applySmLayout(v.layout); this.persistLayout(); }
+      this.selectedSmNode.set(null);
+      this.selectedSmEdgeId.set(null);
+      this.selectedSmGroupId.set(null);
+      this.showSmVersions.set(false);
+    } catch (e: any) { this.smVersionsError.set(e.message || 'Échec chargement'); }
+    finally { this.smVersionsBusy.set(false); }
+  }
+
+  async deleteSmVersion(id: string) {
+    this.smVersionsBusy.set(true);
+    try {
+      await fetch(`${API}/api/admin/tests/sitemap-versions/${id}`, { method: 'DELETE', headers: this.authHeaders });
+      await this.loadSmVersionsList();
+    } catch { /* ignore */ }
+    finally { this.smVersionsBusy.set(false); }
+  }
+
+  // ── Mise à jour de la Site Map par IA ──
+  showSmAiPopup   = signal(false);
+  smAiProvider    = signal('');
+  smAiModel       = signal('');
+  smAiPrompt      = signal('');
+  smAiRunning     = signal(false);
+  smAiError       = signal('');
+  smAiLog         = signal<{ stream: string; text: string }[]>([]);
+  showSmAiReview  = signal(false);
+  smAiProposals   = signal<SmAiProposal[]>([]);
+  smAiApproved    = signal<Set<number>>(new Set());
+  /** Périmètre : null = toute la carte ; sinon groupId de la zone ciblée. */
+  smAiScopeGroupId = signal<string | null>(null);
+  smAiScopeLabel  = computed(() => {
+    const id = this.smAiScopeGroupId();
+    return id ? (this.smGroups().find(g => g.id === id)?.label || id) : '';
+  });
+  private smAiEventSource: EventSource | null = null;
+
+  smAiModels = computed(() => {
+    const base = this.smAiProvider();
+    const list = this.configService.cliConfig().modelsList as Record<string, { value: string; label: string }[]>;
+    return list[base] || [];
+  });
+
+  smAiApprovedCount = computed(() => {
+    const ap = this.smAiApproved();
+    let n = 0;
+    this.smAiProposals().forEach((_, i) => { if (ap.has(i)) n++; });
+    return n;
+  });
+
+  private defaultSmAiInstructions(scopeLabel?: string): string {
+    if (scopeLabel) {
+      return [
+        `Mets à jour UNIQUEMENT la zone « ${scopeLabel} » de la Site Map pour refléter l'état réel de l'application :`,
+        "ajoute les pages/onglets/composants manquants de cette zone, corrige les éléments obsolètes et signale ceux à",
+        "supprimer. Analyse le code (routes, composants, onglets) et l'historique. Ne touche à aucune autre zone."
+      ].join(' ');
+    }
+    return [
+      "Mets à jour la Site Map pour refléter l'état réel de l'application : ajoute les pages/onglets/composants",
+      "manquants, corrige les éléments obsolètes et signale ceux à supprimer. Analyse le code (routes, composants,",
+      "onglets) et l'historique des modifications. Conserve les ids existants pour les modifications/suppressions."
+    ].join(' ');
+  }
+
+  /** Ouvre le popup de configuration IA. `groupId` non nul → mise à jour restreinte à cette zone. */
+  openSmAiUpdate(groupId: string | null = null) {
+    this.closeSmAiStream();
+    this.smAiRunning.set(false);
+    this.smAiError.set('');
+    this.smAiLog.set([]);
+    this.smAiScopeGroupId.set(groupId);
+    const providers = this.aiProviders();
+    const header = this.configService.cliConfig().headerSelection;
+    const headerBase = (header.provider || '').split('-')[0];
+    const chosen = providers.find(p => p.baseId === headerBase) || providers[0];
+    this.smAiProvider.set(chosen?.baseId || '');
+    const models = this.smAiModels();
+    this.smAiModel.set(models.find(m => m.value === header.model)?.value || models[0]?.value || '');
+    const scopeLabel = groupId ? (this.smGroups().find(g => g.id === groupId)?.label || '') : '';
+    this.smAiPrompt.set(this.defaultSmAiInstructions(scopeLabel));
+    this.showSmVersions.set(false);
+    this.showSmAiPopup.set(true);
+  }
+
+  onSmAiProviderChange(base: string) {
+    this.smAiProvider.set(base);
+    this.smAiModel.set(this.smAiModels()[0]?.value || '');
+  }
+  onSmAiModelChange(model: string) { this.smAiModel.set(model); }
+
+  closeSmAiPopup() { this.closeSmAiStream(); this.smAiRunning.set(false); this.showSmAiPopup.set(false); }
+  private closeSmAiStream() { if (this.smAiEventSource) { this.smAiEventSource.close(); this.smAiEventSource = null; } }
+  private appendSmAiLog(stream: string, text: string) {
+    if (!text) return;
+    this.smAiLog.update(log => { const next = [...log, { stream, text }]; return next.length > 500 ? next.slice(next.length - 500) : next; });
+  }
+
+  /** Lance l'analyse IA : prépare le run (POST) puis ouvre le flux SSE. */
+  async confirmSmAiUpdate() {
+    if (!this.smAiProvider()) { this.smAiError.set('Aucun provider IA disponible — active un CLI dans admin/config'); return; }
+    this.closeSmAiStream();
+    this.smAiError.set('');
+    this.smAiLog.set([]);
+    this.smAiRunning.set(true);
+    try {
+      const sitemap = { nodes: this.smNodes(), groups: this.smGroups(), edges: this.smEdges() };
+      const scopeId = this.smAiScopeGroupId();
+      const scope = scopeId ? { groupId: scopeId, label: this.smAiScopeLabel() } : null;
+      const res = await fetch(`${API}/api/admin/tests/sitemap-update/prepare`, {
+        method: 'POST', headers: this.authHeaders,
+        body: JSON.stringify({ sitemap, instructions: this.smAiPrompt().trim(), scope }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Préparation impossible');
+      const { runId } = await res.json();
+      const token = this.authService.getToken() || '';
+      const params = new URLSearchParams({ runId, provider: this.smAiProvider(), model: this.smAiModel(), token });
+      const es = new EventSource(`${API}/api/admin/tests/sitemap-update-stream?${params.toString()}`);
+      this.smAiEventSource = es;
+
+      es.addEventListener('start', () => this.appendSmAiLog('info', 'Analyse de la Site Map et du code en cours…'));
+      es.addEventListener('ai-log', (e: MessageEvent) => { try { const d = JSON.parse(e.data); this.appendSmAiLog(d.stream || 'stdout', d.text || ''); } catch { /* ignore */ } });
+      es.addEventListener('ai-error', (e: MessageEvent) => { try { this.smAiError.set(JSON.parse(e.data).message || 'Erreur IA'); } catch { /* ignore */ } });
+      es.addEventListener('complete', (e: MessageEvent) => {
+        let d: any = {}; try { d = JSON.parse(e.data); } catch { /* ignore */ }
+        const proposals = (d.proposals || []) as SmAiProposal[];
+        this.smAiRunning.set(false);
+        this.closeSmAiStream();
+        this.smAiProposals.set(proposals);
+        this.smAiApproved.set(new Set(proposals.map((_, i) => i)));
+        this.showSmAiPopup.set(false);
+        if (proposals.length === 0) { this.smAiError.set('Aucune évolution proposée — la Site Map est à jour.'); this.showSmAiPopup.set(true); return; }
+        this.showSmAiReview.set(true);
+      });
+      es.addEventListener('run-failed', (e: MessageEvent) => { try { this.smAiError.set(JSON.parse(e.data).message || 'Échec de l\'analyse'); } catch { /* ignore */ } this.smAiRunning.set(false); this.closeSmAiStream(); });
+      es.onerror = () => { if (this.smAiRunning()) this.smAiError.set(this.smAiError() || 'Connexion au flux IA interrompue'); this.smAiRunning.set(false); this.closeSmAiStream(); };
+    } catch (e: any) {
+      this.smAiError.set(e.message || 'Échec du lancement');
+      this.smAiRunning.set(false);
+    }
+  }
+
+  isSmAiApproved(i: number): boolean { return this.smAiApproved().has(i); }
+  toggleSmAiApprove(i: number) { this.smAiApproved.update(s => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; }); }
+  closeSmAiReview() { this.showSmAiReview.set(false); }
+
+  smAiOpLabel(op: string): string { return op === 'add' ? 'Ajout' : op === 'modify' ? 'Modification' : 'Suppression'; }
+  smAiKindLabel(kind: string): string { return kind === 'node' ? 'Nœud' : kind === 'group' ? 'Zone' : 'Liaison'; }
+  smAiOpClass(op: string): string {
+    if (op === 'add') return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+    if (op === 'modify') return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+    return 'bg-red-500/15 text-red-400 border-red-500/30';
+  }
+
+  /** Applique les propositions cochées, diffuse, puis enregistre une nouvelle version. */
+  async applySmAiProposals() {
+    const props = this.smAiProposals();
+    const ap = this.smAiApproved();
+    const approved = props.filter((_, i) => ap.has(i));
+    if (approved.length === 0) { this.closeSmAiReview(); return; }
+
+    // Point de départ pour placer les nouveaux nœuds (colonne de staging à droite)
+    let stageX = Math.max(0, ...this.smNodes().map(n => n.x + n.w)) + 80;
+    let stageY = 80;
+
+    for (const p of approved) {
+      if (p.kind === 'node') {
+        if (p.op === 'add') {
+          const d = p.data || {};
+          const id = 'node-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+          const node: SitemapNode = {
+            id, label: d.label || 'Nouveau nœud', url: d.url || 'embed',
+            port: (d.port === 4203 ? 4203 : 4202), kind: (d.kind || 'protected'),
+            groupId: d.groupId || '', x: stageX, y: stageY, w: 300, h: d.tabs?.length ? 60 + d.tabs.length * 22 : 60,
+            components: Array.isArray(d.components) ? d.components : [],
+            tabs: Array.isArray(d.tabs) && d.tabs.length ? d.tabs : undefined,
+            description: d.description || '', cahierPaths: Array.isArray(d.cahierPaths) ? d.cahierPaths : [],
+          };
+          this.smNodes.update(ns => [...ns, node]);
+          stageY += node.h + 24;
+        } else if (p.op === 'modify' && p.id) {
+          const d = p.data || {};
+          this.smNodes.update(ns => ns.map(n => n.id === p.id ? {
+            ...n,
+            label: d.label ?? n.label, url: d.url ?? n.url, port: d.port ?? n.port, kind: d.kind ?? n.kind,
+            groupId: d.groupId ?? n.groupId, components: Array.isArray(d.components) ? d.components : n.components,
+            tabs: Array.isArray(d.tabs) ? (d.tabs.length ? d.tabs : undefined) : n.tabs,
+            description: d.description ?? n.description, cahierPaths: Array.isArray(d.cahierPaths) ? d.cahierPaths : n.cahierPaths,
+          } : n));
+        } else if (p.op === 'delete' && p.id) {
+          this.smNodes.update(ns => ns.filter(n => n.id !== p.id));
+        }
+      } else if (p.kind === 'group') {
+        if (p.op === 'add') {
+          const d = p.data || {};
+          const id = 'grp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+          const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
+          this.smGroups.update(gs => [...gs, { id, label: d.label || 'Nouvelle zone', x: stageX - 20, y: stageY, w: 340, h: 220, stroke: pal.stroke, fill: pal.fill }]);
+          stageY += 244;
+        } else if (p.op === 'modify' && p.id) {
+          const d = p.data || {};
+          this.smGroups.update(gs => gs.map(g => g.id === p.id ? { ...g, label: d.label ?? g.label } : g));
+        } else if (p.op === 'delete' && p.id) {
+          this.smGroups.update(gs => gs.filter(g => g.id !== p.id));
+        }
+      } else if (p.kind === 'edge') {
+        if (p.op === 'add') {
+          const d = p.data || {};
+          if (d.from && d.to) {
+            const id = 'edge-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+            this.smEdges.update(es => [...es, { id, from: d.from, to: d.to, type: (d.type || 'nav'), label: d.label || '' } as SitemapEdge]);
+          }
+        } else if (p.op === 'modify' && p.id) {
+          const d = p.data || {};
+          this.smEdges.update(es => es.map(e => e.id === p.id ? { ...e, type: d.type ?? e.type, label: d.label ?? e.label, from: d.from ?? e.from, to: d.to ?? e.to } : e));
+        } else if (p.op === 'delete' && p.id) {
+          this.smEdges.update(es => es.filter(e => e.id !== p.id));
+        }
+      }
+    }
+
+    this.persistLayout();
+    // Enregistre automatiquement une nouvelle version
+    const scopeLabel = this.smAiScopeLabel();
+    const name = (scopeLabel ? `MAJ IA (${scopeLabel}) — ` : 'MAJ IA — ') + new Date().toLocaleString('fr-FR');
+    this.smVersionName.set(name);
+    await this.saveSmVersion();
+    this.closeSmAiReview();
   }
 
   /** Restaure la disposition par défaut (supprime zones/liaisons personnalisées). */
@@ -2003,6 +2309,9 @@ Exemple :
   smGroupMouseDown(group: SitemapGroup, mode: 'move' | 'resize', e: MouseEvent) {
     e.stopPropagation();
     e.preventDefault();
+    // Mode création de liaison : une zone peut être une extrémité (préfixe 'group:' pour éviter
+    // toute collision d'id avec un nœud — ex : le nœud 'admin' et la zone 'admin').
+    if (this.smLinkMode()) { this.handleLinkClick('group:' + group.id); return; }
     // Zones déplacées : la zone saisie + toutes les zones qu'elle contient (nesting)
     const groupIds = new Set<string>([group.id]);
     const og2 = new Map<string, { x: number; y: number }>();
@@ -2128,6 +2437,18 @@ Exemple :
   }
 
   smIsLinkSource(id: string): boolean { return this.smLinkSource() === id; }
+  smIsLinkSourceGroup(id: string): boolean { return this.smLinkSource() === 'group:' + id; }
+
+  /** Libellé lisible d'une extrémité d'arête (nœud ou zone). */
+  smEdgeEndLabel(ref: string): string {
+    if (!ref) return '';
+    if (ref.startsWith('group:')) {
+      const g = this.smGroups().find(x => x.id === ref.slice(6));
+      return '⬚ ' + (g?.label || ref.slice(6));
+    }
+    const n = this.smNodes().find(x => x.id === ref);
+    return n?.label || ref;
+  }
 
   private handleLinkClick(nodeId: string) {
     const src = this.smLinkSource();
@@ -2159,10 +2480,10 @@ Exemple :
     this.persistLayout();
   }
 
-  /** Supprime la liaison sélectionnée (personnalisée uniquement). */
+  /** Supprime la liaison sélectionnée (toute liaison, base ou personnalisée). */
   deleteSelectedEdge() {
     const id = this.selectedSmEdgeId();
-    if (!id || !this.isCustomEdge(id)) return;
+    if (!id) return;
     this.smEdges.update(es => es.filter(e => e.id !== id));
     this.smEdgeOverrides.update(o => { const n = { ...o }; delete n[id]; return n; });
     this.selectedSmEdgeId.set(null);
@@ -2235,29 +2556,49 @@ Exemple :
    */
   smEdgeLayout = computed((): Map<string, SmEdgeGeo> => {
     const m = new Map<string, SmEdgeGeo>();
+    // Lit nœuds ET zones : une extrémité d'arête peut être un nœud ou une zone.
     const nodes = this.smNodes();
+    const groups = this.smGroups();
     const ov = this.smEdgeOverrides();
+    const boxOf = (ref: string) => {
+      if (ref && ref.startsWith('group:')) {
+        const g = groups.find(x => x.id === ref.slice(6)); return g ? { x: g.x, y: g.y, w: g.w, h: g.h } : null;
+      }
+      const n = nodes.find(x => x.id === ref); if (n) return { x: n.x, y: n.y, w: n.w, h: n.h };
+      const g = groups.find(x => x.id === ref); if (g) return { x: g.x, y: g.y, w: g.w, h: g.h }; // repli (anciens refs nus)
+      return null;
+    };
     for (const edge of this.smEdges()) {
-      const from = nodes.find(n => n.id === edge.from);
-      const to   = nodes.find(n => n.id === edge.to);
+      const from = boxOf(edge.from);
+      const to   = boxOf(edge.to);
       if (!from || !to) continue;
       m.set(edge.id, this.buildEdgeGeometry(from, to, ov[edge.id]));
     }
     return m;
   });
 
-  /** Point d'ancrage (et normale sortante) sur un côté d'un nœud. */
-  private smSideAnchor(node: SitemapNode, side: SmSide): { x: number; y: number; nx: number; ny: number } {
+  /** Boîte (nœud ou zone) d'une extrémité d'arête (réf nœud nue, ou 'group:<id>' pour une zone). */
+  private smBoxOf(ref: string): { x: number; y: number; w: number; h: number } | null {
+    if (ref && ref.startsWith('group:')) {
+      const g = this.smGroups().find(x => x.id === ref.slice(6)); return g ? { x: g.x, y: g.y, w: g.w, h: g.h } : null;
+    }
+    const n = this.smNodes().find(x => x.id === ref); if (n) return { x: n.x, y: n.y, w: n.w, h: n.h };
+    const g = this.smGroups().find(x => x.id === ref); if (g) return { x: g.x, y: g.y, w: g.w, h: g.h };
+    return null;
+  }
+
+  /** Point d'ancrage (et normale sortante) sur un côté d'une boîte (nœud ou zone). */
+  private smSideAnchor(box: { x: number; y: number; w: number; h: number }, side: SmSide): { x: number; y: number; nx: number; ny: number } {
     switch (side) {
-      case 'left':   return { x: node.x,          y: node.y + node.h / 2, nx: -1, ny: 0 };
-      case 'right':  return { x: node.x + node.w, y: node.y + node.h / 2, nx: 1,  ny: 0 };
-      case 'top':    return { x: node.x + node.w / 2, y: node.y,          nx: 0,  ny: -1 };
-      default:       return { x: node.x + node.w / 2, y: node.y + node.h, nx: 0,  ny: 1 }; // bottom
+      case 'left':   return { x: box.x,          y: box.y + box.h / 2, nx: -1, ny: 0 };
+      case 'right':  return { x: box.x + box.w, y: box.y + box.h / 2, nx: 1,  ny: 0 };
+      case 'top':    return { x: box.x + box.w / 2, y: box.y,          nx: 0,  ny: -1 };
+      default:       return { x: box.x + box.w / 2, y: box.y + box.h, nx: 0,  ny: 1 }; // bottom
     }
   }
 
-  /** Côtés d'accroche choisis automatiquement selon la position relative des nœuds. */
-  private smAutoSides(from: SitemapNode, to: SitemapNode): { fromSide: SmSide; toSide: SmSide } {
+  /** Côtés d'accroche choisis automatiquement selon la position relative des boîtes. */
+  private smAutoSides(from: { x: number; y: number; w: number; h: number }, to: { x: number; y: number; w: number; h: number }): { fromSide: SmSide; toSide: SmSide } {
     const dx = (to.x + to.w / 2) - (from.x + from.w / 2);
     const dy = (to.y + to.h / 2) - (from.y + from.h / 2);
     if (Math.abs(dx) > Math.abs(dy) * 0.7) {
@@ -2266,7 +2607,7 @@ Exemple :
     return dy > 0 ? { fromSide: 'bottom', toSide: 'top' } : { fromSide: 'top', toSide: 'bottom' };
   }
 
-  private buildEdgeGeometry(from: SitemapNode, to: SitemapNode, ov?: SmEdgeOverride): SmEdgeGeo {
+  private buildEdgeGeometry(from: { x: number; y: number; w: number; h: number }, to: { x: number; y: number; w: number; h: number }, ov?: SmEdgeOverride): SmEdgeGeo {
     const auto = this.smAutoSides(from, to);
     const a1 = this.smSideAnchor(from, ov?.fromSide ?? auto.fromSide);
     const a2 = this.smSideAnchor(to,   ov?.toSide   ?? auto.toSide);
@@ -2317,8 +2658,7 @@ Exemple :
     const ov = this.selectedSmEdgeOverride();
     const edge = this.selectedSmEdge();
     if (!edge) return false;
-    const nodes = this.smNodes();
-    const from = nodes.find(n => n.id === edge.from), to = nodes.find(n => n.id === edge.to);
+    const from = this.smBoxOf(edge.from), to = this.smBoxOf(edge.to);
     const auto = (from && to) ? this.smAutoSides(from, to) : { fromSide: 'right' as SmSide, toSide: 'left' as SmSide };
     const cur = end === 'from' ? (ov.fromSide ?? auto.fromSide) : (ov.toSide ?? auto.toSide);
     return cur === side;
