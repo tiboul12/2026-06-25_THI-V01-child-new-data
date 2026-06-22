@@ -10940,6 +10940,29 @@
       "prompt": "pourrais tu ajouté une option pour deplacer les lignes de liaison en changeant par exemple la courbure ou en changeant le point de laision (haut/bas.droite gauche de l'element)",
       "startedAt": "2026-06-22T01:40:00.000Z",
       "completedAt": "2026-06-22T02:05:00.000Z"
+    },
+    {
+      "id": "mod-447",
+      "version": "B-0.303",
+      "date": "2026-06-22T02:40:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : ajout de zones, inclusion (nesting/elements) et creation de liaisons",
+      "description": "Editeur de carte etendu. Bouton Zone : cree une zone personnalisee (volet : libelle, couleur de palette, suppression). Inclusion d'un element : deposer un noeud dans une zone le rattache (groupId, plus petite zone contenante). Inclusion d'une zone : deplacer une zone deplace aussi les zones contenues et leurs noeuds. Bouton Liaison (mode) : clic source puis cible cree une liaison editable (libelle, type) et supprimable. smEdges passe en signal ; zones/liaisons personnalisees et reassignations de groupe persistees dans la disposition (customGroups, customEdges, nodes.groupId).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "on doit pouvoir rajouté des zones et inclure des zones à l'interieur ou des elements, on doit pouvoir créé des liaisons",
+      "startedAt": "2026-06-22T02:10:00.000Z",
+      "completedAt": "2026-06-22T02:45:00.000Z"
     }
   ]
 }

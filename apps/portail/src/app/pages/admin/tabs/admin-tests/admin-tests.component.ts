@@ -1502,7 +1502,7 @@ Exemple :
       cahierPaths: ['connecte/outils/cahier-recette'] },
   ];
 
-  readonly smEdges: SitemapEdge[] = [
+  private readonly SM_BASE_EDGES: SitemapEdge[] = [
     // Parcours de navigation
     { id: 'e-login',     from: 'landing',     to: 'documents',   label: 'connexion', type: 'auth' },
     { id: 'e-nav-proj',  from: 'projets-nav', to: 'proj-list',   label: ':4203',     type: 'cross-app' },
@@ -1523,11 +1523,19 @@ Exemple :
 
   /** Nœuds de la carte, déplaçables — positions persistées en localStorage. */
   smNodes = signal<SitemapNode[]>(this.loadInitialSmNodes());
-  /** Zones (groupes), déplaçables et redimensionnables — géométrie persistée. */
+  /** Zones (groupes) base + personnalisées, déplaçables et redimensionnables. */
   smGroups = signal<SitemapGroup[]>(this.loadInitialSmGroups());
+  /** Liaisons base + personnalisées. */
+  smEdges = signal<SitemapEdge[]>(this.loadInitialSmEdges());
 
   /** Lit la disposition sauvegardée. */
-  private readSmLayout(): { nodes?: Record<string, { x: number; y: number }>; groups?: Record<string, { x: number; y: number; w: number; h: number }>; edges?: Record<string, SmEdgeOverride> } {
+  private readSmLayout(): {
+    nodes?: Record<string, { x: number; y: number; groupId?: string }>;
+    groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string }>;
+    edges?: Record<string, SmEdgeOverride>;
+    customGroups?: SitemapGroup[];
+    customEdges?: SitemapEdge[];
+  } {
     try {
       const raw = localStorage.getItem(this.SM_LAYOUT_KEY);
       if (raw) return JSON.parse(raw) || {};
@@ -1535,27 +1543,35 @@ Exemple :
     return {};
   }
 
-  /** Applique les positions sauvegardées sur les nœuds par défaut. */
+  /** Applique les positions + réassignations de zone sauvegardées sur les nœuds par défaut. */
   private loadInitialSmNodes(): SitemapNode[] {
     const saved = this.readSmLayout().nodes || {};
     return this.SM_BASE_NODES.map(n => {
       const p = saved[n.id];
-      return p ? { ...n, x: p.x, y: p.y } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId } : { ...n };
     });
   }
 
   /** Charge les overrides d'arêtes sauvegardés (côtés d'accroche, courbure). */
-  private loadInitialSmEdges(): Record<string, SmEdgeOverride> {
+  private loadInitialEdgeOverrides(): Record<string, SmEdgeOverride> {
     return this.readSmLayout().edges || {};
   }
 
-  /** Applique la géométrie sauvegardée sur les zones par défaut. */
+  /** Zones par défaut (avec géométrie/label sauvegardés) + zones personnalisées. */
   private loadInitialSmGroups(): SitemapGroup[] {
     const saved = this.readSmLayout().groups || {};
-    return this.SM_BASE_GROUPS.map(g => {
+    const base = this.SM_BASE_GROUPS.map(g => {
       const s = saved[g.id];
-      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h } : { ...g };
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label } : { ...g };
     });
+    const custom = (this.readSmLayout().customGroups || []).map(g => ({ ...g }));
+    return [...base, ...custom];
+  }
+
+  /** Liaisons par défaut + liaisons personnalisées. */
+  private loadInitialSmEdges(): SitemapEdge[] {
+    const custom = (this.readSmLayout().customEdges || []).map(e => ({ ...e }));
+    return [...this.SM_BASE_EDGES.map(e => ({ ...e })), ...custom];
   }
 
   // ── Site Map — signals & état ──
@@ -1566,12 +1582,21 @@ Exemple :
   /** Sélection multiple de nœuds (Ctrl/Maj+clic) pour alignement / déplacement groupé. */
   smMultiSelect      = signal<Set<string>>(new Set());
   smMultiCount       = computed(() => this.smMultiSelect().size);
+  /** Zone (groupe) sélectionnée pour édition (label / couleur / suppression). */
+  selectedSmGroupId  = signal<string | null>(null);
+  selectedSmGroup    = computed(() => {
+    const id = this.selectedSmGroupId();
+    return id ? this.smGroups().find(g => g.id === id) ?? null : null;
+  });
+  /** Mode création de liaison + nœud source en attente. */
+  smLinkMode         = signal(false);
+  smLinkSource       = signal<string | null>(null);
   /** Arête sélectionnée (édition côté d'accroche / courbure) + ses overrides. */
   selectedSmEdgeId   = signal<string | null>(null);
-  smEdgeOverrides    = signal<Record<string, SmEdgeOverride>>(this.loadInitialSmEdges());
+  smEdgeOverrides    = signal<Record<string, SmEdgeOverride>>(this.loadInitialEdgeOverrides());
   selectedSmEdge     = computed(() => {
     const id = this.selectedSmEdgeId();
-    return id ? this.smEdges.find(e => e.id === id) ?? null : null;
+    return id ? this.smEdges().find(e => e.id === id) ?? null : null;
   });
   selectedSmEdgeOverride = computed((): SmEdgeOverride => {
     const id = this.selectedSmEdgeId();
@@ -1674,6 +1699,8 @@ Exemple :
   smNodeMouseDown(node: SitemapNode, e: MouseEvent) {
     e.stopPropagation();
     e.preventDefault();
+    // Mode création de liaison : clic = choix source puis cible
+    if (this.smLinkMode()) { this.handleLinkClick(node.id); return; }
     const additive = e.ctrlKey || e.metaKey || e.shiftKey;
     const sel = this.smMultiSelect();
     // Déplacement groupé si on saisit (sans modificateur) un nœud déjà dans une multi-sélection
@@ -1730,7 +1757,14 @@ Exemple :
       return;
     }
     if (this.smGroupDrag) {
-      if (this.smGroupDrag.moved) this.persistLayout();
+      if (this.smGroupDrag.moved) {
+        this.persistLayout();
+      } else {
+        // Clic sans déplacement → sélection de la zone (édition)
+        const id = this.smGroupDrag.id;
+        this.selectedSmGroupId.update(c => c === id ? null : id);
+        if (this.selectedSmGroupId()) { this.selectedSmNode.set(null); this.selectedSmEdgeId.set(null); this.smMultiSelect.set(new Set()); }
+      }
       this.smGroupDrag = null;
       return;
     }
@@ -1739,6 +1773,7 @@ Exemple :
       if (!d.moved) {
         const id = d.id;
         this.selectedSmEdgeId.set(null);
+        this.selectedSmGroupId.set(null);
         if (d.additive) {
           // Ctrl/Maj+clic → (dé)sélectionne dans la multi-sélection
           let added = false;
@@ -1763,6 +1798,14 @@ Exemple :
           }
         }
       } else {
+        // Après un déplacement de nœud isolé : rattache le nœud à la zone sous son centre
+        if (!d.group) {
+          const node = this.smNodes().find(n => n.id === d.id);
+          if (node) {
+            const zone = this.zoneAtPoint(node.x + node.w / 2, node.y + node.h / 2);
+            if (zone && zone.id !== node.groupId) this.updateNodeGroup(d.id, zone.id);
+          }
+        }
         this.persistLayout();
       }
       this.smNodeDrag = null;
@@ -1852,26 +1895,40 @@ Exemple :
     this.smNodes.update(nodes => nodes.map(n => n.id === id ? { ...n, x, y } : n));
   }
 
-  /** Persiste la disposition complète (nœuds + zones) en localStorage. */
+  /** Persiste la disposition complète (nœuds + zones + liaisons, base & personnalisées). */
   private persistLayout() {
     try {
-      const nodes: Record<string, { x: number; y: number }> = {};
-      for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y };
-      const groups: Record<string, { x: number; y: number; w: number; h: number }> = {};
-      for (const g of this.smGroups()) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h };
+      const nodes: Record<string, { x: number; y: number; groupId?: string }> = {};
+      for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId };
+
+      const baseGroupIds = new Set(this.SM_BASE_GROUPS.map(g => g.id));
+      const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string }> = {};
+      const customGroups: SitemapGroup[] = [];
+      for (const g of this.smGroups()) {
+        if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label };
+        else customGroups.push({ ...g });
+      }
+
+      const baseEdgeIds = new Set(this.SM_BASE_EDGES.map(e => e.id));
+      const customEdges = this.smEdges().filter(e => !baseEdgeIds.has(e.id)).map(e => ({ ...e }));
+
       const edges = this.smEdgeOverrides();
-      localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify({ nodes, groups, edges }));
+      localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify({ nodes, groups, edges, customGroups, customEdges }));
     } catch { /* ignore */ }
   }
 
-  /** Restaure la disposition par défaut (nœuds + zones + arêtes). */
+  /** Restaure la disposition par défaut (supprime zones/liaisons personnalisées). */
   resetSmLayout() {
     try { localStorage.removeItem(this.SM_LAYOUT_KEY); } catch { /* ignore */ }
     this.smNodes.set(this.SM_BASE_NODES.map(n => ({ ...n })));
     this.smGroups.set(this.SM_BASE_GROUPS.map(g => ({ ...g })));
+    this.smEdges.set(this.SM_BASE_EDGES.map(e => ({ ...e })));
     this.smEdgeOverrides.set({});
     this.smMultiSelect.set(new Set());
     this.selectedSmEdgeId.set(null);
+    this.selectedSmGroupId.set(null);
+    this.smLinkMode.set(false);
+    this.smLinkSource.set(null);
   }
 
   // ── Déplacement / redimensionnement des zones (groupes) ──
@@ -1880,18 +1937,42 @@ Exemple :
   private smGroupDrag: {
     id: string; mode: 'move' | 'resize'; sx: number; sy: number; moved: boolean;
     og: { x: number; y: number; w: number; h: number };
-    on: Map<string, { x: number; y: number }>;
+    groupIds: Set<string>;                          // zones déplacées (dragged + contenues)
+    og2: Map<string, { x: number; y: number }>;     // positions d'origine des zones déplacées
+    on: Map<string, { x: number; y: number }>;      // positions d'origine des nœuds déplacés
   } | null = null;
+
+  /** True si la zone `inner` est entièrement contenue dans `outer`. */
+  private smGroupContains(outer: SitemapGroup, inner: SitemapGroup): boolean {
+    return inner.id !== outer.id
+      && inner.x >= outer.x && inner.y >= outer.y
+      && inner.x + inner.w <= outer.x + outer.w
+      && inner.y + inner.h <= outer.y + outer.h;
+  }
 
   /** Début de déplacement (mode 'move') ou redimensionnement (mode 'resize') d'une zone. */
   smGroupMouseDown(group: SitemapGroup, mode: 'move' | 'resize', e: MouseEvent) {
     e.stopPropagation();
     e.preventDefault();
+    // Zones déplacées : la zone saisie + toutes les zones qu'elle contient (nesting)
+    const groupIds = new Set<string>([group.id]);
+    const og2 = new Map<string, { x: number; y: number }>();
+    for (const g of this.smGroups()) {
+      if (g.id === group.id || (mode === 'move' && this.smGroupContains(group, g))) {
+        groupIds.add(g.id);
+        og2.set(g.id, { x: g.x, y: g.y });
+      }
+    }
+    // Nœuds déplacés : appartenant à une zone déplacée, ou dont le centre est dans la zone saisie
     const on = new Map<string, { x: number; y: number }>();
-    for (const n of this.smNodes()) if (n.groupId === group.id) on.set(n.id, { x: n.x, y: n.y });
+    for (const n of this.smNodes()) {
+      const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+      const inside = cx >= group.x && cx <= group.x + group.w && cy >= group.y && cy <= group.y + group.h;
+      if (groupIds.has(n.groupId) || (mode === 'move' && inside)) on.set(n.id, { x: n.x, y: n.y });
+    }
     this.smGroupDrag = {
       id: group.id, mode, sx: e.clientX, sy: e.clientY, moved: false,
-      og: { x: group.x, y: group.y, w: group.w, h: group.h }, on,
+      og: { x: group.x, y: group.y, w: group.w, h: group.h }, groupIds, og2, on,
     };
   }
 
@@ -1903,8 +1984,11 @@ Exemple :
     if (Math.abs(e.clientX - d.sx) > 3 || Math.abs(e.clientY - d.sy) > 3) d.moved = true;
 
     if (d.mode === 'move') {
-      const nx = Math.round(d.og.x + ddx), ny = Math.round(d.og.y + ddy);
-      this.smGroups.update(gs => gs.map(g => g.id === d.id ? { ...g, x: nx, y: ny } : g));
+      // Déplace toutes les zones concernées (dragged + contenues)
+      this.smGroups.update(gs => gs.map(g => {
+        const o = d.og2.get(g.id);
+        return o ? { ...g, x: Math.round(o.x + ddx), y: Math.round(o.y + ddy) } : g;
+      }));
       // Déplace tous les nœuds internes du même delta
       this.smNodes.update(ns => ns.map(n => {
         const o = d.on.get(n.id);
@@ -1915,6 +1999,125 @@ Exemple :
       const nh = Math.max(this.SM_GROUP_MIN_H, Math.round(d.og.h + ddy));
       this.smGroups.update(gs => gs.map(g => g.id === d.id ? { ...g, w: nw, h: nh } : g));
     }
+  }
+
+  // ── Création / édition de zones ──
+  readonly zonePalette = [
+    { stroke: '#0ea5e9', fill: '#0ea5e90a' },
+    { stroke: '#6366f1', fill: '#6366f10a' },
+    { stroke: '#f59e0b', fill: '#f59e0b0d' },
+    { stroke: '#10b981', fill: '#10b9810a' },
+    { stroke: '#8b5cf6', fill: '#8b5cf60a' },
+    { stroke: '#ec4899', fill: '#ec48990a' },
+  ];
+
+  isCustomZone(id: string): boolean { return !this.SM_BASE_GROUPS.some(g => g.id === id); }
+  isCustomEdge(id: string): boolean { return !this.SM_BASE_EDGES.some(e => e.id === id); }
+
+  /** Crée une nouvelle zone et la sélectionne. */
+  addZone() {
+    const id = 'grp-' + Date.now().toString(36);
+    const count = this.smGroups().filter(g => this.isCustomZone(g.id)).length;
+    const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
+    const g: SitemapGroup = {
+      id, label: 'Nouvelle zone',
+      x: 60 + (count % 5) * 30, y: 60 + (count % 5) * 30, w: 320, h: 220,
+      stroke: pal.stroke, fill: pal.fill,
+    };
+    this.smGroups.update(gs => [...gs, g]);
+    this.selectedSmGroupId.set(id);
+    this.selectedSmNode.set(null);
+    this.selectedSmEdgeId.set(null);
+    this.persistLayout();
+  }
+
+  renameSelectedZone(label: string) {
+    const id = this.selectedSmGroupId();
+    if (!id) return;
+    this.smGroups.update(gs => gs.map(g => g.id === id ? { ...g, label } : g));
+    this.persistLayout();
+  }
+
+  setSelectedZoneColor(stroke: string, fill: string) {
+    const id = this.selectedSmGroupId();
+    if (!id) return;
+    this.smGroups.update(gs => gs.map(g => g.id === id ? { ...g, stroke, fill } : g));
+    this.persistLayout();
+  }
+
+  /** Supprime la zone personnalisée sélectionnée (détache ses nœuds). */
+  deleteSelectedZone() {
+    const id = this.selectedSmGroupId();
+    if (!id || !this.isCustomZone(id)) return;
+    this.smGroups.update(gs => gs.filter(g => g.id !== id));
+    this.smNodes.update(ns => ns.map(n => n.groupId === id ? { ...n, groupId: '' } : n));
+    this.selectedSmGroupId.set(null);
+    this.persistLayout();
+  }
+
+  private updateNodeGroup(id: string, groupId: string) {
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, groupId } : n));
+  }
+
+  /** Plus petite zone contenant le point (gère le nesting). */
+  private zoneAtPoint(x: number, y: number): SitemapGroup | null {
+    const hits = this.smGroups().filter(g => x >= g.x && x <= g.x + g.w && y >= g.y && y <= g.y + g.h);
+    if (!hits.length) return null;
+    return hits.reduce((a, b) => (a.w * a.h <= b.w * b.h ? a : b));
+  }
+
+  // ── Création de liaisons ──
+  toggleLinkMode() {
+    this.smLinkMode.update(v => !v);
+    this.smLinkSource.set(null);
+    if (this.smLinkMode()) {
+      this.selectedSmNode.set(null);
+      this.selectedSmEdgeId.set(null);
+      this.selectedSmGroupId.set(null);
+      this.smMultiSelect.set(new Set());
+    }
+  }
+
+  smIsLinkSource(id: string): boolean { return this.smLinkSource() === id; }
+
+  private handleLinkClick(nodeId: string) {
+    const src = this.smLinkSource();
+    if (!src) { this.smLinkSource.set(nodeId); return; }
+    if (src === nodeId) { this.smLinkSource.set(null); return; }
+    this.createEdge(src, nodeId);
+    this.smLinkSource.set(null);
+    this.smLinkMode.set(false);
+  }
+
+  private createEdge(from: string, to: string) {
+    const id = 'edge-' + Date.now().toString(36);
+    this.smEdges.update(es => [...es, { id, from, to, type: 'nav', label: '' } as SitemapEdge]);
+    this.selectedSmEdgeId.set(id);
+    this.persistLayout();
+  }
+
+  setSelectedEdgeType(type: SitemapEdge['type']) {
+    const id = this.selectedSmEdgeId();
+    if (!id) return;
+    this.smEdges.update(es => es.map(e => e.id === id ? { ...e, type } : e));
+    this.persistLayout();
+  }
+
+  setSelectedEdgeLabel(label: string) {
+    const id = this.selectedSmEdgeId();
+    if (!id) return;
+    this.smEdges.update(es => es.map(e => e.id === id ? { ...e, label } : e));
+    this.persistLayout();
+  }
+
+  /** Supprime la liaison sélectionnée (personnalisée uniquement). */
+  deleteSelectedEdge() {
+    const id = this.selectedSmEdgeId();
+    if (!id || !this.isCustomEdge(id)) return;
+    this.smEdges.update(es => es.filter(e => e.id !== id));
+    this.smEdgeOverrides.update(o => { const n = { ...o }; delete n[id]; return n; });
+    this.selectedSmEdgeId.set(null);
+    this.persistLayout();
   }
 
   private attachSmWheel() {
@@ -1985,7 +2188,7 @@ Exemple :
     const m = new Map<string, SmEdgeGeo>();
     const nodes = this.smNodes();
     const ov = this.smEdgeOverrides();
-    for (const edge of this.smEdges) {
+    for (const edge of this.smEdges()) {
       const from = nodes.find(n => n.id === edge.from);
       const to   = nodes.find(n => n.id === edge.to);
       if (!from || !to) continue;
@@ -2044,6 +2247,7 @@ Exemple :
     this.selectedSmEdgeId.update(c => c === id ? null : id);
     if (this.selectedSmEdgeId()) {
       this.selectedSmNode.set(null);
+      this.selectedSmGroupId.set(null);
       this.smMultiSelect.set(new Set());
     }
   }

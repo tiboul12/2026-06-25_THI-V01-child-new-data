@@ -274,8 +274,15 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - Clic sur une liaison la sélectionne (halo cyan) et ouvre un volet d'édition.
   - **Côté d'accroche** de chaque extrémité (départ / arrivée) : haut / bas / gauche / droite ; par défaut, choix automatique selon la position des nœuds.
   - **Courbure** : boutons « − Courber » / « Courber + » ou glisser la **poignée cyan** au milieu de la liaison (décalage perpendiculaire des points de contrôle).
+  - **Libellé** et **type** (nav / auth / cross-app / relation) éditables dans le volet.
   - Bouton **« Tracé automatique »** : réinitialise l'arête (supprime ses overrides).
   - Côtés + courbure sont **persistés** dans la disposition (`wo_sitemap_layout_v2`, clé `edges`).
+- **Ajout de zones, inclusion, liaisons (édition de la carte)** :
+  - Bouton **« Zone »** : ajoute une nouvelle zone (sélectionnée → volet d'édition : libellé, couleur dans une palette, suppression). Les zones de base ne sont pas supprimables.
+  - **Inclusion d'un élément** : déposer un nœud à l'intérieur d'une zone le rattache à cette zone (`groupId`) → il suit ses déplacements. La plus petite zone contenant le centre l'emporte (nesting).
+  - **Inclusion d'une zone** : déplacer une zone déplace aussi les zones entièrement contenues et leurs nœuds.
+  - Bouton **« Liaison »** (mode) : cliquer le nœud source (surbrillance rose) puis la cible crée une nouvelle liaison (éditable / supprimable).
+  - Zones et liaisons personnalisées sont **persistées** (`customGroups`, `customEdges`) ; le bouton « Disposition » les supprime (retour à l'état par défaut).
 - **Créer / lancer un test depuis un nœud** (volet de détails) :
   - **« Lancer »** (vert, `play_circle`) sur chaque section de test liée → pré-sélectionne la section et bascule sur l'onglet Exécution.
   - **« Créer une section de test ici »** (indigo, `add`) → ouvre le popup de création pré-rempli (section parente = chemin du nœud, titre/slug d'après le label).
