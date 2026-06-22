@@ -247,7 +247,8 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 ## `2-1-5-13` — [modification] Onglet Site Map graphique
 
 - **5e onglet "Site Map"** (`account_tree`) dans la barre Admin › Tests.
-- **Carte SVG interactive** reflétant le **parcours réel de l'utilisateur** (et non un simple listing de routes), avec pan/zoom.
+- **Modèle métier à 3 niveaux (V2)** : **Page** (zone `role=page` : écran réel, URL + composant lié) ▸ **Section** (zone `role=section` : header / menu / content / aside / footer + composant lié) ▸ **Élément** (nœud `elType` : lien / bouton / formulaire / widget, rattaché à une section via `groupId`). Les **relations** (liaisons) relient n'importe quels éléments/sections/pages. Boutons toolbar **« Page »** / **« Zone »** ; **« Ajouter une section »** (volet page) ; **« Ajouter un élément »** par type (volet section). Volets enrichis : rôle, type de section, URL, composant lié, liste des sections (page) / éléments (section). Couleurs des éléments par type (lien indigo / bouton émeraude / form ambre / widget violet). Schéma de disposition versionné (`v3`) : les anciennes dispositions incompatibles sont ignorées.
+- **Carte SVG interactive** avec pan/zoom.
   - **Groupes encadrés** (pointillés colorés, label) = parties du système : `Public :4202`, `App connectée :4202` (menu Documents · Projets · Admin), `Admin` (onglets, réservé admin), `App Projets :4203`, `Outils & widgets embarqués`.
   - **Nœuds cliquables** par page : fond coloré selon le type (`public` sky / `protected` indigo / `admin` ambre / `projets` émeraude / `widget` violet), label + URL + badge port.
   - **Structure réelle du menu** : les entrées de navigation (Documents, Projets→:4203, Historique conditionnel, Config, Déploiements, Admin) sont des nœuds dans le groupe « App connectée ».
@@ -292,7 +293,8 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - La réinitialisation (« Disposition ») est elle aussi partagée (écrit l'état par défaut côté serveur).
 - **Versions (snapshots) de la Site Map** :
   - Bouton **« Versions »** (`history`) → popup de gestion des versions.
-  - **Enregistrer l'état actuel** sous un nom → snapshot complet de la disposition courante.
+  - **Enregistrer l'état actuel** sous un nom → snapshot complet de la disposition courante (bouton « Nouvelle »).
+  - **Mettre à jour la dernière version** : bouton « Mettre à jour la dernière version (« nom ») » → écrase le contenu de la version la plus récente avec l'état courant (endpoint `PUT /api/admin/tests/sitemap-versions/:id`). Disponible uniquement pour la dernière version enregistrée.
   - **Liste** des versions (nom, date, auteur).
   - **Charger** une version (`restore`) : l'applique à la carte et la diffuse comme disposition courante (partagée).
   - **Supprimer** une version.

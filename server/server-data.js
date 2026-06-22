@@ -8480,10 +8480,15 @@ Tu ne dois proposer des changements QUE pour la zone « ${scope.label || scope.g
 
     return `${intro}${scopeBlock}
 
+## Modèle (métier, 3 niveaux)
+- Une **PAGE** = une \`group\` avec \`role:"page"\` (un écran réel : url, composant lié).
+- Une **SECTION** = une \`group\` avec \`role:"section"\` + \`sectionType\` (header|menu|content|aside|footer) + composant lié, contenue dans une page.
+- Un **ÉLÉMENT** = un \`node\` avec \`elType\` (link|button|form|widget), rattaché à une section via \`groupId\` (= id de la section).
+- Une **RELATION** = une \`edge\` entre deux éléments/sections/pages (les extrémités zone sont préfixées \`group:<id>\`).
+
 ## Site Map actuelle (version de référence)
 Lis le fichier JSON : ${cur}
-Il contient { nodes:[...], groups:[...], edges:[...] }. Chaque nœud a un id, label, url, port, kind
-('public'|'protected'|'admin'|'projets'|'widget'), groupId, components[], tabs?[], description, cahierPaths?[].
+Il contient { nodes:[...] (éléments, avec elType), groups:[...] (pages & sections, avec role/sectionType/component), edges:[...] (relations) }.
 
 ## À analyser pour détecter les évolutions
 1. Le CODE RÉEL du dépôt :
@@ -8498,25 +8503,29 @@ N'écris RIEN dans ta réponse texte — tout passe par ce fichier.
 Écris un tableau JSON d'opérations :
 \`\`\`json
 [
+  { "op": "add", "kind": "group", "id": null,
+    "data": { "label": "Nom page", "role": "page", "url": "/route", "component": "apps/portail/.../x.component.ts", "description": "…" },
+    "reason": "Nouvelle page détectée dans app.routes" },
+  { "op": "add", "kind": "group", "id": null,
+    "data": { "label": "Header", "role": "section", "sectionType": "header", "component": "…" },
+    "reason": "Section identifiée dans le template de la page" },
   { "op": "add", "kind": "node", "id": null,
-    "data": { "label": "Nom", "url": "/route", "port": 4202, "kind": "admin",
-              "groupId": "admin", "components": ["apps/portail/.../x.component.ts"],
-              "tabs": [], "description": "…", "cahierPaths": ["connecte/admin/x"] },
-    "reason": "Pourquoi (ex: nouvelle page détectée dans app.routes)" },
-  { "op": "modify", "kind": "node", "id": "adm-tests",
-    "data": { "label": "Tests", "url": "/admin/tests/cahier", "tabs": ["…"], "components": ["…"], "description": "…" },
-    "reason": "Onglet ajouté / composant renommé" },
-  { "op": "delete", "kind": "node", "id": "vieux-noeud", "reason": "Page supprimée du code" },
-  { "op": "add", "kind": "group", "id": null, "data": { "label": "Nouvelle zone" }, "reason": "…" },
-  { "op": "add", "kind": "edge", "id": null, "data": { "from": "adm-x", "to": "proj-list", "type": "relation", "label": "…" }, "reason": "…" }
+    "data": { "label": "Lien Admin", "elType": "link", "groupId": "<id de la section>", "url": "/admin", "components": ["…"], "description": "…", "cahierPaths": ["connecte/admin/x"] },
+    "reason": "Élément (lien) présent dans la section" },
+  { "op": "modify", "kind": "node", "id": "el-existant",
+    "data": { "label": "…", "elType": "button", "components": ["…"] }, "reason": "Composant renommé / type changé" },
+  { "op": "delete", "kind": "node", "id": "el-obsolete", "reason": "Élément supprimé du code" },
+  { "op": "add", "kind": "edge", "id": null, "data": { "from": "el-x", "to": "group:pg-admin", "type": "nav", "label": "ouvre" }, "reason": "…" }
 ]
 \`\`\`
 Règles :
 - \`op\` ∈ add | modify | delete ; \`kind\` ∈ node | group | edge.
+- \`group.role\` ∈ page | section | zone ; \`group.sectionType\` ∈ header | menu | content | aside | footer (si section).
+- \`node.elType\` ∈ link | button | form | widget ; \`node.groupId\` = id de la SECTION qui contient l'élément.
+- \`edge\` : \`from\`/\`to\` = id d'un élément (nu) ou \`group:<id>\` pour une page/section. \`edge.type\` ∈ nav | auth | cross-app | relation.
 - Pour modify/delete : RÉUTILISE l'\`id\` EXACT de l'élément existant (depuis la Site Map actuelle).
 - Pour add : \`id\` = null (le client en attribuera un).
 - NE FOURNIS PAS de coordonnées (x/y/w/h) : le placement est géré par l'application.
-- \`node.kind\` ∈ public | protected | admin | projets | widget. \`edge.type\` ∈ nav | auth | cross-app | relation.
 - Pour modify, ne mets dans \`data\` que les champs à changer (les autres sont conservés).
 - N'inclus QUE de vraies évolutions par rapport au code. Si rien ne change pour un élément, ne l'inclus pas.
 - \`reason\` : courte justification factuelle (1 phrase).
@@ -9086,6 +9095,24 @@ app.get('/api/admin/tests/sitemap-versions/:id', (req, res) => {
     const v = sitemapVersionsLoad().find(x => x.id === req.params.id);
     if (!v) return res.status(404).json({ error: 'Version introuvable' });
     res.json(v);
+});
+
+// PUT /api/admin/tests/sitemap-versions/:id { layout } — écrase le contenu d'une version existante.
+app.put('/api/admin/tests/sitemap-versions/:id', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const versions = sitemapVersionsLoad();
+    const idx = versions.findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Version introuvable' });
+    const layout = (req.body?.layout && typeof req.body.layout === 'object') ? req.body.layout : sitemapLayoutLoad();
+    versions[idx] = {
+        ...versions[idx], layout,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user.username || user.email || 'admin',
+    };
+    if (!sitemapVersionsSave(versions)) return res.status(500).json({ error: 'Échec écriture' });
+    const { layout: _omit, ...meta } = versions[idx];
+    res.json(meta);
 });
 
 // DELETE /api/admin/tests/sitemap-versions/:id — supprime une version.

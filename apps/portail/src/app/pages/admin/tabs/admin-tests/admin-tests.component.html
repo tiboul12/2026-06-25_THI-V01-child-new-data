@@ -1068,8 +1068,13 @@
           Disposition
         </button>
 
-        <!-- Ajouter une zone -->
-        <button (click)="addZone()" title="Ajouter une zone"
+        <!-- Ajouter une page / une zone -->
+        <button (click)="addPage()" title="Ajouter une page"
+                class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:border-light-primary dark:hover:border-primary transition-all">
+          <span class="material-symbols-outlined text-sm">web</span>
+          Page
+        </button>
+        <button (click)="addZone()" title="Ajouter une zone générique"
                 class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:border-light-primary dark:hover:border-primary transition-all">
           <span class="material-symbols-outlined text-sm">add_box</span>
           Zone
@@ -1157,13 +1162,15 @@
 
         <span class="flex-1"></span>
 
-        <!-- Légende -->
+        <!-- Légende (modèle métier : Page ▸ Section ▸ Élément) -->
         <div class="flex items-center gap-3 text-[10px] text-light-text-muted dark:text-white/40 flex-wrap">
-          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-sky-500 bg-sky-500/10 inline-block"></span>Public</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-indigo-500 bg-indigo-500/10 inline-block"></span>Connecté</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-amber-500 bg-amber-500/10 inline-block"></span>Admin</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-emerald-500 bg-emerald-500/10 inline-block"></span>App Projets</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-violet-500 bg-violet-500/10 inline-block"></span>Widget</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-emerald-500 bg-emerald-500/10 inline-block"></span>Page</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-dashed border-slate-400 inline-block"></span>Section</span>
+          <span class="h-3 w-px bg-light-border dark:bg-white/10"></span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-indigo-500 bg-indigo-500/15 inline-block"></span>Lien</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-emerald-500 bg-emerald-500/15 inline-block"></span>Bouton</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-amber-500 bg-amber-500/15 inline-block"></span>Form</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm border-2 border-violet-500 bg-violet-500/15 inline-block"></span>Widget</span>
           <span class="h-3 w-px bg-light-border dark:bg-white/10"></span>
           <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-green-400 inline-block"></span>Connexion</span>
           <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-amber-400 inline-block"></span>Cross-app</span>
@@ -1297,44 +1304,51 @@
                    [style.cursor]="smLinkMode() ? 'crosshair' : 'grab'"
                    [attr.opacity]="smNodeOpacity(node.id)"
                    (mousedown)="smNodeMouseDown(node, $event)">
-                  <!-- Fond du nœud -->
-                  <rect [attr.x]="node.x" [attr.y]="node.y"
-                        [attr.width]="node.w" [attr.height]="node.h"
-                        [attr.fill]="smNodeFill(node.kind)"
-                        [attr.stroke]="smIsLinkSource(node.id) ? '#f472b6' : (smNodeMultiSelected(node.id) ? '#22d3ee' : (smNodeSelected(node.id) ? '#ffffff' : (smNodeHighlighted(node.id) ? '#ffffff' : smNodeStroke(node.kind))))"
-                        [attr.stroke-width]="smIsLinkSource(node.id) ? 3 : (smNodeMultiSelected(node.id) ? 3 : (smNodeSelected(node.id) ? 2.5 : (smNodeHighlighted(node.id) ? 2 : 1.5)))"
-                        rx="10" ry="10"/>
 
-                  <!-- Badge port (coin sup-droit) -->
-                  <rect [attr.x]="node.x + node.w - 46" [attr.y]="node.y + 7"
-                        width="38" height="14" rx="6"
-                        [attr.fill]="smNodeStroke(node.kind)" fill-opacity="0.15"
-                        [attr.stroke]="smNodeStroke(node.kind)" stroke-opacity="0.4" stroke-width="0.8"/>
-                  <text [attr.x]="node.x + node.w - 27" [attr.y]="node.y + 18"
-                        text-anchor="middle" [attr.fill]="smNodeStroke(node.kind)"
-                        font-size="9" font-family="Inter, monospace" font-weight="600">{{ ':' + node.port }}</text>
-
-                  <!-- Label principal -->
-                  <text [attr.x]="node.x + 14" [attr.y]="node.y + 26"
-                        [attr.fill]="smNodeTextColor(node.kind)"
-                        font-size="13" font-weight="700" font-family="Inter, sans-serif">{{ node.label }}</text>
-
-                  <!-- URL -->
-                  <text [attr.x]="node.x + 14" [attr.y]="node.y + 44"
-                        [attr.fill]="smNodeStroke(node.kind)"
-                        font-size="10" font-family="monospace" fill-opacity="0.75">{{ node.url }}</text>
-
-                  <!-- Tabs (si node.tabs) — affiché sous l'URL -->
-                  @if (node.tabs) {
-                    @for (tab of node.tabs; track tab; let ti = $index) {
-                      <rect [attr.x]="node.x + 14" [attr.y]="node.y + 54 + ti * 33"
-                            [attr.width]="node.w - 28" height="26"
-                            rx="5"
-                            [attr.fill]="smNodeStroke(node.kind)" fill-opacity="0.07"
-                            [attr.stroke]="smNodeStroke(node.kind)" stroke-opacity="0.15" stroke-width="0.7"/>
-                      <text [attr.x]="node.x + 24" [attr.y]="node.y + 71 + ti * 33"
-                            [attr.fill]="smNodeTextColor(node.kind)"
-                            font-size="10" font-family="Inter, sans-serif" fill-opacity="0.85">{{ tab }}</text>
+                  @if (node.elType) {
+                    <!-- ÉLÉMENT compact (lien / bouton / form / widget) -->
+                    <rect [attr.x]="node.x" [attr.y]="node.y" [attr.width]="node.w" [attr.height]="node.h"
+                          [attr.fill]="smElFill(node.elType)"
+                          [attr.stroke]="smIsLinkSource(node.id) ? '#f472b6' : (smNodeMultiSelected(node.id) ? '#22d3ee' : (smNodeSelected(node.id) ? '#ffffff' : smElStroke(node.elType)))"
+                          [attr.stroke-width]="smIsLinkSource(node.id) ? 2.5 : (smNodeMultiSelected(node.id) || smNodeSelected(node.id) ? 2 : 1)"
+                          rx="6" ry="6"/>
+                    <text [attr.x]="node.x + 9" [attr.y]="node.y + node.h / 2 + 4"
+                          [attr.fill]="smElStroke(node.elType)" class="material-symbols-outlined" font-size="13"
+                          style="pointer-events:none">{{ smElIcon(node.elType) }}</text>
+                    <text [attr.x]="node.x + 28" [attr.y]="node.y + node.h / 2 + 4"
+                          [attr.fill]="smElText(node.elType)"
+                          font-size="11" font-weight="600" font-family="Inter, sans-serif" style="pointer-events:none">{{ node.label }}</text>
+                  } @else {
+                    <!-- NŒUD complet (page legacy) -->
+                    <rect [attr.x]="node.x" [attr.y]="node.y"
+                          [attr.width]="node.w" [attr.height]="node.h"
+                          [attr.fill]="smNodeFill(node.kind)"
+                          [attr.stroke]="smIsLinkSource(node.id) ? '#f472b6' : (smNodeMultiSelected(node.id) ? '#22d3ee' : (smNodeSelected(node.id) ? '#ffffff' : (smNodeHighlighted(node.id) ? '#ffffff' : smNodeStroke(node.kind))))"
+                          [attr.stroke-width]="smIsLinkSource(node.id) ? 3 : (smNodeMultiSelected(node.id) ? 3 : (smNodeSelected(node.id) ? 2.5 : (smNodeHighlighted(node.id) ? 2 : 1.5)))"
+                          rx="10" ry="10"/>
+                    <rect [attr.x]="node.x + node.w - 46" [attr.y]="node.y + 7"
+                          width="38" height="14" rx="6"
+                          [attr.fill]="smNodeStroke(node.kind)" fill-opacity="0.15"
+                          [attr.stroke]="smNodeStroke(node.kind)" stroke-opacity="0.4" stroke-width="0.8"/>
+                    <text [attr.x]="node.x + node.w - 27" [attr.y]="node.y + 18"
+                          text-anchor="middle" [attr.fill]="smNodeStroke(node.kind)"
+                          font-size="9" font-family="Inter, monospace" font-weight="600">{{ ':' + node.port }}</text>
+                    <text [attr.x]="node.x + 14" [attr.y]="node.y + 26"
+                          [attr.fill]="smNodeTextColor(node.kind)"
+                          font-size="13" font-weight="700" font-family="Inter, sans-serif">{{ node.label }}</text>
+                    <text [attr.x]="node.x + 14" [attr.y]="node.y + 44"
+                          [attr.fill]="smNodeStroke(node.kind)"
+                          font-size="10" font-family="monospace" fill-opacity="0.75">{{ node.url }}</text>
+                    @if (node.tabs) {
+                      @for (tab of node.tabs; track tab; let ti = $index) {
+                        <rect [attr.x]="node.x + 14" [attr.y]="node.y + 54 + ti * 33"
+                              [attr.width]="node.w - 28" height="26" rx="5"
+                              [attr.fill]="smNodeStroke(node.kind)" fill-opacity="0.07"
+                              [attr.stroke]="smNodeStroke(node.kind)" stroke-opacity="0.15" stroke-width="0.7"/>
+                        <text [attr.x]="node.x + 24" [attr.y]="node.y + 71 + ti * 33"
+                              [attr.fill]="smNodeTextColor(node.kind)"
+                              font-size="10" font-family="Inter, sans-serif" fill-opacity="0.85">{{ tab }}</text>
+                      }
                     }
                   }
                 </g>
@@ -1412,6 +1426,36 @@
                        (input)="renameSelectedNode($any($event.target).value)"
                        class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-xs focus:outline-none focus:border-light-primary dark:focus:border-primary" />
               </div>
+
+              <!-- Type d'élément (si élément) -->
+              @if (node.elType) {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Type d'élément</div>
+                  <div class="grid grid-cols-4 gap-1">
+                    @for (t of smElTypes; track t) {
+                      <button (click)="setSelectedNodeElType(t)"
+                              [ngClass]="node.elType === t ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:border-indigo-500/50'"
+                              class="px-0.5 py-1.5 rounded-md border text-[9px] transition-all">{{ smElTypeLabel(t) }}</button>
+                    }
+                  </div>
+                </div>
+                <!-- URL / cible -->
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">URL / cible</div>
+                  <input type="text" [value]="node.url"
+                         (input)="setSelectedNodeUrl($any($event.target).value)"
+                         placeholder="/route ou embed"
+                         class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-xs font-mono focus:outline-none focus:border-light-primary dark:focus:border-primary" />
+                </div>
+                <!-- Composant lié (édition) -->
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Composant lié</div>
+                  <input type="text" [value]="node.components[0] || ''"
+                         (input)="setSelectedNodeComponent($any($event.target).value)"
+                         placeholder="apps/portail/.../x.component.ts"
+                         class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-[11px] font-mono focus:outline-none focus:border-light-primary dark:focus:border-primary" />
+                </div>
+              }
 
               <!-- Description -->
               @if (node.description) {
@@ -1503,6 +1547,12 @@
                 <button (click)="smFolderFilter.set(''); smSectionOnly.set(false)"
                         class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
                   <span class="material-symbols-outlined text-sm">layers</span>Voir toutes les sections
+                </button>
+              }
+              @if (node.elType) {
+                <button (click)="deleteSelectedNode()"
+                        class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all">
+                  <span class="material-symbols-outlined text-sm">delete</span>Supprimer l'élément
                 </button>
               }
             </div>
@@ -1602,7 +1652,7 @@
                (mousedown)="$event.stopPropagation()" (mouseup)="$event.stopPropagation()" (wheel)="$event.stopPropagation()">
             <div class="px-4 py-3 border-b border-light-border dark:border-white/10" [style.border-left]="'4px solid ' + grp.stroke">
               <div class="flex items-start justify-between gap-2">
-                <div class="text-sm font-bold text-light-text dark:text-white">Zone</div>
+                <div class="text-sm font-bold text-light-text dark:text-white">{{ smGroupRoleLabel(grp.role) }}<span class="text-light-text-muted dark:text-white/40 font-normal"> · {{ grp.label }}</span></div>
                 <button (click)="selectedSmGroupId.set(null)"
                         class="p-1 rounded text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors flex-shrink-0">
                   <span class="material-symbols-outlined text-base">close</span>
@@ -1610,7 +1660,7 @@
               </div>
             </div>
 
-            <div class="flex-1 px-4 py-3 space-y-4 text-xs">
+            <div class="flex-1 overflow-y-auto px-4 py-3 space-y-4 text-xs">
               <!-- Libellé -->
               <div>
                 <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Libellé</div>
@@ -1618,6 +1668,83 @@
                        (input)="renameSelectedZone($any($event.target).value)"
                        class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-xs focus:outline-none focus:border-light-primary dark:focus:border-primary" />
               </div>
+              <!-- Rôle -->
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Rôle</div>
+                <div class="grid grid-cols-3 gap-1">
+                  @for (r of ['page','section','zone']; track r) {
+                    <button (click)="setSelectedZoneRole($any(r))"
+                            [ngClass]="(grp.role || 'zone') === r ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:border-indigo-500/50'"
+                            class="px-1 py-1.5 rounded-md border text-[10px] capitalize transition-all">{{ r }}</button>
+                  }
+                </div>
+              </div>
+              <!-- URL (si page) -->
+              @if (grp.role === 'page') {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">URL</div>
+                  <input type="text" [value]="grp.url || ''" (input)="setSelectedZoneUrl($any($event.target).value)"
+                         placeholder="/route ou embed"
+                         class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-xs font-mono focus:outline-none focus:border-light-primary dark:focus:border-primary" />
+                </div>
+              }
+              <!-- Type de section (si section) -->
+              @if (grp.role === 'section') {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Type de section</div>
+                  <div class="grid grid-cols-5 gap-1">
+                    @for (t of smSectionTypes; track t) {
+                      <button (click)="setSelectedZoneSectionType(t)"
+                              [ngClass]="grp.sectionType === t ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:border-indigo-500/50'"
+                              class="px-0.5 py-1.5 rounded-md border text-[8px] capitalize transition-all">{{ t }}</button>
+                    }
+                  </div>
+                </div>
+              }
+              <!-- Composant lié (page/section) -->
+              @if (grp.role === 'page' || grp.role === 'section') {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Composant lié</div>
+                  <input type="text" [value]="grp.component || ''" (input)="setSelectedZoneComponent($any($event.target).value)"
+                         placeholder="apps/portail/.../x.component.ts"
+                         class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-[11px] font-mono focus:outline-none focus:border-light-primary dark:focus:border-primary" />
+                </div>
+              }
+
+              <!-- Sections de la page -->
+              @if (grp.role === 'page') {
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40">Sections ({{ smPageSections().length }})</span>
+                    <button (click)="addSectionToPage(grp.id)" class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 transition-all"><span class="material-symbols-outlined text-[12px]">add</span>Section</button>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    @for (s of smPageSections(); track s.id) {
+                      <button (click)="selectedSmGroupId.set(s.id)" class="text-left px-2 py-1 rounded-md bg-white/5 border border-white/10 text-[11px] text-light-text dark:text-white/80 hover:border-indigo-500/40 transition-all">{{ s.label }}<span class="text-light-text-muted dark:text-white/30"> · {{ s.sectionType }}</span></button>
+                    }
+                  </div>
+                </div>
+              }
+              <!-- Éléments de la section -->
+              @if (grp.role === 'section') {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Ajouter un élément</div>
+                  <div class="grid grid-cols-4 gap-1 mb-2">
+                    @for (t of smElTypes; track t) {
+                      <button (click)="addElementToSection(grp.id, t)"
+                              class="px-0.5 py-1.5 rounded-md border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/60 hover:border-indigo-500/50 text-[9px] transition-all">{{ smElTypeLabel(t) }}</button>
+                    }
+                  </div>
+                  @if (smSectionElements().length) {
+                    <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1">Éléments ({{ smSectionElements().length }})</div>
+                    <div class="flex flex-col gap-1">
+                      @for (el of smSectionElements(); track el.id) {
+                        <button (click)="selectedSmNode.set(el); selectedSmGroupId.set(null)" class="text-left px-2 py-1 rounded-md bg-white/5 border border-white/10 text-[11px] text-light-text dark:text-white/80 hover:border-indigo-500/40 transition-all">{{ el.label }}<span class="text-light-text-muted dark:text-white/30"> · {{ smElTypeLabel(el.elType) }}</span></button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
               <!-- Couleur -->
               <div>
                 <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Couleur</div>
@@ -1688,11 +1815,20 @@
                    class="flex-1 px-3 py-2 text-sm rounded-lg bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white focus:outline-none focus:border-light-primary dark:focus:border-primary disabled:opacity-50" />
             <button (click)="saveSmVersion()" [disabled]="smVersionsBusy()"
                     class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 transition-all disabled:opacity-50">
-              <span class="material-symbols-outlined text-sm">save</span>Enregistrer
+              <span class="material-symbols-outlined text-sm">save</span>Nouvelle
             </button>
           </div>
+          @if (smLatestVersion(); as last) {
+            <button (click)="updateSmVersion(last.id)" [disabled]="smVersionsBusy()"
+                    class="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50">
+              <span class="material-symbols-outlined text-sm">save_as</span>Mettre à jour la dernière version (« {{ last.name }} »)
+            </button>
+          }
           @if (smVersionsError()) {
             <p class="text-[11px] text-red-400 mt-1.5">{{ smVersionsError() }}</p>
+          }
+          @if (smVersionsMsg()) {
+            <p class="text-[11px] text-emerald-400 mt-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">check_circle</span>{{ smVersionsMsg() }}</p>
           }
         </div>
 
@@ -1707,6 +1843,9 @@
                   <div class="min-w-0">
                     <div class="text-sm font-semibold text-light-text dark:text-white truncate">{{ v.name }}</div>
                     <div class="text-[10px] text-light-text-muted dark:text-white/40">{{ v.createdAt | date:'dd/MM/yyyy HH:mm' }} · {{ v.createdBy }}</div>
+                    @if (v.updatedAt && v.updatedAt !== v.createdAt) {
+                      <div class="text-[10px] text-amber-400/80">maj {{ v.updatedAt | date:'dd/MM/yyyy HH:mm' }}</div>
+                    }
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <button (click)="loadSmVersion(v.id)" [disabled]="smVersionsBusy()" title="Charger cette version"

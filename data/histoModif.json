@@ -11218,6 +11218,78 @@
       "prompt": "on doit pouvoir changert les titres des component",
       "startedAt": "2026-06-22T07:30:00.000Z",
       "completedAt": "2026-06-22T07:50:00.000Z"
+    },
+    {
+      "id": "mod-459",
+      "version": "B-0.305",
+      "date": "2026-06-22T09:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map V2 : modele metier Page > Section > Element",
+      "description": "Refonte de la Site Map en representation metier a 3 niveaux sur le canvas existant. PAGE = zone role=page (ecran reel : url + composant) ; SECTION = zone role=section (header/menu/content/aside/footer + composant) imbriquee ; ELEMENT = noeud elType (link/button/form/widget) rattache a une section via groupId. Relations entre tout element/section/page. Base restructuree (pages Landing/Documents/Outils/Admin/Projets/Editeur avec sections et elements representatifs + relations). Rendu compact colore des elements par type, legende mise a jour. Volets enrichis : noeud (type d'element, URL, composant, suppression), zone (role, type de section, URL, composant, liste des sections/elements + boutons d'ajout). Boutons toolbar Page/Zone, Ajouter section (page), Ajouter element par type (section). Persistance etendue (role/sectionType/url/component, elType) avec schema versionne v3 (ignore les anciennes dispositions). MAJ IA etendue au modele V2 (prompt + application des role/sectionType/component/elType).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "en prenant en compte toutes les fonctions ajouté au système de création de site map, je voudrais que tu me propose des améliorations. Je voudrais que la site map représente l'ensemble de l'application, chaque page est une zone, dans chaque zone on peux avoir des sections (exemple menu, contenue, header, footer), chaque sections peut avoir un component lié. Une section peux avoir plusieurs sous éléments comme des liens/form ou autre outils. Chaque element peut être relié à une autre section. Le but est de voir l'ensemble des pages, leur relation et les éléments qui la compose. Garde les fonctions comme le popup d'information et ses fonctions. Propose moi une nouvelle vision et modifi le sitemap en conséquence.",
+      "startedAt": "2026-06-22T08:00:00.000Z",
+      "completedAt": "2026-06-22T09:05:00.000Z"
+    },
+    {
+      "id": "mod-460",
+      "version": "B-0.305",
+      "date": "2026-06-22T09:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map : mettre a jour la derniere version avec l'etat courant",
+      "description": "Ajout de la possibilite d'ecraser une version deja enregistree avec l'etat courant, limitee a la derniere version (la plus recente). Serveur : PUT /api/admin/tests/sitemap-versions/:id (remplace layout + updatedAt/By). Client : bouton 'Mettre a jour la derniere version (<nom>)' dans le popup Versions (computed smLatestVersion = tete de liste), a cote du bouton Nouvelle.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans la sitemap on peux enregistré une nouvelle version, je voudrais pouvoir enregistré la version en cours dans une version déjà enregistré (uniquement la dernière de la liste)",
+      "startedAt": "2026-06-22T09:10:00.000Z",
+      "completedAt": "2026-06-22T09:35:00.000Z"
+    },
+    {
+      "id": "mod-461",
+      "version": "B-0.305",
+      "date": "2026-06-22T09:55:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : retour visuel sur la mise a jour d'une version (pas de feedback)",
+      "description": "Le bouton 'Mettre a jour la derniere version' semblait sans effet (succes serveur mais aucun retour visible, la ligne affichant createdAt). Ajout d'un message de confirmation vert ('Version X mise a jour'), d'un message d'erreur explicite avec code HTTP si echec (ex : route absente cote serveur non redemarre), et affichage de la date de mise a jour ('maj ...') sur les lignes de version. NB : le serveur (port 3001) doit etre redemarre pour exposer la route PUT /api/admin/tests/sitemap-versions/:id ajoutee dans mod-460.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je clique sur \"Mettre à jour la dernière version\" rien ne ce passe, cela devrait enregistré les modification dans cette version (remplace l'ancienne)",
+      "startedAt": "2026-06-22T09:40:00.000Z",
+      "completedAt": "2026-06-22T10:00:00.000Z"
     }
   ]
 }

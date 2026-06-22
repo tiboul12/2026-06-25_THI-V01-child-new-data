@@ -146,6 +146,8 @@ interface FnHistoryChange {
 
 // ── Site Map ──
 type SmKind = 'public' | 'protected' | 'admin' | 'projets' | 'widget';
+// Type d'un élément (nœud feuille placé dans une section)
+type SmElType = 'link' | 'button' | 'form' | 'widget';
 interface SitemapNode {
   id: string;
   label: string;
@@ -158,6 +160,7 @@ interface SitemapNode {
   tabs?: string[];
   description?: string;
   cahierPaths?: string[];
+  elType?: SmElType;  // si défini → l'objet est un ÉLÉMENT (lien/bouton/form/widget) d'une section
 }
 interface SitemapEdge {
   id: string;
@@ -165,10 +168,17 @@ interface SitemapEdge {
   label?: string;
   type: 'nav' | 'auth' | 'cross-app' | 'relation';
 }
+// Rôle d'une zone : page (écran réel) · section (zone d'une page) · zone (regroupement générique)
+type SmGroupRole = 'page' | 'section' | 'zone';
 interface SitemapGroup {
   id: string; label: string;
   x: number; y: number; w: number; h: number;
   stroke: string; fill: string;
+  role?: SmGroupRole;
+  sectionType?: string;   // header | menu | content | footer | aside … (si role=section)
+  url?: string;           // route (si role=page)
+  component?: string;     // composant Angular lié (page ou section)
+  description?: string;
 }
 type SmSide = 'left' | 'right' | 'top' | 'bottom';
 interface SmEdgeOverride { fromSide?: SmSide; toSide?: SmSide; bend?: number; }
@@ -1367,167 +1377,112 @@ Exemple :
 
   // ── Site Map — données statiques (reflète le parcours réel de l'utilisateur) ──
 
+  // Modèle V2 (métier) : PAGES (zones role=page) ▸ SECTIONS (zones role=section) ▸ ÉLÉMENTS (nœuds elType).
+  private readonly SM_SECTION_STROKE = '#7c8aa0';
+  private readonly SM_SECTION_FILL   = '#7c8aa00f';
+
   private readonly SM_BASE_GROUPS: SitemapGroup[] = [
-    { id: 'public',  label: 'Public — :4202 (non connecté)',                 x: 20,   y: 60,  w: 300,  h: 372, stroke: '#0ea5e9', fill: '#0ea5e90a' },
-    { id: 'app',     label: 'App connectée — :4202  ·  menu : Documents · Projets · Admin', x: 360, y: 60, w: 360, h: 560, stroke: '#6366f1', fill: '#6366f10a' },
-    { id: 'admin',   label: 'Admin — réservé admin (onglets)',               x: 760,  y: 60,  w: 340,  h: 824, stroke: '#f59e0b', fill: '#f59e0b0d' },
-    { id: 'projets', label: 'App Projets — :4203',                            x: 1140, y: 60,  w: 480,  h: 624, stroke: '#10b981', fill: '#10b9810a' },
-    { id: 'widgets', label: 'Outils & widgets embarqués (visibilité pilotée par Admin › Outils)', x: 20, y: 912, w: 1080, h: 178, stroke: '#8b5cf6', fill: '#8b5cf60a' },
+    // ── PAGE Landing (public) ──
+    { id: 'pg-landing', label: 'Landing', role: 'page', url: '/', component: 'LandingComponent',
+      description: "Page d'accueil publique — présentation et connexion.",
+      x: 40, y: 70, w: 360, h: 430, stroke: '#0ea5e9', fill: '#0ea5e90d' },
+    { id: 'sec-landing-header',  label: 'Header',  role: 'section', sectionType: 'header',  component: 'LandingComponent', x: 60, y: 120, w: 320, h: 96,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-landing-content', label: 'Contenu', role: 'section', sectionType: 'content', component: 'LandingComponent', x: 60, y: 224, w: 320, h: 128, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-landing-footer',  label: 'Footer',  role: 'section', sectionType: 'footer',  x: 60, y: 360, w: 320, h: 78,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Documents (connecté) ──
+    { id: 'pg-documents', label: 'Documents', role: 'page', url: '/documents', component: 'DocumentsComponent',
+      description: 'Gestion des documents de l’utilisateur connecté.',
+      x: 440, y: 70, w: 360, h: 300, stroke: '#6366f1', fill: '#6366f10d' },
+    { id: 'sec-doc-menu',    label: 'Menu',    role: 'section', sectionType: 'menu',    component: 'NavComponent',       x: 460, y: 120, w: 320, h: 86,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-doc-content', label: 'Contenu', role: 'section', sectionType: 'content', component: 'DocumentsComponent', x: 460, y: 214, w: 320, h: 146, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Outils embarqués (widgets) ──
+    { id: 'pg-widgets', label: 'Outils embarqués', role: 'page', url: 'embed',
+      description: 'Widgets flottants embarquables (visibilité pilotée par Admin › Outils).',
+      x: 440, y: 420, w: 360, h: 210, stroke: '#8b5cf6', fill: '#8b5cf60d' },
+    { id: 'sec-widgets', label: 'Widgets', role: 'section', sectionType: 'content', x: 460, y: 470, w: 320, h: 150, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Admin (réservé admin, à onglets) ──
+    { id: 'pg-admin', label: 'Admin', role: 'page', url: '/admin', component: 'AdminComponent',
+      description: "Panneau d'administration à onglets (réservé admin).",
+      x: 840, y: 70, w: 380, h: 600, stroke: '#f59e0b', fill: '#f59e0b12' },
+    { id: 'sec-adm-tabs',   label: 'Onglets',      role: 'section', sectionType: 'menu',    component: 'AdminTabsRegistryService', x: 860, y: 120, w: 340, h: 70,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-adm-users',  label: 'Utilisateurs', role: 'section', sectionType: 'content', component: 'AdminUsersComponent', x: 860, y: 200, w: 340, h: 110, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-adm-tests',  label: 'Tests',        role: 'section', sectionType: 'content', component: 'AdminTestsComponent', x: 860, y: 322, w: 340, h: 150, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-adm-config', label: 'Config',       role: 'section', sectionType: 'content', component: 'ConfigComponent',     x: 860, y: 484, w: 340, h: 92,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Liste des projets (app Projets :4203) ──
+    { id: 'pg-projets', label: 'Liste des projets', role: 'page', url: '/projets', component: 'ProjetsComponent',
+      description: 'Accueil de l’app Projets (port 4203) — grille, création, ouverture.',
+      x: 1260, y: 70, w: 360, h: 240, stroke: '#10b981', fill: '#10b9810d' },
+    { id: 'sec-proj-content', label: 'Contenu', role: 'section', sectionType: 'content', component: 'ProjetsComponent', x: 1280, y: 120, w: 320, h: 180, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Éditeur de projet (app Projets :4203) ──
+    { id: 'pg-editor', label: 'Éditeur de projet', role: 'page', url: '/projets/:id', component: 'ProjetEditorComponent',
+      description: 'Éditeur HTML/CSS/JS avec IA (toolbar, sidebar, code, preview, conversation).',
+      x: 1660, y: 70, w: 400, h: 430, stroke: '#10b981', fill: '#10b9810d' },
+    { id: 'sec-ed-toolbar', label: 'Toolbar',      role: 'section', sectionType: 'header',  component: 'ProjetToolbarComponent',    x: 1680, y: 120, w: 360, h: 64,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-ed-sidebar', label: 'Sidebar',      role: 'section', sectionType: 'aside',   component: 'ProjetSidebarComponent',    x: 1680, y: 192, w: 170, h: 210, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-ed-code',    label: 'Zone Code',    role: 'section', sectionType: 'content', component: 'ProjetEditorZoneComponent', x: 1862, y: 192, w: 178, h: 210, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-ed-chat',    label: 'Conversation', role: 'section', sectionType: 'content', component: 'ProjetConversationComponent', x: 1680, y: 412, w: 360, h: 70,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
   ];
 
   private readonly SM_BASE_NODES: SitemapNode[] = [
-    // ── Public ──
-    { id: 'landing', label: 'Landing', url: '/', port: 4202, kind: 'public', groupId: 'public',
-      x: 44, y: 104, w: 252, h: 60,
-      components: ['LandingComponent'],
-      description: "Page d'accueil publique — connexion / présentation. Point d'entrée vers l'app connectée.",
-      cahierPaths: ['non-connecte/landing'] },
-    { id: 'cahier-doc', label: 'Doc · Cahier recette', url: '/cahier-recette-doc', port: 4202, kind: 'public', groupId: 'public',
-      x: 44, y: 178, w: 252, h: 56,
-      components: ['CahierRecetteDocComponent'],
-      description: 'Page de documentation publique du widget Cahier de recette.',
-      cahierPaths: ['connecte/outils/cahier-recette'] },
-    { id: 'tchat-doc', label: 'Doc · TchatIA', url: '/tchat-ia-doc', port: 4202, kind: 'public', groupId: 'public',
-      x: 44, y: 248, w: 252, h: 56,
-      components: ['TchatIaDocComponent'],
-      description: 'Page de documentation publique du widget TchatIA.',
-      cahierPaths: ['connecte/outils/tchat-ia'] },
-    { id: 'ticket-doc', label: 'Doc · Ticket widget', url: '/ticket-widget-doc', port: 4202, kind: 'public', groupId: 'public',
-      x: 44, y: 318, w: 252, h: 56,
-      components: ['TicketWidgetDocComponent'],
-      description: 'Page de documentation publique du widget de tickets.',
-      cahierPaths: ['connecte/outils/tickets'] },
+    // ── Éléments : Landing ──
+    { id: 'el-landing-logo',  label: 'Logo',       url: '/', port: 4202, kind: 'public', groupId: 'sec-landing-header', elType: 'link',   x: 72,  y: 158, w: 136, h: 30, components: ['LandingComponent'], description: 'Logo / retour accueil.' },
+    { id: 'el-landing-login', label: 'Connexion',  url: '/', port: 4202, kind: 'public', groupId: 'sec-landing-header', elType: 'link',   x: 220, y: 158, w: 148, h: 30, components: ['LandingComponent'], description: 'Lien de connexion → app connectée.' },
+    { id: 'el-landing-pitch', label: 'Présentation', url: 'embed', port: 4202, kind: 'public', groupId: 'sec-landing-content', elType: 'widget', x: 72, y: 262, w: 296, h: 32, components: ['LandingComponent'], description: 'Bloc de présentation.' },
+    { id: 'el-landing-cta',   label: 'CTA Inscription', url: 'embed', port: 4202, kind: 'public', groupId: 'sec-landing-content', elType: 'button', x: 72, y: 304, w: 296, h: 32, components: ['LandingComponent'], description: "Bouton d'appel à l'action." },
+    { id: 'el-landing-legal', label: 'Liens légaux', url: 'embed', port: 4202, kind: 'public', groupId: 'sec-landing-footer', elType: 'link', x: 72, y: 398, w: 296, h: 28, components: ['LandingComponent'] },
 
-    // ── App connectée (entrées du menu de navigation) ──
-    { id: 'documents', label: 'Documents', url: '/documents', port: 4202, kind: 'protected', groupId: 'app',
-      x: 384, y: 110, w: 312, h: 60,
-      components: ['DocumentsComponent'],
-      description: 'Entrée de menu « Documents » — gestion des documents de l’utilisateur.',
-      cahierPaths: [] },
-    { id: 'projets-nav', label: 'Projets (→ app :4203)', url: '/projets', port: 4203, kind: 'protected', groupId: 'app',
-      x: 384, y: 184, w: 312, h: 60,
-      components: ['NavComponent'],
-      description: "Entrée de menu « Projets » (data/child/nav.json). Bascule vers l'app Projets (port 4203) en passant le token + thème par l'URL.",
-      cahierPaths: ['connecte/projets'] },
-    { id: 'historique', label: 'Historique actions', url: '/wo-action-history', port: 4202, kind: 'protected', groupId: 'app',
-      x: 384, y: 258, w: 312, h: 60,
-      components: ['WoActionHistoryComponent'],
-      description: "Entrée de menu conditionnelle — affichée seulement si activée dans Admin › Outils (woActionHistoryNavEnabled).",
-      cahierPaths: [] },
-    { id: 'config', label: 'Configuration', url: '/config', port: 4202, kind: 'protected', groupId: 'app',
-      x: 384, y: 332, w: 312, h: 60,
-      components: ['ConfigComponent'],
-      description: 'Configuration de l’utilisateur (même composant que l’onglet Admin › Config).',
-      cahierPaths: ['connecte/config'] },
-    { id: 'deployments', label: 'Déploiements', url: '/deployments', port: 4202, kind: 'protected', groupId: 'app',
-      x: 384, y: 406, w: 312, h: 60,
-      components: ['DeploymentsComponent'],
-      description: 'Historique des déploiements et bannière de mise à jour.',
-      cahierPaths: ['connecte/deploiements'] },
-    { id: 'admin', label: 'Admin', url: '/admin', port: 4202, kind: 'admin', groupId: 'app',
-      x: 384, y: 480, w: 312, h: 60,
-      components: ['AdminComponent', 'AdminTabsRegistryService'],
-      description: "Entrée de menu « Admin » (rouge, admin uniquement). Ouvre le panneau d'administration à onglets.",
-      cahierPaths: ['connecte/admin'] },
+    // ── Éléments : Documents ──
+    { id: 'el-doc-nav-docs',  label: 'Lien Documents', url: '/documents', port: 4202, kind: 'protected', groupId: 'sec-doc-menu', elType: 'link', x: 472, y: 156, w: 140, h: 30, components: ['NavComponent'] },
+    { id: 'el-doc-nav-admin', label: 'Lien Admin',     url: '/admin',     port: 4202, kind: 'admin',     groupId: 'sec-doc-menu', elType: 'link', x: 620, y: 156, w: 160, h: 30, components: ['NavComponent'], description: 'Entrée de menu Admin → page Admin.' },
+    { id: 'el-doc-list', label: 'Liste documents', url: 'embed', port: 4202, kind: 'protected', groupId: 'sec-doc-content', elType: 'widget', x: 472, y: 254, w: 296, h: 32, components: ['DocumentsComponent'] },
+    { id: 'el-doc-add',  label: 'Ajouter un document', url: 'embed', port: 4202, kind: 'protected', groupId: 'sec-doc-content', elType: 'button', x: 472, y: 296, w: 296, h: 32, components: ['DocumentsComponent'] },
 
-    // ── Admin : onglets (ordre réel du registry) ──
-    { id: 'adm-projets', label: 'Projets', url: '/admin/projets/projets', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 110, w: 300, h: 64,
-      tabs: ['/admin/projets/projets', '/admin/projets/ia-instructions'],
-      components: ['AdminProjetsComponent'],
-      description: 'Onglet Admin › Projets — 2 sous-onglets : liste projets et instructions IA.',
-      cahierPaths: ['connecte/admin/projets'] },
-    { id: 'adm-users', label: 'Utilisateurs', url: '/admin/users', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 188, w: 300, h: 64,
-      components: ['AdminUsersComponent'],
-      description: 'Onglet Admin › Utilisateurs — comptes et rôles (data/config/users.json).',
-      cahierPaths: ['connecte/admin/utilisateurs'] },
-    { id: 'adm-deploy', label: 'Déploiement', url: '/admin/deploiement', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 266, w: 300, h: 64,
-      components: ['AdminDeploymentsComponent'],
-      description: 'Onglet Admin › Déploiement — enregistrements de versions, alertes de MAJ.',
-      cahierPaths: ['connecte/admin/deploiements'] },
-    { id: 'adm-config', label: 'Config', url: '/admin/config', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 344, w: 300, h: 64,
-      components: ['ConfigComponent'],
-      description: 'Onglet Admin › Config — pilote la visibilité du header IA et des entrées de menu.',
-      cahierPaths: ['connecte/admin/config'] },
-    { id: 'adm-theme', label: 'Thème', url: '/admin/theme', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 422, w: 300, h: 64,
-      components: ['AdminThemeComponent'],
-      description: 'Onglet Admin › Thème — personnalisation des couleurs (data/child/theme.json).',
-      cahierPaths: ['connecte/admin/theme'] },
-    { id: 'adm-mega', label: 'Méga-outils', url: '/admin/mega-outils', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 500, w: 300, h: 64,
-      components: ['AdminMegaOutilsComponent', 'TrelloAdminComponent'],
-      description: "Onglet Admin › Méga-outils — gère les instances Trello partagées entre projets. Bouton « Ouvrir dans l'éditeur » → app Projets.",
-      cahierPaths: [] },
-    { id: 'adm-memo', label: 'Mémo', url: '/admin/memo', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 578, w: 300, h: 64,
-      components: ['AdminMemoComponent'],
-      description: 'Onglet Admin › Mémo — notes / aide-mémoire internes.',
-      cahierPaths: [] },
-    { id: 'adm-outils', label: 'Outils', url: '/admin/tools', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 656, w: 300, h: 64,
-      components: ['AdminToolsComponent'],
-      description: "Onglet Admin › Outils — visibilité et widgets flottants par outil (TchatIA, Tickets, Cahier de recette, Historique).",
-      cahierPaths: [] },
-    { id: 'adm-tests', label: 'Tests', url: '/admin/tests/cahier', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 734, w: 300, h: 64,
-      tabs: ['/admin/tests/cahier', '/admin/tests/execution', '/admin/tests/resultats', '/admin/tests/historique', '/admin/tests/sitemap'],
-      components: ['AdminTestsComponent'],
-      description: 'Onglet Admin › Tests — 5 sous-onglets accessibles chacun via URL directe (/admin/tests/:subtab).',
-      cahierPaths: ['connecte/admin/tests'] },
+    // ── Éléments : Outils embarqués ──
+    { id: 'el-w-tchat',  label: 'TchatIA', url: 'embed', port: 4202, kind: 'widget', groupId: 'sec-widgets', elType: 'widget', x: 472, y: 510, w: 296, h: 28, components: ['TchatIaComponent'], cahierPaths: ['connecte/outils/tchat-ia'] },
+    { id: 'el-w-tickets', label: 'Tickets', url: 'embed', port: 4202, kind: 'widget', groupId: 'sec-widgets', elType: 'widget', x: 472, y: 542, w: 296, h: 28, components: ['TicketWidgetComponent'], cahierPaths: ['connecte/outils/tickets'] },
+    { id: 'el-w-cahier', label: 'Cahier de recette', url: 'embed', port: 4202, kind: 'widget', groupId: 'sec-widgets', elType: 'widget', x: 472, y: 574, w: 296, h: 28, components: ['CahierRecetteComponent'], cahierPaths: ['connecte/outils/cahier-recette'] },
 
-    // ── App Projets (:4203) ──
-    { id: 'proj-list', label: 'Liste des projets', url: '/projets', port: 4203, kind: 'projets', groupId: 'projets',
-      x: 1164, y: 110, w: 432, h: 64,
-      components: ['ProjetsComponent'],
-      description: 'Accueil de l’app Projets — grille des projets, création, ouverture.',
-      cahierPaths: ['connecte/projets/accueil'] },
-    { id: 'proj-editor', label: 'Éditeur de projet', url: '/projets/:id', port: 4203, kind: 'projets', groupId: 'projets',
-      x: 1164, y: 196, w: 432, h: 480,
-      tabs: ['Toolbar', 'Sidebar', 'Zone Code', 'Zone Structure', 'Zone Preview', 'Conversation', 'Historique', 'Commentaires F6', 'Outil Édition', 'Outil Agenda', 'Outil Tests', 'Méga-outil Trello', 'Méga-outil Tableau'],
-      components: ['ProjetEditorComponent', 'ProjetToolbarComponent', 'ProjetSidebarComponent', 'ProjetEditorZoneComponent', 'ProjetConversationComponent', 'ProjetHistoryComponent', 'CommentsDrawerComponent', 'EditionOutilComponent', 'AgendaOutilComponent', 'TestsOutilComponent'],
-      description: "Éditeur de projet HTML/CSS/JS avec IA. Intègre les méga-outils (Trello, Tableau) instanciés depuis Admin › Méga-outils.",
-      cahierPaths: ['connecte/projets/editor'] },
+    // ── Éléments : Admin ──
+    { id: 'el-adm-tab-users', label: 'Onglet Utilisateurs', url: '/admin/users', port: 4202, kind: 'admin', groupId: 'sec-adm-tabs', elType: 'link', x: 872, y: 156, w: 150, h: 26, components: ['AdminComponent'] },
+    { id: 'el-adm-tab-tests', label: 'Onglet Tests', url: '/admin/tests/cahier', port: 4202, kind: 'admin', groupId: 'sec-adm-tabs', elType: 'link', x: 1030, y: 156, w: 158, h: 26, components: ['AdminComponent'] },
+    { id: 'el-adm-users-table', label: 'Table utilisateurs', url: 'embed', port: 4202, kind: 'admin', groupId: 'sec-adm-users', elType: 'widget', x: 872, y: 242, w: 316, h: 28, components: ['AdminUsersComponent'], cahierPaths: ['connecte/admin/utilisateurs'] },
+    { id: 'el-adm-users-form',  label: 'Création utilisateur', url: 'embed', port: 4202, kind: 'admin', groupId: 'sec-adm-users', elType: 'form', x: 872, y: 276, w: 316, h: 26, components: ['AdminUsersComponent'], cahierPaths: ['connecte/admin/utilisateurs'] },
+    { id: 'el-adm-tests-cahier', label: 'Cahier de recette', url: '/admin/tests/cahier', port: 4202, kind: 'admin', groupId: 'sec-adm-tests', elType: 'link', x: 872, y: 362, w: 316, h: 26, components: ['AdminTestsComponent'], cahierPaths: ['connecte/admin/tests'] },
+    { id: 'el-adm-tests-sitemap', label: 'Site Map', url: '/admin/tests/sitemap', port: 4202, kind: 'admin', groupId: 'sec-adm-tests', elType: 'link', x: 872, y: 394, w: 316, h: 26, components: ['AdminTestsComponent'], cahierPaths: ['connecte/admin/tests'] },
+    { id: 'el-adm-tests-run', label: 'Lancer un test', url: 'embed', port: 4202, kind: 'admin', groupId: 'sec-adm-tests', elType: 'button', x: 872, y: 426, w: 316, h: 26, components: ['AdminTestsComponent'], cahierPaths: ['connecte/admin/tests'] },
+    { id: 'el-adm-config-form', label: 'Formulaire config', url: 'embed', port: 4202, kind: 'admin', groupId: 'sec-adm-config', elType: 'form', x: 872, y: 526, w: 316, h: 30, components: ['ConfigComponent'], cahierPaths: ['connecte/admin/config'] },
 
-    // ── Widgets embarqués ──
-    { id: 'w-tchat', label: 'TchatIA', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
-      x: 60, y: 962, w: 300, h: 70,
-      components: ['TchatIaComponent'],
-      description: "Widget de chat IA embarquable. Visibilité pilotée par Admin › Outils. Documenté sur /tchat-ia-doc.",
-      cahierPaths: ['connecte/outils/tchat-ia'] },
-    { id: 'w-tickets', label: 'Tickets', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
-      x: 400, y: 962, w: 300, h: 70,
-      components: ['TicketWidgetComponent'],
-      description: 'Widget de tickets flottant. Visibilité pilotée par Admin › Outils. Documenté sur /ticket-widget-doc.',
-      cahierPaths: ['connecte/outils/tickets'] },
-    { id: 'w-cahier', label: 'Cahier de recette', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
-      x: 740, y: 962, w: 300, h: 70,
-      components: ['CahierRecetteComponent'],
-      description: 'Widget Cahier de recette flottant. Visibilité pilotée par Admin › Outils. Documenté sur /cahier-recette-doc.',
-      cahierPaths: ['connecte/outils/cahier-recette'] },
+    // ── Éléments : Liste des projets ──
+    { id: 'el-proj-grid',   label: 'Grille des projets', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-proj-content', elType: 'widget', x: 1292, y: 158, w: 296, h: 32, components: ['ProjetsComponent'], cahierPaths: ['connecte/projets/accueil'] },
+    { id: 'el-proj-create', label: 'Créer un projet', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-proj-content', elType: 'button', x: 1292, y: 198, w: 296, h: 32, components: ['ProjetsComponent'], cahierPaths: ['connecte/projets/accueil'] },
+    { id: 'el-proj-open',   label: 'Ouvrir un projet', url: '/projets/:id', port: 4203, kind: 'projets', groupId: 'sec-proj-content', elType: 'link', x: 1292, y: 238, w: 296, h: 32, components: ['ProjetsComponent'] },
+
+    // ── Éléments : Éditeur ──
+    { id: 'el-ed-toolbar', label: "Barre d'outils", url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-ed-toolbar', elType: 'widget', x: 1692, y: 156, w: 336, h: 24, components: ['ProjetToolbarComponent'], cahierPaths: ['connecte/projets/editor/toolbar'] },
+    { id: 'el-ed-tree',    label: 'Arborescence', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-ed-sidebar', elType: 'widget', x: 1692, y: 232, w: 146, h: 26, components: ['ProjetSidebarComponent'], cahierPaths: ['connecte/projets/editor/sidebar'] },
+    { id: 'el-ed-editor',  label: 'Éditeur de code', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-ed-code', elType: 'widget', x: 1874, y: 232, w: 154, h: 26, components: ['ProjetEditorZoneComponent'], cahierPaths: ['connecte/projets/editor/zone-code'] },
+    { id: 'el-ed-chat',    label: 'Chat IA', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-ed-chat', elType: 'widget', x: 1692, y: 450, w: 336, h: 26, components: ['ProjetConversationComponent'], cahierPaths: ['connecte/projets/editor/zone5-conversation'] },
   ];
 
   private readonly SM_BASE_EDGES: SitemapEdge[] = [
-    // Parcours de navigation
-    { id: 'e-login',     from: 'landing',     to: 'documents',   label: 'connexion', type: 'auth' },
-    { id: 'e-nav-proj',  from: 'projets-nav', to: 'proj-list',   label: ':4203',     type: 'cross-app' },
-    { id: 'e-nav-admin', from: 'admin',       to: 'adm-projets', label: 'ouvre',     type: 'nav' },
-    { id: 'e-proj-edit', from: 'proj-list',   to: 'proj-editor',                     type: 'nav' },
-    // Relations fonctionnelles (dépendances entre éléments)
-    { id: 'r-mega-edit',  from: 'adm-mega',   to: 'proj-editor', label: 'Trello dans l’éditeur', type: 'relation' },
-    { id: 'r-out-tchat',  from: 'adm-outils', to: 'w-tchat',     label: 'visibilité', type: 'relation' },
-    { id: 'r-out-ticket', from: 'adm-outils', to: 'w-tickets',                        type: 'relation' },
-    { id: 'r-out-cahier', from: 'adm-outils', to: 'w-cahier',                         type: 'relation' },
-    { id: 'r-out-hist',   from: 'adm-outils', to: 'historique',  label: 'active menu', type: 'relation' },
-    { id: 'r-cfg-config', from: 'adm-config', to: 'config',      label: 'même composant', type: 'relation' },
-    { id: 'r-projets',    from: 'adm-projets',to: 'proj-list',   label: 'gère', type: 'relation' },
+    // Relations entre éléments / sections / pages (les extrémités zone sont préfixées 'group:')
+    { id: 'e-login',      from: 'el-landing-login', to: 'group:pg-documents', label: 'connexion', type: 'auth' },
+    { id: 'e-nav-admin',  from: 'el-doc-nav-admin', to: 'group:pg-admin',     label: 'ouvre',     type: 'nav' },
+    { id: 'e-tab-users',  from: 'el-adm-tab-users', to: 'group:sec-adm-users', label: 'affiche',  type: 'relation' },
+    { id: 'e-tab-tests',  from: 'el-adm-tab-tests', to: 'group:sec-adm-tests', label: 'affiche',  type: 'relation' },
+    { id: 'e-open-proj',  from: 'el-proj-open',     to: 'group:pg-editor',     label: 'ouvre',     type: 'nav' },
+    { id: 'e-cross-proj', from: 'group:pg-documents', to: 'group:pg-projets',  label: ':4203',     type: 'cross-app' },
   ];
 
   /** Clé localStorage de la disposition personnalisée (nœuds + zones) de la Site Map. */
-  private readonly SM_LAYOUT_KEY = 'wo_sitemap_layout_v2';
+  private readonly SM_LAYOUT_KEY = 'wo_sitemap_layout_v3';
+  /** Schéma du modèle de données (incrémenté quand la structure de base change). */
+  private readonly SM_SCHEMA = 'v3';
 
   /** Nœuds de la carte, déplaçables — positions persistées en localStorage. */
   smNodes = signal<SitemapNode[]>(this.loadInitialSmNodes());
@@ -1538,8 +1493,9 @@ Exemple :
 
   /** Lit la disposition sauvegardée. */
   private readSmLayout(): {
-    nodes?: Record<string, { x: number; y: number; groupId?: string; label?: string }>;
-    groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string }>;
+    schema?: string;
+    nodes?: Record<string, { x: number; y: number; groupId?: string; label?: string; elType?: SmElType }>;
+    groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string; role?: SmGroupRole; sectionType?: string; url?: string; component?: string }>;
     edges?: Record<string, SmEdgeOverride>;
     customGroups?: SitemapGroup[];
     customEdges?: SitemapEdge[];
@@ -1552,36 +1508,43 @@ Exemple :
     return {};
   }
 
+  private smLayoutValid(l: any): boolean { return !!l && l.schema === this.SM_SCHEMA; }
+
   /** Applique les positions + réassignations de zone sauvegardées sur les nœuds par défaut. */
   private loadInitialSmNodes(): SitemapNode[] {
-    const saved = this.readSmLayout().nodes || {};
+    const l = this.readSmLayout();
+    const saved = this.smLayoutValid(l) ? (l.nodes || {}) : {};
     return this.SM_BASE_NODES.map(n => {
       const p = saved[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label, elType: p.elType ?? n.elType } : { ...n };
     });
   }
 
   /** Charge les overrides d'arêtes sauvegardés (côtés d'accroche, courbure). */
   private loadInitialEdgeOverrides(): Record<string, SmEdgeOverride> {
-    return this.readSmLayout().edges || {};
+    const l = this.readSmLayout();
+    return this.smLayoutValid(l) ? (l.edges || {}) : {};
   }
 
   /** Zones par défaut (avec géométrie/label sauvegardés) + zones personnalisées. */
   private loadInitialSmGroups(): SitemapGroup[] {
-    const saved = this.readSmLayout().groups || {};
+    const l = this.readSmLayout();
+    if (!this.smLayoutValid(l)) return this.SM_BASE_GROUPS.map(g => ({ ...g }));
+    const saved = l.groups || {};
     const base = this.SM_BASE_GROUPS.map(g => {
       const s = saved[g.id];
-      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label } : { ...g };
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label, role: s.role ?? g.role, sectionType: s.sectionType ?? g.sectionType, url: s.url ?? g.url, component: s.component ?? g.component } : { ...g };
     });
-    const custom = (this.readSmLayout().customGroups || []).map(g => ({ ...g }));
+    const custom = (l.customGroups || []).map(g => ({ ...g }));
     return [...base, ...custom];
   }
 
   /** Liaisons : liste complète persistée si présente (toute liaison éditable/supprimable), sinon base + custom. */
   private loadInitialSmEdges(): SitemapEdge[] {
-    const layout = this.readSmLayout();
-    if (Array.isArray(layout.edgesAll) && layout.edgesAll.length) return layout.edgesAll.map(e => ({ ...e }));
-    const custom = (layout.customEdges || []).map(e => ({ ...e }));
+    const l = this.readSmLayout();
+    if (!this.smLayoutValid(l)) return this.SM_BASE_EDGES.map(e => ({ ...e }));
+    if (Array.isArray(l.edgesAll) && l.edgesAll.length) return l.edgesAll.map(e => ({ ...e }));
+    const custom = (l.customEdges || []).map(e => ({ ...e }));
     return [...this.SM_BASE_EDGES.map(e => ({ ...e })), ...custom];
   }
 
@@ -1604,10 +1567,13 @@ Exemple :
   smLinkSource       = signal<string | null>(null);
   /** Versions (snapshots) de la Site Map. */
   showSmVersions     = signal(false);
-  smVersions         = signal<{ id: string; name: string; createdAt: string; createdBy: string }[]>([]);
+  smVersions         = signal<{ id: string; name: string; createdAt: string; createdBy: string; updatedAt?: string; updatedBy?: string }[]>([]);
+  /** Dernière version enregistrée (tête de liste, la plus récente) — seule modifiable in place. */
+  smLatestVersion    = computed(() => this.smVersions()[0] ?? null);
   smVersionName      = signal('');
   smVersionsBusy     = signal(false);
   smVersionsError    = signal('');
+  smVersionsMsg      = signal('');
   /** Arête sélectionnée (édition côté d'accroche / courbure) + ses overrides. */
   selectedSmEdgeId   = signal<string | null>(null);
   smEdgeOverrides    = signal<Record<string, SmEdgeOverride>>(this.loadInitialEdgeOverrides());
@@ -1923,14 +1889,14 @@ Exemple :
 
   /** Construit l'objet disposition (nœuds + zones + liaisons, base & personnalisées). */
   private buildLayoutObject() {
-    const nodes: Record<string, { x: number; y: number; groupId?: string; label?: string }> = {};
-    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId, label: n.label };
+    const nodes: Record<string, { x: number; y: number; groupId?: string; label?: string; elType?: SmElType }> = {};
+    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId, label: n.label, elType: n.elType };
 
     const baseGroupIds = new Set(this.SM_BASE_GROUPS.map(g => g.id));
-    const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string }> = {};
+    const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string; role?: SmGroupRole; sectionType?: string; url?: string; component?: string }> = {};
     const customGroups: SitemapGroup[] = [];
     for (const g of this.smGroups()) {
-      if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label };
+      if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label, role: g.role, sectionType: g.sectionType, url: g.url, component: g.component };
       else customGroups.push({ ...g });
     }
 
@@ -1939,20 +1905,21 @@ Exemple :
     // Liste complète des liaisons (base + custom, avec modifs/suppressions) → toute liaison éditable & persistée
     const edgesAll = this.smEdges().map(e => ({ ...e }));
 
-    return { nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges, edgesAll };
+    return { schema: this.SM_SCHEMA, nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges, edgesAll };
   }
 
   /** Applique un objet disposition (chargé du serveur ou du cache) sur les signaux. */
   private applySmLayout(layout: any) {
+    if (!this.smLayoutValid(layout)) return;   // schéma incompatible → on garde la base
     const savedNodes = layout?.nodes || {};
     this.smNodes.set(this.SM_BASE_NODES.map(n => {
       const p = savedNodes[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label, elType: p.elType ?? n.elType } : { ...n };
     }));
     const savedGroups = layout?.groups || {};
     const base = this.SM_BASE_GROUPS.map(g => {
       const s = savedGroups[g.id];
-      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label } : { ...g };
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label, role: s.role ?? g.role, sectionType: s.sectionType ?? g.sectionType, url: s.url ?? g.url, component: s.component ?? g.component } : { ...g };
     });
     const customGroups = Array.isArray(layout?.customGroups) ? layout.customGroups.map((g: SitemapGroup) => ({ ...g })) : [];
     this.smGroups.set([...base, ...customGroups]);
@@ -1990,7 +1957,7 @@ Exemple :
       const res = await fetch(`${API}/api/admin/tests/sitemap-layout`, { headers: this.authHeaders });
       if (!res.ok) return;
       const layout = await res.json();
-      if (layout && (layout.nodes || layout.groups || layout.customGroups || layout.customEdges || layout.edges)) {
+      if (this.smLayoutValid(layout)) {
         this.applySmLayout(layout);
         try { localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
       }
@@ -2002,6 +1969,7 @@ Exemple :
     this.showSmVersions.set(true);
     this.smVersionName.set('');
     this.smVersionsError.set('');
+    this.smVersionsMsg.set('');
     await this.loadSmVersionsList();
   }
   closeSmVersions() { this.showSmVersions.set(false); }
@@ -2029,7 +1997,30 @@ Exemple :
       if (!res.ok) throw new Error((await res.json()).error || 'Échec enregistrement');
       this.smVersionName.set('');
       await this.loadSmVersionsList();
+      this.smVersionsMsg.set(`Version « ${name} » enregistrée.`);
     } catch (e: any) { this.smVersionsError.set(e.message || 'Échec enregistrement'); }
+    finally { this.smVersionsBusy.set(false); }
+  }
+
+  /** Met à jour (écrase) une version existante avec l'état courant. */
+  async updateSmVersion(id: string) {
+    this.smVersionsBusy.set(true);
+    this.smVersionsError.set('');
+    this.smVersionsMsg.set('');
+    try {
+      const res = await fetch(`${API}/api/admin/tests/sitemap-versions/${id}`, {
+        method: 'PUT', headers: this.authHeaders,
+        body: JSON.stringify({ layout: this.buildLayoutObject() }),
+      });
+      if (!res.ok) {
+        let msg = `Échec mise à jour (HTTP ${res.status})`;
+        try { msg = (await res.json()).error || msg; } catch { /* corps non-JSON */ }
+        throw new Error(msg);
+      }
+      const meta = await res.json();
+      await this.loadSmVersionsList();
+      this.smVersionsMsg.set(`Version « ${meta.name || ''} » mise à jour avec l'état actuel.`);
+    } catch (e: any) { this.smVersionsError.set(e.message || 'Échec mise à jour'); }
     finally { this.smVersionsBusy.set(false); }
   }
 
@@ -2210,22 +2201,33 @@ Exemple :
       if (p.kind === 'node') {
         if (p.op === 'add') {
           const d = p.data || {};
-          const id = 'node-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+          const id = 'el-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+          const elType: SmElType | undefined = (['link', 'button', 'form', 'widget'].includes(d.elType) ? d.elType : (d.kind ? undefined : 'link'));
+          // Si l'élément cible une section existante → placement empilé dans la section
+          const sec = elType ? this.smGroups().find(g => g.id === d.groupId && g.role === 'section') : null;
+          let nx = stageX, ny = stageY, nw = 300, nh = elType ? 30 : (d.tabs?.length ? 60 + d.tabs.length * 22 : 60);
+          if (sec) {
+            const inner = this.smNodes().filter(n => n.groupId === sec.id);
+            ny = inner.length ? Math.max(...inner.map(n => n.y + n.h)) + 8 : sec.y + 34;
+            nx = sec.x + 12; nw = sec.w - 24;
+            this.smGroups.update(gs => gs.map(g => g.id === sec.id && (ny + nh) > g.y + g.h ? { ...g, h: ny + nh + 10 - g.y } : g));
+          }
           const node: SitemapNode = {
-            id, label: d.label || 'Nouveau nœud', url: d.url || 'embed',
+            id, label: d.label || 'Nouvel élément', url: d.url || 'embed',
             port: (d.port === 4203 ? 4203 : 4202), kind: (d.kind || 'protected'),
-            groupId: d.groupId || '', x: stageX, y: stageY, w: 300, h: d.tabs?.length ? 60 + d.tabs.length * 22 : 60,
+            groupId: d.groupId || '', x: nx, y: ny, w: nw, h: nh, elType,
             components: Array.isArray(d.components) ? d.components : [],
             tabs: Array.isArray(d.tabs) && d.tabs.length ? d.tabs : undefined,
             description: d.description || '', cahierPaths: Array.isArray(d.cahierPaths) ? d.cahierPaths : [],
           };
           this.smNodes.update(ns => [...ns, node]);
-          stageY += node.h + 24;
+          if (!sec) stageY += nh + 24;
         } else if (p.op === 'modify' && p.id) {
           const d = p.data || {};
           this.smNodes.update(ns => ns.map(n => n.id === p.id ? {
             ...n,
             label: d.label ?? n.label, url: d.url ?? n.url, port: d.port ?? n.port, kind: d.kind ?? n.kind,
+            elType: (['link', 'button', 'form', 'widget'].includes(d.elType) ? d.elType : n.elType),
             groupId: d.groupId ?? n.groupId, components: Array.isArray(d.components) ? d.components : n.components,
             tabs: Array.isArray(d.tabs) ? (d.tabs.length ? d.tabs : undefined) : n.tabs,
             description: d.description ?? n.description, cahierPaths: Array.isArray(d.cahierPaths) ? d.cahierPaths : n.cahierPaths,
@@ -2236,13 +2238,23 @@ Exemple :
       } else if (p.kind === 'group') {
         if (p.op === 'add') {
           const d = p.data || {};
-          const id = 'grp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+          const id = (d.role === 'page' ? 'pg-' : d.role === 'section' ? 'sec-' : 'grp-') + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+          const role: SmGroupRole = (['page', 'section', 'zone'].includes(d.role) ? d.role : 'zone');
           const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
-          this.smGroups.update(gs => [...gs, { id, label: d.label || 'Nouvelle zone', x: stageX - 20, y: stageY, w: 340, h: 220, stroke: pal.stroke, fill: pal.fill }]);
-          stageY += 244;
+          const stroke = role === 'section' ? this.SM_SECTION_STROKE : pal.stroke;
+          const fill = role === 'section' ? this.SM_SECTION_FILL : (role === 'page' ? pal.stroke + '0d' : pal.fill);
+          this.smGroups.update(gs => [...gs, {
+            id, label: d.label || (role === 'page' ? 'Nouvelle page' : role === 'section' ? 'Nouvelle section' : 'Nouvelle zone'),
+            role, sectionType: d.sectionType, url: d.url, component: d.component, description: d.description,
+            x: stageX - 20, y: stageY, w: role === 'section' ? 320 : 360, h: role === 'section' ? 120 : 260, stroke, fill,
+          }]);
+          stageY += (role === 'section' ? 140 : 284);
         } else if (p.op === 'modify' && p.id) {
           const d = p.data || {};
-          this.smGroups.update(gs => gs.map(g => g.id === p.id ? { ...g, label: d.label ?? g.label } : g));
+          this.smGroups.update(gs => gs.map(g => g.id === p.id ? {
+            ...g, label: d.label ?? g.label, role: (['page', 'section', 'zone'].includes(d.role) ? d.role : g.role),
+            sectionType: d.sectionType ?? g.sectionType, url: d.url ?? g.url, component: d.component ?? g.component, description: d.description ?? g.description,
+          } : g));
         } else if (p.op === 'delete' && p.id) {
           this.smGroups.update(gs => gs.filter(g => g.id !== p.id));
         }
@@ -2378,7 +2390,7 @@ Exemple :
     const count = this.smGroups().filter(g => this.isCustomZone(g.id)).length;
     const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
     const g: SitemapGroup = {
-      id, label: 'Nouvelle zone',
+      id, label: 'Nouvelle zone', role: 'zone',
       x: 60 + (count % 5) * 30, y: 60 + (count % 5) * 30, w: 320, h: 220,
       stroke: pal.stroke, fill: pal.fill,
     };
@@ -2386,6 +2398,52 @@ Exemple :
     this.selectedSmGroupId.set(id);
     this.selectedSmNode.set(null);
     this.selectedSmEdgeId.set(null);
+    this.persistLayout();
+  }
+
+  /** Ajoute une PAGE (zone role=page) dans une colonne libre à droite. */
+  addPage() {
+    const id = 'pg-' + Date.now().toString(36);
+    const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
+    const x = Math.max(40, ...this.smGroups().map(g => g.x + g.w)) + 80;
+    this.smGroups.update(gs => [...gs, { id, label: 'Nouvelle page', role: 'page', url: '/', x, y: 70, w: 360, h: 320, stroke: pal.stroke, fill: pal.stroke + '0d' }]);
+    this.selectedSmGroupId.set(id);
+    this.selectedSmNode.set(null);
+    this.selectedSmEdgeId.set(null);
+    this.persistLayout();
+  }
+
+  /** Ajoute une SECTION dans la page (zone) donnée, empilée sous les sections existantes. */
+  addSectionToPage(pageId: string) {
+    const page = this.smGroups().find(g => g.id === pageId);
+    if (!page) return;
+    const id = 'sec-' + Date.now().toString(36);
+    // Empile sous les zones déjà contenues dans la page
+    const inner = this.smGroups().filter(g => g.id !== pageId && g.x >= page.x && g.y >= page.y && g.x + g.w <= page.x + page.w && g.y + g.h <= page.y + page.h);
+    const top = inner.length ? Math.max(...inner.map(g => g.y + g.h)) + 12 : page.y + 50;
+    this.smGroups.update(gs => gs.map(g => g.id === pageId && (top + 110) > g.y + g.h ? { ...g, h: top + 120 - g.y } : g)
+      .concat([{ id, label: 'Nouvelle section', role: 'section' as SmGroupRole, sectionType: 'content', x: page.x + 20, y: top, w: page.w - 40, h: 100, stroke: this.SM_SECTION_STROKE, fill: this.SM_SECTION_FILL }]));
+    this.selectedSmGroupId.set(id);
+    this.persistLayout();
+  }
+
+  /** Ajoute un ÉLÉMENT (type donné) dans la section (zone) donnée, empilé sous les éléments existants. */
+  addElementToSection(sectionId: string, elType: SmElType) {
+    const sec = this.smGroups().find(g => g.id === sectionId);
+    if (!sec) return;
+    const id = 'el-' + Date.now().toString(36);
+    const inner = this.smNodes().filter(n => n.groupId === sectionId);
+    const top = inner.length ? Math.max(...inner.map(n => n.y + n.h)) + 8 : sec.y + 34;
+    const label = elType === 'button' ? 'Nouveau bouton' : elType === 'form' ? 'Nouveau formulaire' : elType === 'widget' ? 'Nouveau widget' : 'Nouveau lien';
+    const node: SitemapNode = {
+      id, label, url: 'embed', port: 4202, kind: 'protected', groupId: sectionId, elType,
+      x: sec.x + 12, y: top, w: sec.w - 24, h: 30, components: [],
+    };
+    // Agrandit la section si besoin
+    this.smGroups.update(gs => gs.map(g => g.id === sectionId && (top + 30) > g.y + g.h ? { ...g, h: top + 40 - g.y } : g));
+    this.smNodes.update(ns => [...ns, node]);
+    this.selectedSmNode.set(node);
+    this.selectedSmGroupId.set(null);
     this.persistLayout();
   }
 
@@ -2402,6 +2460,71 @@ Exemple :
     this.smGroups.update(gs => gs.map(g => g.id === id ? { ...g, stroke, fill } : g));
     this.persistLayout();
   }
+
+  private updateSelectedZone(patch: Partial<SitemapGroup>) {
+    const id = this.selectedSmGroupId();
+    if (!id) return;
+    this.smGroups.update(gs => gs.map(g => g.id === id ? { ...g, ...patch } : g));
+    this.persistLayout();
+  }
+  setSelectedZoneRole(role: SmGroupRole) {
+    const patch: Partial<SitemapGroup> = { role };
+    if (role === 'section') { patch.stroke = this.SM_SECTION_STROKE; patch.fill = this.SM_SECTION_FILL; }
+    this.updateSelectedZone(patch);
+  }
+  setSelectedZoneSectionType(sectionType: string) { this.updateSelectedZone({ sectionType }); }
+  setSelectedZoneUrl(url: string) { this.updateSelectedZone({ url }); }
+  setSelectedZoneComponent(component: string) { this.updateSelectedZone({ component }); }
+  setSelectedZoneDescription(description: string) { this.updateSelectedZone({ description }); }
+
+  /** Sections d'une page sélectionnée (zones role=section entièrement contenues). */
+  smPageSections = computed((): SitemapGroup[] => {
+    const p = this.selectedSmGroup();
+    if (!p || p.role !== 'page') return [];
+    return this.smGroups().filter(s => s.id !== p.id && s.role === 'section'
+      && s.x >= p.x && s.y >= p.y && s.x + s.w <= p.x + p.w && s.y + s.h <= p.y + p.h);
+  });
+  /** Éléments d'une section sélectionnée (nœuds dont groupId = la section). */
+  smSectionElements = computed((): SitemapNode[] => {
+    const s = this.selectedSmGroup();
+    if (!s || s.role !== 'section') return [];
+    return this.smNodes().filter(n => n.groupId === s.id);
+  });
+
+  // ── Édition d'un élément (nœud) ──
+  setSelectedNodeElType(elType: SmElType) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, elType } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+  setSelectedNodeComponent(component: string) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    const comps = component.trim() ? [component.trim()] : [];
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, components: comps } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+  setSelectedNodeUrl(url: string) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, url } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+  /** Supprime l'élément (nœud) sélectionné. */
+  deleteSelectedNode() {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.filter(n => n.id !== id));
+    this.smEdges.update(es => es.filter(e => e.from !== id && e.to !== id));
+    this.selectedSmNode.set(null);
+    this.persistLayout();
+  }
+  readonly smElTypes: SmElType[] = ['link', 'button', 'form', 'widget'];
+  readonly smSectionTypes = ['header', 'menu', 'content', 'aside', 'footer'];
 
   /** Supprime la zone personnalisée sélectionnée (détache ses nœuds). */
   deleteSelectedZone() {
@@ -2522,6 +2645,43 @@ Exemple :
     if (kind === 'projets')   return '#34d399';
     if (kind === 'widget')    return '#c4b5fd';
     return '#38bdf8';
+  }
+
+  // ── Éléments (nœuds elType) : couleurs / libellés / icônes par type ──
+  smElStroke(t?: SmElType): string {
+    if (t === 'button') return '#10b981';
+    if (t === 'form')   return '#f59e0b';
+    if (t === 'widget') return '#8b5cf6';
+    return '#6366f1'; // link (défaut)
+  }
+  smElFill(t?: SmElType): string {
+    if (t === 'button') return '#10b9811f';
+    if (t === 'form')   return '#f59e0b1f';
+    if (t === 'widget') return '#8b5cf61f';
+    return '#6366f11f';
+  }
+  smElText(t?: SmElType): string {
+    if (t === 'button') return '#6ee7b7';
+    if (t === 'form')   return '#fcd34d';
+    if (t === 'widget') return '#c4b5fd';
+    return '#a5b4fc';
+  }
+  smElIcon(t?: SmElType): string {
+    if (t === 'button') return 'smart_button';
+    if (t === 'form')   return 'edit_note';
+    if (t === 'widget') return 'widgets';
+    return 'link';
+  }
+  smElTypeLabel(t?: SmElType): string {
+    if (t === 'button') return 'Bouton';
+    if (t === 'form')   return 'Formulaire';
+    if (t === 'widget') return 'Widget / contenu';
+    return 'Lien';
+  }
+  smGroupRoleLabel(role?: SmGroupRole): string {
+    if (role === 'page') return 'Page';
+    if (role === 'section') return 'Section';
+    return 'Zone';
   }
   smKindLabel(kind: string): string {
     if (kind === 'admin')     return 'Admin only';
