@@ -1648,41 +1648,53 @@ Exemple :
     return this.smHighlightedIds().has(id) ? 1 : 0.25;
   }
 
-  smEdgePath(edge: SitemapEdge): string {
-    const from = this.smNodes.find(n => n.id === edge.from);
-    const to   = this.smNodes.find(n => n.id === edge.to);
-    if (!from || !to) return '';
-    const fx = from.x + from.w / 2;
-    const fy = from.y + from.h / 2;
-    const tx = to.x + to.w / 2;
-    const ty = to.y + to.h / 2;
-    const dx = tx - fx;
-    const dy = ty - fy;
-    let x1: number, y1: number, x2: number, y2: number;
-    if (Math.abs(dx) > Math.abs(dy) * 0.7) {
-      if (dx > 0) { x1 = from.x + from.w; y1 = from.y + from.h / 2; x2 = to.x; y2 = to.y + to.h / 2; }
-      else         { x1 = from.x;           y1 = from.y + from.h / 2; x2 = to.x + to.w; y2 = to.y + to.h / 2; }
-      const cx = (x1 + x2) / 2;
-      return `M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`;
-    } else {
-      if (dy > 0) { x1 = from.x + from.w / 2; y1 = from.y + from.h; x2 = to.x + to.w / 2; y2 = to.y; }
-      else         { x1 = from.x + from.w / 2; y1 = from.y;           x2 = to.x + to.w / 2; y2 = to.y + to.h; }
-      const cy = (y1 + y2) / 2;
-      return `M ${x1} ${y1} C ${x1} ${cy} ${x2} ${cy} ${x2} ${y2}`;
+  /**
+   * Géométrie de chaque arête, mémorisée.
+   * - choisit les ancrages sur les côtés des nœuds (selon position relative)
+   * - courbe de Bézier avec points de contrôle perpendiculaires aux côtés
+   * - libellé positionné sur la courbe réelle (point à t=0.5)
+   */
+  smEdgeLayout = computed((): Map<string, { path: string; midX: number; midY: number }> => {
+    const m = new Map<string, { path: string; midX: number; midY: number }>();
+    for (const edge of this.smEdges) {
+      const from = this.smNodes.find(n => n.id === edge.from);
+      const to   = this.smNodes.find(n => n.id === edge.to);
+      if (!from || !to) continue;
+      m.set(edge.id, this.buildEdgeGeometry(from, to));
     }
-  }
+    return m;
+  });
 
-  smEdgeMidX(edge: SitemapEdge): number {
-    const from = this.smNodes.find(n => n.id === edge.from);
-    const to   = this.smNodes.find(n => n.id === edge.to);
-    if (!from || !to) return 0;
-    return (from.x + from.w / 2 + to.x + to.w / 2) / 2;
-  }
-  smEdgeMidY(edge: SitemapEdge): number {
-    const from = this.smNodes.find(n => n.id === edge.from);
-    const to   = this.smNodes.find(n => n.id === edge.to);
-    if (!from || !to) return 0;
-    return (from.y + from.h / 2 + to.y + to.h / 2) / 2;
+  private buildEdgeGeometry(from: SitemapNode, to: SitemapNode): { path: string; midX: number; midY: number } {
+    const fcx = from.x + from.w / 2, fcy = from.y + from.h / 2;
+    const tcx = to.x + to.w / 2,     tcy = to.y + to.h / 2;
+    const dx = tcx - fcx, dy = tcy - fcy;
+    let x1: number, y1: number, x2: number, y2: number;
+    let c1x: number, c1y: number, c2x: number, c2y: number;
+
+    if (Math.abs(dx) > Math.abs(dy) * 0.7) {
+      // Liaison à dominante horizontale → sort par le côté gauche/droit
+      if (dx > 0) { x1 = from.x + from.w; x2 = to.x; }
+      else        { x1 = from.x;          x2 = to.x + to.w; }
+      y1 = fcy; y2 = tcy;
+      const off = Math.max(60, Math.abs(x2 - x1) * 0.5);
+      c1x = x1 + (dx > 0 ? off : -off); c1y = y1;
+      c2x = x2 + (dx > 0 ? -off : off); c2y = y2;
+    } else {
+      // Liaison à dominante verticale → sort par le haut/bas
+      if (dy > 0) { y1 = from.y + from.h; y2 = to.y; }
+      else        { y1 = from.y;          y2 = to.y + to.h; }
+      x1 = fcx; x2 = tcx;
+      const off = Math.max(50, Math.abs(y2 - y1) * 0.5);
+      c1x = x1; c1y = y1 + (dy > 0 ? off : -off);
+      c2x = x2; c2y = y2 + (dy > 0 ? -off : off);
+    }
+
+    const path = `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`;
+    // Point de la cubique à t=0.5 (libellé posé sur la courbe, pas entre les centres)
+    const midX = 0.125 * x1 + 0.375 * c1x + 0.375 * c2x + 0.125 * x2;
+    const midY = 0.125 * y1 + 0.375 * c1y + 0.375 * c2y + 0.125 * y2;
+    return { path, midX, midY };
   }
 
   smEdgeColor(type: string): string {

@@ -10824,6 +10824,30 @@
       "prompt": "Tu es un ingénieur QA. Crée les fonctions de tests pour une NOUVELLE section — aucune fonction existante à conserver, tout est à créer depuis zéro. Analyse le code source correspondant au chemin de section (composants Angular, templates, routes Express), puis génère des fonctions testables concrètes et exhaustives couvrant tous les comportements clés de la page ou du composant concerné. Si un objectif est précisé ci-dessous, priorise les aspects mentionnés. ...",
       "startedAt": "2026-06-21T17:38:47.000Z",
       "completedAt": "2026-06-21T17:39:40.000Z"
+    },
+    {
+      "id": "mod-442",
+      "version": "B-0.300",
+      "date": "2026-06-22T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "data"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : carte pleine largeur + liaisons plus lisibles",
+      "description": "La zone SVG de la Site Map (Admin > Tests) occupe desormais toute la largeur ; le volet de details passe en overlay (coin haut-droit) au lieu de reduire la carte, et le placeholder vide est supprime. Lisibilite des aretes amelioree : halo sombre sous chaque trait colore, courbure de Bezier plus ample avec ancrages lateraux, libelles poses sur la courbe reelle (point a t=0.5) dans une pastille bordee.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans la section admin/tests/ Site map, agrandi la zone d'affichage de la site map pour quelle prenne toute la largeur de la page et améliore l'affichage des liaisons qui sont illisible",
+      "startedAt": "2026-06-22T00:00:00.000Z",
+      "completedAt": "2026-06-22T00:05:00.000Z"
     }
   ]
 }

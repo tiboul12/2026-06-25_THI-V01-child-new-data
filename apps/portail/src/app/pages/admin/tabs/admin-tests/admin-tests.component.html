@@ -1042,7 +1042,8 @@
   <!-- ── ONGLET SITE MAP ──────────────────────────────────────────── -->
   <!-- ════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'sitemap') {
-    <div class="pt-4">
+    <!-- Plein écran : sort du conteneur centré de la page admin pour occuper toute la largeur de la fenêtre -->
+    <div class="pt-4 relative left-1/2 -translate-x-1/2 w-screen px-6">
 
       <!-- Barre d'outils -->
       <div class="flex flex-wrap items-center gap-2 mb-3">
@@ -1110,12 +1111,12 @@
         </div>
       </div>
 
-      <!-- Conteneur principal : carte SVG + volet latéral -->
-      <div class="flex gap-3" style="height:72vh">
+      <!-- Conteneur principal : carte SVG pleine largeur + volet en overlay -->
+      <div class="relative" style="height:72vh">
 
         <!-- Zone SVG interactive -->
         <div #sitemapContainer
-             class="flex-1 relative border border-light-border dark:border-white/10 rounded-xl overflow-hidden bg-[#060b14] select-none"
+             class="w-full h-full relative border border-light-border dark:border-white/10 rounded-xl overflow-hidden bg-[#060b14] select-none"
              (mousedown)="smMouseDown($event)"
              (mousemove)="smMouseMove($event)"
              (mouseup)="smMouseUp()"
@@ -1169,21 +1170,30 @@
 
               <!-- ── Arêtes ── -->
               @for (edge of smEdges; track edge.id) {
-                <path [attr.d]="smEdgePath(edge)"
-                      fill="none"
-                      [attr.stroke]="smEdgeColor(edge.type)"
-                      stroke-width="2"
-                      [attr.stroke-dasharray]="smEdgeDashed(edge.type) ? '5 4' : null"
-                      [attr.marker-end]="'url(#sm-arrow-' + edge.type + ')'"
-                      stroke-opacity="0.75"/>
-                @if (edge.label) {
-                  <rect [attr.x]="smEdgeMidX(edge) - edge.label.length * 4 - 4"
-                        [attr.y]="smEdgeMidY(edge) - 9"
-                        [attr.width]="edge.label.length * 8 + 8" height="16"
-                        fill="#060b14" rx="4"/>
-                  <text [attr.x]="smEdgeMidX(edge)" [attr.y]="smEdgeMidY(edge) + 4"
-                        text-anchor="middle" [attr.fill]="smEdgeColor(edge.type)"
-                        font-size="10" font-family="Inter, monospace">{{ edge.label }}</text>
+                @if (smEdgeLayout().get(edge.id); as geo) {
+                  <!-- Halo sombre : démarque la liaison des nœuds qu'elle survole -->
+                  <path [attr.d]="geo.path"
+                        fill="none" stroke="#060b14" stroke-width="6"
+                        stroke-opacity="0.9" stroke-linecap="round"/>
+                  <!-- Trait coloré -->
+                  <path [attr.d]="geo.path"
+                        fill="none"
+                        [attr.stroke]="smEdgeColor(edge.type)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        [attr.stroke-dasharray]="smEdgeDashed(edge.type) ? '6 5' : null"
+                        [attr.marker-end]="'url(#sm-arrow-' + edge.type + ')'"
+                        stroke-opacity="0.95"/>
+                  @if (edge.label) {
+                    <rect [attr.x]="geo.midX - edge.label.length * 3.6 - 6"
+                          [attr.y]="geo.midY - 10"
+                          [attr.width]="edge.label.length * 7.2 + 12" height="18" rx="5"
+                          fill="#060b14"
+                          [attr.stroke]="smEdgeColor(edge.type)" stroke-opacity="0.4" stroke-width="0.8"/>
+                    <text [attr.x]="geo.midX" [attr.y]="geo.midY + 3"
+                          text-anchor="middle" [attr.fill]="smEdgeColor(edge.type)"
+                          font-size="10" font-weight="600" font-family="Inter, sans-serif">{{ edge.label }}</text>
+                  }
                 }
               }
 
@@ -1243,11 +1253,10 @@
           <div class="absolute bottom-2 left-3 text-[10px] text-white/20 pointer-events-none select-none">
             Molette : zoom · Cliquer-glisser : déplacer · Cliquer sur un nœud : détails
           </div>
-        </div>
 
-        <!-- Volet latéral : détails du nœud sélectionné -->
-        @if (selectedSmNode(); as node) {
-          <div class="w-72 flex-shrink-0 flex flex-col border border-light-border dark:border-white/10 rounded-xl overflow-hidden bg-light-surface dark:bg-surface">
+          <!-- Volet latéral : détails du nœud sélectionné (overlay sur la carte) -->
+          @if (selectedSmNode(); as node) {
+          <div class="absolute top-3 right-3 bottom-3 w-72 flex flex-col border border-light-border dark:border-white/10 rounded-xl overflow-hidden bg-light-surface dark:bg-surface shadow-2xl">
 
             <!-- En-tête nœud -->
             <div class="px-4 py-3 border-b border-light-border dark:border-white/10"
@@ -1345,15 +1354,8 @@
             </div>
 
           </div>
-        }
-
-        <!-- Placeholder volet latéral vide -->
-        @if (!selectedSmNode()) {
-          <div class="w-72 flex-shrink-0 flex flex-col items-center justify-center border border-light-border dark:border-white/10 rounded-xl text-center px-6 gap-3">
-            <span class="material-symbols-outlined text-3xl text-light-text-muted dark:text-white/20">touch_app</span>
-            <p class="text-xs text-light-text-muted dark:text-white/30 leading-relaxed">Clique sur un nœud de la carte pour voir les détails : composants, onglets, URL, sections du cahier de recette associées.</p>
-          </div>
-        }
+          }
+        </div>
       </div>
 
     </div>

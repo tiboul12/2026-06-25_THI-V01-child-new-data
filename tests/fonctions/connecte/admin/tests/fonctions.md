@@ -244,7 +244,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 
 ---
 
-## `2-1-5-13` — Onglet Site Map graphique
+## `2-1-5-13` — [modification] Onglet Site Map graphique
 
 - **5e onglet "Site Map"** (`account_tree`) dans la barre Admin › Tests.
 - **Carte SVG interactive** reflétant le **parcours réel de l'utilisateur** (et non un simple listing de routes), avec pan/zoom.
@@ -258,6 +258,8 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Molette** : zoom in/out (min 15%, max 250%).
   - **Cliquer-glisser** sur le fond : pan.
   - **Barre d'outils** : boutons `−` / `+` / reset (`center_focus_strong`), % de zoom courant.
+- **Carte en pleine largeur** : la zone SVG occupe toute la largeur disponible ; le volet de détails s'affiche en **overlay** (coin haut-droit) au clic sur un nœud, sans réduire la largeur de la carte.
+- **Lisibilité des liaisons** : chaque arête est tracée avec un **halo sombre** sous le trait coloré (la liaison reste lisible quand elle survole un nœud), une courbure de Bézier plus ample, et son libellé posé **sur la courbe** (point à t=0.5) dans une pastille bordée de la couleur de l'arête.
 - **Volet latéral** (clic sur un nœud) :
   - Label, URL, badges (type + port), description (rôle dans le parcours).
   - Liste des **composants Angular** réels du nœud.
