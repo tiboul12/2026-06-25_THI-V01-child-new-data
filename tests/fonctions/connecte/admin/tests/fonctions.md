@@ -270,6 +270,12 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Ctrl/Maj+clic** ajoute/retire un nœud de la multi-sélection (contour cyan épais). Un clic simple réinitialise la sélection.
   - Glisser un nœud déjà multi-sélectionné **déplace tout le groupe** ensemble.
   - **Barre d'alignement** (visible dès 2 nœuds) : aligner gauche / centre vertical / droite, haut / milieu horizontal / bas ; **répartir** horizontalement/verticalement (dès 3 nœuds) ; bouton « Effacer la sélection ».
+- **Édition des liaisons (arêtes)** :
+  - Clic sur une liaison la sélectionne (halo cyan) et ouvre un volet d'édition.
+  - **Côté d'accroche** de chaque extrémité (départ / arrivée) : haut / bas / gauche / droite ; par défaut, choix automatique selon la position des nœuds.
+  - **Courbure** : boutons « − Courber » / « Courber + » ou glisser la **poignée cyan** au milieu de la liaison (décalage perpendiculaire des points de contrôle).
+  - Bouton **« Tracé automatique »** : réinitialise l'arête (supprime ses overrides).
+  - Côtés + courbure sont **persistés** dans la disposition (`wo_sitemap_layout_v2`, clé `edges`).
 - **Créer / lancer un test depuis un nœud** (volet de détails) :
   - **« Lancer »** (vert, `play_circle`) sur chaque section de test liée → pré-sélectionne la section et bascule sur l'onglet Exécution.
   - **« Créer une section de test ici »** (indigo, `add`) → ouvre le popup de création pré-rempli (section parente = chemin du nœud, titre/slug d'après le label).

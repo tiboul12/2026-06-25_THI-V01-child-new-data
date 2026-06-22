@@ -1232,7 +1232,8 @@
                 @if (smEdgeLayout().get(edge.id); as geo) {
                   <!-- Halo sombre : démarque la liaison des nœuds qu'elle survole -->
                   <path [attr.d]="geo.path"
-                        fill="none" stroke="#060b14" stroke-width="6"
+                        fill="none" [attr.stroke]="smEdgeSelected(edge.id) ? '#22d3ee' : '#060b14'"
+                        [attr.stroke-width]="smEdgeSelected(edge.id) ? 8 : 6"
                         stroke-opacity="0.9" stroke-linecap="round"/>
                   <!-- Trait coloré -->
                   <path [attr.d]="geo.path"
@@ -1243,15 +1244,31 @@
                         [attr.stroke-dasharray]="smEdgeDashed(edge.type) ? '6 5' : null"
                         [attr.marker-end]="'url(#sm-arrow-' + edge.type + ')'"
                         stroke-opacity="0.95"/>
+                  <!-- Zone de saisie (sélection au clic, seul le tracé réagit) -->
+                  <path data-smnode="1"
+                        [attr.d]="geo.path"
+                        fill="none" stroke="transparent" stroke-width="14"
+                        style="cursor:pointer; pointer-events:stroke"
+                        (mousedown)="selectSmEdge(edge.id, $event)"/>
                   @if (edge.label) {
                     <rect [attr.x]="geo.midX - edge.label.length * 3.6 - 6"
                           [attr.y]="geo.midY - 10"
                           [attr.width]="edge.label.length * 7.2 + 12" height="18" rx="5"
                           fill="#060b14"
-                          [attr.stroke]="smEdgeColor(edge.type)" stroke-opacity="0.4" stroke-width="0.8"/>
+                          [attr.stroke]="smEdgeColor(edge.type)" stroke-opacity="0.4" stroke-width="0.8"
+                          style="pointer-events:none"/>
                     <text [attr.x]="geo.midX" [attr.y]="geo.midY + 3"
                           text-anchor="middle" [attr.fill]="smEdgeColor(edge.type)"
-                          font-size="10" font-weight="600" font-family="Inter, sans-serif">{{ edge.label }}</text>
+                          font-size="10" font-weight="600" font-family="Inter, sans-serif"
+                          style="pointer-events:none">{{ edge.label }}</text>
+                  }
+                  <!-- Poignée de courbure (visible quand l'arête est sélectionnée) -->
+                  @if (smEdgeSelected(edge.id)) {
+                    <circle data-smnode="1"
+                            [attr.cx]="geo.midX" [attr.cy]="geo.midY" r="7"
+                            fill="#22d3ee" stroke="#060b14" stroke-width="2"
+                            style="cursor:grab"
+                            (mousedown)="smEdgeHandleMouseDown(edge.id, $event)"/>
                   }
                 }
               }
@@ -1436,6 +1453,67 @@
               }
             </div>
 
+          </div>
+          }
+
+          <!-- Volet latéral : édition d'une arête sélectionnée -->
+          @if (selectedSmEdge(); as edge) {
+          <div class="absolute top-3 right-3 w-72 flex flex-col border border-cyan-500/40 rounded-xl overflow-hidden bg-light-surface dark:bg-surface shadow-2xl">
+            <div class="px-4 py-3 border-b border-light-border dark:border-white/10" style="border-left:4px solid #22d3ee">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="text-sm font-bold text-light-text dark:text-white">Liaison</div>
+                  <div class="font-mono text-[11px] mt-0.5 text-cyan-400 truncate">{{ edge.from }} → {{ edge.to }}</div>
+                </div>
+                <button (click)="selectedSmEdgeId.set(null)"
+                        class="p-1 rounded text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors flex-shrink-0">
+                  <span class="material-symbols-outlined text-base">close</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex-1 px-4 py-3 space-y-4 text-xs">
+              <!-- Côté d'accroche : départ -->
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Accroche départ</div>
+                <div class="grid grid-cols-4 gap-1">
+                  @for (s of ['top','bottom','left','right']; track s) {
+                    <button (click)="setEdgeSide('from', $any(s))"
+                            [ngClass]="isEdgeSide('from', $any(s)) ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300' : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:border-cyan-500/50'"
+                            class="px-1 py-1.5 rounded-md border text-[10px] capitalize transition-all">{{ s }}</button>
+                  }
+                </div>
+              </div>
+              <!-- Côté d'accroche : arrivée -->
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Accroche arrivée</div>
+                <div class="grid grid-cols-4 gap-1">
+                  @for (s of ['top','bottom','left','right']; track s) {
+                    <button (click)="setEdgeSide('to', $any(s))"
+                            [ngClass]="isEdgeSide('to', $any(s)) ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300' : 'border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:border-cyan-500/50'"
+                            class="px-1 py-1.5 rounded-md border text-[10px] capitalize transition-all">{{ s }}</button>
+                  }
+                </div>
+              </div>
+              <!-- Courbure -->
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Courbure</div>
+                <div class="flex items-center gap-2">
+                  <button (click)="adjustEdgeBend(-20)"
+                          class="flex-1 px-2 py-1.5 rounded-md border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/60 hover:border-cyan-500/50 transition-all">− Courber</button>
+                  <button (click)="adjustEdgeBend(20)"
+                          class="flex-1 px-2 py-1.5 rounded-md border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/60 hover:border-cyan-500/50 transition-all">Courber +</button>
+                </div>
+                <p class="text-[10px] text-light-text-muted dark:text-white/30 mt-1.5">Ou glisse la poignée cyan au milieu de la liaison.</p>
+              </div>
+            </div>
+
+            <div class="px-4 py-3 border-t border-light-border dark:border-white/10">
+              <button (click)="resetSelectedEdge()"
+                      class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white transition-all">
+                <span class="material-symbols-outlined text-sm">restart_alt</span>Tracé automatique
+              </button>
+            </div>
           </div>
           }
         </div>

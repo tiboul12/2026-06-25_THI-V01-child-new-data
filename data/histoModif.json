@@ -10917,6 +10917,29 @@
       "prompt": "on doit pouvoir selectionné plusieurs elements et les centré ensemble",
       "startedAt": "2026-06-22T01:10:00.000Z",
       "completedAt": "2026-06-22T01:35:00.000Z"
+    },
+    {
+      "id": "mod-446",
+      "version": "B-0.302",
+      "date": "2026-06-22T02:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : edition des liaisons (cote d'accroche + courbure)",
+      "description": "Les liaisons deviennent selectionnables (halo cyan + zone de saisie sur le trace). Un volet d'edition permet de fixer le cote d'accroche de chaque extremite (haut/bas/gauche/droite, defaut auto) et d'ajuster la courbure via boutons ou en glissant une poignee cyan au milieu (decalage perpendiculaire des points de controle Bezier). Bouton de retour au trace automatique. Overrides (fromSide/toSide/bend) persistes dans la disposition localStorage sous la cle edges.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "pourrais tu ajouté une option pour deplacer les lignes de liaison en changeant par exemple la courbure ou en changeant le point de laision (haut/bas.droite gauche de l'element)",
+      "startedAt": "2026-06-22T01:40:00.000Z",
+      "completedAt": "2026-06-22T02:05:00.000Z"
     }
   ]
 }

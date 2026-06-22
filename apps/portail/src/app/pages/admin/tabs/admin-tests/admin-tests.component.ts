@@ -170,6 +170,9 @@ interface SitemapGroup {
   x: number; y: number; w: number; h: number;
   stroke: string; fill: string;
 }
+type SmSide = 'left' | 'right' | 'top' | 'bottom';
+interface SmEdgeOverride { fromSide?: SmSide; toSide?: SmSide; bend?: number; }
+interface SmEdgeGeo { path: string; midX: number; midY: number; perpX: number; perpY: number; }
 
 @Component({
   selector: 'app-admin-tests',
@@ -1524,7 +1527,7 @@ Exemple :
   smGroups = signal<SitemapGroup[]>(this.loadInitialSmGroups());
 
   /** Lit la disposition sauvegardée. */
-  private readSmLayout(): { nodes?: Record<string, { x: number; y: number }>; groups?: Record<string, { x: number; y: number; w: number; h: number }> } {
+  private readSmLayout(): { nodes?: Record<string, { x: number; y: number }>; groups?: Record<string, { x: number; y: number; w: number; h: number }>; edges?: Record<string, SmEdgeOverride> } {
     try {
       const raw = localStorage.getItem(this.SM_LAYOUT_KEY);
       if (raw) return JSON.parse(raw) || {};
@@ -1539,6 +1542,11 @@ Exemple :
       const p = saved[n.id];
       return p ? { ...n, x: p.x, y: p.y } : { ...n };
     });
+  }
+
+  /** Charge les overrides d'arêtes sauvegardés (côtés d'accroche, courbure). */
+  private loadInitialSmEdges(): Record<string, SmEdgeOverride> {
+    return this.readSmLayout().edges || {};
   }
 
   /** Applique la géométrie sauvegardée sur les zones par défaut. */
@@ -1558,6 +1566,17 @@ Exemple :
   /** Sélection multiple de nœuds (Ctrl/Maj+clic) pour alignement / déplacement groupé. */
   smMultiSelect      = signal<Set<string>>(new Set());
   smMultiCount       = computed(() => this.smMultiSelect().size);
+  /** Arête sélectionnée (édition côté d'accroche / courbure) + ses overrides. */
+  selectedSmEdgeId   = signal<string | null>(null);
+  smEdgeOverrides    = signal<Record<string, SmEdgeOverride>>(this.loadInitialSmEdges());
+  selectedSmEdge     = computed(() => {
+    const id = this.selectedSmEdgeId();
+    return id ? this.smEdges.find(e => e.id === id) ?? null : null;
+  });
+  selectedSmEdgeOverride = computed((): SmEdgeOverride => {
+    const id = this.selectedSmEdgeId();
+    return id ? (this.smEdgeOverrides()[id] || {}) : {};
+  });
   smFolderFilter     = signal('');
   smSectionOnly      = signal(false);
   smDragging = false;
@@ -1667,6 +1686,16 @@ Exemple :
   }
 
   smMouseMove(e: MouseEvent) {
+    // Ajustement de la courbure d'une arête en cours
+    if (this.smEdgeBendDrag) {
+      const d = this.smEdgeBendDrag;
+      const z = this.sitemapZoom();
+      const ddx = (e.clientX - d.sx) / z, ddy = (e.clientY - d.sy) / z;
+      const delta = ddx * d.perpX + ddy * d.perpY;
+      const nb = Math.round(d.startBend + delta);
+      this.smEdgeOverrides.update(o => ({ ...o, [d.id]: { ...(o[d.id] || {}), bend: nb } }));
+      return;
+    }
     // Déplacement / redimensionnement d'une zone en cours
     if (this.smGroupDrag) { this.applyGroupDrag(e); return; }
     // Déplacement d'un nœud en cours
@@ -1695,6 +1724,11 @@ Exemple :
   }
 
   smMouseUp() {
+    if (this.smEdgeBendDrag) {
+      this.persistLayout();
+      this.smEdgeBendDrag = null;
+      return;
+    }
     if (this.smGroupDrag) {
       if (this.smGroupDrag.moved) this.persistLayout();
       this.smGroupDrag = null;
@@ -1704,6 +1738,7 @@ Exemple :
       const d = this.smNodeDrag;
       if (!d.moved) {
         const id = d.id;
+        this.selectedSmEdgeId.set(null);
         if (d.additive) {
           // Ctrl/Maj+clic → (dé)sélectionne dans la multi-sélection
           let added = false;
@@ -1824,16 +1859,19 @@ Exemple :
       for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y };
       const groups: Record<string, { x: number; y: number; w: number; h: number }> = {};
       for (const g of this.smGroups()) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h };
-      localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify({ nodes, groups }));
+      const edges = this.smEdgeOverrides();
+      localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify({ nodes, groups, edges }));
     } catch { /* ignore */ }
   }
 
-  /** Restaure la disposition par défaut (nœuds + zones). */
+  /** Restaure la disposition par défaut (nœuds + zones + arêtes). */
   resetSmLayout() {
     try { localStorage.removeItem(this.SM_LAYOUT_KEY); } catch { /* ignore */ }
     this.smNodes.set(this.SM_BASE_NODES.map(n => ({ ...n })));
     this.smGroups.set(this.SM_BASE_GROUPS.map(g => ({ ...g })));
+    this.smEdgeOverrides.set({});
     this.smMultiSelect.set(new Set());
+    this.selectedSmEdgeId.set(null);
   }
 
   // ── Déplacement / redimensionnement des zones (groupes) ──
@@ -1943,48 +1981,129 @@ Exemple :
    * - courbe de Bézier avec points de contrôle perpendiculaires aux côtés
    * - libellé positionné sur la courbe réelle (point à t=0.5)
    */
-  smEdgeLayout = computed((): Map<string, { path: string; midX: number; midY: number }> => {
-    const m = new Map<string, { path: string; midX: number; midY: number }>();
+  smEdgeLayout = computed((): Map<string, SmEdgeGeo> => {
+    const m = new Map<string, SmEdgeGeo>();
     const nodes = this.smNodes();
+    const ov = this.smEdgeOverrides();
     for (const edge of this.smEdges) {
       const from = nodes.find(n => n.id === edge.from);
       const to   = nodes.find(n => n.id === edge.to);
       if (!from || !to) continue;
-      m.set(edge.id, this.buildEdgeGeometry(from, to));
+      m.set(edge.id, this.buildEdgeGeometry(from, to, ov[edge.id]));
     }
     return m;
   });
 
-  private buildEdgeGeometry(from: SitemapNode, to: SitemapNode): { path: string; midX: number; midY: number } {
-    const fcx = from.x + from.w / 2, fcy = from.y + from.h / 2;
-    const tcx = to.x + to.w / 2,     tcy = to.y + to.h / 2;
-    const dx = tcx - fcx, dy = tcy - fcy;
-    let x1: number, y1: number, x2: number, y2: number;
-    let c1x: number, c1y: number, c2x: number, c2y: number;
-
-    if (Math.abs(dx) > Math.abs(dy) * 0.7) {
-      // Liaison à dominante horizontale → sort par le côté gauche/droit
-      if (dx > 0) { x1 = from.x + from.w; x2 = to.x; }
-      else        { x1 = from.x;          x2 = to.x + to.w; }
-      y1 = fcy; y2 = tcy;
-      const off = Math.max(60, Math.abs(x2 - x1) * 0.5);
-      c1x = x1 + (dx > 0 ? off : -off); c1y = y1;
-      c2x = x2 + (dx > 0 ? -off : off); c2y = y2;
-    } else {
-      // Liaison à dominante verticale → sort par le haut/bas
-      if (dy > 0) { y1 = from.y + from.h; y2 = to.y; }
-      else        { y1 = from.y;          y2 = to.y + to.h; }
-      x1 = fcx; x2 = tcx;
-      const off = Math.max(50, Math.abs(y2 - y1) * 0.5);
-      c1x = x1; c1y = y1 + (dy > 0 ? off : -off);
-      c2x = x2; c2y = y2 + (dy > 0 ? -off : off);
+  /** Point d'ancrage (et normale sortante) sur un côté d'un nœud. */
+  private smSideAnchor(node: SitemapNode, side: SmSide): { x: number; y: number; nx: number; ny: number } {
+    switch (side) {
+      case 'left':   return { x: node.x,          y: node.y + node.h / 2, nx: -1, ny: 0 };
+      case 'right':  return { x: node.x + node.w, y: node.y + node.h / 2, nx: 1,  ny: 0 };
+      case 'top':    return { x: node.x + node.w / 2, y: node.y,          nx: 0,  ny: -1 };
+      default:       return { x: node.x + node.w / 2, y: node.y + node.h, nx: 0,  ny: 1 }; // bottom
     }
+  }
 
-    const path = `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`;
-    // Point de la cubique à t=0.5 (libellé posé sur la courbe, pas entre les centres)
-    const midX = 0.125 * x1 + 0.375 * c1x + 0.375 * c2x + 0.125 * x2;
-    const midY = 0.125 * y1 + 0.375 * c1y + 0.375 * c2y + 0.125 * y2;
-    return { path, midX, midY };
+  /** Côtés d'accroche choisis automatiquement selon la position relative des nœuds. */
+  private smAutoSides(from: SitemapNode, to: SitemapNode): { fromSide: SmSide; toSide: SmSide } {
+    const dx = (to.x + to.w / 2) - (from.x + from.w / 2);
+    const dy = (to.y + to.h / 2) - (from.y + from.h / 2);
+    if (Math.abs(dx) > Math.abs(dy) * 0.7) {
+      return dx > 0 ? { fromSide: 'right', toSide: 'left' } : { fromSide: 'left', toSide: 'right' };
+    }
+    return dy > 0 ? { fromSide: 'bottom', toSide: 'top' } : { fromSide: 'top', toSide: 'bottom' };
+  }
+
+  private buildEdgeGeometry(from: SitemapNode, to: SitemapNode, ov?: SmEdgeOverride): SmEdgeGeo {
+    const auto = this.smAutoSides(from, to);
+    const a1 = this.smSideAnchor(from, ov?.fromSide ?? auto.fromSide);
+    const a2 = this.smSideAnchor(to,   ov?.toSide   ?? auto.toSide);
+    const dist = Math.hypot(a2.x - a1.x, a2.y - a1.y);
+    const off = Math.max(50, dist * 0.4);
+    let c1x = a1.x + a1.nx * off, c1y = a1.y + a1.ny * off;
+    let c2x = a2.x + a2.nx * off, c2y = a2.y + a2.ny * off;
+    // Courbure manuelle : décale les points de contrôle perpendiculairement à la corde
+    const len = dist || 1;
+    const perpX = -(a2.y - a1.y) / len, perpY = (a2.x - a1.x) / len;
+    const bend = ov?.bend ?? 0;
+    if (bend) { c1x += perpX * bend; c1y += perpY * bend; c2x += perpX * bend; c2y += perpY * bend; }
+
+    const path = `M ${a1.x} ${a1.y} C ${c1x} ${c1y} ${c2x} ${c2y} ${a2.x} ${a2.y}`;
+    // Point de la cubique à t=0.5 (libellé + poignée de courbure posés sur la courbe)
+    const midX = 0.125 * a1.x + 0.375 * c1x + 0.375 * c2x + 0.125 * a2.x;
+    const midY = 0.125 * a1.y + 0.375 * c1y + 0.375 * c2y + 0.125 * a2.y;
+    return { path, midX, midY, perpX, perpY };
+  }
+
+  // ── Édition des arêtes (côté d'accroche + courbure) ──
+  smEdgeSelected(id: string): boolean { return this.selectedSmEdgeId() === id; }
+
+  /** Sélectionne / désélectionne une arête (ferme la sélection de nœud). */
+  selectSmEdge(id: string, e: MouseEvent) {
+    e.stopPropagation();
+    this.selectedSmEdgeId.update(c => c === id ? null : id);
+    if (this.selectedSmEdgeId()) {
+      this.selectedSmNode.set(null);
+      this.smMultiSelect.set(new Set());
+    }
+  }
+
+  /** Fixe le côté d'accroche d'une extrémité de l'arête sélectionnée. */
+  setEdgeSide(end: 'from' | 'to', side: SmSide) {
+    const id = this.selectedSmEdgeId();
+    if (!id) return;
+    this.smEdgeOverrides.update(o => {
+      const cur = { ...(o[id] || {}) };
+      if (end === 'from') cur.fromSide = side; else cur.toSide = side;
+      return { ...o, [id]: cur };
+    });
+    this.persistLayout();
+  }
+
+  isEdgeSide(end: 'from' | 'to', side: SmSide): boolean {
+    const ov = this.selectedSmEdgeOverride();
+    const edge = this.selectedSmEdge();
+    if (!edge) return false;
+    const nodes = this.smNodes();
+    const from = nodes.find(n => n.id === edge.from), to = nodes.find(n => n.id === edge.to);
+    const auto = (from && to) ? this.smAutoSides(from, to) : { fromSide: 'right' as SmSide, toSide: 'left' as SmSide };
+    const cur = end === 'from' ? (ov.fromSide ?? auto.fromSide) : (ov.toSide ?? auto.toSide);
+    return cur === side;
+  }
+
+  adjustEdgeBend(delta: number) {
+    const id = this.selectedSmEdgeId();
+    if (!id) return;
+    this.smEdgeOverrides.update(o => {
+      const cur = { ...(o[id] || {}) };
+      cur.bend = (cur.bend || 0) + delta;
+      return { ...o, [id]: cur };
+    });
+    this.persistLayout();
+  }
+
+  /** Réinitialise l'arête sélectionnée (retour au tracé automatique). */
+  resetSelectedEdge() {
+    const id = this.selectedSmEdgeId();
+    if (!id) return;
+    this.smEdgeOverrides.update(o => { const n = { ...o }; delete n[id]; return n; });
+    this.persistLayout();
+  }
+
+  // Glisser la poignée de courbure (milieu de l'arête)
+  private smEdgeBendDrag: { id: string; sx: number; sy: number; startBend: number; perpX: number; perpY: number } | null = null;
+
+  smEdgeHandleMouseDown(edgeId: string, e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    const geo = this.smEdgeLayout().get(edgeId);
+    if (!geo) return;
+    this.selectedSmEdgeId.set(edgeId);
+    this.smEdgeBendDrag = {
+      id: edgeId, sx: e.clientX, sy: e.clientY,
+      startBend: this.smEdgeOverrides()[edgeId]?.bend ?? 0,
+      perpX: geo.perpX, perpY: geo.perpY,
+    };
   }
 
   smEdgeColor(type: string): string {
