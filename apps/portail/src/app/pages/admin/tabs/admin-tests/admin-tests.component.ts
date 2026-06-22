@@ -1895,25 +1895,73 @@ Exemple :
     this.smNodes.update(nodes => nodes.map(n => n.id === id ? { ...n, x, y } : n));
   }
 
-  /** Persiste la disposition complète (nœuds + zones + liaisons, base & personnalisées). */
+  /** Construit l'objet disposition (nœuds + zones + liaisons, base & personnalisées). */
+  private buildLayoutObject() {
+    const nodes: Record<string, { x: number; y: number; groupId?: string }> = {};
+    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId };
+
+    const baseGroupIds = new Set(this.SM_BASE_GROUPS.map(g => g.id));
+    const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string }> = {};
+    const customGroups: SitemapGroup[] = [];
+    for (const g of this.smGroups()) {
+      if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label };
+      else customGroups.push({ ...g });
+    }
+
+    const baseEdgeIds = new Set(this.SM_BASE_EDGES.map(e => e.id));
+    const customEdges = this.smEdges().filter(e => !baseEdgeIds.has(e.id)).map(e => ({ ...e }));
+
+    return { nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges };
+  }
+
+  /** Applique un objet disposition (chargé du serveur ou du cache) sur les signaux. */
+  private applySmLayout(layout: any) {
+    const savedNodes = layout?.nodes || {};
+    this.smNodes.set(this.SM_BASE_NODES.map(n => {
+      const p = savedNodes[n.id];
+      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId } : { ...n };
+    }));
+    const savedGroups = layout?.groups || {};
+    const base = this.SM_BASE_GROUPS.map(g => {
+      const s = savedGroups[g.id];
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label } : { ...g };
+    });
+    const customGroups = Array.isArray(layout?.customGroups) ? layout.customGroups.map((g: SitemapGroup) => ({ ...g })) : [];
+    this.smGroups.set([...base, ...customGroups]);
+    const customEdges = Array.isArray(layout?.customEdges) ? layout.customEdges.map((e: SitemapEdge) => ({ ...e })) : [];
+    this.smEdges.set([...this.SM_BASE_EDGES.map(e => ({ ...e })), ...customEdges]);
+    this.smEdgeOverrides.set(layout?.edges || {});
+  }
+
+  private smLayoutSaveTimer: any = null;
+
+  /** Persiste la disposition : cache local immédiat + enregistrement serveur (partagé) débouncé. */
   private persistLayout() {
+    const layout = this.buildLayoutObject();
+    try { localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
+    if (this.smLayoutSaveTimer) clearTimeout(this.smLayoutSaveTimer);
+    this.smLayoutSaveTimer = setTimeout(() => this.saveSitemapLayoutToServer(layout), 600);
+  }
+
+  /** Disposition partagée : enregistre côté serveur (visible par les autres admins). */
+  private async saveSitemapLayoutToServer(layout: any) {
     try {
-      const nodes: Record<string, { x: number; y: number; groupId?: string }> = {};
-      for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId };
+      await fetch(`${API}/api/admin/tests/sitemap-layout`, {
+        method: 'PUT', headers: this.authHeaders, body: JSON.stringify(layout),
+      });
+    } catch { /* hors-ligne : le cache local prend le relais */ }
+  }
 
-      const baseGroupIds = new Set(this.SM_BASE_GROUPS.map(g => g.id));
-      const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string }> = {};
-      const customGroups: SitemapGroup[] = [];
-      for (const g of this.smGroups()) {
-        if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label };
-        else customGroups.push({ ...g });
+  /** Charge la disposition partagée depuis le serveur et l'applique. */
+  private async loadSitemapLayout() {
+    try {
+      const res = await fetch(`${API}/api/admin/tests/sitemap-layout`, { headers: this.authHeaders });
+      if (!res.ok) return;
+      const layout = await res.json();
+      if (layout && (layout.nodes || layout.groups || layout.customGroups || layout.customEdges || layout.edges)) {
+        this.applySmLayout(layout);
+        try { localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
       }
-
-      const baseEdgeIds = new Set(this.SM_BASE_EDGES.map(e => e.id));
-      const customEdges = this.smEdges().filter(e => !baseEdgeIds.has(e.id)).map(e => ({ ...e }));
-
-      const edges = this.smEdgeOverrides();
-      localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify({ nodes, groups, edges, customGroups, customEdges }));
     } catch { /* ignore */ }
   }
 
@@ -1929,6 +1977,7 @@ Exemple :
     this.selectedSmGroupId.set(null);
     this.smLinkMode.set(false);
     this.smLinkSource.set(null);
+    this.persistLayout();   // partage la réinitialisation (serveur + cache)
   }
 
   // ── Déplacement / redimensionnement des zones (groupes) ──
@@ -2344,6 +2393,7 @@ Exemple :
     this.loadMatrix();   // résultats nécessaires aux couleurs du Cahier
     this.loadFavorites();
     this.loadSettings();
+    this.loadSitemapLayout();   // disposition partagée de la Site Map (serveur)
 
     // Routing par segment : /admin/tests/:subtab (réagit aussi au retour arrière navigateur)
     this.route.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {

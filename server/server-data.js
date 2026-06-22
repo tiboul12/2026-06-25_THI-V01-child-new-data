@@ -7643,6 +7643,7 @@ const ADMIN_TESTS_RUNS_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'runs.json');
 const ADMIN_TESTS_FNHIST_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'functions-history.json');
 const ADMIN_TESTS_FAV_FILE    = path.join(ADMIN_TESTS_RUNS_DIR, 'favorites.json');
 const ADMIN_TESTS_SETTINGS_FILE = path.join(ADMIN_TESTS_RUNS_DIR, 'settings.json');
+const ADMIN_TESTS_SITEMAP_FILE  = path.join(ADMIN_TESTS_RUNS_DIR, 'sitemap-layout.json');
 const FONCTIONS_DIR         = path.join(__dirname, '..', 'tests', 'fonctions');
 const FONCTIONS_REGISTRY    = path.join(FONCTIONS_DIR, '_registry.json');
 const USER_CREATED_FILE     = path.join(FONCTIONS_DIR, '_user-created.json');
@@ -8798,6 +8799,23 @@ function testsSettingsSave(s) {
     } catch (e) { console.error('[ADMIN-TESTS] settings save error:', e); return false; }
 }
 
+// ── Disposition de la Site Map (partagée entre utilisateurs) ──
+function sitemapLayoutLoad() {
+    try {
+        if (fs.existsSync(ADMIN_TESTS_SITEMAP_FILE)) {
+            return JSON.parse(fs.readFileSync(ADMIN_TESTS_SITEMAP_FILE, 'utf8')) || {};
+        }
+    } catch (e) { console.error('[ADMIN-TESTS] sitemap layout load error:', e); }
+    return {};
+}
+function sitemapLayoutSave(layout) {
+    try {
+        fs.mkdirSync(ADMIN_TESTS_RUNS_DIR, { recursive: true });
+        fs.writeFileSync(ADMIN_TESTS_SITEMAP_FILE, JSON.stringify(layout, null, 2), 'utf8');
+        return true;
+    } catch (e) { console.error('[ADMIN-TESTS] sitemap layout save error:', e); return false; }
+}
+
 // GET /api/admin/tests/settings — seuils de validation.
 app.get('/api/admin/tests/settings', (req, res) => {
     const user = getSessionUser(req);
@@ -8865,6 +8883,31 @@ app.post('/api/admin/tests/favorites', (req, res) => {
     const folderIds = [...set];
     favSave(folderIds);
     res.json({ folderIds });
+});
+
+// GET /api/admin/tests/sitemap-layout — disposition partagée de la Site Map.
+app.get('/api/admin/tests/sitemap-layout', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    res.json(sitemapLayoutLoad());
+});
+
+// PUT /api/admin/tests/sitemap-layout { nodes, groups, edges, customGroups, customEdges } — enregistre la disposition.
+app.put('/api/admin/tests/sitemap-layout', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const b = req.body || {};
+    const layout = {
+        nodes:        (b.nodes && typeof b.nodes === 'object') ? b.nodes : {},
+        groups:       (b.groups && typeof b.groups === 'object') ? b.groups : {},
+        edges:        (b.edges && typeof b.edges === 'object') ? b.edges : {},
+        customGroups: Array.isArray(b.customGroups) ? b.customGroups : [],
+        customEdges:  Array.isArray(b.customEdges) ? b.customEdges : [],
+        updatedAt:    new Date().toISOString(),
+        updatedBy:    user.username || user.email || 'admin',
+    };
+    if (!sitemapLayoutSave(layout)) return res.status(500).json({ error: 'Échec écriture' });
+    res.json({ ok: true, updatedAt: layout.updatedAt, updatedBy: layout.updatedBy });
 });
 
 // ============================================================

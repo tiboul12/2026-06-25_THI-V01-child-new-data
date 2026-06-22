@@ -283,6 +283,10 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Inclusion d'une zone** : déplacer une zone déplace aussi les zones entièrement contenues et leurs nœuds.
   - Bouton **« Liaison »** (mode) : cliquer le nœud source (surbrillance rose) puis la cible crée une nouvelle liaison (éditable / supprimable).
   - Zones et liaisons personnalisées sont **persistées** (`customGroups`, `customEdges`) ; le bouton « Disposition » les supprime (retour à l'état par défaut).
+- **Disposition partagée (serveur)** :
+  - La disposition complète (positions/zones/liaisons/overrides) est enregistrée **côté serveur** (`data/tests-admin/sitemap-layout.json`) via `PUT /api/admin/tests/sitemap-layout` (débouncé ~600 ms), et chargée au démarrage via `GET …/sitemap-layout` → **tous les admins voient les mêmes modifications**.
+  - Le localStorage (`wo_sitemap_layout_v2`) sert de **cache local / repli hors-ligne**.
+  - La réinitialisation (« Disposition ») est elle aussi partagée (écrit l'état par défaut côté serveur).
 - **Créer / lancer un test depuis un nœud** (volet de détails) :
   - **« Lancer »** (vert, `play_circle`) sur chaque section de test liée → pré-sélectionne la section et bascule sur l'onglet Exécution.
   - **« Créer une section de test ici »** (indigo, `add`) → ouvre le popup de création pré-rempli (section parente = chemin du nœud, titre/slug d'après le label).

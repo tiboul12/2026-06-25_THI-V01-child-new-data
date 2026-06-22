@@ -10963,6 +10963,30 @@
       "prompt": "on doit pouvoir rajouté des zones et inclure des zones à l'interieur ou des elements, on doit pouvoir créé des liaisons",
       "startedAt": "2026-06-22T02:10:00.000Z",
       "completedAt": "2026-06-22T02:45:00.000Z"
+    },
+    {
+      "id": "mod-448",
+      "version": "B-0.304",
+      "date": "2026-06-22T03:10:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map : disposition partagee cote serveur (visible par tous les admins)",
+      "description": "La disposition de la Site Map (positions des noeuds, zones, liaisons, overrides, zones/liaisons personnalisees) est desormais enregistree cote serveur dans data/tests-admin/sitemap-layout.json via GET/PUT /api/admin/tests/sitemap-layout (admin requis), et chargee au demarrage. Les modifications sont donc partagees entre tous les admins/instances. Le localStorage reste un cache local / repli hors-ligne. La sauvegarde serveur est debouncee (~600 ms) ; la reinitialisation est egalement propagee.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "les modification dans le sitemap doivent être sauvegardé et partagé (via bdd ou autre) afin que les autres users puissent voir les modification de la sitemap",
+      "startedAt": "2026-06-22T02:50:00.000Z",
+      "completedAt": "2026-06-22T03:15:00.000Z"
     }
   ]
 }
