@@ -283,7 +283,8 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Inclusion d'un élément** : déposer un nœud à l'intérieur d'une zone le rattache à cette zone (`groupId`) → il suit ses déplacements. La plus petite zone contenant le centre l'emporte (nesting).
   - **Inclusion d'une zone** : déplacer une zone déplace aussi les zones entièrement contenues et leurs nœuds.
   - Les **poignées des zones** (bordure cliquable, étiquette, redimensionnement) sont rendues dans une **couche interactive au-dessus des arêtes et des nœuds** : une zone imbriquée reste sélectionnable/déplaçable même quand des liaisons la traversent.
-  - Bouton **« Liaison »** (mode) : cliquer la source (surbrillance rose) puis la cible crée une nouvelle liaison (éditable / supprimable). Une extrémité peut être **un nœud OU une zone** → on peut relier nœud↔zone, zone↔zone, zone↔nœud (clic sur la bordure/étiquette de la zone en mode liaison). La géométrie des arêtes est calculée sur la « boîte » de l'élément (nœud ou zone) et suit ses déplacements/redimensionnements.
+  - Bouton **« Liaison »** (mode) : cliquer la source (surbrillance rose) puis la cible crée une nouvelle liaison (éditable / supprimable). Une extrémité peut être **un nœud OU une zone** → on peut relier nœud↔zone, zone↔zone, zone↔nœud. La géométrie des arêtes est calculée sur la « boîte » de l'élément (nœud ou zone) et suit ses déplacements/redimensionnements.
+  - **Ciblage facile d'une zone** : en mode liaison, toute la surface de la zone est cliquable comme extrémité (les nœuds restent prioritaires au-dessus) ; on n'est pas obligé de viser la bordure ou l'étiquette.
   - Zones et liaisons personnalisées sont **persistées** (`customGroups`, `customEdges`) ; le bouton « Disposition » les supprime (retour à l'état par défaut).
 - **Disposition partagée (serveur)** :
   - La disposition complète (positions/zones/liaisons/overrides) est enregistrée **côté serveur** (`data/tests-admin/sitemap-layout.json`) via `PUT /api/admin/tests/sitemap-layout` (débouncé ~600 ms), et chargée au démarrage via `GET …/sitemap-layout` → **tous les admins voient les mêmes modifications**.
@@ -309,6 +310,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Carte en pleine largeur** : la zone SVG occupe toute la largeur disponible ; le volet de détails s'affiche en **overlay** (coin haut-droit) au clic sur un nœud, sans réduire la largeur de la carte.
 - **Lisibilité des liaisons** : chaque arête est tracée avec un **halo sombre** sous le trait coloré (la liaison reste lisible quand elle survole un nœud), une courbure de Bézier plus ample, et son libellé posé **sur la courbe** (point à t=0.5) dans une pastille bordée de la couleur de l'arête.
 - **Volet latéral** (clic sur un nœud) :
+  - **Titre éditable** : champ « Titre » modifiant le libellé du nœud (persisté dans la disposition, override `label`).
   - Label, URL, badges (type + port), description (rôle dans le parcours).
   - Liste des **composants Angular** réels du nœud.
   - Liste des **onglets** (si page tabulée).

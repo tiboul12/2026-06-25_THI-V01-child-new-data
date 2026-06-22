@@ -1220,10 +1220,10 @@
                 <rect [attr.x]="grp.x" [attr.y]="grp.y"
                       [attr.width]="grp.w" [attr.height]="grp.h"
                       [attr.fill]="grp.fill"
-                      [attr.stroke]="smIsLinkSource(grp.id) ? '#f472b6' : grp.stroke"
-                      [attr.stroke-width]="smIsLinkSource(grp.id) ? 3 : (selectedSmGroupId() === grp.id ? 2.5 : 1.5)"
+                      [attr.stroke]="smIsLinkSourceGroup(grp.id) ? '#f472b6' : grp.stroke"
+                      [attr.stroke-width]="smIsLinkSourceGroup(grp.id) ? 3 : (selectedSmGroupId() === grp.id ? 2.5 : 1.5)"
                       rx="14" ry="14" style="pointer-events:none"
-                      [attr.stroke-dasharray]="(smIsLinkSource(grp.id) || selectedSmGroupId() === grp.id) ? null : '6 3'"/>
+                      [attr.stroke-dasharray]="(smIsLinkSourceGroup(grp.id) || selectedSmGroupId() === grp.id) ? null : '6 3'"/>
                 <!-- Étiquette (fond + texte, visuel) -->
                 <rect [attr.x]="grp.x + 10" [attr.y]="grp.y - 11"
                       [attr.width]="grp.label.length * 7 + 16" height="22"
@@ -1277,6 +1277,17 @@
                             style="cursor:grab"
                             (mousedown)="smEdgeHandleMouseDown(edge.id, $event)"/>
                   }
+                }
+              }
+
+              <!-- ── Cibles de liaison sur les ZONES (mode liaison) : surface pleine cliquable.
+                   Placée avant les nœuds → les nœuds restent cliquables au-dessus, l'espace vide de la zone cible la zone. -->
+              @if (smLinkMode()) {
+                @for (grp of smVisibleGroups(); track grp.id) {
+                  <rect data-smnode="1"
+                        [attr.x]="grp.x" [attr.y]="grp.y" [attr.width]="grp.w" [attr.height]="grp.h"
+                        rx="14" ry="14" fill="transparent" style="cursor:crosshair; pointer-events:fill"
+                        (mousedown)="smGroupMouseDown(grp, 'move', $event)"/>
                 }
               }
 
@@ -1394,6 +1405,14 @@
             <!-- Contenu scrollable -->
             <div class="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-xs">
 
+              <!-- Titre éditable -->
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Titre</div>
+                <input type="text" [value]="node.label"
+                       (input)="renameSelectedNode($any($event.target).value)"
+                       class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-xs focus:outline-none focus:border-light-primary dark:focus:border-primary" />
+              </div>
+
               <!-- Description -->
               @if (node.description) {
                 <p class="text-light-text-muted dark:text-white/55 leading-relaxed">{{ node.description }}</p>
@@ -1499,7 +1518,7 @@
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
                   <div class="text-sm font-bold text-light-text dark:text-white">Liaison</div>
-                  <div class="font-mono text-[11px] mt-0.5 text-cyan-400 truncate">{{ edge.from }} → {{ edge.to }}</div>
+                  <div class="text-[11px] mt-0.5 text-cyan-400 truncate">{{ smEdgeEndLabel(edge.from) }} → {{ smEdgeEndLabel(edge.to) }}</div>
                 </div>
                 <button (click)="selectedSmEdgeId.set(null)"
                         class="p-1 rounded text-light-text-muted dark:text-white/40 hover:text-light-text dark:hover:text-white transition-colors flex-shrink-0">

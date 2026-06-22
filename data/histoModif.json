@@ -11151,6 +11151,73 @@
       "prompt": "on doit pouvoir relié un composant à une zone ou une zone à une zone ou une zone à un composant",
       "startedAt": "2026-06-22T06:10:00.000Z",
       "completedAt": "2026-06-22T06:35:00.000Z"
+    },
+    {
+      "id": "mod-456",
+      "version": "B-0.304",
+      "date": "2026-06-22T06:55:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : ciblage facile d'une zone comme extremite de liaison",
+      "description": "Relier un noeud a une zone fonctionnait mais exigeait de viser la fine bordure (14px) ou l'etiquette de la zone, l'interieur declenchant le pan. En mode liaison uniquement, ajout d'une surface de capture pleine par zone, placee AVANT les noeuds : les noeuds restent cliquables au-dessus (cibles prioritaires) et l'espace vide de la zone devient une cible facile pour creer la liaison noeud<->zone / zone<->zone.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je doit pouvoir relié un composant à une zone",
+      "startedAt": "2026-06-22T06:40:00.000Z",
+      "completedAt": "2026-06-22T07:00:00.000Z"
+    },
+    {
+      "id": "mod-457",
+      "version": "B-0.304",
+      "date": "2026-06-22T07:20:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : fix liaison noeud->zone bloquee par collision d'id (noeud 'admin' vs zone 'admin')",
+      "description": "Le noeud 'Admin' (id 'admin') et la zone 'Admin — reserve admin' (id 'admin') partagent le meme id : handleLinkClick voyait src===cible et annulait la creation. Les extremites 'zone' sont desormais prefixees 'group:<id>' (les noeuds restent en id nu pour compat). smBoxOf et le boxOf de smEdgeLayout resolvent le prefixe, smIsLinkSourceGroup gere la surbrillance de la zone source, et smEdgeEndLabel affiche un libelle lisible dans le volet d'arete.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "je n'arrive pas à relié une component Admin avec une zone Admin - Réserver admin",
+      "startedAt": "2026-06-22T07:05:00.000Z",
+      "completedAt": "2026-06-22T07:25:00.000Z"
+    },
+    {
+      "id": "mod-458",
+      "version": "B-0.304",
+      "date": "2026-06-22T07:45:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : titre des noeuds editable (champ Titre dans le volet)",
+      "description": "Le volet d'un noeud propose un champ 'Titre' qui modifie son libelle. Le label est persiste comme override (nodes[id].label) dans la disposition (load/apply/build), et la nouvelle valeur est diffusee (persistLayout) et reflechie immediatement (selectedSmNode resynchronise).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "on doit pouvoir changert les titres des component",
+      "startedAt": "2026-06-22T07:30:00.000Z",
+      "completedAt": "2026-06-22T07:50:00.000Z"
     }
   ]
 }

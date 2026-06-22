@@ -1538,7 +1538,7 @@ Exemple :
 
   /** Lit la disposition sauvegardée. */
   private readSmLayout(): {
-    nodes?: Record<string, { x: number; y: number; groupId?: string }>;
+    nodes?: Record<string, { x: number; y: number; groupId?: string; label?: string }>;
     groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string }>;
     edges?: Record<string, SmEdgeOverride>;
     customGroups?: SitemapGroup[];
@@ -1557,7 +1557,7 @@ Exemple :
     const saved = this.readSmLayout().nodes || {};
     return this.SM_BASE_NODES.map(n => {
       const p = saved[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label } : { ...n };
     });
   }
 
@@ -1831,6 +1831,15 @@ Exemple :
     this.smDragging = false;
   }
 
+  /** Renomme le nœud sélectionné (persisté). */
+  renameSelectedNode(label: string) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, label } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+
   smNodeMultiSelected(id: string): boolean { return this.smMultiSelect().has(id); }
   clearMultiSelect() { this.smMultiSelect.set(new Set()); }
 
@@ -1914,8 +1923,8 @@ Exemple :
 
   /** Construit l'objet disposition (nœuds + zones + liaisons, base & personnalisées). */
   private buildLayoutObject() {
-    const nodes: Record<string, { x: number; y: number; groupId?: string }> = {};
-    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId };
+    const nodes: Record<string, { x: number; y: number; groupId?: string; label?: string }> = {};
+    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId, label: n.label };
 
     const baseGroupIds = new Set(this.SM_BASE_GROUPS.map(g => g.id));
     const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string }> = {};
@@ -1938,7 +1947,7 @@ Exemple :
     const savedNodes = layout?.nodes || {};
     this.smNodes.set(this.SM_BASE_NODES.map(n => {
       const p = savedNodes[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label } : { ...n };
     }));
     const savedGroups = layout?.groups || {};
     const base = this.SM_BASE_GROUPS.map(g => {
@@ -2300,8 +2309,9 @@ Exemple :
   smGroupMouseDown(group: SitemapGroup, mode: 'move' | 'resize', e: MouseEvent) {
     e.stopPropagation();
     e.preventDefault();
-    // Mode création de liaison : une zone peut être une extrémité (source ou cible)
-    if (this.smLinkMode()) { this.handleLinkClick(group.id); return; }
+    // Mode création de liaison : une zone peut être une extrémité (préfixe 'group:' pour éviter
+    // toute collision d'id avec un nœud — ex : le nœud 'admin' et la zone 'admin').
+    if (this.smLinkMode()) { this.handleLinkClick('group:' + group.id); return; }
     // Zones déplacées : la zone saisie + toutes les zones qu'elle contient (nesting)
     const groupIds = new Set<string>([group.id]);
     const og2 = new Map<string, { x: number; y: number }>();
@@ -2427,6 +2437,18 @@ Exemple :
   }
 
   smIsLinkSource(id: string): boolean { return this.smLinkSource() === id; }
+  smIsLinkSourceGroup(id: string): boolean { return this.smLinkSource() === 'group:' + id; }
+
+  /** Libellé lisible d'une extrémité d'arête (nœud ou zone). */
+  smEdgeEndLabel(ref: string): string {
+    if (!ref) return '';
+    if (ref.startsWith('group:')) {
+      const g = this.smGroups().find(x => x.id === ref.slice(6));
+      return '⬚ ' + (g?.label || ref.slice(6));
+    }
+    const n = this.smNodes().find(x => x.id === ref);
+    return n?.label || ref;
+  }
 
   private handleLinkClick(nodeId: string) {
     const src = this.smLinkSource();
@@ -2538,9 +2560,12 @@ Exemple :
     const nodes = this.smNodes();
     const groups = this.smGroups();
     const ov = this.smEdgeOverrides();
-    const boxOf = (id: string) => {
-      const n = nodes.find(x => x.id === id); if (n) return { x: n.x, y: n.y, w: n.w, h: n.h };
-      const g = groups.find(x => x.id === id); if (g) return { x: g.x, y: g.y, w: g.w, h: g.h };
+    const boxOf = (ref: string) => {
+      if (ref && ref.startsWith('group:')) {
+        const g = groups.find(x => x.id === ref.slice(6)); return g ? { x: g.x, y: g.y, w: g.w, h: g.h } : null;
+      }
+      const n = nodes.find(x => x.id === ref); if (n) return { x: n.x, y: n.y, w: n.w, h: n.h };
+      const g = groups.find(x => x.id === ref); if (g) return { x: g.x, y: g.y, w: g.w, h: g.h }; // repli (anciens refs nus)
       return null;
     };
     for (const edge of this.smEdges()) {
@@ -2552,10 +2577,13 @@ Exemple :
     return m;
   });
 
-  /** Boîte (nœud ou zone) d'un identifiant. */
-  private smBoxOf(id: string): { x: number; y: number; w: number; h: number } | null {
-    const n = this.smNodes().find(x => x.id === id); if (n) return { x: n.x, y: n.y, w: n.w, h: n.h };
-    const g = this.smGroups().find(x => x.id === id); if (g) return { x: g.x, y: g.y, w: g.w, h: g.h };
+  /** Boîte (nœud ou zone) d'une extrémité d'arête (réf nœud nue, ou 'group:<id>' pour une zone). */
+  private smBoxOf(ref: string): { x: number; y: number; w: number; h: number } | null {
+    if (ref && ref.startsWith('group:')) {
+      const g = this.smGroups().find(x => x.id === ref.slice(6)); return g ? { x: g.x, y: g.y, w: g.w, h: g.h } : null;
+    }
+    const n = this.smNodes().find(x => x.id === ref); if (n) return { x: n.x, y: n.y, w: n.w, h: n.h };
+    const g = this.smGroups().find(x => x.id === ref); if (g) return { x: g.x, y: g.y, w: g.w, h: g.h };
     return null;
   }
 
