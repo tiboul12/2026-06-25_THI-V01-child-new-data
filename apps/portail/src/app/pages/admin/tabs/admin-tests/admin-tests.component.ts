@@ -1563,7 +1563,10 @@ Exemple :
   selectedSmNode     = signal<SitemapNode | null>(null);
   /** Sélection multiple de nœuds (Ctrl/Maj+clic) pour alignement / déplacement groupé. */
   smMultiSelect      = signal<Set<string>>(new Set());
-  smMultiCount       = computed(() => this.smMultiSelect().size);
+  /** Sélection multiple de zones/sections (Ctrl/Maj+clic) pour alignement. */
+  smGroupMultiSelect = signal<Set<string>>(new Set());
+  /** Nombre total de boîtes (nœuds + zones) multi-sélectionnées → pilote l'affichage de la barre d'alignement. */
+  smMultiCount       = computed(() => this.smMultiSelect().size + this.smGroupMultiSelect().size);
   /** Zone (groupe) sélectionnée pour édition (label / couleur / suppression). */
   selectedSmGroupId  = signal<string | null>(null);
   selectedSmGroup    = computed(() => {
@@ -1752,10 +1755,16 @@ Exemple :
     if (this.smGroupDrag) {
       if (this.smGroupDrag.moved) {
         this.persistLayout();
+      } else if (this.smGroupDrag.additive) {
+        // Ctrl/Maj+clic → (dé)sélectionne la zone dans la multi-sélection (pour alignement)
+        const id = this.smGroupDrag.id;
+        this.smGroupMultiSelect.update(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+        this.selectedSmGroupId.set(null); this.selectedSmNode.set(null); this.selectedSmEdgeId.set(null); this.smMultiSelect.set(new Set());
       } else {
-        // Clic sans déplacement → sélection de la zone (édition)
+        // Clic simple → sélection unique de la zone (édition)
         const id = this.smGroupDrag.id;
         this.selectedSmGroupId.update(c => c === id ? null : id);
+        this.smGroupMultiSelect.set(new Set());
         if (this.selectedSmGroupId()) { this.selectedSmNode.set(null); this.selectedSmEdgeId.set(null); this.smMultiSelect.set(new Set()); }
       }
       this.smGroupDrag = null;
@@ -1767,6 +1776,7 @@ Exemple :
         const id = d.id;
         this.selectedSmEdgeId.set(null);
         this.selectedSmGroupId.set(null);
+        this.smGroupMultiSelect.set(new Set());
         if (d.additive) {
           // Ctrl/Maj+clic → (dé)sélectionne dans la multi-sélection
           let added = false;
@@ -1817,7 +1827,8 @@ Exemple :
   }
 
   smNodeMultiSelected(id: string): boolean { return this.smMultiSelect().has(id); }
-  clearMultiSelect() { this.smMultiSelect.set(new Set()); }
+  smGroupMultiSelected(id: string): boolean { return this.smGroupMultiSelect().has(id); }
+  clearMultiSelect() { this.smMultiSelect.set(new Set()); this.smGroupMultiSelect.set(new Set()); }
 
   private readonly SM_NODE_MIN_W = 80;
 
@@ -1830,21 +1841,23 @@ Exemple :
     this.persistLayout();
   }
 
-  /** Réduit/agrandit la largeur de tous les nœuds multi-sélectionnés. */
+  /** Réduit/agrandit la largeur des nœuds ET zones multi-sélectionnés. */
   resizeMultiWidth(delta: number) {
-    const sel = this.smMultiSelect();
-    if (sel.size < 1) return;
-    this.smNodes.update(ns => ns.map(n => sel.has(n.id) ? { ...n, w: Math.max(this.SM_NODE_MIN_W, n.w + delta) } : n));
+    const nsel = this.smMultiSelect(), gsel = this.smGroupMultiSelect();
+    if (nsel.size + gsel.size < 1) return;
+    if (nsel.size) this.smNodes.update(ns => ns.map(n => nsel.has(n.id) ? { ...n, w: Math.max(this.SM_NODE_MIN_W, n.w + delta) } : n));
+    if (gsel.size) this.smGroups.update(gs => gs.map(g => gsel.has(g.id) ? { ...g, w: Math.max(this.SM_GROUP_MIN_W, g.w + delta) } : g));
     this.persistLayout();
   }
 
-  /** Uniformise la largeur des nœuds multi-sélectionnés (sur la plus étroite). */
+  /** Uniformise la largeur des boîtes multi-sélectionnées (sur la plus étroite). */
   uniformizeMultiWidth() {
-    const nodes = this.selectedNodesList();
-    if (nodes.length < 2) return;
-    const w = Math.max(this.SM_NODE_MIN_W, Math.min(...nodes.map(n => n.w)));
-    const ids = new Set(nodes.map(n => n.id));
-    this.smNodes.update(ns => ns.map(n => ids.has(n.id) ? { ...n, w } : n));
+    const boxes = this.selectedBoxes();
+    if (boxes.length < 2) return;
+    const nsel = this.smMultiSelect(), gsel = this.smGroupMultiSelect();
+    const w = Math.max(this.SM_NODE_MIN_W, Math.min(...boxes.map(b => b.w)));
+    if (nsel.size) this.smNodes.update(ns => ns.map(n => nsel.has(n.id) ? { ...n, w } : n));
+    if (gsel.size) this.smGroups.update(gs => gs.map(g => gsel.has(g.id) ? { ...g, w } : g));
     this.persistLayout();
   }
 
@@ -1854,70 +1867,74 @@ Exemple :
     return this.smNodes().filter(n => sel.has(n.id));
   }
 
-  private patchNodes(patches: { id: string; x?: number; y?: number }[]) {
-    const map = new Map(patches.map(p => [p.id, p]));
-    this.smNodes.update(ns => ns.map(n => {
-      const p = map.get(n.id);
-      return p ? { ...n, x: p.x ?? n.x, y: p.y ?? n.y } : n;
-    }));
+  /** Boîtes alignables : nœuds + zones/sections multi-sélectionnés (chacun avec x/y/w/h). */
+  private selectedBoxes(): { id: string; kind: 'node' | 'group'; x: number; y: number; w: number; h: number }[] {
+    const out: { id: string; kind: 'node' | 'group'; x: number; y: number; w: number; h: number }[] = [];
+    for (const n of this.selectedNodesList()) out.push({ id: n.id, kind: 'node', x: n.x, y: n.y, w: n.w, h: n.h });
+    const gsel = this.smGroupMultiSelect();
+    for (const g of this.smGroups()) if (gsel.has(g.id)) out.push({ id: g.id, kind: 'group', x: g.x, y: g.y, w: g.w, h: g.h });
+    return out;
   }
 
-  /** Aligne les nœuds multi-sélectionnés selon un bord ou un centre commun. */
-  alignSelected(mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') {
-    const nodes = this.selectedNodesList();
-    if (nodes.length < 2) return;
-    let patches: { id: string; x?: number; y?: number }[] = [];
-    switch (mode) {
-      case 'left': {
-        const x = Math.min(...nodes.map(n => n.x));
-        patches = nodes.map(n => ({ id: n.id, x }));
-        break;
-      }
-      case 'right': {
-        const r = Math.max(...nodes.map(n => n.x + n.w));
-        patches = nodes.map(n => ({ id: n.id, x: r - n.w }));
-        break;
-      }
-      case 'hcenter': {
-        const cx = nodes.reduce((s, n) => s + n.x + n.w / 2, 0) / nodes.length;
-        patches = nodes.map(n => ({ id: n.id, x: Math.round(cx - n.w / 2) }));
-        break;
-      }
-      case 'top': {
-        const y = Math.min(...nodes.map(n => n.y));
-        patches = nodes.map(n => ({ id: n.id, y }));
-        break;
-      }
-      case 'bottom': {
-        const b = Math.max(...nodes.map(n => n.y + n.h));
-        patches = nodes.map(n => ({ id: n.id, y: b - n.h }));
-        break;
-      }
-      case 'vcenter': {
-        const cy = nodes.reduce((s, n) => s + n.y + n.h / 2, 0) / nodes.length;
-        patches = nodes.map(n => ({ id: n.id, y: Math.round(cy - n.h / 2) }));
-        break;
+  /** Applique un delta (dx,dy) à chaque boîte. Une ZONE entraîne son contenu (nœuds + zones imbriquées). */
+  private applyBoxDeltas(deltas: Map<string, { kind: 'node' | 'group'; dx: number; dy: number }>) {
+    const groups = this.smGroups();
+    const nodes = this.smNodes();
+    const nodeDX = new Map<string, { dx: number; dy: number }>();
+    const groupDX = new Map<string, { dx: number; dy: number }>();
+    for (const [id, d] of deltas) {
+      if (!d.dx && !d.dy) continue;
+      if (d.kind === 'group') {
+        const g = groups.find(x => x.id === id); if (!g) continue;
+        groupDX.set(id, { dx: d.dx, dy: d.dy });
+        for (const inner of groups) if (this.smGroupContains(g, inner)) groupDX.set(inner.id, { dx: d.dx, dy: d.dy });
+        for (const n of nodes) {
+          const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+          const inside = cx >= g.x && cx <= g.x + g.w && cy >= g.y && cy <= g.y + g.h;
+          if (n.groupId === id || inside) nodeDX.set(n.id, { dx: d.dx, dy: d.dy });
+        }
+      } else {
+        nodeDX.set(id, { dx: d.dx, dy: d.dy });
       }
     }
-    this.patchNodes(patches);
+    if (groupDX.size) this.smGroups.update(gs => gs.map(g => { const o = groupDX.get(g.id); return o ? { ...g, x: Math.round(g.x + o.dx), y: Math.round(g.y + o.dy) } : g; }));
+    if (nodeDX.size) this.smNodes.update(ns => ns.map(n => { const o = nodeDX.get(n.id); return o ? { ...n, x: Math.round(n.x + o.dx), y: Math.round(n.y + o.dy) } : n; }));
+  }
+
+  /** Aligne les boîtes (nœuds + zones) multi-sélectionnées selon un bord ou un centre commun. */
+  alignSelected(mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') {
+    const boxes = this.selectedBoxes();
+    if (boxes.length < 2) return;
+    const deltas = new Map<string, { kind: 'node' | 'group'; dx: number; dy: number }>();
+    const set = (b: typeof boxes[number], tx?: number, ty?: number) =>
+      deltas.set(b.id, { kind: b.kind, dx: tx !== undefined ? tx - b.x : 0, dy: ty !== undefined ? ty - b.y : 0 });
+    switch (mode) {
+      case 'left':    { const x = Math.min(...boxes.map(b => b.x));            for (const b of boxes) set(b, x); break; }
+      case 'right':   { const r = Math.max(...boxes.map(b => b.x + b.w));      for (const b of boxes) set(b, r - b.w); break; }
+      case 'hcenter': { const cx = boxes.reduce((s, b) => s + b.x + b.w / 2, 0) / boxes.length; for (const b of boxes) set(b, Math.round(cx - b.w / 2)); break; }
+      case 'top':     { const y = Math.min(...boxes.map(b => b.y));            for (const b of boxes) set(b, undefined, y); break; }
+      case 'bottom':  { const bo = Math.max(...boxes.map(b => b.y + b.h));     for (const b of boxes) set(b, undefined, bo - b.h); break; }
+      case 'vcenter': { const cy = boxes.reduce((s, b) => s + b.y + b.h / 2, 0) / boxes.length; for (const b of boxes) set(b, undefined, Math.round(cy - b.h / 2)); break; }
+    }
+    this.applyBoxDeltas(deltas);
     this.persistLayout();
   }
 
-  /** Répartit les nœuds sélectionnés à intervalles égaux (≥ 3 nœuds). */
+  /** Répartit les boîtes sélectionnées (nœuds + zones) à intervalles égaux (≥ 3). */
   distributeSelected(axis: 'h' | 'v') {
-    const nodes = this.selectedNodesList();
-    if (nodes.length < 3) return;
-    const sorted = [...nodes].sort((a, b) => axis === 'h' ? a.x - b.x : a.y - b.y);
+    const boxes = this.selectedBoxes();
+    if (boxes.length < 3) return;
+    const sorted = [...boxes].sort((a, b) => axis === 'h' ? a.x - b.x : a.y - b.y);
     const first = sorted[0], last = sorted[sorted.length - 1];
+    const deltas = new Map<string, { kind: 'node' | 'group'; dx: number; dy: number }>();
     if (axis === 'h') {
-      const start = first.x + first.w / 2, end = last.x + last.w / 2;
-      const step = (end - start) / (sorted.length - 1);
-      this.patchNodes(sorted.map((n, i) => ({ id: n.id, x: Math.round(start + step * i - n.w / 2) })));
+      const start = first.x + first.w / 2, end = last.x + last.w / 2, step = (end - start) / (sorted.length - 1);
+      sorted.forEach((b, i) => { const tx = Math.round(start + step * i - b.w / 2); deltas.set(b.id, { kind: b.kind, dx: tx - b.x, dy: 0 }); });
     } else {
-      const start = first.y + first.h / 2, end = last.y + last.h / 2;
-      const step = (end - start) / (sorted.length - 1);
-      this.patchNodes(sorted.map((n, i) => ({ id: n.id, y: Math.round(start + step * i - n.h / 2) })));
+      const start = first.y + first.h / 2, end = last.y + last.h / 2, step = (end - start) / (sorted.length - 1);
+      sorted.forEach((b, i) => { const ty = Math.round(start + step * i - b.h / 2); deltas.set(b.id, { kind: b.kind, dx: 0, dy: ty - b.y }); });
     }
+    this.applyBoxDeltas(deltas);
     this.persistLayout();
   }
 
@@ -2133,13 +2150,16 @@ Exemple :
       return [
         `Mets à jour UNIQUEMENT la zone « ${scopeLabel} » de la Site Map pour refléter l'état réel de l'application :`,
         "ajoute les pages/onglets/composants manquants de cette zone, corrige les éléments obsolètes et signale ceux à",
-        "supprimer. Analyse le code (routes, composants, onglets) et l'historique. Ne touche à aucune autre zone."
+        "supprimer. Analyse le code (routes, composants, onglets) et l'historique. Ne touche à aucune autre zone.",
+        "Garde une organisation claire et aérée : sections cohérentes, éléments bien rangés dans leur section (groupId)."
       ].join(' ');
     }
     return [
       "Mets à jour la Site Map pour refléter l'état réel de l'application : ajoute les pages/onglets/composants",
       "manquants, corrige les éléments obsolètes et signale ceux à supprimer. Analyse le code (routes, composants,",
-      "onglets) et l'historique des modifications. Conserve les ids existants pour les modifications/suppressions."
+      "onglets) et l'historique des modifications. Conserve les ids existants pour les modifications/suppressions.",
+      "Vise une carte propre et hiérarchisée : regroupe les pages d'un même domaine dans des zones conteneurs",
+      "(parentId), range chaque élément dans une section pertinente (groupId), et relie les domaines par des liaisons."
     ].join(' ');
   }
 
@@ -2357,74 +2377,189 @@ Exemple :
     this.closeSmAiReview();
   }
 
-  private readonly SM_L = { PAGE_GAP: 60, COL_PAD: 18, SEC_GAP: 14, PAGE_LABEL: 42, SEC_LABEL: 30, EL_H: 30, EL_GAP: 8, EL_PAD: 12, PAGE_W: 380, MAXW: 2000, START: 40 };
+  private readonly SM_L = { PAGE_GAP: 60, COL_PAD: 18, SEC_GAP: 16, PAGE_LABEL: 42, SEC_LABEL: 30, EL_H: 30, EL_GAP: 8, EL_PAD: 12, PAGE_W: 340, MAXW: 2400, START: 40, ZONE_MAXW: 1700,
+    // Disposition multi-colonnes des sections dans une page : largeur d'une colonne, écart entre colonnes, hauteur max d'une colonne avant retour à la ligne.
+    SEC_COL_W: 300, SEC_COL_GAP: 28, SEC_MAX_COL_H: 520 };
 
-  /** Sections d'une page : par parentId, sinon par contenance géométrique (base sans parentId). */
+  /** Sections d'une page : union des sections rattachées par `parentId` ET (pour celles sans parentId) celles
+   *  géométriquement contenues dans la page → aucune section n'est oubliée même si l'état parentId est mixte. */
   private smSectionsOf(page: SitemapGroup, groups: SitemapGroup[]): SitemapGroup[] {
-    const direct = groups.filter(s => s.role === 'section' && s.parentId === page.id);
-    if (direct.length) return direct;
-    return groups.filter(s => s.role === 'section' && s.id !== page.id
+    const byParent = groups.filter(s => s.role === 'section' && s.parentId === page.id);
+    const seen = new Set(byParent.map(s => s.id));
+    const geom = groups.filter(s => s.role === 'section' && s.id !== page.id && !s.parentId && !seen.has(s.id)
       && s.x >= page.x && s.y >= page.y && s.x + s.w <= page.x + page.w && s.y + s.h <= page.y + page.h);
+    return [...byParent, ...geom];
   }
 
-  /** Calcule la disposition interne (relative) d'une page : hauteur + placements sections/éléments. */
+  /** Calcule la disposition interne (relative) d'une page : sections réparties en MULTIPLES COLONNES
+   *  (retour à la ligne quand une colonne dépasse SEC_MAX_COL_H) → carte compacte, claire et épurée. */
   private smComputePageLayout(page: SitemapGroup, groups: SitemapGroup[], nodes: SitemapNode[]) {
     const L = this.SM_L;
     const elementsOf = (gid: string) => nodes.filter(n => n.groupId === gid);
-    let contentY = L.PAGE_LABEL + 8;
-    const secPlacements: { sec: SitemapGroup; relY: number; h: number; els: { el: SitemapNode; relY: number }[] }[] = [];
-    for (const sec of this.smSectionsOf(page, groups)) {
+    // 1) Hauteur de chaque section (selon ses éléments).
+    const secs = this.smSectionsOf(page, groups).map(sec => {
       let ey = L.SEC_LABEL;
       const els = elementsOf(sec.id).map(el => { const pos = { el, relY: ey }; ey += L.EL_H + L.EL_GAP; return pos; });
-      const h = Math.max(56, ey + 6);
-      secPlacements.push({ sec, relY: contentY, h, els });
-      contentY += h + L.SEC_GAP;
+      return { sec, h: Math.max(56, ey + 6), els };
+    });
+    // 2) Répartition des sections en colonnes (flux par seuil de hauteur).
+    const cols: { items: typeof secs; h: number }[] = [];
+    let col: { items: typeof secs; h: number } = { items: [], h: 0 };
+    for (const s of secs) {
+      if (col.items.length && col.h + L.SEC_GAP + s.h > L.SEC_MAX_COL_H) { cols.push(col); col = { items: [], h: 0 }; }
+      if (col.items.length) col.h += L.SEC_GAP;
+      col.items.push(s); col.h += s.h;
     }
-    const directEls = elementsOf(page.id).map(el => { const pos = { el, relY: contentY }; contentY += L.EL_H + L.EL_GAP; return pos; });
-    return { height: Math.max(150, contentY + L.COL_PAD), secPlacements, directEls };
+    if (col.items.length) cols.push(col);
+    // 3) Placements (relatifs à la page).
+    const secPlacements: { sec: SitemapGroup; relX: number; relY: number; w: number; h: number; els: { el: SitemapNode; relY: number }[] }[] = [];
+    cols.forEach((c, ci) => {
+      const relX = L.COL_PAD + ci * (L.SEC_COL_W + L.SEC_COL_GAP);
+      let relY = L.PAGE_LABEL;
+      for (const s of c.items) { secPlacements.push({ sec: s.sec, relX, relY, w: L.SEC_COL_W, h: s.h, els: s.els }); relY += s.h + L.SEC_GAP; }
+    });
+    // 4) Éléments rattachés directement à la page (sans section) → colonne supplémentaire à droite.
+    const direct = elementsOf(page.id);
+    const directEls: { el: SitemapNode; relX: number; relY: number; w: number }[] = [];
+    if (direct.length) {
+      const relX = L.COL_PAD + cols.length * (L.SEC_COL_W + L.SEC_COL_GAP);
+      let relY = L.PAGE_LABEL;
+      for (const el of direct) { directEls.push({ el, relX, relY, w: L.SEC_COL_W }); relY += L.EL_H + L.EL_GAP; }
+    }
+    const nCols = cols.length + (direct.length ? 1 : 0);
+    const width = Math.max(L.PAGE_W, 2 * L.COL_PAD + (nCols > 0 ? nCols * L.SEC_COL_W + (nCols - 1) * L.SEC_COL_GAP : 0));
+    const colHeights = cols.map(c => c.h);
+    const directH = direct.length ? direct.length * (L.EL_H + L.EL_GAP) : 0;
+    const innerH = Math.max(0, ...colHeights, directH);
+    const height = Math.max(150, L.PAGE_LABEL + innerH + L.COL_PAD);
+    return { width, height, secPlacements, directEls };
   }
 
-  /** Applique une disposition calculée (positions absolues à partir de page.x/y/w). */
+  /** Applique une disposition calculée (positions absolues à partir de page.x/y). */
   private smApplyPageLayout(page: SitemapGroup, lay: ReturnType<typeof this.smComputePageLayout>) {
     const L = this.SM_L;
-    const secW = page.w - 2 * L.COL_PAD;
     for (const pl of lay.secPlacements) {
-      pl.sec.x = page.x + L.COL_PAD; pl.sec.w = secW; pl.sec.y = page.y + pl.relY; pl.sec.h = pl.h;
+      pl.sec.x = page.x + pl.relX; pl.sec.y = page.y + pl.relY; pl.sec.w = pl.w; pl.sec.h = pl.h;
       for (const ep of pl.els) { ep.el.x = pl.sec.x + L.EL_PAD; ep.el.w = pl.sec.w - 2 * L.EL_PAD; ep.el.y = pl.sec.y + ep.relY; ep.el.h = L.EL_H; }
     }
-    for (const dp of lay.directEls) { dp.el.x = page.x + L.COL_PAD; dp.el.w = secW; dp.el.y = page.y + dp.relY; dp.el.h = L.EL_H; }
+    for (const dp of lay.directEls) { dp.el.x = page.x + dp.relX; dp.el.w = dp.w; dp.el.y = page.y + dp.relY; dp.el.h = L.EL_H; }
   }
 
-  /** Organise TOUTE la carte : pages en grille, sections/éléments empilés. */
+  // Cache de disposition récursive : par groupe, soit un conteneur (zone/page avec sous-pages) en rangées, soit une feuille (page avec sections).
+  private smGroupChildren(group: SitemapGroup, groups: SitemapGroup[]): SitemapGroup[] {
+    return groups.filter(g => g.parentId === group.id && (g.role === 'page' || g.role === 'zone'));
+  }
+
+  /** Mesure récursive : calcule {w,h} d'un groupe et mémorise sa disposition dans `cache`.
+   *  - Conteneur (a des sous-groupes pages/zones) → grille de sous-groupes (retour à la ligne sur ZONE_MAXW).
+   *  - Feuille (page) → sections + éléments empilés (largeur = page.w existante ou PAGE_W). */
+  private smMeasureTree(
+    group: SitemapGroup, groups: SitemapGroup[], nodes: SitemapNode[],
+    cache: Map<string, { kind: 'container'; w: number; h: number; rows: { items: { c: SitemapGroup; w: number; h: number }[]; rowH: number }[] }
+                       | { kind: 'leaf'; w: number; h: number; lay: ReturnType<AdminTestsComponent['smComputePageLayout']> }>
+  ): { w: number; h: number } {
+    const L = this.SM_L;
+    const children = this.smGroupChildren(group, groups);
+    if (children.length) {
+      // Conteneur : place les sous-groupes en rangées.
+      const sizes = children.map(c => ({ c, s: this.smMeasureTree(c, groups, nodes, cache) }));
+      const rows: { items: { c: SitemapGroup; w: number; h: number }[]; rowH: number }[] = [];
+      let row: { c: SitemapGroup; w: number; h: number }[] = [];
+      let rowW = 0, rowH = 0;
+      for (const { c, s } of sizes) {
+        const add = (row.length ? L.PAGE_GAP : 0) + s.w;
+        if (row.length && rowW + add > L.ZONE_MAXW) { rows.push({ items: row, rowH }); row = []; rowW = 0; rowH = 0; }
+        rowW += (row.length ? L.PAGE_GAP : 0) + s.w;
+        row.push({ c, w: s.w, h: s.h });
+        rowH = Math.max(rowH, s.h);
+      }
+      if (row.length) rows.push({ items: row, rowH });
+      const innerW = Math.max(0, ...rows.map(r => r.items.reduce((a, it, i) => a + (i ? L.PAGE_GAP : 0) + it.w, 0)));
+      const innerH = rows.reduce((a, r, i) => a + (i ? L.PAGE_GAP : 0) + r.rowH, 0);
+      const w = innerW + 2 * L.COL_PAD;
+      const h = L.PAGE_LABEL + innerH + L.COL_PAD;
+      cache.set(group.id, { kind: 'container', w, h, rows });
+      return { w, h };
+    }
+    // Feuille : sections / éléments (largeur dynamique selon le nombre de colonnes de sections).
+    const lay = this.smComputePageLayout(group, groups, nodes);
+    cache.set(group.id, { kind: 'leaf', w: lay.width, h: lay.height, lay });
+    return { w: lay.width, h: lay.height };
+  }
+
+  /** Place récursivement un groupe (et son contenu) à partir de (x,y), d'après le cache de mesure. */
+  private smPlaceTree(
+    group: SitemapGroup, groups: SitemapGroup[], nodes: SitemapNode[], x: number, y: number,
+    cache: Map<string, any>
+  ) {
+    const L = this.SM_L;
+    const info = cache.get(group.id);
+    group.x = x; group.y = y;
+    if (!info) return;
+    group.w = info.w; group.h = info.h;
+    if (info.kind === 'container') {
+      let curY = y + L.PAGE_LABEL;
+      for (const r of info.rows) {
+        let curX = x + L.COL_PAD;
+        for (const it of r.items) {
+          this.smPlaceTree(it.c, groups, nodes, curX, curY, cache);
+          curX += it.w + L.PAGE_GAP;
+        }
+        curY += r.rowH + L.PAGE_GAP;
+      }
+    } else {
+      this.smApplyPageLayout(group, info.lay);
+    }
+  }
+
+  /** Organise TOUTE la carte : zones conteneurs ▸ pages ▸ sections ▸ éléments, emboîtées et espacées. */
   autoLayoutSitemap() {
     const groups = this.smGroups().map(g => ({ ...g }));
     const nodes  = this.smNodes().map(n => ({ ...n }));
     const byId = new Map(groups.map(g => [g.id, g]));
     const L = this.SM_L;
     const topGroups = groups.filter(g => (g.role === 'page' || g.role === 'zone' || !g.role) && !(g.parentId && byId.has(g.parentId)));
+    // Sections orphelines (parentId absent/invalide et non contenues dans une page) → placées comme blocs de
+    // premier niveau pour rester lisibles et NE JAMAIS se chevaucher, même si l'IA a oublié leur rattachement.
+    // « claimed » = sections rangées par une page (de premier niveau OU imbriquée dans une zone).
+    const claimed = new Set<string>();
+    for (const g of groups) if (g.role === 'page' || !g.role) for (const s of this.smSectionsOf(g, groups)) claimed.add(s.id);
+    const orphanSecs = groups.filter(g => g.role === 'section' && !claimed.has(g.id));
+    const roots = [...topGroups, ...orphanSecs];
+    const cache = new Map<string, any>();
+    for (const g of roots) this.smMeasureTree(g, groups, nodes, cache);
     let curX = L.START, curY = L.START, rowH = 0;
-    for (const page of topGroups) {
-      page.w = L.PAGE_W;
-      const lay = this.smComputePageLayout(page, groups, nodes);
-      if (curX > L.START && curX + L.PAGE_W > L.MAXW) { curX = L.START; curY += rowH + L.PAGE_GAP; rowH = 0; }
-      page.x = curX; page.y = curY; page.h = lay.height;
-      this.smApplyPageLayout(page, lay);
-      curX += L.PAGE_W + L.PAGE_GAP; rowH = Math.max(rowH, lay.height);
+    for (const g of roots) {
+      const size = cache.get(g.id);
+      if (curX > L.START && curX + size.w > L.MAXW) { curX = L.START; curY += rowH + L.PAGE_GAP; rowH = 0; }
+      this.smPlaceTree(g, groups, nodes, curX, curY, cache);
+      curX += size.w + L.PAGE_GAP; rowH = Math.max(rowH, size.h);
+    }
+    // Éléments non rattachés (groupId vide/invalide) → rangés en grille sous le reste (jamais de chevauchement).
+    const gids = new Set(groups.map(g => g.id));
+    const orphanNodes = nodes.filter(n => !n.groupId || !gids.has(n.groupId));
+    if (orphanNodes.length) {
+      let ox = L.START, oy = curY + rowH + L.PAGE_GAP, orow = L.EL_H;
+      for (const n of orphanNodes) {
+        n.w = L.SEC_COL_W; n.h = L.EL_H;
+        if (ox > L.START && ox + n.w > L.MAXW) { ox = L.START; oy += orow + L.EL_GAP; }
+        n.x = ox; n.y = oy; ox += n.w + L.SEC_COL_GAP;
+      }
     }
     this.smGroups.set(groups);
     this.smNodes.set(nodes);
     this.persistLayout();
   }
 
-  /** Organise UNIQUEMENT la zone donnée (garde sa position, range ses sections/éléments, ajuste sa hauteur). */
+  /** Organise UNIQUEMENT la zone donnée (garde sa position, range récursivement son contenu, ajuste sa taille). */
   autoLayoutPage(pageId: string) {
     const groups = this.smGroups().map(g => ({ ...g }));
     const nodes  = this.smNodes().map(n => ({ ...n }));
     const page = groups.find(g => g.id === pageId);
     if (!page) return;
-    const lay = this.smComputePageLayout(page, groups, nodes);
-    page.h = lay.height;             // conserve x/y/w, ajuste seulement la hauteur
-    this.smApplyPageLayout(page, lay);
+    const cache = new Map<string, any>();
+    this.smMeasureTree(page, groups, nodes, cache);
+    this.smPlaceTree(page, groups, nodes, page.x, page.y, cache); // conserve x/y, recalcule contenu + taille
     this.smGroups.set(groups);
     this.smNodes.set(nodes);
     this.persistLayout();
@@ -2438,6 +2573,7 @@ Exemple :
     this.smEdges.set(this.SM_BASE_EDGES.map(e => ({ ...e })));
     this.smEdgeOverrides.set({});
     this.smMultiSelect.set(new Set());
+    this.smGroupMultiSelect.set(new Set());
     this.selectedSmEdgeId.set(null);
     this.selectedSmGroupId.set(null);
     this.smLinkMode.set(false);
@@ -2450,6 +2586,7 @@ Exemple :
   private readonly SM_GROUP_MIN_H = 120;
   private smGroupDrag: {
     id: string; mode: 'move' | 'resize'; sx: number; sy: number; moved: boolean;
+    additive: boolean;                              // Ctrl/Maj+clic → (dé)sélection multiple de zones
     og: { x: number; y: number; w: number; h: number };
     groupIds: Set<string>;                          // zones déplacées (dragged + contenues)
     og2: Map<string, { x: number; y: number }>;     // positions d'origine des zones déplacées
@@ -2489,6 +2626,7 @@ Exemple :
     }
     this.smGroupDrag = {
       id: group.id, mode, sx: e.clientX, sy: e.clientY, moved: false,
+      additive: (e.ctrlKey || e.metaKey || e.shiftKey),
       og: { x: group.x, y: group.y, w: group.w, h: group.h }, groupIds, og2, on,
     };
   }
@@ -2703,6 +2841,7 @@ Exemple :
       this.selectedSmEdgeId.set(null);
       this.selectedSmGroupId.set(null);
       this.smMultiSelect.set(new Set());
+      this.smGroupMultiSelect.set(new Set());
     }
   }
 
@@ -2946,6 +3085,7 @@ Exemple :
       this.selectedSmNode.set(null);
       this.selectedSmGroupId.set(null);
       this.smMultiSelect.set(new Set());
+      this.smGroupMultiSelect.set(new Set());
     }
   }
 

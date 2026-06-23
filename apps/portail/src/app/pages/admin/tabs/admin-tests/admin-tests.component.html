@@ -1255,10 +1255,10 @@
                 <rect [attr.x]="grp.x" [attr.y]="grp.y"
                       [attr.width]="grp.w" [attr.height]="grp.h"
                       [attr.fill]="grp.fill"
-                      [attr.stroke]="smIsLinkSourceGroup(grp.id) ? '#f472b6' : grp.stroke"
-                      [attr.stroke-width]="smIsLinkSourceGroup(grp.id) ? 3 : (selectedSmGroupId() === grp.id ? 2.5 : 1.5)"
+                      [attr.stroke]="smIsLinkSourceGroup(grp.id) ? '#f472b6' : (smGroupMultiSelected(grp.id) ? '#22d3ee' : grp.stroke)"
+                      [attr.stroke-width]="smIsLinkSourceGroup(grp.id) ? 3 : (smGroupMultiSelected(grp.id) ? 3 : (selectedSmGroupId() === grp.id ? 2.5 : 1.5))"
                       rx="14" ry="14" style="pointer-events:none"
-                      [attr.stroke-dasharray]="(smIsLinkSourceGroup(grp.id) || selectedSmGroupId() === grp.id) ? null : '6 3'"/>
+                      [attr.stroke-dasharray]="(smIsLinkSourceGroup(grp.id) || smGroupMultiSelected(grp.id) || selectedSmGroupId() === grp.id) ? null : '6 3'"/>
                 <!-- Étiquette (fond + texte, visuel) -->
                 <rect [attr.x]="grp.x + 10" [attr.y]="grp.y - 11"
                       [attr.width]="grp.label.length * 7 + 16" height="22"
@@ -1831,7 +1831,7 @@
 
   <!-- ── POPUP : Versions de la Site Map ── -->
   @if (showSmVersions()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="fixed inset-0 z-[130] flex items-center justify-center bg-black/50 p-4">
       <div class="w-full max-w-lg bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-2xl shadow-xl flex flex-col max-h-[85vh]">
         <!-- En-tête -->
         <div class="flex items-center justify-between px-5 py-4 border-b border-light-border dark:border-white/10">
@@ -1920,7 +1920,7 @@
 
   <!-- ── POPUP : Mise à jour de la Site Map par IA (configuration) ── -->
   @if (showSmAiPopup()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="fixed inset-0 z-[130] flex items-center justify-center bg-black/50 p-4">
       <div class="w-full max-w-2xl bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-2xl shadow-xl flex flex-col max-h-[88vh]">
         <div class="flex items-center justify-between px-5 py-4 border-b border-light-border dark:border-white/10">
           <div class="flex items-center gap-2 min-w-0">
@@ -1995,7 +1995,7 @@
 
   <!-- ── POPUP : Revue des propositions IA de la Site Map ── -->
   @if (showSmAiReview()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="fixed inset-0 z-[130] flex items-center justify-center bg-black/50 p-4">
       <div class="w-full max-w-2xl bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-2xl shadow-xl flex flex-col max-h-[88vh]">
         <div class="flex items-center justify-between px-5 py-4 border-b border-light-border dark:border-white/10">
           <div class="flex items-center gap-2">
@@ -2423,7 +2423,7 @@
 
   <!-- ── POPUP : Confirmation (annulation / suppression) ── -->
   @if (confirmPopup(); as c) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="fixed inset-0 z-[130] flex items-center justify-center bg-black/50 p-4">
       <div class="w-full max-w-sm bg-white dark:bg-surface border border-light-border dark:border-white/10 rounded-2xl shadow-xl p-5">
         <div class="flex items-center gap-3 mb-3">
           <span class="material-symbols-outlined text-2xl text-red-400">{{ c.kind === 'cancel' ? 'cancel' : 'delete' }}</span>
