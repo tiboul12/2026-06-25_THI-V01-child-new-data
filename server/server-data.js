@@ -8470,20 +8470,56 @@ function buildSitemapUpdatePrompt(runDir, instructions, scope) {
         "Compare la Site Map actuelle au code source et à l'historique des modifications, puis propose les ajouts,",
         "modifications et suppressions d'éléments (nœuds = pages/composants, zones = regroupements, liaisons = relations)."
     ].join(' ');
-    const scopeBlock = (scope && scope.groupId) ? `
+    // Calcule les sections (zones contenues) de la page ciblée, pour guider l'IA.
+    let scopeBlock = '';
+    if (scope && scope.groupId) {
+        let sectionsList = '';
+        try {
+            const sm = JSON.parse(fs.readFileSync(path.join(runDir, 'current-sitemap.json'), 'utf8'));
+            const groups = Array.isArray(sm.groups) ? sm.groups : [];
+            const sc = groups.find(g => g.id === scope.groupId);
+            if (sc) {
+                const sections = groups.filter(g => g.id !== sc.id
+                    && g.x >= sc.x && g.y >= sc.y && g.x + g.w <= sc.x + sc.w && g.y + g.h <= sc.y + sc.h);
+                sectionsList = sections.map(s => `    • \`${s.id}\` — ${s.label}${s.sectionType ? ' (' + s.sectionType + ')' : ''}`).join('\n');
+            }
+        } catch { /* ignore */ }
+        scopeBlock = `
 
-## PÉRIMÈTRE RESTREINT — une seule zone
-Tu ne dois proposer des changements QUE pour la zone « ${scope.label || scope.groupId} » (groupId = \`${scope.groupId}\`).
-- N'inclus QUE : les nœuds dont \`groupId\` === \`${scope.groupId}\`, la zone elle-même, et les liaisons entre nœuds de cette zone.
-- Tout nouveau nœud DOIT avoir \`groupId\` = \`${scope.groupId}\`.
-- N'inclus AUCUNE opération concernant d'autres zones ou leurs nœuds.` : '';
+## PÉRIMÈTRE RESTREINT — la page « ${scope.label || scope.groupId} » (\`${scope.groupId}\`)
+Ne propose des changements QUE pour cette page : ses **sections** (zones contenues) et leurs **éléments**, et les **liaisons** impliquant ces éléments/sections.
+Sections existantes de cette page :
+${sectionsList || '    (aucune section — tu peux en créer via op add kind group role section)'}
+Règles de rattachement OBLIGATOIRES :
+- Chaque ÉLÉMENT ajouté DOIT avoir \`groupId\` = l'id d'une SECTION ci-dessus (PAS l'id de la page). Choisis la section la plus pertinente selon le rôle de l'élément (menu/onglets → section menu ; champs/formulaire → section content ; etc.).
+- Si une section adaptée manque, crée-la d'abord (op add, kind group, role "section", sectionType …) puis rattache l'élément à cette nouvelle section (tu peux référencer une section que tu viens de créer par un id temporaire que tu réutilises dans les groupId des éléments de la même réponse).
+- Crée les **liaisons** pertinentes (op add, kind edge) : par ex. un onglet/lien vers une autre section → \`{ "from":"<id élément>", "to":"group:<id section/page cible>", "type":"nav" }\`.
+- N'inclus AUCUNE opération concernant une autre page.`;
+    }
 
     return `${intro}${scopeBlock}
 
+## Modèle (métier, 3 niveaux) + ZONE conteneur
+- Une **ZONE conteneur** = une \`group\` avec \`role:"zone"\` : un regroupement de haut niveau qui CONTIENT plusieurs pages liées par leur domaine fonctionnel (ex : « Connecté », « Outils embarqués », « Espace public »). Les pages qu'elle regroupe ont \`parentId\` = l'id de la zone.
+- Une **PAGE** = une \`group\` avec \`role:"page"\` (un écran réel : url, composant lié). Si elle appartient à un domaine, \`parentId\` = l'id de la ZONE conteneur.
+- Une **SECTION** = une \`group\` avec \`role:"section"\` + \`sectionType\` (header|menu|content|aside|footer) + composant lié, contenue dans une page (\`parentId\` = id de la page).
+- Un **ÉLÉMENT** = un \`node\` avec \`elType\` (link|button|form|widget), rattaché à une section via \`groupId\` (= id de la section).
+- Une **RELATION** = une \`edge\` entre deux éléments/sections/pages (les extrémités zone sont préfixées \`group:<id>\`).
+
+## Organisation graphique attendue (TRÈS IMPORTANT — vise une carte claire, aérée et hiérarchisée)
+La carte doit ressembler à un schéma d'architecture propre : des **zones bien séparées**, **emboîtées proprement** (zone ▸ page ▸ section ▸ éléments), avec des **espaces** entre les blocs et **aucun chevauchement**. Le placement (x/y/w/h) est calculé automatiquement par l'application À PARTIR de la hiérarchie \`parentId\`/\`groupId\` que tu fournis : c'est donc la QUALITÉ de cette hiérarchie qui produit une carte lisible. Respecte impérativement :
+1. **Regroupe les pages d'un même domaine dans une ZONE conteneur** (\`role:"zone"\`) plutôt que de les laisser éparpillées. Exemples typiques de zones de haut niveau : « Espace public » (landing…), « Connecté » (pages accessibles une fois authentifié : Documents, Admin, Projets…), « Outils embarqués » (widgets : TchatIA, Tickets, Cahier de recette…). Une zone peut elle-même contenir des pages qui contiennent d'autres zones (ex : « Connecté » ▸ page « Admin » ▸ sections « Onglets », « Utilisateurs », « Tests », « Config »).
+2. **Chaîne TOUJOURS la hiérarchie via \`parentId\`** : chaque PAGE d'un domaine → \`parentId\` = sa ZONE ; chaque SECTION → \`parentId\` = sa PAGE. Sans \`parentId\` correct, l'élément flotte hors de son conteneur et la carte devient illisible.
+3. **Rattache CHAQUE élément à une section** via \`groupId\` (jamais directement à une page ou une zone). Une section regroupe des éléments de même nature (un menu regroupe ses liens, un content regroupe ses formulaires/boutons…).
+4. **Crée les sections manquantes** pour que les éléments soient bien rangés : ne mets pas 10 éléments en vrac, répartis-les en sections cohérentes (menu / content / header / footer / aside).
+4b. **GRANULARITÉ DES SECTIONS — PEU de sections, larges.** Une SECTION est une AIRE STRUCTURELLE de la page (un menu, une zone de contenu, un header…), PAS une fonctionnalité. NE crée JAMAIS une section par onglet/lien/fonction. Exemple : les onglets d'Admin (Utilisateurs, Tests, Projets, Config…) sont des ÉLÉMENTS \`link\` placés DANS UNE SEULE section « Onglets » (sectionType menu) — surtout pas une section « Projets », une section « Tests », etc. Vise typiquement 1 à 4 sections par page.
+4c. **Rattachement à une page EXISTANTE.** Si tu ajoutes des sections/éléments à une page déjà présente dans la Site Map actuelle, mets \`parentId\` = l'\`id\` EXACT de cette page existante (ex : \`pg-admin\`), et \`groupId\` des éléments = l'id de la section (existante ou créée dans la même réponse). Ne recrée pas une page qui existe déjà.
+5. **Relie les zones/pages entre elles par des liaisons** (\`edge\`) pour matérialiser la navigation (ex : « Landing → Connecté » type \`connexion\`, « Lien Admin → page Admin » type \`nav\`, « Projets → app :4203 » type \`cross-app\`). Une carte organisée montre clairement les flux entre domaines.
+6. **Préfère peu de zones larges et bien nommées** plutôt que beaucoup de petits groupes : la lisibilité prime. Donne à chaque zone/page/section un \`label\` court et explicite.
+
 ## Site Map actuelle (version de référence)
 Lis le fichier JSON : ${cur}
-Il contient { nodes:[...], groups:[...], edges:[...] }. Chaque nœud a un id, label, url, port, kind
-('public'|'protected'|'admin'|'projets'|'widget'), groupId, components[], tabs?[], description, cahierPaths?[].
+Il contient { nodes:[...] (éléments, avec elType), groups:[...] (pages & sections, avec role/sectionType/component), edges:[...] (relations) }.
 
 ## À analyser pour détecter les évolutions
 1. Le CODE RÉEL du dépôt :
@@ -8498,25 +8534,32 @@ N'écris RIEN dans ta réponse texte — tout passe par ce fichier.
 Écris un tableau JSON d'opérations :
 \`\`\`json
 [
+  { "op": "add", "kind": "group", "id": "tmp-zone-connecte",
+    "data": { "label": "Connecté", "role": "zone", "description": "Domaine : pages accessibles une fois authentifié" },
+    "reason": "Zone conteneur de haut niveau regroupant les pages connectées" },
+  { "op": "add", "kind": "group", "id": null,
+    "data": { "label": "Nom page", "role": "page", "url": "/route", "component": "apps/portail/.../x.component.ts", "parentId": "tmp-zone-connecte", "description": "…" },
+    "reason": "Nouvelle page détectée dans app.routes, rattachée à sa zone de domaine" },
+  { "op": "add", "kind": "group", "id": "tmp-sec-header", "tempId-note": "un id temporaire reutilisable dans groupId/parentId",
+    "data": { "label": "Header", "role": "section", "sectionType": "header", "component": "…", "parentId": "<id de la PAGE>" },
+    "reason": "Section identifiée dans le template de la page" },
   { "op": "add", "kind": "node", "id": null,
-    "data": { "label": "Nom", "url": "/route", "port": 4202, "kind": "admin",
-              "groupId": "admin", "components": ["apps/portail/.../x.component.ts"],
-              "tabs": [], "description": "…", "cahierPaths": ["connecte/admin/x"] },
-    "reason": "Pourquoi (ex: nouvelle page détectée dans app.routes)" },
-  { "op": "modify", "kind": "node", "id": "adm-tests",
-    "data": { "label": "Tests", "url": "/admin/tests/cahier", "tabs": ["…"], "components": ["…"], "description": "…" },
-    "reason": "Onglet ajouté / composant renommé" },
-  { "op": "delete", "kind": "node", "id": "vieux-noeud", "reason": "Page supprimée du code" },
-  { "op": "add", "kind": "group", "id": null, "data": { "label": "Nouvelle zone" }, "reason": "…" },
-  { "op": "add", "kind": "edge", "id": null, "data": { "from": "adm-x", "to": "proj-list", "type": "relation", "label": "…" }, "reason": "…" }
+    "data": { "label": "Lien Admin", "elType": "link", "groupId": "<id de la section>", "url": "/admin", "components": ["…"], "description": "…", "cahierPaths": ["connecte/admin/x"] },
+    "reason": "Élément (lien) présent dans la section" },
+  { "op": "modify", "kind": "node", "id": "el-existant",
+    "data": { "label": "…", "elType": "button", "components": ["…"] }, "reason": "Composant renommé / type changé" },
+  { "op": "delete", "kind": "node", "id": "el-obsolete", "reason": "Élément supprimé du code" },
+  { "op": "add", "kind": "edge", "id": null, "data": { "from": "el-x", "to": "group:pg-admin", "type": "nav", "label": "ouvre" }, "reason": "…" }
 ]
 \`\`\`
 Règles :
 - \`op\` ∈ add | modify | delete ; \`kind\` ∈ node | group | edge.
+- \`group.role\` ∈ page | section | zone ; \`group.sectionType\` ∈ header | menu | content | aside | footer (si section). Hiérarchie de \`parentId\` OBLIGATOIRE pour l'organisation graphique automatique : une SECTION → \`parentId\` = id de sa PAGE ; une PAGE appartenant à un domaine → \`parentId\` = id de sa ZONE conteneur (\`role:"zone"\`). \`parentId\` peut être un id existant OU un id temporaire d'un groupe créé dans la même réponse.
+- \`node.elType\` ∈ link | button | form | widget ; \`node.groupId\` = id de la SECTION qui contient l'élément.
+- \`edge\` : \`from\`/\`to\` = id d'un élément (nu) ou \`group:<id>\` pour une page/section. \`edge.type\` ∈ nav | auth | cross-app | relation.
 - Pour modify/delete : RÉUTILISE l'\`id\` EXACT de l'élément existant (depuis la Site Map actuelle).
 - Pour add : \`id\` = null (le client en attribuera un).
 - NE FOURNIS PAS de coordonnées (x/y/w/h) : le placement est géré par l'application.
-- \`node.kind\` ∈ public | protected | admin | projets | widget. \`edge.type\` ∈ nav | auth | cross-app | relation.
 - Pour modify, ne mets dans \`data\` que les champs à changer (les autres sont conservés).
 - N'inclus QUE de vraies évolutions par rapport au code. Si rien ne change pour un élément, ne l'inclus pas.
 - \`reason\` : courte justification factuelle (1 phrase).
@@ -8537,16 +8580,31 @@ function computeSitemapProposals(currentSitemap, proposed, scope) {
     };
     const nodeGroupOf = new Map(nodes.map(n => [n.id, n.groupId]));
     const scopeId = (scope && scope.groupId) ? scope.groupId : null;
-    const inScope = (kind, op, data, before) => {
-        if (!scopeId) return true;
-        if (kind === 'node') {
-            if (op === 'add') return (data.groupId || '') === scopeId;
-            return before && before.groupId === scopeId;
+    // Groupes autorisés dans le scope = la page ciblée + toutes les zones (sections) qu'elle contient géométriquement.
+    let allowed = null;
+    if (scopeId) {
+        allowed = new Set([scopeId]);
+        const sc = groups.find(g => g.id === scopeId);
+        if (sc) for (const g of groups) {
+            if (g.id !== scopeId && g.x >= sc.x && g.y >= sc.y && g.x + g.w <= sc.x + sc.w && g.y + g.h <= sc.y + sc.h) allowed.add(g.id);
         }
-        if (kind === 'group') return op !== 'add' && before && before.id === scopeId;
+    }
+    const grpOfRef = (ref) => (ref && typeof ref === 'string' && ref.startsWith('group:')) ? ref.slice(6) : nodeGroupOf.get(ref);
+    const inScope = (kind, op, data, before) => {
+        if (!allowed) return true;
+        if (kind === 'node') {
+            if (op === 'add') return !data.groupId || allowed.has(data.groupId);   // section de la page (ou à rattacher)
+            return !!before && allowed.has(before.groupId);
+        }
+        if (kind === 'group') {
+            if (op === 'add') return true;                       // nouvelle section dans la page
+            return !!before && allowed.has(before.id);
+        }
         if (kind === 'edge') {
             const e = op === 'add' ? data : before;
-            return e && nodeGroupOf.get(e.from) === scopeId && nodeGroupOf.get(e.to) === scopeId;
+            if (!e) return false;
+            const fg = grpOfRef(e.from), tg = grpOfRef(e.to);
+            return (fg && allowed.has(fg)) || (tg && allowed.has(tg));   // ≥1 extrémité dans le scope
         }
         return false;
     };
@@ -8563,9 +8621,8 @@ function computeSitemapProposals(currentSitemap, proposed, scope) {
         if (kind === 'edge' && data.type && !EDGE_TYPES.has(data.type)) delete data.type;
         const reason = (p.reason || '').toString().slice(0, 300);
         if (op === 'add') {
-            if (scopeId && kind === 'node') data.groupId = scopeId; // force le rattachement à la zone
             if (!inScope(kind, op, data, null)) continue;
-            out.push({ op, kind, id: null, data, reason });
+            out.push({ op, kind, id: null, tempId: (p.id ? String(p.id) : null), data, reason });
         } else {
             const id = (p.id || '').toString();
             const before = id ? byId[kind].get(id) : null;
@@ -9086,6 +9143,24 @@ app.get('/api/admin/tests/sitemap-versions/:id', (req, res) => {
     const v = sitemapVersionsLoad().find(x => x.id === req.params.id);
     if (!v) return res.status(404).json({ error: 'Version introuvable' });
     res.json(v);
+});
+
+// PUT /api/admin/tests/sitemap-versions/:id { layout } — écrase le contenu d'une version existante.
+app.put('/api/admin/tests/sitemap-versions/:id', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+    const versions = sitemapVersionsLoad();
+    const idx = versions.findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Version introuvable' });
+    const layout = (req.body?.layout && typeof req.body.layout === 'object') ? req.body.layout : sitemapLayoutLoad();
+    versions[idx] = {
+        ...versions[idx], layout,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user.username || user.email || 'admin',
+    };
+    if (!sitemapVersionsSave(versions)) return res.status(500).json({ error: 'Échec écriture' });
+    const { layout: _omit, ...meta } = versions[idx];
+    res.json(meta);
 });
 
 // DELETE /api/admin/tests/sitemap-versions/:id — supprime une version.

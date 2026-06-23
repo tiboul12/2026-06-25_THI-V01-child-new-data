@@ -146,6 +146,8 @@ interface FnHistoryChange {
 
 // ── Site Map ──
 type SmKind = 'public' | 'protected' | 'admin' | 'projets' | 'widget';
+// Type d'un élément (nœud feuille placé dans une section)
+type SmElType = 'link' | 'button' | 'form' | 'widget';
 interface SitemapNode {
   id: string;
   label: string;
@@ -158,6 +160,7 @@ interface SitemapNode {
   tabs?: string[];
   description?: string;
   cahierPaths?: string[];
+  elType?: SmElType;  // si défini → l'objet est un ÉLÉMENT (lien/bouton/form/widget) d'une section
 }
 interface SitemapEdge {
   id: string;
@@ -165,10 +168,18 @@ interface SitemapEdge {
   label?: string;
   type: 'nav' | 'auth' | 'cross-app' | 'relation';
 }
+// Rôle d'une zone : page (écran réel) · section (zone d'une page) · zone (regroupement générique)
+type SmGroupRole = 'page' | 'section' | 'zone';
 interface SitemapGroup {
   id: string; label: string;
   x: number; y: number; w: number; h: number;
   stroke: string; fill: string;
+  role?: SmGroupRole;
+  sectionType?: string;   // header | menu | content | footer | aside … (si role=section)
+  url?: string;           // route (si role=page)
+  component?: string;     // composant Angular lié (page ou section)
+  description?: string;
+  parentId?: string;      // page parente (si role=section) — pour l'organisation automatique
 }
 type SmSide = 'left' | 'right' | 'top' | 'bottom';
 interface SmEdgeOverride { fromSide?: SmSide; toSide?: SmSide; bend?: number; }
@@ -176,6 +187,7 @@ interface SmAiProposal {
   op: 'add' | 'modify' | 'delete';
   kind: 'node' | 'group' | 'edge';
   id: string | null;
+  tempId?: string | null;
   data?: any;
   before?: any;
   reason?: string;
@@ -1367,167 +1379,112 @@ Exemple :
 
   // ── Site Map — données statiques (reflète le parcours réel de l'utilisateur) ──
 
+  // Modèle V2 (métier) : PAGES (zones role=page) ▸ SECTIONS (zones role=section) ▸ ÉLÉMENTS (nœuds elType).
+  private readonly SM_SECTION_STROKE = '#7c8aa0';
+  private readonly SM_SECTION_FILL   = '#7c8aa00f';
+
   private readonly SM_BASE_GROUPS: SitemapGroup[] = [
-    { id: 'public',  label: 'Public — :4202 (non connecté)',                 x: 20,   y: 60,  w: 300,  h: 372, stroke: '#0ea5e9', fill: '#0ea5e90a' },
-    { id: 'app',     label: 'App connectée — :4202  ·  menu : Documents · Projets · Admin', x: 360, y: 60, w: 360, h: 560, stroke: '#6366f1', fill: '#6366f10a' },
-    { id: 'admin',   label: 'Admin — réservé admin (onglets)',               x: 760,  y: 60,  w: 340,  h: 824, stroke: '#f59e0b', fill: '#f59e0b0d' },
-    { id: 'projets', label: 'App Projets — :4203',                            x: 1140, y: 60,  w: 480,  h: 624, stroke: '#10b981', fill: '#10b9810a' },
-    { id: 'widgets', label: 'Outils & widgets embarqués (visibilité pilotée par Admin › Outils)', x: 20, y: 912, w: 1080, h: 178, stroke: '#8b5cf6', fill: '#8b5cf60a' },
+    // ── PAGE Landing (public) ──
+    { id: 'pg-landing', label: 'Landing', role: 'page', url: '/', component: 'LandingComponent',
+      description: "Page d'accueil publique — présentation et connexion.",
+      x: 40, y: 70, w: 360, h: 430, stroke: '#0ea5e9', fill: '#0ea5e90d' },
+    { id: 'sec-landing-header',  label: 'Header',  role: 'section', sectionType: 'header',  component: 'LandingComponent', x: 60, y: 120, w: 320, h: 96,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-landing-content', label: 'Contenu', role: 'section', sectionType: 'content', component: 'LandingComponent', x: 60, y: 224, w: 320, h: 128, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-landing-footer',  label: 'Footer',  role: 'section', sectionType: 'footer',  x: 60, y: 360, w: 320, h: 78,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Documents (connecté) ──
+    { id: 'pg-documents', label: 'Documents', role: 'page', url: '/documents', component: 'DocumentsComponent',
+      description: 'Gestion des documents de l’utilisateur connecté.',
+      x: 440, y: 70, w: 360, h: 300, stroke: '#6366f1', fill: '#6366f10d' },
+    { id: 'sec-doc-menu',    label: 'Menu',    role: 'section', sectionType: 'menu',    component: 'NavComponent',       x: 460, y: 120, w: 320, h: 86,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-doc-content', label: 'Contenu', role: 'section', sectionType: 'content', component: 'DocumentsComponent', x: 460, y: 214, w: 320, h: 146, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Outils embarqués (widgets) ──
+    { id: 'pg-widgets', label: 'Outils embarqués', role: 'page', url: 'embed',
+      description: 'Widgets flottants embarquables (visibilité pilotée par Admin › Outils).',
+      x: 440, y: 420, w: 360, h: 210, stroke: '#8b5cf6', fill: '#8b5cf60d' },
+    { id: 'sec-widgets', label: 'Widgets', role: 'section', sectionType: 'content', x: 460, y: 470, w: 320, h: 150, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Admin (réservé admin, à onglets) ──
+    { id: 'pg-admin', label: 'Admin', role: 'page', url: '/admin', component: 'AdminComponent',
+      description: "Panneau d'administration à onglets (réservé admin).",
+      x: 840, y: 70, w: 380, h: 600, stroke: '#f59e0b', fill: '#f59e0b12' },
+    { id: 'sec-adm-tabs',   label: 'Onglets',      role: 'section', sectionType: 'menu',    component: 'AdminTabsRegistryService', x: 860, y: 120, w: 340, h: 70,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-adm-users',  label: 'Utilisateurs', role: 'section', sectionType: 'content', component: 'AdminUsersComponent', x: 860, y: 200, w: 340, h: 110, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-adm-tests',  label: 'Tests',        role: 'section', sectionType: 'content', component: 'AdminTestsComponent', x: 860, y: 322, w: 340, h: 150, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-adm-config', label: 'Config',       role: 'section', sectionType: 'content', component: 'ConfigComponent',     x: 860, y: 484, w: 340, h: 92,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Liste des projets (app Projets :4203) ──
+    { id: 'pg-projets', label: 'Liste des projets', role: 'page', url: '/projets', component: 'ProjetsComponent',
+      description: 'Accueil de l’app Projets (port 4203) — grille, création, ouverture.',
+      x: 1260, y: 70, w: 360, h: 240, stroke: '#10b981', fill: '#10b9810d' },
+    { id: 'sec-proj-content', label: 'Contenu', role: 'section', sectionType: 'content', component: 'ProjetsComponent', x: 1280, y: 120, w: 320, h: 180, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+
+    // ── PAGE Éditeur de projet (app Projets :4203) ──
+    { id: 'pg-editor', label: 'Éditeur de projet', role: 'page', url: '/projets/:id', component: 'ProjetEditorComponent',
+      description: 'Éditeur HTML/CSS/JS avec IA (toolbar, sidebar, code, preview, conversation).',
+      x: 1660, y: 70, w: 400, h: 430, stroke: '#10b981', fill: '#10b9810d' },
+    { id: 'sec-ed-toolbar', label: 'Toolbar',      role: 'section', sectionType: 'header',  component: 'ProjetToolbarComponent',    x: 1680, y: 120, w: 360, h: 64,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-ed-sidebar', label: 'Sidebar',      role: 'section', sectionType: 'aside',   component: 'ProjetSidebarComponent',    x: 1680, y: 192, w: 170, h: 210, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-ed-code',    label: 'Zone Code',    role: 'section', sectionType: 'content', component: 'ProjetEditorZoneComponent', x: 1862, y: 192, w: 178, h: 210, stroke: '#7c8aa0', fill: '#7c8aa00f' },
+    { id: 'sec-ed-chat',    label: 'Conversation', role: 'section', sectionType: 'content', component: 'ProjetConversationComponent', x: 1680, y: 412, w: 360, h: 70,  stroke: '#7c8aa0', fill: '#7c8aa00f' },
   ];
 
   private readonly SM_BASE_NODES: SitemapNode[] = [
-    // ── Public ──
-    { id: 'landing', label: 'Landing', url: '/', port: 4202, kind: 'public', groupId: 'public',
-      x: 44, y: 104, w: 252, h: 60,
-      components: ['LandingComponent'],
-      description: "Page d'accueil publique — connexion / présentation. Point d'entrée vers l'app connectée.",
-      cahierPaths: ['non-connecte/landing'] },
-    { id: 'cahier-doc', label: 'Doc · Cahier recette', url: '/cahier-recette-doc', port: 4202, kind: 'public', groupId: 'public',
-      x: 44, y: 178, w: 252, h: 56,
-      components: ['CahierRecetteDocComponent'],
-      description: 'Page de documentation publique du widget Cahier de recette.',
-      cahierPaths: ['connecte/outils/cahier-recette'] },
-    { id: 'tchat-doc', label: 'Doc · TchatIA', url: '/tchat-ia-doc', port: 4202, kind: 'public', groupId: 'public',
-      x: 44, y: 248, w: 252, h: 56,
-      components: ['TchatIaDocComponent'],
-      description: 'Page de documentation publique du widget TchatIA.',
-      cahierPaths: ['connecte/outils/tchat-ia'] },
-    { id: 'ticket-doc', label: 'Doc · Ticket widget', url: '/ticket-widget-doc', port: 4202, kind: 'public', groupId: 'public',
-      x: 44, y: 318, w: 252, h: 56,
-      components: ['TicketWidgetDocComponent'],
-      description: 'Page de documentation publique du widget de tickets.',
-      cahierPaths: ['connecte/outils/tickets'] },
+    // ── Éléments : Landing ──
+    { id: 'el-landing-logo',  label: 'Logo',       url: '/', port: 4202, kind: 'public', groupId: 'sec-landing-header', elType: 'link',   x: 72,  y: 158, w: 136, h: 30, components: ['LandingComponent'], description: 'Logo / retour accueil.' },
+    { id: 'el-landing-login', label: 'Connexion',  url: '/', port: 4202, kind: 'public', groupId: 'sec-landing-header', elType: 'link',   x: 220, y: 158, w: 148, h: 30, components: ['LandingComponent'], description: 'Lien de connexion → app connectée.' },
+    { id: 'el-landing-pitch', label: 'Présentation', url: 'embed', port: 4202, kind: 'public', groupId: 'sec-landing-content', elType: 'widget', x: 72, y: 262, w: 296, h: 32, components: ['LandingComponent'], description: 'Bloc de présentation.' },
+    { id: 'el-landing-cta',   label: 'CTA Inscription', url: 'embed', port: 4202, kind: 'public', groupId: 'sec-landing-content', elType: 'button', x: 72, y: 304, w: 296, h: 32, components: ['LandingComponent'], description: "Bouton d'appel à l'action." },
+    { id: 'el-landing-legal', label: 'Liens légaux', url: 'embed', port: 4202, kind: 'public', groupId: 'sec-landing-footer', elType: 'link', x: 72, y: 398, w: 296, h: 28, components: ['LandingComponent'] },
 
-    // ── App connectée (entrées du menu de navigation) ──
-    { id: 'documents', label: 'Documents', url: '/documents', port: 4202, kind: 'protected', groupId: 'app',
-      x: 384, y: 110, w: 312, h: 60,
-      components: ['DocumentsComponent'],
-      description: 'Entrée de menu « Documents » — gestion des documents de l’utilisateur.',
-      cahierPaths: [] },
-    { id: 'projets-nav', label: 'Projets (→ app :4203)', url: '/projets', port: 4203, kind: 'protected', groupId: 'app',
-      x: 384, y: 184, w: 312, h: 60,
-      components: ['NavComponent'],
-      description: "Entrée de menu « Projets » (data/child/nav.json). Bascule vers l'app Projets (port 4203) en passant le token + thème par l'URL.",
-      cahierPaths: ['connecte/projets'] },
-    { id: 'historique', label: 'Historique actions', url: '/wo-action-history', port: 4202, kind: 'protected', groupId: 'app',
-      x: 384, y: 258, w: 312, h: 60,
-      components: ['WoActionHistoryComponent'],
-      description: "Entrée de menu conditionnelle — affichée seulement si activée dans Admin › Outils (woActionHistoryNavEnabled).",
-      cahierPaths: [] },
-    { id: 'config', label: 'Configuration', url: '/config', port: 4202, kind: 'protected', groupId: 'app',
-      x: 384, y: 332, w: 312, h: 60,
-      components: ['ConfigComponent'],
-      description: 'Configuration de l’utilisateur (même composant que l’onglet Admin › Config).',
-      cahierPaths: ['connecte/config'] },
-    { id: 'deployments', label: 'Déploiements', url: '/deployments', port: 4202, kind: 'protected', groupId: 'app',
-      x: 384, y: 406, w: 312, h: 60,
-      components: ['DeploymentsComponent'],
-      description: 'Historique des déploiements et bannière de mise à jour.',
-      cahierPaths: ['connecte/deploiements'] },
-    { id: 'admin', label: 'Admin', url: '/admin', port: 4202, kind: 'admin', groupId: 'app',
-      x: 384, y: 480, w: 312, h: 60,
-      components: ['AdminComponent', 'AdminTabsRegistryService'],
-      description: "Entrée de menu « Admin » (rouge, admin uniquement). Ouvre le panneau d'administration à onglets.",
-      cahierPaths: ['connecte/admin'] },
+    // ── Éléments : Documents ──
+    { id: 'el-doc-nav-docs',  label: 'Lien Documents', url: '/documents', port: 4202, kind: 'protected', groupId: 'sec-doc-menu', elType: 'link', x: 472, y: 156, w: 140, h: 30, components: ['NavComponent'] },
+    { id: 'el-doc-nav-admin', label: 'Lien Admin',     url: '/admin',     port: 4202, kind: 'admin',     groupId: 'sec-doc-menu', elType: 'link', x: 620, y: 156, w: 160, h: 30, components: ['NavComponent'], description: 'Entrée de menu Admin → page Admin.' },
+    { id: 'el-doc-list', label: 'Liste documents', url: 'embed', port: 4202, kind: 'protected', groupId: 'sec-doc-content', elType: 'widget', x: 472, y: 254, w: 296, h: 32, components: ['DocumentsComponent'] },
+    { id: 'el-doc-add',  label: 'Ajouter un document', url: 'embed', port: 4202, kind: 'protected', groupId: 'sec-doc-content', elType: 'button', x: 472, y: 296, w: 296, h: 32, components: ['DocumentsComponent'] },
 
-    // ── Admin : onglets (ordre réel du registry) ──
-    { id: 'adm-projets', label: 'Projets', url: '/admin/projets/projets', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 110, w: 300, h: 64,
-      tabs: ['/admin/projets/projets', '/admin/projets/ia-instructions'],
-      components: ['AdminProjetsComponent'],
-      description: 'Onglet Admin › Projets — 2 sous-onglets : liste projets et instructions IA.',
-      cahierPaths: ['connecte/admin/projets'] },
-    { id: 'adm-users', label: 'Utilisateurs', url: '/admin/users', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 188, w: 300, h: 64,
-      components: ['AdminUsersComponent'],
-      description: 'Onglet Admin › Utilisateurs — comptes et rôles (data/config/users.json).',
-      cahierPaths: ['connecte/admin/utilisateurs'] },
-    { id: 'adm-deploy', label: 'Déploiement', url: '/admin/deploiement', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 266, w: 300, h: 64,
-      components: ['AdminDeploymentsComponent'],
-      description: 'Onglet Admin › Déploiement — enregistrements de versions, alertes de MAJ.',
-      cahierPaths: ['connecte/admin/deploiements'] },
-    { id: 'adm-config', label: 'Config', url: '/admin/config', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 344, w: 300, h: 64,
-      components: ['ConfigComponent'],
-      description: 'Onglet Admin › Config — pilote la visibilité du header IA et des entrées de menu.',
-      cahierPaths: ['connecte/admin/config'] },
-    { id: 'adm-theme', label: 'Thème', url: '/admin/theme', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 422, w: 300, h: 64,
-      components: ['AdminThemeComponent'],
-      description: 'Onglet Admin › Thème — personnalisation des couleurs (data/child/theme.json).',
-      cahierPaths: ['connecte/admin/theme'] },
-    { id: 'adm-mega', label: 'Méga-outils', url: '/admin/mega-outils', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 500, w: 300, h: 64,
-      components: ['AdminMegaOutilsComponent', 'TrelloAdminComponent'],
-      description: "Onglet Admin › Méga-outils — gère les instances Trello partagées entre projets. Bouton « Ouvrir dans l'éditeur » → app Projets.",
-      cahierPaths: [] },
-    { id: 'adm-memo', label: 'Mémo', url: '/admin/memo', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 578, w: 300, h: 64,
-      components: ['AdminMemoComponent'],
-      description: 'Onglet Admin › Mémo — notes / aide-mémoire internes.',
-      cahierPaths: [] },
-    { id: 'adm-outils', label: 'Outils', url: '/admin/tools', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 656, w: 300, h: 64,
-      components: ['AdminToolsComponent'],
-      description: "Onglet Admin › Outils — visibilité et widgets flottants par outil (TchatIA, Tickets, Cahier de recette, Historique).",
-      cahierPaths: [] },
-    { id: 'adm-tests', label: 'Tests', url: '/admin/tests/cahier', port: 4202, kind: 'admin', groupId: 'admin',
-      x: 780, y: 734, w: 300, h: 64,
-      tabs: ['/admin/tests/cahier', '/admin/tests/execution', '/admin/tests/resultats', '/admin/tests/historique', '/admin/tests/sitemap'],
-      components: ['AdminTestsComponent'],
-      description: 'Onglet Admin › Tests — 5 sous-onglets accessibles chacun via URL directe (/admin/tests/:subtab).',
-      cahierPaths: ['connecte/admin/tests'] },
+    // ── Éléments : Outils embarqués ──
+    { id: 'el-w-tchat',  label: 'TchatIA', url: 'embed', port: 4202, kind: 'widget', groupId: 'sec-widgets', elType: 'widget', x: 472, y: 510, w: 296, h: 28, components: ['TchatIaComponent'], cahierPaths: ['connecte/outils/tchat-ia'] },
+    { id: 'el-w-tickets', label: 'Tickets', url: 'embed', port: 4202, kind: 'widget', groupId: 'sec-widgets', elType: 'widget', x: 472, y: 542, w: 296, h: 28, components: ['TicketWidgetComponent'], cahierPaths: ['connecte/outils/tickets'] },
+    { id: 'el-w-cahier', label: 'Cahier de recette', url: 'embed', port: 4202, kind: 'widget', groupId: 'sec-widgets', elType: 'widget', x: 472, y: 574, w: 296, h: 28, components: ['CahierRecetteComponent'], cahierPaths: ['connecte/outils/cahier-recette'] },
 
-    // ── App Projets (:4203) ──
-    { id: 'proj-list', label: 'Liste des projets', url: '/projets', port: 4203, kind: 'projets', groupId: 'projets',
-      x: 1164, y: 110, w: 432, h: 64,
-      components: ['ProjetsComponent'],
-      description: 'Accueil de l’app Projets — grille des projets, création, ouverture.',
-      cahierPaths: ['connecte/projets/accueil'] },
-    { id: 'proj-editor', label: 'Éditeur de projet', url: '/projets/:id', port: 4203, kind: 'projets', groupId: 'projets',
-      x: 1164, y: 196, w: 432, h: 480,
-      tabs: ['Toolbar', 'Sidebar', 'Zone Code', 'Zone Structure', 'Zone Preview', 'Conversation', 'Historique', 'Commentaires F6', 'Outil Édition', 'Outil Agenda', 'Outil Tests', 'Méga-outil Trello', 'Méga-outil Tableau'],
-      components: ['ProjetEditorComponent', 'ProjetToolbarComponent', 'ProjetSidebarComponent', 'ProjetEditorZoneComponent', 'ProjetConversationComponent', 'ProjetHistoryComponent', 'CommentsDrawerComponent', 'EditionOutilComponent', 'AgendaOutilComponent', 'TestsOutilComponent'],
-      description: "Éditeur de projet HTML/CSS/JS avec IA. Intègre les méga-outils (Trello, Tableau) instanciés depuis Admin › Méga-outils.",
-      cahierPaths: ['connecte/projets/editor'] },
+    // ── Éléments : Admin ──
+    { id: 'el-adm-tab-users', label: 'Onglet Utilisateurs', url: '/admin/users', port: 4202, kind: 'admin', groupId: 'sec-adm-tabs', elType: 'link', x: 872, y: 156, w: 150, h: 26, components: ['AdminComponent'] },
+    { id: 'el-adm-tab-tests', label: 'Onglet Tests', url: '/admin/tests/cahier', port: 4202, kind: 'admin', groupId: 'sec-adm-tabs', elType: 'link', x: 1030, y: 156, w: 158, h: 26, components: ['AdminComponent'] },
+    { id: 'el-adm-users-table', label: 'Table utilisateurs', url: 'embed', port: 4202, kind: 'admin', groupId: 'sec-adm-users', elType: 'widget', x: 872, y: 242, w: 316, h: 28, components: ['AdminUsersComponent'], cahierPaths: ['connecte/admin/utilisateurs'] },
+    { id: 'el-adm-users-form',  label: 'Création utilisateur', url: 'embed', port: 4202, kind: 'admin', groupId: 'sec-adm-users', elType: 'form', x: 872, y: 276, w: 316, h: 26, components: ['AdminUsersComponent'], cahierPaths: ['connecte/admin/utilisateurs'] },
+    { id: 'el-adm-tests-cahier', label: 'Cahier de recette', url: '/admin/tests/cahier', port: 4202, kind: 'admin', groupId: 'sec-adm-tests', elType: 'link', x: 872, y: 362, w: 316, h: 26, components: ['AdminTestsComponent'], cahierPaths: ['connecte/admin/tests'] },
+    { id: 'el-adm-tests-sitemap', label: 'Site Map', url: '/admin/tests/sitemap', port: 4202, kind: 'admin', groupId: 'sec-adm-tests', elType: 'link', x: 872, y: 394, w: 316, h: 26, components: ['AdminTestsComponent'], cahierPaths: ['connecte/admin/tests'] },
+    { id: 'el-adm-tests-run', label: 'Lancer un test', url: 'embed', port: 4202, kind: 'admin', groupId: 'sec-adm-tests', elType: 'button', x: 872, y: 426, w: 316, h: 26, components: ['AdminTestsComponent'], cahierPaths: ['connecte/admin/tests'] },
+    { id: 'el-adm-config-form', label: 'Formulaire config', url: 'embed', port: 4202, kind: 'admin', groupId: 'sec-adm-config', elType: 'form', x: 872, y: 526, w: 316, h: 30, components: ['ConfigComponent'], cahierPaths: ['connecte/admin/config'] },
 
-    // ── Widgets embarqués ──
-    { id: 'w-tchat', label: 'TchatIA', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
-      x: 60, y: 962, w: 300, h: 70,
-      components: ['TchatIaComponent'],
-      description: "Widget de chat IA embarquable. Visibilité pilotée par Admin › Outils. Documenté sur /tchat-ia-doc.",
-      cahierPaths: ['connecte/outils/tchat-ia'] },
-    { id: 'w-tickets', label: 'Tickets', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
-      x: 400, y: 962, w: 300, h: 70,
-      components: ['TicketWidgetComponent'],
-      description: 'Widget de tickets flottant. Visibilité pilotée par Admin › Outils. Documenté sur /ticket-widget-doc.',
-      cahierPaths: ['connecte/outils/tickets'] },
-    { id: 'w-cahier', label: 'Cahier de recette', url: 'embed', port: 4202, kind: 'widget', groupId: 'widgets',
-      x: 740, y: 962, w: 300, h: 70,
-      components: ['CahierRecetteComponent'],
-      description: 'Widget Cahier de recette flottant. Visibilité pilotée par Admin › Outils. Documenté sur /cahier-recette-doc.',
-      cahierPaths: ['connecte/outils/cahier-recette'] },
+    // ── Éléments : Liste des projets ──
+    { id: 'el-proj-grid',   label: 'Grille des projets', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-proj-content', elType: 'widget', x: 1292, y: 158, w: 296, h: 32, components: ['ProjetsComponent'], cahierPaths: ['connecte/projets/accueil'] },
+    { id: 'el-proj-create', label: 'Créer un projet', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-proj-content', elType: 'button', x: 1292, y: 198, w: 296, h: 32, components: ['ProjetsComponent'], cahierPaths: ['connecte/projets/accueil'] },
+    { id: 'el-proj-open',   label: 'Ouvrir un projet', url: '/projets/:id', port: 4203, kind: 'projets', groupId: 'sec-proj-content', elType: 'link', x: 1292, y: 238, w: 296, h: 32, components: ['ProjetsComponent'] },
+
+    // ── Éléments : Éditeur ──
+    { id: 'el-ed-toolbar', label: "Barre d'outils", url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-ed-toolbar', elType: 'widget', x: 1692, y: 156, w: 336, h: 24, components: ['ProjetToolbarComponent'], cahierPaths: ['connecte/projets/editor/toolbar'] },
+    { id: 'el-ed-tree',    label: 'Arborescence', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-ed-sidebar', elType: 'widget', x: 1692, y: 232, w: 146, h: 26, components: ['ProjetSidebarComponent'], cahierPaths: ['connecte/projets/editor/sidebar'] },
+    { id: 'el-ed-editor',  label: 'Éditeur de code', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-ed-code', elType: 'widget', x: 1874, y: 232, w: 154, h: 26, components: ['ProjetEditorZoneComponent'], cahierPaths: ['connecte/projets/editor/zone-code'] },
+    { id: 'el-ed-chat',    label: 'Chat IA', url: 'embed', port: 4203, kind: 'projets', groupId: 'sec-ed-chat', elType: 'widget', x: 1692, y: 450, w: 336, h: 26, components: ['ProjetConversationComponent'], cahierPaths: ['connecte/projets/editor/zone5-conversation'] },
   ];
 
   private readonly SM_BASE_EDGES: SitemapEdge[] = [
-    // Parcours de navigation
-    { id: 'e-login',     from: 'landing',     to: 'documents',   label: 'connexion', type: 'auth' },
-    { id: 'e-nav-proj',  from: 'projets-nav', to: 'proj-list',   label: ':4203',     type: 'cross-app' },
-    { id: 'e-nav-admin', from: 'admin',       to: 'adm-projets', label: 'ouvre',     type: 'nav' },
-    { id: 'e-proj-edit', from: 'proj-list',   to: 'proj-editor',                     type: 'nav' },
-    // Relations fonctionnelles (dépendances entre éléments)
-    { id: 'r-mega-edit',  from: 'adm-mega',   to: 'proj-editor', label: 'Trello dans l’éditeur', type: 'relation' },
-    { id: 'r-out-tchat',  from: 'adm-outils', to: 'w-tchat',     label: 'visibilité', type: 'relation' },
-    { id: 'r-out-ticket', from: 'adm-outils', to: 'w-tickets',                        type: 'relation' },
-    { id: 'r-out-cahier', from: 'adm-outils', to: 'w-cahier',                         type: 'relation' },
-    { id: 'r-out-hist',   from: 'adm-outils', to: 'historique',  label: 'active menu', type: 'relation' },
-    { id: 'r-cfg-config', from: 'adm-config', to: 'config',      label: 'même composant', type: 'relation' },
-    { id: 'r-projets',    from: 'adm-projets',to: 'proj-list',   label: 'gère', type: 'relation' },
+    // Relations entre éléments / sections / pages (les extrémités zone sont préfixées 'group:')
+    { id: 'e-login',      from: 'el-landing-login', to: 'group:pg-documents', label: 'connexion', type: 'auth' },
+    { id: 'e-nav-admin',  from: 'el-doc-nav-admin', to: 'group:pg-admin',     label: 'ouvre',     type: 'nav' },
+    { id: 'e-tab-users',  from: 'el-adm-tab-users', to: 'group:sec-adm-users', label: 'affiche',  type: 'relation' },
+    { id: 'e-tab-tests',  from: 'el-adm-tab-tests', to: 'group:sec-adm-tests', label: 'affiche',  type: 'relation' },
+    { id: 'e-open-proj',  from: 'el-proj-open',     to: 'group:pg-editor',     label: 'ouvre',     type: 'nav' },
+    { id: 'e-cross-proj', from: 'group:pg-documents', to: 'group:pg-projets',  label: ':4203',     type: 'cross-app' },
   ];
 
   /** Clé localStorage de la disposition personnalisée (nœuds + zones) de la Site Map. */
-  private readonly SM_LAYOUT_KEY = 'wo_sitemap_layout_v2';
+  private readonly SM_LAYOUT_KEY = 'wo_sitemap_layout_v3';
+  /** Schéma du modèle de données (incrémenté quand la structure de base change). */
+  private readonly SM_SCHEMA = 'v3';
 
   /** Nœuds de la carte, déplaçables — positions persistées en localStorage. */
   smNodes = signal<SitemapNode[]>(this.loadInitialSmNodes());
@@ -1538,11 +1495,13 @@ Exemple :
 
   /** Lit la disposition sauvegardée. */
   private readSmLayout(): {
-    nodes?: Record<string, { x: number; y: number; groupId?: string; label?: string }>;
-    groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string }>;
+    schema?: string;
+    nodes?: Record<string, { x: number; y: number; w?: number; h?: number; groupId?: string; label?: string; elType?: SmElType }>;
+    groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string; role?: SmGroupRole; sectionType?: string; url?: string; component?: string; parentId?: string }>;
     edges?: Record<string, SmEdgeOverride>;
     customGroups?: SitemapGroup[];
     customEdges?: SitemapEdge[];
+    customNodes?: SitemapNode[];
     edgesAll?: SitemapEdge[];
   } {
     try {
@@ -1552,36 +1511,46 @@ Exemple :
     return {};
   }
 
-  /** Applique les positions + réassignations de zone sauvegardées sur les nœuds par défaut. */
+  private smLayoutValid(l: any): boolean { return !!l && l.schema === this.SM_SCHEMA; }
+
+  /** Applique les positions/tailles + réassignations sauvegardées sur les nœuds par défaut, + nœuds personnalisés. */
   private loadInitialSmNodes(): SitemapNode[] {
-    const saved = this.readSmLayout().nodes || {};
-    return this.SM_BASE_NODES.map(n => {
+    const l = this.readSmLayout();
+    if (!this.smLayoutValid(l)) return this.SM_BASE_NODES.map(n => ({ ...n }));
+    const saved = l.nodes || {};
+    const base = this.SM_BASE_NODES.map(n => {
       const p = saved[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, w: p.w ?? n.w, h: p.h ?? n.h, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label, elType: p.elType ?? n.elType } : { ...n };
     });
+    const custom = (l.customNodes || []).map(n => ({ ...n }));
+    return [...base, ...custom];
   }
 
   /** Charge les overrides d'arêtes sauvegardés (côtés d'accroche, courbure). */
   private loadInitialEdgeOverrides(): Record<string, SmEdgeOverride> {
-    return this.readSmLayout().edges || {};
+    const l = this.readSmLayout();
+    return this.smLayoutValid(l) ? (l.edges || {}) : {};
   }
 
   /** Zones par défaut (avec géométrie/label sauvegardés) + zones personnalisées. */
   private loadInitialSmGroups(): SitemapGroup[] {
-    const saved = this.readSmLayout().groups || {};
+    const l = this.readSmLayout();
+    if (!this.smLayoutValid(l)) return this.SM_BASE_GROUPS.map(g => ({ ...g }));
+    const saved = l.groups || {};
     const base = this.SM_BASE_GROUPS.map(g => {
       const s = saved[g.id];
-      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label } : { ...g };
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label, role: s.role ?? g.role, sectionType: s.sectionType ?? g.sectionType, url: s.url ?? g.url, component: s.component ?? g.component, parentId: s.parentId ?? g.parentId } : { ...g };
     });
-    const custom = (this.readSmLayout().customGroups || []).map(g => ({ ...g }));
+    const custom = (l.customGroups || []).map(g => ({ ...g }));
     return [...base, ...custom];
   }
 
   /** Liaisons : liste complète persistée si présente (toute liaison éditable/supprimable), sinon base + custom. */
   private loadInitialSmEdges(): SitemapEdge[] {
-    const layout = this.readSmLayout();
-    if (Array.isArray(layout.edgesAll) && layout.edgesAll.length) return layout.edgesAll.map(e => ({ ...e }));
-    const custom = (layout.customEdges || []).map(e => ({ ...e }));
+    const l = this.readSmLayout();
+    if (!this.smLayoutValid(l)) return this.SM_BASE_EDGES.map(e => ({ ...e }));
+    if (Array.isArray(l.edgesAll) && l.edgesAll.length) return l.edgesAll.map(e => ({ ...e }));
+    const custom = (l.customEdges || []).map(e => ({ ...e }));
     return [...this.SM_BASE_EDGES.map(e => ({ ...e })), ...custom];
   }
 
@@ -1589,10 +1558,15 @@ Exemple :
 
   sitemapZoom        = signal(0.6);
   sitemapPan         = signal({ x: 10, y: 10 });
+  /** Mode plein écran : la Site Map occupe toute la fenêtre, masque les barres de menu. */
+  sitemapFullscreen  = signal(false);
   selectedSmNode     = signal<SitemapNode | null>(null);
   /** Sélection multiple de nœuds (Ctrl/Maj+clic) pour alignement / déplacement groupé. */
   smMultiSelect      = signal<Set<string>>(new Set());
-  smMultiCount       = computed(() => this.smMultiSelect().size);
+  /** Sélection multiple de zones/sections (Ctrl/Maj+clic) pour alignement. */
+  smGroupMultiSelect = signal<Set<string>>(new Set());
+  /** Nombre total de boîtes (nœuds + zones) multi-sélectionnées → pilote l'affichage de la barre d'alignement. */
+  smMultiCount       = computed(() => this.smMultiSelect().size + this.smGroupMultiSelect().size);
   /** Zone (groupe) sélectionnée pour édition (label / couleur / suppression). */
   selectedSmGroupId  = signal<string | null>(null);
   selectedSmGroup    = computed(() => {
@@ -1604,10 +1578,13 @@ Exemple :
   smLinkSource       = signal<string | null>(null);
   /** Versions (snapshots) de la Site Map. */
   showSmVersions     = signal(false);
-  smVersions         = signal<{ id: string; name: string; createdAt: string; createdBy: string }[]>([]);
+  smVersions         = signal<{ id: string; name: string; createdAt: string; createdBy: string; updatedAt?: string; updatedBy?: string }[]>([]);
+  /** Dernière version enregistrée (tête de liste, la plus récente) — seule modifiable in place. */
+  smLatestVersion    = computed(() => this.smVersions()[0] ?? null);
   smVersionName      = signal('');
   smVersionsBusy     = signal(false);
   smVersionsError    = signal('');
+  smVersionsMsg      = signal('');
   /** Arête sélectionnée (édition côté d'accroche / courbure) + ses overrides. */
   selectedSmEdgeId   = signal<string | null>(null);
   smEdgeOverrides    = signal<Record<string, SmEdgeOverride>>(this.loadInitialEdgeOverrides());
@@ -1695,6 +1672,8 @@ Exemple :
   sitemapZoomIn()    { this.sitemapZoom.update(z => Math.min(2.5, +(z + 0.1).toFixed(1))); }
   sitemapZoomOut()   { this.sitemapZoom.update(z => Math.max(0.15, +(z - 0.1).toFixed(1))); }
   sitemapZoomReset() { this.sitemapZoom.set(0.6); this.sitemapPan.set({ x: 10, y: 10 }); }
+  /** Bascule le mode plein écran de la Site Map (masque toutes les barres de menu hors celle de la Site Map). */
+  toggleSitemapFullscreen() { this.sitemapFullscreen.update(v => !v); }
 
   smMouseDown(e: MouseEvent) {
     const tgt = e.target as Element;
@@ -1776,10 +1755,16 @@ Exemple :
     if (this.smGroupDrag) {
       if (this.smGroupDrag.moved) {
         this.persistLayout();
+      } else if (this.smGroupDrag.additive) {
+        // Ctrl/Maj+clic → (dé)sélectionne la zone dans la multi-sélection (pour alignement)
+        const id = this.smGroupDrag.id;
+        this.smGroupMultiSelect.update(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+        this.selectedSmGroupId.set(null); this.selectedSmNode.set(null); this.selectedSmEdgeId.set(null); this.smMultiSelect.set(new Set());
       } else {
-        // Clic sans déplacement → sélection de la zone (édition)
+        // Clic simple → sélection unique de la zone (édition)
         const id = this.smGroupDrag.id;
         this.selectedSmGroupId.update(c => c === id ? null : id);
+        this.smGroupMultiSelect.set(new Set());
         if (this.selectedSmGroupId()) { this.selectedSmNode.set(null); this.selectedSmEdgeId.set(null); this.smMultiSelect.set(new Set()); }
       }
       this.smGroupDrag = null;
@@ -1791,6 +1776,7 @@ Exemple :
         const id = d.id;
         this.selectedSmEdgeId.set(null);
         this.selectedSmGroupId.set(null);
+        this.smGroupMultiSelect.set(new Set());
         if (d.additive) {
           // Ctrl/Maj+clic → (dé)sélectionne dans la multi-sélection
           let added = false;
@@ -1841,7 +1827,39 @@ Exemple :
   }
 
   smNodeMultiSelected(id: string): boolean { return this.smMultiSelect().has(id); }
-  clearMultiSelect() { this.smMultiSelect.set(new Set()); }
+  smGroupMultiSelected(id: string): boolean { return this.smGroupMultiSelect().has(id); }
+  clearMultiSelect() { this.smMultiSelect.set(new Set()); this.smGroupMultiSelect.set(new Set()); }
+
+  private readonly SM_NODE_MIN_W = 80;
+
+  /** Réduit/agrandit la largeur du nœud sélectionné (volet élément). */
+  resizeSelectedNodeWidth(delta: number) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, w: Math.max(this.SM_NODE_MIN_W, n.w + delta) } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+
+  /** Réduit/agrandit la largeur des nœuds ET zones multi-sélectionnés. */
+  resizeMultiWidth(delta: number) {
+    const nsel = this.smMultiSelect(), gsel = this.smGroupMultiSelect();
+    if (nsel.size + gsel.size < 1) return;
+    if (nsel.size) this.smNodes.update(ns => ns.map(n => nsel.has(n.id) ? { ...n, w: Math.max(this.SM_NODE_MIN_W, n.w + delta) } : n));
+    if (gsel.size) this.smGroups.update(gs => gs.map(g => gsel.has(g.id) ? { ...g, w: Math.max(this.SM_GROUP_MIN_W, g.w + delta) } : g));
+    this.persistLayout();
+  }
+
+  /** Uniformise la largeur des boîtes multi-sélectionnées (sur la plus étroite). */
+  uniformizeMultiWidth() {
+    const boxes = this.selectedBoxes();
+    if (boxes.length < 2) return;
+    const nsel = this.smMultiSelect(), gsel = this.smGroupMultiSelect();
+    const w = Math.max(this.SM_NODE_MIN_W, Math.min(...boxes.map(b => b.w)));
+    if (nsel.size) this.smNodes.update(ns => ns.map(n => nsel.has(n.id) ? { ...n, w } : n));
+    if (gsel.size) this.smGroups.update(gs => gs.map(g => gsel.has(g.id) ? { ...g, w } : g));
+    this.persistLayout();
+  }
 
   /** Liste des nœuds actuellement multi-sélectionnés. */
   private selectedNodesList(): SitemapNode[] {
@@ -1849,70 +1867,74 @@ Exemple :
     return this.smNodes().filter(n => sel.has(n.id));
   }
 
-  private patchNodes(patches: { id: string; x?: number; y?: number }[]) {
-    const map = new Map(patches.map(p => [p.id, p]));
-    this.smNodes.update(ns => ns.map(n => {
-      const p = map.get(n.id);
-      return p ? { ...n, x: p.x ?? n.x, y: p.y ?? n.y } : n;
-    }));
+  /** Boîtes alignables : nœuds + zones/sections multi-sélectionnés (chacun avec x/y/w/h). */
+  private selectedBoxes(): { id: string; kind: 'node' | 'group'; x: number; y: number; w: number; h: number }[] {
+    const out: { id: string; kind: 'node' | 'group'; x: number; y: number; w: number; h: number }[] = [];
+    for (const n of this.selectedNodesList()) out.push({ id: n.id, kind: 'node', x: n.x, y: n.y, w: n.w, h: n.h });
+    const gsel = this.smGroupMultiSelect();
+    for (const g of this.smGroups()) if (gsel.has(g.id)) out.push({ id: g.id, kind: 'group', x: g.x, y: g.y, w: g.w, h: g.h });
+    return out;
   }
 
-  /** Aligne les nœuds multi-sélectionnés selon un bord ou un centre commun. */
-  alignSelected(mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') {
-    const nodes = this.selectedNodesList();
-    if (nodes.length < 2) return;
-    let patches: { id: string; x?: number; y?: number }[] = [];
-    switch (mode) {
-      case 'left': {
-        const x = Math.min(...nodes.map(n => n.x));
-        patches = nodes.map(n => ({ id: n.id, x }));
-        break;
-      }
-      case 'right': {
-        const r = Math.max(...nodes.map(n => n.x + n.w));
-        patches = nodes.map(n => ({ id: n.id, x: r - n.w }));
-        break;
-      }
-      case 'hcenter': {
-        const cx = nodes.reduce((s, n) => s + n.x + n.w / 2, 0) / nodes.length;
-        patches = nodes.map(n => ({ id: n.id, x: Math.round(cx - n.w / 2) }));
-        break;
-      }
-      case 'top': {
-        const y = Math.min(...nodes.map(n => n.y));
-        patches = nodes.map(n => ({ id: n.id, y }));
-        break;
-      }
-      case 'bottom': {
-        const b = Math.max(...nodes.map(n => n.y + n.h));
-        patches = nodes.map(n => ({ id: n.id, y: b - n.h }));
-        break;
-      }
-      case 'vcenter': {
-        const cy = nodes.reduce((s, n) => s + n.y + n.h / 2, 0) / nodes.length;
-        patches = nodes.map(n => ({ id: n.id, y: Math.round(cy - n.h / 2) }));
-        break;
+  /** Applique un delta (dx,dy) à chaque boîte. Une ZONE entraîne son contenu (nœuds + zones imbriquées). */
+  private applyBoxDeltas(deltas: Map<string, { kind: 'node' | 'group'; dx: number; dy: number }>) {
+    const groups = this.smGroups();
+    const nodes = this.smNodes();
+    const nodeDX = new Map<string, { dx: number; dy: number }>();
+    const groupDX = new Map<string, { dx: number; dy: number }>();
+    for (const [id, d] of deltas) {
+      if (!d.dx && !d.dy) continue;
+      if (d.kind === 'group') {
+        const g = groups.find(x => x.id === id); if (!g) continue;
+        groupDX.set(id, { dx: d.dx, dy: d.dy });
+        for (const inner of groups) if (this.smGroupContains(g, inner)) groupDX.set(inner.id, { dx: d.dx, dy: d.dy });
+        for (const n of nodes) {
+          const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+          const inside = cx >= g.x && cx <= g.x + g.w && cy >= g.y && cy <= g.y + g.h;
+          if (n.groupId === id || inside) nodeDX.set(n.id, { dx: d.dx, dy: d.dy });
+        }
+      } else {
+        nodeDX.set(id, { dx: d.dx, dy: d.dy });
       }
     }
-    this.patchNodes(patches);
+    if (groupDX.size) this.smGroups.update(gs => gs.map(g => { const o = groupDX.get(g.id); return o ? { ...g, x: Math.round(g.x + o.dx), y: Math.round(g.y + o.dy) } : g; }));
+    if (nodeDX.size) this.smNodes.update(ns => ns.map(n => { const o = nodeDX.get(n.id); return o ? { ...n, x: Math.round(n.x + o.dx), y: Math.round(n.y + o.dy) } : n; }));
+  }
+
+  /** Aligne les boîtes (nœuds + zones) multi-sélectionnées selon un bord ou un centre commun. */
+  alignSelected(mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') {
+    const boxes = this.selectedBoxes();
+    if (boxes.length < 2) return;
+    const deltas = new Map<string, { kind: 'node' | 'group'; dx: number; dy: number }>();
+    const set = (b: typeof boxes[number], tx?: number, ty?: number) =>
+      deltas.set(b.id, { kind: b.kind, dx: tx !== undefined ? tx - b.x : 0, dy: ty !== undefined ? ty - b.y : 0 });
+    switch (mode) {
+      case 'left':    { const x = Math.min(...boxes.map(b => b.x));            for (const b of boxes) set(b, x); break; }
+      case 'right':   { const r = Math.max(...boxes.map(b => b.x + b.w));      for (const b of boxes) set(b, r - b.w); break; }
+      case 'hcenter': { const cx = boxes.reduce((s, b) => s + b.x + b.w / 2, 0) / boxes.length; for (const b of boxes) set(b, Math.round(cx - b.w / 2)); break; }
+      case 'top':     { const y = Math.min(...boxes.map(b => b.y));            for (const b of boxes) set(b, undefined, y); break; }
+      case 'bottom':  { const bo = Math.max(...boxes.map(b => b.y + b.h));     for (const b of boxes) set(b, undefined, bo - b.h); break; }
+      case 'vcenter': { const cy = boxes.reduce((s, b) => s + b.y + b.h / 2, 0) / boxes.length; for (const b of boxes) set(b, undefined, Math.round(cy - b.h / 2)); break; }
+    }
+    this.applyBoxDeltas(deltas);
     this.persistLayout();
   }
 
-  /** Répartit les nœuds sélectionnés à intervalles égaux (≥ 3 nœuds). */
+  /** Répartit les boîtes sélectionnées (nœuds + zones) à intervalles égaux (≥ 3). */
   distributeSelected(axis: 'h' | 'v') {
-    const nodes = this.selectedNodesList();
-    if (nodes.length < 3) return;
-    const sorted = [...nodes].sort((a, b) => axis === 'h' ? a.x - b.x : a.y - b.y);
+    const boxes = this.selectedBoxes();
+    if (boxes.length < 3) return;
+    const sorted = [...boxes].sort((a, b) => axis === 'h' ? a.x - b.x : a.y - b.y);
     const first = sorted[0], last = sorted[sorted.length - 1];
+    const deltas = new Map<string, { kind: 'node' | 'group'; dx: number; dy: number }>();
     if (axis === 'h') {
-      const start = first.x + first.w / 2, end = last.x + last.w / 2;
-      const step = (end - start) / (sorted.length - 1);
-      this.patchNodes(sorted.map((n, i) => ({ id: n.id, x: Math.round(start + step * i - n.w / 2) })));
+      const start = first.x + first.w / 2, end = last.x + last.w / 2, step = (end - start) / (sorted.length - 1);
+      sorted.forEach((b, i) => { const tx = Math.round(start + step * i - b.w / 2); deltas.set(b.id, { kind: b.kind, dx: tx - b.x, dy: 0 }); });
     } else {
-      const start = first.y + first.h / 2, end = last.y + last.h / 2;
-      const step = (end - start) / (sorted.length - 1);
-      this.patchNodes(sorted.map((n, i) => ({ id: n.id, y: Math.round(start + step * i - n.h / 2) })));
+      const start = first.y + first.h / 2, end = last.y + last.h / 2, step = (end - start) / (sorted.length - 1);
+      sorted.forEach((b, i) => { const ty = Math.round(start + step * i - b.h / 2); deltas.set(b.id, { kind: b.kind, dx: 0, dy: ty - b.y }); });
     }
+    this.applyBoxDeltas(deltas);
     this.persistLayout();
   }
 
@@ -1923,14 +1945,19 @@ Exemple :
 
   /** Construit l'objet disposition (nœuds + zones + liaisons, base & personnalisées). */
   private buildLayoutObject() {
-    const nodes: Record<string, { x: number; y: number; groupId?: string; label?: string }> = {};
-    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId, label: n.label };
+    const baseNodeIds = new Set(this.SM_BASE_NODES.map(n => n.id));
+    const nodes: Record<string, { x: number; y: number; w?: number; h?: number; groupId?: string; label?: string; elType?: SmElType }> = {};
+    const customNodes: SitemapNode[] = [];
+    for (const n of this.smNodes()) {
+      if (baseNodeIds.has(n.id)) nodes[n.id] = { x: n.x, y: n.y, w: n.w, h: n.h, groupId: n.groupId, label: n.label, elType: n.elType };
+      else customNodes.push({ ...n });   // élément/nœud ajouté → sauvegarde complète
+    }
 
     const baseGroupIds = new Set(this.SM_BASE_GROUPS.map(g => g.id));
-    const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string }> = {};
+    const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string; role?: SmGroupRole; sectionType?: string; url?: string; component?: string; parentId?: string }> = {};
     const customGroups: SitemapGroup[] = [];
     for (const g of this.smGroups()) {
-      if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label };
+      if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label, role: g.role, sectionType: g.sectionType, url: g.url, component: g.component, parentId: g.parentId };
       else customGroups.push({ ...g });
     }
 
@@ -1939,20 +1966,23 @@ Exemple :
     // Liste complète des liaisons (base + custom, avec modifs/suppressions) → toute liaison éditable & persistée
     const edgesAll = this.smEdges().map(e => ({ ...e }));
 
-    return { nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges, edgesAll };
+    return { schema: this.SM_SCHEMA, nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges, customNodes, edgesAll };
   }
 
   /** Applique un objet disposition (chargé du serveur ou du cache) sur les signaux. */
   private applySmLayout(layout: any) {
+    if (!this.smLayoutValid(layout)) return;   // schéma incompatible → on garde la base
     const savedNodes = layout?.nodes || {};
-    this.smNodes.set(this.SM_BASE_NODES.map(n => {
+    const baseNodes = this.SM_BASE_NODES.map(n => {
       const p = savedNodes[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label } : { ...n };
-    }));
+      return p ? { ...n, x: p.x, y: p.y, w: p.w ?? n.w, h: p.h ?? n.h, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label, elType: p.elType ?? n.elType } : { ...n };
+    });
+    const customNodes = Array.isArray(layout?.customNodes) ? layout.customNodes.map((n: SitemapNode) => ({ ...n })) : [];
+    this.smNodes.set([...baseNodes, ...customNodes]);
     const savedGroups = layout?.groups || {};
     const base = this.SM_BASE_GROUPS.map(g => {
       const s = savedGroups[g.id];
-      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label } : { ...g };
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label, role: s.role ?? g.role, sectionType: s.sectionType ?? g.sectionType, url: s.url ?? g.url, component: s.component ?? g.component, parentId: s.parentId ?? g.parentId } : { ...g };
     });
     const customGroups = Array.isArray(layout?.customGroups) ? layout.customGroups.map((g: SitemapGroup) => ({ ...g })) : [];
     this.smGroups.set([...base, ...customGroups]);
@@ -1990,7 +2020,7 @@ Exemple :
       const res = await fetch(`${API}/api/admin/tests/sitemap-layout`, { headers: this.authHeaders });
       if (!res.ok) return;
       const layout = await res.json();
-      if (layout && (layout.nodes || layout.groups || layout.customGroups || layout.customEdges || layout.edges)) {
+      if (this.smLayoutValid(layout)) {
         this.applySmLayout(layout);
         try { localStorage.setItem(this.SM_LAYOUT_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
       }
@@ -2002,6 +2032,7 @@ Exemple :
     this.showSmVersions.set(true);
     this.smVersionName.set('');
     this.smVersionsError.set('');
+    this.smVersionsMsg.set('');
     await this.loadSmVersionsList();
   }
   closeSmVersions() { this.showSmVersions.set(false); }
@@ -2029,7 +2060,30 @@ Exemple :
       if (!res.ok) throw new Error((await res.json()).error || 'Échec enregistrement');
       this.smVersionName.set('');
       await this.loadSmVersionsList();
+      this.smVersionsMsg.set(`Version « ${name} » enregistrée.`);
     } catch (e: any) { this.smVersionsError.set(e.message || 'Échec enregistrement'); }
+    finally { this.smVersionsBusy.set(false); }
+  }
+
+  /** Met à jour (écrase) une version existante avec l'état courant. */
+  async updateSmVersion(id: string) {
+    this.smVersionsBusy.set(true);
+    this.smVersionsError.set('');
+    this.smVersionsMsg.set('');
+    try {
+      const res = await fetch(`${API}/api/admin/tests/sitemap-versions/${id}`, {
+        method: 'PUT', headers: this.authHeaders,
+        body: JSON.stringify({ layout: this.buildLayoutObject() }),
+      });
+      if (!res.ok) {
+        let msg = `Échec mise à jour (HTTP ${res.status})`;
+        try { msg = (await res.json()).error || msg; } catch { /* corps non-JSON */ }
+        throw new Error(msg);
+      }
+      const meta = await res.json();
+      await this.loadSmVersionsList();
+      this.smVersionsMsg.set(`Version « ${meta.name || ''} » mise à jour avec l'état actuel.`);
+    } catch (e: any) { this.smVersionsError.set(e.message || 'Échec mise à jour'); }
     finally { this.smVersionsBusy.set(false); }
   }
 
@@ -2096,13 +2150,16 @@ Exemple :
       return [
         `Mets à jour UNIQUEMENT la zone « ${scopeLabel} » de la Site Map pour refléter l'état réel de l'application :`,
         "ajoute les pages/onglets/composants manquants de cette zone, corrige les éléments obsolètes et signale ceux à",
-        "supprimer. Analyse le code (routes, composants, onglets) et l'historique. Ne touche à aucune autre zone."
+        "supprimer. Analyse le code (routes, composants, onglets) et l'historique. Ne touche à aucune autre zone.",
+        "Garde une organisation claire et aérée : sections cohérentes, éléments bien rangés dans leur section (groupId)."
       ].join(' ');
     }
     return [
       "Mets à jour la Site Map pour refléter l'état réel de l'application : ajoute les pages/onglets/composants",
       "manquants, corrige les éléments obsolètes et signale ceux à supprimer. Analyse le code (routes, composants,",
-      "onglets) et l'historique des modifications. Conserve les ids existants pour les modifications/suppressions."
+      "onglets) et l'historique des modifications. Conserve les ids existants pour les modifications/suppressions.",
+      "Vise une carte propre et hiérarchisée : regroupe les pages d'un même domaine dans des zones conteneurs",
+      "(parentId), range chaque élément dans une section pertinente (groupId), et relie les domaines par des liaisons."
     ].join(' ');
   }
 
@@ -2202,31 +2259,79 @@ Exemple :
     const approved = props.filter((_, i) => ap.has(i));
     if (approved.length === 0) { this.closeSmAiReview(); return; }
 
-    // Point de départ pour placer les nouveaux nœuds (colonne de staging à droite)
+    // Point de départ pour placer les éléments/zones sans cible (colonne de staging à droite)
     let stageX = Math.max(0, ...this.smNodes().map(n => n.x + n.w)) + 80;
     let stageY = 80;
+    const rid = (pfx: string) => pfx + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+    const scopePageId = (() => { const id = this.smAiScopeGroupId(); return (id && this.smGroups().find(g => g.id === id && g.role === 'page')) ? id : null; })();
+    // Mapping id temporaire (proposé par l'IA) → id réel généré (pour rattacher éléments/liaisons aux nouvelles sections)
+    const tempMap = new Map<string, string>();
+    const resolveRef = (ref: string): string => {
+      if (!ref) return ref;
+      if (ref.startsWith('group:')) { const inner = ref.slice(6); return 'group:' + (tempMap.get(inner) || inner); }
+      return tempMap.get(ref) || ref;
+    };
 
+    // ── Passe 1 : créer les ZONES (pages/sections) d'abord, pour rattacher ensuite éléments & liaisons ──
+    for (const p of approved) {
+      if (p.kind !== 'group' || p.op !== 'add') continue;
+      const d = p.data || {};
+      const role: SmGroupRole = (['page', 'section', 'zone'].includes(d.role) ? d.role : 'zone');
+      const id = rid(role === 'page' ? 'pg-' : role === 'section' ? 'sec-' : 'grp-');
+      if (p.tempId) tempMap.set(p.tempId, id);
+      const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
+      const stroke = role === 'section' ? this.SM_SECTION_STROKE : pal.stroke;
+      const fill = role === 'section' ? this.SM_SECTION_FILL : (role === 'page' ? pal.stroke + '0d' : pal.fill);
+      let gx = stageX - 20, gy = stageY, gw = role === 'section' ? 320 : 360, gh = role === 'section' ? 110 : 260;
+      // Une nouvelle section issue d'une MAJ scopée sur une page → placée DANS la page
+      const page = (role === 'section' && scopePageId) ? this.smGroups().find(g => g.id === scopePageId) : null;
+      if (page) {
+        const inner = this.smGroups().filter(g => g.id !== page.id && g.x >= page.x && g.y >= page.y && g.x + g.w <= page.x + page.w && g.y + g.h <= page.y + page.h);
+        gx = page.x + 20; gw = page.w - 40;
+        gy = inner.length ? Math.max(...inner.map(g => g.y + g.h)) + 12 : page.y + 50;
+        if (gy + gh > page.y + page.h) this.smGroups.update(gs => gs.map(g => g.id === page.id ? { ...g, h: gy + gh + 20 - g.y } : g));
+      } else { stageY += gh + 20; }
+      const parentId = role === 'section' ? (resolveRef(d.parentId || '') || scopePageId || undefined) : undefined;
+      this.smGroups.update(gs => [...gs, {
+        id, label: d.label || (role === 'page' ? 'Nouvelle page' : role === 'section' ? 'Nouvelle section' : 'Nouvelle zone'),
+        role, sectionType: d.sectionType, url: d.url, component: d.component, description: d.description, parentId,
+        x: gx, y: gy, w: gw, h: gh, stroke, fill,
+      }]);
+    }
+
+    // ── Passe 2 : éléments (nœuds), modifs/suppressions de zones, liaisons ──
     for (const p of approved) {
       if (p.kind === 'node') {
         if (p.op === 'add') {
           const d = p.data || {};
-          const id = 'node-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
-          const node: SitemapNode = {
-            id, label: d.label || 'Nouveau nœud', url: d.url || 'embed',
+          const id = rid('el-');
+          const elType: SmElType | undefined = (['link', 'button', 'form', 'widget'].includes(d.elType) ? d.elType : (d.kind ? undefined : 'link'));
+          const gid = resolveRef(d.groupId || '');
+          // Rattache l'élément à sa section → placement empilé dedans
+          const sec = elType ? this.smGroups().find(g => g.id === gid && g.role === 'section') : null;
+          let nx = stageX, ny = stageY, nw = 300, nh = elType ? 30 : (d.tabs?.length ? 60 + d.tabs.length * 22 : 60);
+          if (sec) {
+            const inner = this.smNodes().filter(n => n.groupId === sec.id);
+            ny = inner.length ? Math.max(...inner.map(n => n.y + n.h)) + 8 : sec.y + 34;
+            nx = sec.x + 12; nw = sec.w - 24;
+            this.smGroups.update(gs => gs.map(g => g.id === sec.id && (ny + nh) > g.y + g.h ? { ...g, h: ny + nh + 10 - g.y } : g));
+          }
+          this.smNodes.update(ns => [...ns, {
+            id, label: d.label || 'Nouvel élément', url: d.url || 'embed',
             port: (d.port === 4203 ? 4203 : 4202), kind: (d.kind || 'protected'),
-            groupId: d.groupId || '', x: stageX, y: stageY, w: 300, h: d.tabs?.length ? 60 + d.tabs.length * 22 : 60,
+            groupId: sec ? sec.id : (gid || ''), x: nx, y: ny, w: nw, h: nh, elType,
             components: Array.isArray(d.components) ? d.components : [],
             tabs: Array.isArray(d.tabs) && d.tabs.length ? d.tabs : undefined,
             description: d.description || '', cahierPaths: Array.isArray(d.cahierPaths) ? d.cahierPaths : [],
-          };
-          this.smNodes.update(ns => [...ns, node]);
-          stageY += node.h + 24;
+          }]);
+          if (!sec) stageY += nh + 24;
         } else if (p.op === 'modify' && p.id) {
           const d = p.data || {};
           this.smNodes.update(ns => ns.map(n => n.id === p.id ? {
             ...n,
             label: d.label ?? n.label, url: d.url ?? n.url, port: d.port ?? n.port, kind: d.kind ?? n.kind,
-            groupId: d.groupId ?? n.groupId, components: Array.isArray(d.components) ? d.components : n.components,
+            elType: (['link', 'button', 'form', 'widget'].includes(d.elType) ? d.elType : n.elType),
+            groupId: d.groupId ? resolveRef(d.groupId) : n.groupId, components: Array.isArray(d.components) ? d.components : n.components,
             tabs: Array.isArray(d.tabs) ? (d.tabs.length ? d.tabs : undefined) : n.tabs,
             description: d.description ?? n.description, cahierPaths: Array.isArray(d.cahierPaths) ? d.cahierPaths : n.cahierPaths,
           } : n));
@@ -2234,41 +2339,230 @@ Exemple :
           this.smNodes.update(ns => ns.filter(n => n.id !== p.id));
         }
       } else if (p.kind === 'group') {
-        if (p.op === 'add') {
+        if (p.op === 'modify' && p.id) {
           const d = p.data || {};
-          const id = 'grp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
-          const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
-          this.smGroups.update(gs => [...gs, { id, label: d.label || 'Nouvelle zone', x: stageX - 20, y: stageY, w: 340, h: 220, stroke: pal.stroke, fill: pal.fill }]);
-          stageY += 244;
-        } else if (p.op === 'modify' && p.id) {
-          const d = p.data || {};
-          this.smGroups.update(gs => gs.map(g => g.id === p.id ? { ...g, label: d.label ?? g.label } : g));
+          this.smGroups.update(gs => gs.map(g => g.id === p.id ? {
+            ...g, label: d.label ?? g.label, role: (['page', 'section', 'zone'].includes(d.role) ? d.role : g.role),
+            sectionType: d.sectionType ?? g.sectionType, url: d.url ?? g.url, component: d.component ?? g.component, description: d.description ?? g.description,
+          } : g));
         } else if (p.op === 'delete' && p.id) {
           this.smGroups.update(gs => gs.filter(g => g.id !== p.id));
         }
       } else if (p.kind === 'edge') {
         if (p.op === 'add') {
           const d = p.data || {};
-          if (d.from && d.to) {
-            const id = 'edge-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
-            this.smEdges.update(es => [...es, { id, from: d.from, to: d.to, type: (d.type || 'nav'), label: d.label || '' } as SitemapEdge]);
+          const from = resolveRef(d.from || ''), to = resolveRef(d.to || '');
+          if (from && to) {
+            const id = rid('edge-');
+            this.smEdges.update(es => [...es, { id, from, to, type: (d.type || 'nav'), label: d.label || '' } as SitemapEdge]);
           }
         } else if (p.op === 'modify' && p.id) {
           const d = p.data || {};
-          this.smEdges.update(es => es.map(e => e.id === p.id ? { ...e, type: d.type ?? e.type, label: d.label ?? e.label, from: d.from ?? e.from, to: d.to ?? e.to } : e));
+          this.smEdges.update(es => es.map(e => e.id === p.id ? { ...e, type: d.type ?? e.type, label: d.label ?? e.label, from: d.from ? resolveRef(d.from) : e.from, to: d.to ? resolveRef(d.to) : e.to } : e));
         } else if (p.op === 'delete' && p.id) {
           this.smEdges.update(es => es.filter(e => e.id !== p.id));
         }
       }
     }
 
-    this.persistLayout();
+    // Organise automatiquement : seulement la zone ciblée si MAJ scopée, sinon toute la carte
+    const aiScope = this.smAiScopeGroupId();
+    if (aiScope && this.smGroups().some(g => g.id === aiScope)) this.autoLayoutPage(aiScope);
+    else this.autoLayoutSitemap();
     // Enregistre automatiquement une nouvelle version
     const scopeLabel = this.smAiScopeLabel();
     const name = (scopeLabel ? `MAJ IA (${scopeLabel}) — ` : 'MAJ IA — ') + new Date().toLocaleString('fr-FR');
     this.smVersionName.set(name);
     await this.saveSmVersion();
     this.closeSmAiReview();
+  }
+
+  private readonly SM_L = { PAGE_GAP: 60, COL_PAD: 18, SEC_GAP: 16, PAGE_LABEL: 42, SEC_LABEL: 30, EL_H: 30, EL_GAP: 8, EL_PAD: 12, PAGE_W: 340, MAXW: 2400, START: 40, ZONE_MAXW: 1700,
+    // Disposition multi-colonnes des sections dans une page : largeur d'une colonne, écart entre colonnes, hauteur max d'une colonne avant retour à la ligne.
+    SEC_COL_W: 300, SEC_COL_GAP: 28, SEC_MAX_COL_H: 520 };
+
+  /** Sections d'une page : union des sections rattachées par `parentId` ET (pour celles sans parentId) celles
+   *  géométriquement contenues dans la page → aucune section n'est oubliée même si l'état parentId est mixte. */
+  private smSectionsOf(page: SitemapGroup, groups: SitemapGroup[]): SitemapGroup[] {
+    const byParent = groups.filter(s => s.role === 'section' && s.parentId === page.id);
+    const seen = new Set(byParent.map(s => s.id));
+    const geom = groups.filter(s => s.role === 'section' && s.id !== page.id && !s.parentId && !seen.has(s.id)
+      && s.x >= page.x && s.y >= page.y && s.x + s.w <= page.x + page.w && s.y + s.h <= page.y + page.h);
+    return [...byParent, ...geom];
+  }
+
+  /** Calcule la disposition interne (relative) d'une page : sections réparties en MULTIPLES COLONNES
+   *  (retour à la ligne quand une colonne dépasse SEC_MAX_COL_H) → carte compacte, claire et épurée. */
+  private smComputePageLayout(page: SitemapGroup, groups: SitemapGroup[], nodes: SitemapNode[]) {
+    const L = this.SM_L;
+    const elementsOf = (gid: string) => nodes.filter(n => n.groupId === gid);
+    // 1) Hauteur de chaque section (selon ses éléments).
+    const secs = this.smSectionsOf(page, groups).map(sec => {
+      let ey = L.SEC_LABEL;
+      const els = elementsOf(sec.id).map(el => { const pos = { el, relY: ey }; ey += L.EL_H + L.EL_GAP; return pos; });
+      return { sec, h: Math.max(56, ey + 6), els };
+    });
+    // 2) Répartition des sections en colonnes (flux par seuil de hauteur).
+    const cols: { items: typeof secs; h: number }[] = [];
+    let col: { items: typeof secs; h: number } = { items: [], h: 0 };
+    for (const s of secs) {
+      if (col.items.length && col.h + L.SEC_GAP + s.h > L.SEC_MAX_COL_H) { cols.push(col); col = { items: [], h: 0 }; }
+      if (col.items.length) col.h += L.SEC_GAP;
+      col.items.push(s); col.h += s.h;
+    }
+    if (col.items.length) cols.push(col);
+    // 3) Placements (relatifs à la page).
+    const secPlacements: { sec: SitemapGroup; relX: number; relY: number; w: number; h: number; els: { el: SitemapNode; relY: number }[] }[] = [];
+    cols.forEach((c, ci) => {
+      const relX = L.COL_PAD + ci * (L.SEC_COL_W + L.SEC_COL_GAP);
+      let relY = L.PAGE_LABEL;
+      for (const s of c.items) { secPlacements.push({ sec: s.sec, relX, relY, w: L.SEC_COL_W, h: s.h, els: s.els }); relY += s.h + L.SEC_GAP; }
+    });
+    // 4) Éléments rattachés directement à la page (sans section) → colonne supplémentaire à droite.
+    const direct = elementsOf(page.id);
+    const directEls: { el: SitemapNode; relX: number; relY: number; w: number }[] = [];
+    if (direct.length) {
+      const relX = L.COL_PAD + cols.length * (L.SEC_COL_W + L.SEC_COL_GAP);
+      let relY = L.PAGE_LABEL;
+      for (const el of direct) { directEls.push({ el, relX, relY, w: L.SEC_COL_W }); relY += L.EL_H + L.EL_GAP; }
+    }
+    const nCols = cols.length + (direct.length ? 1 : 0);
+    const width = Math.max(L.PAGE_W, 2 * L.COL_PAD + (nCols > 0 ? nCols * L.SEC_COL_W + (nCols - 1) * L.SEC_COL_GAP : 0));
+    const colHeights = cols.map(c => c.h);
+    const directH = direct.length ? direct.length * (L.EL_H + L.EL_GAP) : 0;
+    const innerH = Math.max(0, ...colHeights, directH);
+    const height = Math.max(150, L.PAGE_LABEL + innerH + L.COL_PAD);
+    return { width, height, secPlacements, directEls };
+  }
+
+  /** Applique une disposition calculée (positions absolues à partir de page.x/y). */
+  private smApplyPageLayout(page: SitemapGroup, lay: ReturnType<typeof this.smComputePageLayout>) {
+    const L = this.SM_L;
+    for (const pl of lay.secPlacements) {
+      pl.sec.x = page.x + pl.relX; pl.sec.y = page.y + pl.relY; pl.sec.w = pl.w; pl.sec.h = pl.h;
+      for (const ep of pl.els) { ep.el.x = pl.sec.x + L.EL_PAD; ep.el.w = pl.sec.w - 2 * L.EL_PAD; ep.el.y = pl.sec.y + ep.relY; ep.el.h = L.EL_H; }
+    }
+    for (const dp of lay.directEls) { dp.el.x = page.x + dp.relX; dp.el.w = dp.w; dp.el.y = page.y + dp.relY; dp.el.h = L.EL_H; }
+  }
+
+  // Cache de disposition récursive : par groupe, soit un conteneur (zone/page avec sous-pages) en rangées, soit une feuille (page avec sections).
+  private smGroupChildren(group: SitemapGroup, groups: SitemapGroup[]): SitemapGroup[] {
+    return groups.filter(g => g.parentId === group.id && (g.role === 'page' || g.role === 'zone'));
+  }
+
+  /** Mesure récursive : calcule {w,h} d'un groupe et mémorise sa disposition dans `cache`.
+   *  - Conteneur (a des sous-groupes pages/zones) → grille de sous-groupes (retour à la ligne sur ZONE_MAXW).
+   *  - Feuille (page) → sections + éléments empilés (largeur = page.w existante ou PAGE_W). */
+  private smMeasureTree(
+    group: SitemapGroup, groups: SitemapGroup[], nodes: SitemapNode[],
+    cache: Map<string, { kind: 'container'; w: number; h: number; rows: { items: { c: SitemapGroup; w: number; h: number }[]; rowH: number }[] }
+                       | { kind: 'leaf'; w: number; h: number; lay: ReturnType<AdminTestsComponent['smComputePageLayout']> }>
+  ): { w: number; h: number } {
+    const L = this.SM_L;
+    const children = this.smGroupChildren(group, groups);
+    if (children.length) {
+      // Conteneur : place les sous-groupes en rangées.
+      const sizes = children.map(c => ({ c, s: this.smMeasureTree(c, groups, nodes, cache) }));
+      const rows: { items: { c: SitemapGroup; w: number; h: number }[]; rowH: number }[] = [];
+      let row: { c: SitemapGroup; w: number; h: number }[] = [];
+      let rowW = 0, rowH = 0;
+      for (const { c, s } of sizes) {
+        const add = (row.length ? L.PAGE_GAP : 0) + s.w;
+        if (row.length && rowW + add > L.ZONE_MAXW) { rows.push({ items: row, rowH }); row = []; rowW = 0; rowH = 0; }
+        rowW += (row.length ? L.PAGE_GAP : 0) + s.w;
+        row.push({ c, w: s.w, h: s.h });
+        rowH = Math.max(rowH, s.h);
+      }
+      if (row.length) rows.push({ items: row, rowH });
+      const innerW = Math.max(0, ...rows.map(r => r.items.reduce((a, it, i) => a + (i ? L.PAGE_GAP : 0) + it.w, 0)));
+      const innerH = rows.reduce((a, r, i) => a + (i ? L.PAGE_GAP : 0) + r.rowH, 0);
+      const w = innerW + 2 * L.COL_PAD;
+      const h = L.PAGE_LABEL + innerH + L.COL_PAD;
+      cache.set(group.id, { kind: 'container', w, h, rows });
+      return { w, h };
+    }
+    // Feuille : sections / éléments (largeur dynamique selon le nombre de colonnes de sections).
+    const lay = this.smComputePageLayout(group, groups, nodes);
+    cache.set(group.id, { kind: 'leaf', w: lay.width, h: lay.height, lay });
+    return { w: lay.width, h: lay.height };
+  }
+
+  /** Place récursivement un groupe (et son contenu) à partir de (x,y), d'après le cache de mesure. */
+  private smPlaceTree(
+    group: SitemapGroup, groups: SitemapGroup[], nodes: SitemapNode[], x: number, y: number,
+    cache: Map<string, any>
+  ) {
+    const L = this.SM_L;
+    const info = cache.get(group.id);
+    group.x = x; group.y = y;
+    if (!info) return;
+    group.w = info.w; group.h = info.h;
+    if (info.kind === 'container') {
+      let curY = y + L.PAGE_LABEL;
+      for (const r of info.rows) {
+        let curX = x + L.COL_PAD;
+        for (const it of r.items) {
+          this.smPlaceTree(it.c, groups, nodes, curX, curY, cache);
+          curX += it.w + L.PAGE_GAP;
+        }
+        curY += r.rowH + L.PAGE_GAP;
+      }
+    } else {
+      this.smApplyPageLayout(group, info.lay);
+    }
+  }
+
+  /** Organise TOUTE la carte : zones conteneurs ▸ pages ▸ sections ▸ éléments, emboîtées et espacées. */
+  autoLayoutSitemap() {
+    const groups = this.smGroups().map(g => ({ ...g }));
+    const nodes  = this.smNodes().map(n => ({ ...n }));
+    const byId = new Map(groups.map(g => [g.id, g]));
+    const L = this.SM_L;
+    const topGroups = groups.filter(g => (g.role === 'page' || g.role === 'zone' || !g.role) && !(g.parentId && byId.has(g.parentId)));
+    // Sections orphelines (parentId absent/invalide et non contenues dans une page) → placées comme blocs de
+    // premier niveau pour rester lisibles et NE JAMAIS se chevaucher, même si l'IA a oublié leur rattachement.
+    // « claimed » = sections rangées par une page (de premier niveau OU imbriquée dans une zone).
+    const claimed = new Set<string>();
+    for (const g of groups) if (g.role === 'page' || !g.role) for (const s of this.smSectionsOf(g, groups)) claimed.add(s.id);
+    const orphanSecs = groups.filter(g => g.role === 'section' && !claimed.has(g.id));
+    const roots = [...topGroups, ...orphanSecs];
+    const cache = new Map<string, any>();
+    for (const g of roots) this.smMeasureTree(g, groups, nodes, cache);
+    let curX = L.START, curY = L.START, rowH = 0;
+    for (const g of roots) {
+      const size = cache.get(g.id);
+      if (curX > L.START && curX + size.w > L.MAXW) { curX = L.START; curY += rowH + L.PAGE_GAP; rowH = 0; }
+      this.smPlaceTree(g, groups, nodes, curX, curY, cache);
+      curX += size.w + L.PAGE_GAP; rowH = Math.max(rowH, size.h);
+    }
+    // Éléments non rattachés (groupId vide/invalide) → rangés en grille sous le reste (jamais de chevauchement).
+    const gids = new Set(groups.map(g => g.id));
+    const orphanNodes = nodes.filter(n => !n.groupId || !gids.has(n.groupId));
+    if (orphanNodes.length) {
+      let ox = L.START, oy = curY + rowH + L.PAGE_GAP, orow = L.EL_H;
+      for (const n of orphanNodes) {
+        n.w = L.SEC_COL_W; n.h = L.EL_H;
+        if (ox > L.START && ox + n.w > L.MAXW) { ox = L.START; oy += orow + L.EL_GAP; }
+        n.x = ox; n.y = oy; ox += n.w + L.SEC_COL_GAP;
+      }
+    }
+    this.smGroups.set(groups);
+    this.smNodes.set(nodes);
+    this.persistLayout();
+  }
+
+  /** Organise UNIQUEMENT la zone donnée (garde sa position, range récursivement son contenu, ajuste sa taille). */
+  autoLayoutPage(pageId: string) {
+    const groups = this.smGroups().map(g => ({ ...g }));
+    const nodes  = this.smNodes().map(n => ({ ...n }));
+    const page = groups.find(g => g.id === pageId);
+    if (!page) return;
+    const cache = new Map<string, any>();
+    this.smMeasureTree(page, groups, nodes, cache);
+    this.smPlaceTree(page, groups, nodes, page.x, page.y, cache); // conserve x/y, recalcule contenu + taille
+    this.smGroups.set(groups);
+    this.smNodes.set(nodes);
+    this.persistLayout();
   }
 
   /** Restaure la disposition par défaut (supprime zones/liaisons personnalisées). */
@@ -2279,6 +2573,7 @@ Exemple :
     this.smEdges.set(this.SM_BASE_EDGES.map(e => ({ ...e })));
     this.smEdgeOverrides.set({});
     this.smMultiSelect.set(new Set());
+    this.smGroupMultiSelect.set(new Set());
     this.selectedSmEdgeId.set(null);
     this.selectedSmGroupId.set(null);
     this.smLinkMode.set(false);
@@ -2291,6 +2586,7 @@ Exemple :
   private readonly SM_GROUP_MIN_H = 120;
   private smGroupDrag: {
     id: string; mode: 'move' | 'resize'; sx: number; sy: number; moved: boolean;
+    additive: boolean;                              // Ctrl/Maj+clic → (dé)sélection multiple de zones
     og: { x: number; y: number; w: number; h: number };
     groupIds: Set<string>;                          // zones déplacées (dragged + contenues)
     og2: Map<string, { x: number; y: number }>;     // positions d'origine des zones déplacées
@@ -2330,6 +2626,7 @@ Exemple :
     }
     this.smGroupDrag = {
       id: group.id, mode, sx: e.clientX, sy: e.clientY, moved: false,
+      additive: (e.ctrlKey || e.metaKey || e.shiftKey),
       og: { x: group.x, y: group.y, w: group.w, h: group.h }, groupIds, og2, on,
     };
   }
@@ -2378,7 +2675,7 @@ Exemple :
     const count = this.smGroups().filter(g => this.isCustomZone(g.id)).length;
     const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
     const g: SitemapGroup = {
-      id, label: 'Nouvelle zone',
+      id, label: 'Nouvelle zone', role: 'zone',
       x: 60 + (count % 5) * 30, y: 60 + (count % 5) * 30, w: 320, h: 220,
       stroke: pal.stroke, fill: pal.fill,
     };
@@ -2386,6 +2683,52 @@ Exemple :
     this.selectedSmGroupId.set(id);
     this.selectedSmNode.set(null);
     this.selectedSmEdgeId.set(null);
+    this.persistLayout();
+  }
+
+  /** Ajoute une PAGE (zone role=page) dans une colonne libre à droite. */
+  addPage() {
+    const id = 'pg-' + Date.now().toString(36);
+    const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
+    const x = Math.max(40, ...this.smGroups().map(g => g.x + g.w)) + 80;
+    this.smGroups.update(gs => [...gs, { id, label: 'Nouvelle page', role: 'page', url: '/', x, y: 70, w: 360, h: 320, stroke: pal.stroke, fill: pal.stroke + '0d' }]);
+    this.selectedSmGroupId.set(id);
+    this.selectedSmNode.set(null);
+    this.selectedSmEdgeId.set(null);
+    this.persistLayout();
+  }
+
+  /** Ajoute une SECTION dans la page (zone) donnée, empilée sous les sections existantes. */
+  addSectionToPage(pageId: string) {
+    const page = this.smGroups().find(g => g.id === pageId);
+    if (!page) return;
+    const id = 'sec-' + Date.now().toString(36);
+    // Empile sous les zones déjà contenues dans la page
+    const inner = this.smGroups().filter(g => g.id !== pageId && g.x >= page.x && g.y >= page.y && g.x + g.w <= page.x + page.w && g.y + g.h <= page.y + page.h);
+    const top = inner.length ? Math.max(...inner.map(g => g.y + g.h)) + 12 : page.y + 50;
+    this.smGroups.update(gs => gs.map(g => g.id === pageId && (top + 110) > g.y + g.h ? { ...g, h: top + 120 - g.y } : g)
+      .concat([{ id, label: 'Nouvelle section', role: 'section' as SmGroupRole, sectionType: 'content', x: page.x + 20, y: top, w: page.w - 40, h: 100, stroke: this.SM_SECTION_STROKE, fill: this.SM_SECTION_FILL }]));
+    this.selectedSmGroupId.set(id);
+    this.persistLayout();
+  }
+
+  /** Ajoute un ÉLÉMENT (type donné) dans la section (zone) donnée, empilé sous les éléments existants. */
+  addElementToSection(sectionId: string, elType: SmElType) {
+    const sec = this.smGroups().find(g => g.id === sectionId);
+    if (!sec) return;
+    const id = 'el-' + Date.now().toString(36);
+    const inner = this.smNodes().filter(n => n.groupId === sectionId);
+    const top = inner.length ? Math.max(...inner.map(n => n.y + n.h)) + 8 : sec.y + 34;
+    const label = elType === 'button' ? 'Nouveau bouton' : elType === 'form' ? 'Nouveau formulaire' : elType === 'widget' ? 'Nouveau widget' : 'Nouveau lien';
+    const node: SitemapNode = {
+      id, label, url: 'embed', port: 4202, kind: 'protected', groupId: sectionId, elType,
+      x: sec.x + 12, y: top, w: sec.w - 24, h: 30, components: [],
+    };
+    // Agrandit la section si besoin
+    this.smGroups.update(gs => gs.map(g => g.id === sectionId && (top + 30) > g.y + g.h ? { ...g, h: top + 40 - g.y } : g));
+    this.smNodes.update(ns => [...ns, node]);
+    this.selectedSmNode.set(node);
+    this.selectedSmGroupId.set(null);
     this.persistLayout();
   }
 
@@ -2402,6 +2745,71 @@ Exemple :
     this.smGroups.update(gs => gs.map(g => g.id === id ? { ...g, stroke, fill } : g));
     this.persistLayout();
   }
+
+  private updateSelectedZone(patch: Partial<SitemapGroup>) {
+    const id = this.selectedSmGroupId();
+    if (!id) return;
+    this.smGroups.update(gs => gs.map(g => g.id === id ? { ...g, ...patch } : g));
+    this.persistLayout();
+  }
+  setSelectedZoneRole(role: SmGroupRole) {
+    const patch: Partial<SitemapGroup> = { role };
+    if (role === 'section') { patch.stroke = this.SM_SECTION_STROKE; patch.fill = this.SM_SECTION_FILL; }
+    this.updateSelectedZone(patch);
+  }
+  setSelectedZoneSectionType(sectionType: string) { this.updateSelectedZone({ sectionType }); }
+  setSelectedZoneUrl(url: string) { this.updateSelectedZone({ url }); }
+  setSelectedZoneComponent(component: string) { this.updateSelectedZone({ component }); }
+  setSelectedZoneDescription(description: string) { this.updateSelectedZone({ description }); }
+
+  /** Sections d'une page sélectionnée (zones role=section entièrement contenues). */
+  smPageSections = computed((): SitemapGroup[] => {
+    const p = this.selectedSmGroup();
+    if (!p || p.role !== 'page') return [];
+    return this.smGroups().filter(s => s.id !== p.id && s.role === 'section'
+      && s.x >= p.x && s.y >= p.y && s.x + s.w <= p.x + p.w && s.y + s.h <= p.y + p.h);
+  });
+  /** Éléments d'une section sélectionnée (nœuds dont groupId = la section). */
+  smSectionElements = computed((): SitemapNode[] => {
+    const s = this.selectedSmGroup();
+    if (!s || s.role !== 'section') return [];
+    return this.smNodes().filter(n => n.groupId === s.id);
+  });
+
+  // ── Édition d'un élément (nœud) ──
+  setSelectedNodeElType(elType: SmElType) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, elType } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+  setSelectedNodeComponent(component: string) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    const comps = component.trim() ? [component.trim()] : [];
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, components: comps } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+  setSelectedNodeUrl(url: string) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, url } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+  /** Supprime l'élément (nœud) sélectionné. */
+  deleteSelectedNode() {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.filter(n => n.id !== id));
+    this.smEdges.update(es => es.filter(e => e.from !== id && e.to !== id));
+    this.selectedSmNode.set(null);
+    this.persistLayout();
+  }
+  readonly smElTypes: SmElType[] = ['link', 'button', 'form', 'widget'];
+  readonly smSectionTypes = ['header', 'menu', 'content', 'aside', 'footer'];
 
   /** Supprime la zone personnalisée sélectionnée (détache ses nœuds). */
   deleteSelectedZone() {
@@ -2433,6 +2841,7 @@ Exemple :
       this.selectedSmEdgeId.set(null);
       this.selectedSmGroupId.set(null);
       this.smMultiSelect.set(new Set());
+      this.smGroupMultiSelect.set(new Set());
     }
   }
 
@@ -2522,6 +2931,43 @@ Exemple :
     if (kind === 'projets')   return '#34d399';
     if (kind === 'widget')    return '#c4b5fd';
     return '#38bdf8';
+  }
+
+  // ── Éléments (nœuds elType) : couleurs / libellés / icônes par type ──
+  smElStroke(t?: SmElType): string {
+    if (t === 'button') return '#10b981';
+    if (t === 'form')   return '#f59e0b';
+    if (t === 'widget') return '#8b5cf6';
+    return '#6366f1'; // link (défaut)
+  }
+  smElFill(t?: SmElType): string {
+    if (t === 'button') return '#10b9811f';
+    if (t === 'form')   return '#f59e0b1f';
+    if (t === 'widget') return '#8b5cf61f';
+    return '#6366f11f';
+  }
+  smElText(t?: SmElType): string {
+    if (t === 'button') return '#6ee7b7';
+    if (t === 'form')   return '#fcd34d';
+    if (t === 'widget') return '#c4b5fd';
+    return '#a5b4fc';
+  }
+  smElIcon(t?: SmElType): string {
+    if (t === 'button') return 'smart_button';
+    if (t === 'form')   return 'edit_note';
+    if (t === 'widget') return 'widgets';
+    return 'link';
+  }
+  smElTypeLabel(t?: SmElType): string {
+    if (t === 'button') return 'Bouton';
+    if (t === 'form')   return 'Formulaire';
+    if (t === 'widget') return 'Widget / contenu';
+    return 'Lien';
+  }
+  smGroupRoleLabel(role?: SmGroupRole): string {
+    if (role === 'page') return 'Page';
+    if (role === 'section') return 'Section';
+    return 'Zone';
   }
   smKindLabel(kind: string): string {
     if (kind === 'admin')     return 'Admin only';
@@ -2639,6 +3085,7 @@ Exemple :
       this.selectedSmNode.set(null);
       this.selectedSmGroupId.set(null);
       this.smMultiSelect.set(new Set());
+      this.smGroupMultiSelect.set(new Set());
     }
   }
 

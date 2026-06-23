@@ -247,7 +247,8 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 ## `2-1-5-13` — [modification] Onglet Site Map graphique
 
 - **5e onglet "Site Map"** (`account_tree`) dans la barre Admin › Tests.
-- **Carte SVG interactive** reflétant le **parcours réel de l'utilisateur** (et non un simple listing de routes), avec pan/zoom.
+- **Modèle métier à 3 niveaux (V2)** : **Page** (zone `role=page` : écran réel, URL + composant lié) ▸ **Section** (zone `role=section` : header / menu / content / aside / footer + composant lié) ▸ **Élément** (nœud `elType` : lien / bouton / formulaire / widget, rattaché à une section via `groupId`). Les **relations** (liaisons) relient n'importe quels éléments/sections/pages. Boutons toolbar **« Page »** / **« Zone »** ; **« Ajouter une section »** (volet page) ; **« Ajouter un élément »** par type (volet section). Volets enrichis : rôle, type de section, URL, composant lié, liste des sections (page) / éléments (section). Couleurs des éléments par type (lien indigo / bouton émeraude / form ambre / widget violet). Schéma de disposition versionné (`v3`) : les anciennes dispositions incompatibles sont ignorées.
+- **Carte SVG interactive** avec pan/zoom.
   - **Groupes encadrés** (pointillés colorés, label) = parties du système : `Public :4202`, `App connectée :4202` (menu Documents · Projets · Admin), `Admin` (onglets, réservé admin), `App Projets :4203`, `Outils & widgets embarqués`.
   - **Nœuds cliquables** par page : fond coloré selon le type (`public` sky / `protected` indigo / `admin` ambre / `projets` émeraude / `widget` violet), label + URL + badge port.
   - **Structure réelle du menu** : les entrées de navigation (Documents, Projets→:4203, Historique conditionnel, Config, Déploiements, Admin) sont des nœuds dans le groupe « App connectée ».
@@ -258,6 +259,16 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Molette** : zoom in/out (min 15%, max 250%).
   - **Cliquer-glisser** sur le fond : pan.
   - **Barre d'outils** : boutons `−` / `+` / reset (`center_focus_strong`), % de zoom courant.
+- **Mode plein écran** :
+  - Bouton toolbar **« Plein écran »** (`fullscreen`) → la Site Map occupe toute la fenêtre via un overlay fixe (`fixed inset-0 z-[100]`) qui masque le header, la navigation Admin et les sous-onglets Tests ; seule la barre d'outils de la Site Map reste visible. La carte s'agrandit (`calc(100vh - 90px)`).
+  - En plein écran, le bouton devient **« Mode normal »** (`fullscreen_exit`, état actif surligné) → revient à l'affichage standard intégré à la page Admin.
+  - Les popups de la Site Map (Versions, Mise à jour par IA, Revue des propositions, Confirmation) restent **utilisables en plein écran** : elles sont rendues au-dessus de l'overlay (`z-[130]` > overlay `z-[120]`).
+- **Organisation automatique** :
+  - Bouton toolbar **« Organiser »** (`grid_view`) → recalcule TOUTE la disposition de façon **récursive et emboîtée** : zones conteneurs (`role:"zone"`) ▸ pages ▸ sections ▸ éléments. Les sous-groupes d'une zone sont placés en grille (retour à la ligne sur `ZONE_MAXW`), la zone se dimensionne automatiquement sur son contenu ; **les sections d'une page sont réparties en plusieurs colonnes** (retour à la ligne quand une colonne dépasse `SEC_MAX_COL_H` ≈ 520 px → page compacte et lisible au lieu d'une longue colonne unique), les éléments empilés dans leur section, toutes les tailles ajustées et espacées.
+  - **Robustesse (anti-chevauchement)** : `smSectionsOf` prend l'union des sections rattachées par `parentId` ET de celles géométriquement contenues (sans parentId) → aucune section oubliée. Les **sections orphelines** (sans rattachement valide à une page) sont placées comme blocs de premier niveau dans la grille, et les **éléments non rattachés** (groupId vide/invalide) sont rangés en grille sous la carte → jamais de chevauchement même si l'IA a omis un `parentId`/`groupId`.
+  - Volet d'une zone : bouton **« Organiser cette zone »** → réorganise UNIQUEMENT cette zone (garde sa position, range récursivement son contenu — sous-pages/sections/éléments —, ajuste sa taille).
+  - Après une **mise à jour par IA** : si scopée à une zone → seule cette zone est réorganisée ; sinon → toute la carte.
+  - **Prompt IA orienté organisation** : le prompt envoyé à l'IA (côté serveur `buildSitemapUpdatePrompt`) décrit le modèle ZONE conteneur ▸ PAGE ▸ SECTION ▸ ÉLÉMENT et impose une carte claire/aérée : regrouper les pages d'un même domaine dans des zones conteneurs (`parentId`), chaîner la hiérarchie (`parentId`/`groupId`), créer les sections manquantes, relier les domaines par des liaisons. **Granularité des sections** : peu de sections larges (1 à 4 par page), une section = aire structurelle (menu/content/header…) et JAMAIS une section par onglet/fonction (les onglets sont des éléments `link` dans une seule section « Onglets »). Rattachement obligatoire à une page existante via son `id` exact (ex : `pg-admin`). La hiérarchie produite par l'IA est rendue lisible par l'auto-layout récursif multi-colonnes.
 - **Déplacement des nœuds (drag & drop)** :
   - Glisser un nœud le repositionne ; les **liaisons suivent** le déplacement en temps réel (positions recalculées).
   - Un clic sans mouvement (< 3px) ouvre/ferme le volet de détails ; au-delà, c'est un déplacement.
@@ -266,10 +277,12 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Déplacement & redimensionnement des zones (groupes)** :
   - Glisser la **bordure** (le contour réagit, l'intérieur reste libre pour le pan) ou l'**étiquette** de la zone la déplace ; **tous les nœuds internes suivent** du même delta.
   - **Poignée de redimensionnement** (coin bas-droit, `nwse-resize`) : agrandit/réduit la zone (min 160×120 px). Les nœuds ne bougent pas au redimensionnement.
-- **Multi-sélection & alignement de nœuds** :
-  - **Ctrl/Maj+clic** ajoute/retire un nœud de la multi-sélection (contour cyan épais). Un clic simple réinitialise la sélection.
+- **Multi-sélection & alignement de nœuds ET zones/sections** :
+  - **Ctrl/Maj+clic** ajoute/retire un nœud **ou une zone/section** (clic sur sa bordure ou son étiquette) de la multi-sélection (contour cyan épais). Un clic simple réinitialise la sélection. Nœuds et zones peuvent être mélangés dans la même sélection.
   - Glisser un nœud déjà multi-sélectionné **déplace tout le groupe** ensemble.
-  - **Barre d'alignement** (visible dès 2 nœuds) : aligner gauche / centre vertical / droite, haut / milieu horizontal / bas ; **répartir** horizontalement/verticalement (dès 3 nœuds) ; bouton « Effacer la sélection ».
+  - **Barre d'alignement** (visible dès 2 boîtes sélectionnées, nœuds et/ou zones) : aligner gauche / centre vertical / droite, haut / milieu horizontal / bas ; **répartir** horizontalement/verticalement (dès 3 boîtes) ; **largeur** : réduire (`−`) / agrandir (`+`), **« Même largeur »** (uniformise sur la plus étroite) ; bouton « Effacer la sélection ».
+  - **Aligner une zone entraîne son contenu** : déplacer une section/zone par alignement ou répartition déplace aussi du même delta ses nœuds internes et ses zones imbriquées (la section reste cohérente).
+- **Largeur d'un élément** : le volet d'un élément propose « Réduire » / « Agrandir » la largeur (pas de 20 px, min 80 px), avec la largeur courante affichée.
 - **Édition des liaisons (arêtes)** :
   - Clic sur une liaison la sélectionne (halo cyan) et ouvre un volet d'édition.
   - **Côté d'accroche** de chaque extrémité (départ / arrivée) : haut / bas / gauche / droite ; par défaut, choix automatique selon la position des nœuds.
@@ -292,7 +305,8 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - La réinitialisation (« Disposition ») est elle aussi partagée (écrit l'état par défaut côté serveur).
 - **Versions (snapshots) de la Site Map** :
   - Bouton **« Versions »** (`history`) → popup de gestion des versions.
-  - **Enregistrer l'état actuel** sous un nom → snapshot complet de la disposition courante.
+  - **Enregistrer l'état actuel** sous un nom → snapshot complet de la disposition courante (bouton « Nouvelle »).
+  - **Mettre à jour la dernière version** : bouton « Mettre à jour la dernière version (« nom ») » → écrase le contenu de la version la plus récente avec l'état courant (endpoint `PUT /api/admin/tests/sitemap-versions/:id`). Disponible uniquement pour la dernière version enregistrée.
   - **Liste** des versions (nom, date, auteur).
   - **Charger** une version (`restore`) : l'applique à la carte et la diffuse comme disposition courante (partagée).
   - **Supprimer** une version.
@@ -303,7 +317,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Popup de revue** : chaque proposition est cochable (badge op + type, before→after, justification) → rien n'est appliqué sans validation.
   - À l'application : ops cochées appliquées (placement auto des nouveaux éléments), diffusion (`persistLayout`) **et** enregistrement automatique d'une version **« MAJ IA — <date> »**.
   - Serveur : `POST /api/admin/tests/sitemap-update/prepare` (écrit le run) + `GET …/sitemap-update-stream` (SSE, exécute l'agent CLI via l'executor port 3002). Prérequis : executor lancé + provider CLI actif.
-  - **Restreint à une zone** : le volet d'édition d'une zone propose **« Nouvelle version par IA (cette zone) »** → même flux mais l'IA ne propose des changements QUE pour cette zone (nœuds dont `groupId` = la zone, la zone elle-même, liaisons internes). Le `scope` est transmis au serveur (filtrage + consigne de prompt) ; la version créée est nommée `MAJ IA (<zone>) — <date>`.
+  - **Restreint à une zone** : le volet d'édition d'une zone propose **« Nouvelle version par IA (cette zone) »** → même flux restreint au périmètre de la page : ses **sections** (zones contenues) et leurs **éléments**, plus les **liaisons** impliquant ces éléments/sections. Le prompt liste les sections existantes (id + libellé) et impose : rattacher chaque élément au `groupId` de la **section** adaptée (pas la page), créer la section manquante si besoin (réutilisable via id temporaire dans la même réponse), et créer les **liaisons**. Côté application : passe 1 = création des zones (mapping id temporaire → id réel, nouvelles sections placées DANS la page), passe 2 = éléments rattachés à leur section + liaisons résolues. Version créée : `MAJ IA (<zone>) — <date>`.
 - **Créer / lancer un test depuis un nœud** (volet de détails) :
   - **« Lancer »** (vert, `play_circle`) sur chaque section de test liée → pré-sélectionne la section et bascule sur l'onglet Exécution.
   - **« Créer une section de test ici »** (indigo, `add`) → ouvre le popup de création pré-rempli (section parente = chemin du nœud, titre/slug d'après le label).

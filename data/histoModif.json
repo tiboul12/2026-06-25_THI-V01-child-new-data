@@ -1,6 +1,44 @@
 {
   "modifications": [
     {
+      "id": "mod-437",
+      "version": "B-0.298",
+      "date": "2026-06-23T18:50:00.000Z",
+      "type": "config",
+      "commitType": "AMELIORATION",
+      "scope": ["data"],
+      "features": "system:sitemap-proposals",
+      "title": "Sitemap — Propositions de mise à jour pour la zone Admin (sm-1782240441391)",
+      "description": "Génération du fichier proposals.json pour refléter l'état réel de la zone d'administration dans la Site Map (sections, sous-onglets, widgets, formulaires et liaisons de navigation/activation).",
+      "files": [
+        "data/tests-admin/sitemap-runs/sm-1782240441391/proposals.json"
+      ],
+      "ai": "Antigravity",
+      "model": "Gemini 3.5 Flash",
+      "prompt": "Mets à jour UNIQUEMENT la zone « Admin » de la Site Map pour refléter l'état réel de l'application : ajoute les pages/onglets/composants manquants de cette zone, corrige les éléments obsolètes et signale ceux à supprimer. Analyse le code (routes, composants, onglets) et l'historique. Ne touche à aucune autre zone. Garde une organisation claire et aérée : sections cohérentes, éléments bien rangés dans leur section (groupId). Dans la zone onglets, on à des onglet qui doivent être réléi à des pages, verifie tous les onglets et rajoute les informations lié au onglet : page, liaison etc.",
+      "startedAt": "2026-06-23T20:47:26+02:00",
+      "completedAt": "2026-06-23T20:50:00+02:00"
+    },
+    {
+      "id": "mod-436",
+      "version": "B-0.298",
+      "date": "2026-06-22T20:01:00.000Z",
+      "type": "config",
+      "commitType": "AMELIORATION",
+      "scope": ["data"],
+      "features": "system:sitemap-proposals",
+      "title": "Sitemap — Propositions de mise à jour pour la zone Admin",
+      "description": "Génération du fichier proposals.json pour refléter l'état réel de la zone d'administration dans la Site Map (sections, sous-onglets, widgets, formulaires et liaisons de navigation/activation).",
+      "files": [
+        "data/tests-admin/sitemap-runs/sm-1782158355484/proposals.json"
+      ],
+      "ai": "Antigravity",
+      "model": "Gemini 3.5 Flash",
+      "prompt": "Mets à jour UNIQUEMENT la zone « Admin » de la Site Map pour refléter l'état réel de l'application : ajoute les pages/onglets/composants manquants de cette zone, corrige les éléments obsolètes et signale ceux à supprimer. Analyse le code (routes, composants, onglets) et l'historique. Ne touche à aucune autre zone. Des menus a admin on été rajouté, verifi les pages et section lié et crait les zone pages section, element et les liaison entre eux",
+      "startedAt": "2026-06-22T21:59:20+02:00",
+      "completedAt": "2026-06-22T22:01:00+02:00"
+    },
+    {
       "id": "mod-435",
       "version": "B-0.298",
       "date": "2026-06-21T21:30:00.000Z",
@@ -11218,6 +11256,317 @@
       "prompt": "on doit pouvoir changert les titres des component",
       "startedAt": "2026-06-22T07:30:00.000Z",
       "completedAt": "2026-06-22T07:50:00.000Z"
+    },
+    {
+      "id": "mod-459",
+      "version": "B-0.305",
+      "date": "2026-06-22T09:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map V2 : modele metier Page > Section > Element",
+      "description": "Refonte de la Site Map en representation metier a 3 niveaux sur le canvas existant. PAGE = zone role=page (ecran reel : url + composant) ; SECTION = zone role=section (header/menu/content/aside/footer + composant) imbriquee ; ELEMENT = noeud elType (link/button/form/widget) rattache a une section via groupId. Relations entre tout element/section/page. Base restructuree (pages Landing/Documents/Outils/Admin/Projets/Editeur avec sections et elements representatifs + relations). Rendu compact colore des elements par type, legende mise a jour. Volets enrichis : noeud (type d'element, URL, composant, suppression), zone (role, type de section, URL, composant, liste des sections/elements + boutons d'ajout). Boutons toolbar Page/Zone, Ajouter section (page), Ajouter element par type (section). Persistance etendue (role/sectionType/url/component, elType) avec schema versionne v3 (ignore les anciennes dispositions). MAJ IA etendue au modele V2 (prompt + application des role/sectionType/component/elType).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "en prenant en compte toutes les fonctions ajouté au système de création de site map, je voudrais que tu me propose des améliorations. Je voudrais que la site map représente l'ensemble de l'application, chaque page est une zone, dans chaque zone on peux avoir des sections (exemple menu, contenue, header, footer), chaque sections peut avoir un component lié. Une section peux avoir plusieurs sous éléments comme des liens/form ou autre outils. Chaque element peut être relié à une autre section. Le but est de voir l'ensemble des pages, leur relation et les éléments qui la compose. Garde les fonctions comme le popup d'information et ses fonctions. Propose moi une nouvelle vision et modifi le sitemap en conséquence.",
+      "startedAt": "2026-06-22T08:00:00.000Z",
+      "completedAt": "2026-06-22T09:05:00.000Z"
+    },
+    {
+      "id": "mod-460",
+      "version": "B-0.305",
+      "date": "2026-06-22T09:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map : mettre a jour la derniere version avec l'etat courant",
+      "description": "Ajout de la possibilite d'ecraser une version deja enregistree avec l'etat courant, limitee a la derniere version (la plus recente). Serveur : PUT /api/admin/tests/sitemap-versions/:id (remplace layout + updatedAt/By). Client : bouton 'Mettre a jour la derniere version (<nom>)' dans le popup Versions (computed smLatestVersion = tete de liste), a cote du bouton Nouvelle.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans la sitemap on peux enregistré une nouvelle version, je voudrais pouvoir enregistré la version en cours dans une version déjà enregistré (uniquement la dernière de la liste)",
+      "startedAt": "2026-06-22T09:10:00.000Z",
+      "completedAt": "2026-06-22T09:35:00.000Z"
+    },
+    {
+      "id": "mod-461",
+      "version": "B-0.305",
+      "date": "2026-06-22T09:55:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : retour visuel sur la mise a jour d'une version (pas de feedback)",
+      "description": "Le bouton 'Mettre a jour la derniere version' semblait sans effet (succes serveur mais aucun retour visible, la ligne affichant createdAt). Ajout d'un message de confirmation vert ('Version X mise a jour'), d'un message d'erreur explicite avec code HTTP si echec (ex : route absente cote serveur non redemarre), et affichage de la date de mise a jour ('maj ...') sur les lignes de version. NB : le serveur (port 3001) doit etre redemarre pour exposer la route PUT /api/admin/tests/sitemap-versions/:id ajoutee dans mod-460.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je clique sur \"Mettre à jour la dernière version\" rien ne ce passe, cela devrait enregistré les modification dans cette version (remplace l'ancienne)",
+      "startedAt": "2026-06-22T09:40:00.000Z",
+      "completedAt": "2026-06-22T10:00:00.000Z"
+    },
+    {
+      "id": "mod-462",
+      "version": "B-0.305",
+      "date": "2026-06-22T10:20:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : largeur des elements (reduire/agrandir + uniformiser)",
+      "description": "Volet d'un element : boutons Reduire/Agrandir la largeur (pas de 20px, min 80px) avec largeur courante affichee. Barre de multi-selection : boutons reduire/agrandir la largeur de tous les noeuds selectionnes + bouton 'Meme largeur' qui uniformise sur la largeur la plus etroite. Methodes resizeSelectedNodeWidth, resizeMultiWidth, uniformizeMultiWidth.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "ajoute une option pour diminué la taille en largeur des elements et une option pour avoir la même taille en largeur pour plusieurs élément",
+      "startedAt": "2026-06-22T10:05:00.000Z",
+      "completedAt": "2026-06-22T10:25:00.000Z"
+    },
+    {
+      "id": "mod-463",
+      "version": "B-0.305",
+      "date": "2026-06-22T10:50:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : persistance incomplete (largeur/hauteur des noeuds + elements ajoutes perdus)",
+      "description": "Le round-trip d'une version etait incorrect : l'override de noeud ne sauvegardait ni w/h (changements de largeur perdus) ni les noeuds ajoutes (aucun customNodes, seuls les noeuds de base etaient restaures par applySmLayout). Resultat : 'Charger' ramenait un etat anterieur. Correction : buildLayoutObject inclut w/h dans l'override des noeuds de base et sauvegarde les noeuds non-base dans customNodes ; loadInitialSmNodes/applySmLayout appliquent w/h et reconstruisent les customNodes. (Les versions enregistrees AVANT ce correctif n'ont pas ces donnees : re-enregistrer apres mise a jour.)",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "le système qui enregistre le sitemap graphique dans la dernière version ne fonctionne pas, si je l'enregistre et que je clique ensuite sur charger de la dernière version, c'est la version précédente qui ce charge et non la dernière version que je viens d'enregistré",
+      "startedAt": "2026-06-22T10:30:00.000Z",
+      "completedAt": "2026-06-22T10:55:00.000Z"
+    },
+    {
+      "id": "mod-464",
+      "version": "B-0.305",
+      "date": "2026-06-22T11:20:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map : MAJ IA d'une zone range les elements dans les sections et cree les liaisons",
+      "description": "La MAJ IA scopee sur une page ajoutait bien les elements mais les laissait en colonne de staging (non ranges) et ne creait pas de liaisons. Causes : le filtre de scope forcait groupId = id de la page (donc jamais une section) et rejetait les liaisons (extremites dans des sections). Corrections serveur : computeSitemapProposals calcule le perimetre autorise = page + ses sections (contenance geometrique), n'impose plus le groupId, accepte les sections (group add) et les liaisons (>=1 extremite dans le scope) ; conserve un tempId sur les ajouts. Prompt enrichi : liste les sections (id+libelle) de la page, impose le rattachement de chaque element au groupId d'une section, la creation de section manquante (id temporaire reutilisable) et la creation des liaisons. Client : applySmAiProposals en 2 passes (zones d'abord avec mapping tempId->reel et placement des nouvelles sections dans la page, puis elements rattaches a leur section + liaisons resolues).",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "lorsque je demande de mettre à jour une zone via l'IA en rajoutant les éléments manquant, le système les rajoute bien mais il ne les range pas dans les différentes zone et ne crait pas les laisons, améliore le prompt pour que l'IA verifi la zone, ajoute les éléments et les organise dans les zones et ajoute les liaisons",
+      "startedAt": "2026-06-22T11:00:00.000Z",
+      "completedAt": "2026-06-22T11:25:00.000Z"
+    },
+    {
+      "id": "mod-465",
+      "version": "B-0.305",
+      "date": "2026-06-22T11:50:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail",
+        "server"
+      ],
+      "features": "portail:admin-tests,server:admin-tests,system:tests",
+      "title": "Site Map : organisation graphique automatique (pages en grille, sections/elements empiles)",
+      "description": "La creation/MAJ IA produisait la bonne structure mais des chevauchements (pages/zones les unes sur les autres). Ajout d'un lien parentId (section -> page) persiste, et d'une fonction autoLayoutSitemap qui recalcule toutes les coordonnees : pages en grille avec wrap, sections empilees dans leur page (via parentId, fallback contenance), elements empiles dans leur section, tailles ajustees. Bouton 'Organiser' dans la toolbar + appel automatique apres une MAJ IA. Prompt enrichi : chaque section doit fournir parentId (id de sa page, existant ou temporaire). applySmAiProposals renseigne parentId des sections creees.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "Cela crait bien toutes les pages et éléments mais ne les organises pas graphiquement, les pages et zones sont les unes sur les autres, améliore le prompt pour qu'on puisse avoir une meilleur vision graphique du système, exemple les pages les unes en dessous des autres etc etc",
+      "startedAt": "2026-06-22T11:30:00.000Z",
+      "completedAt": "2026-06-22T11:55:00.000Z"
+    },
+    {
+      "id": "mod-466",
+      "version": "B-0.305",
+      "date": "2026-06-22T12:10:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": [
+        "portail"
+      ],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : l'organisation auto apres MAJ IA scopee ne touche que la zone ciblee",
+      "description": "Apres une MAJ IA scopee, autoLayoutSitemap reorganisait toute la carte. Extraction de l'algorithme en helpers (smComputePageLayout/smApplyPageLayout/smSectionsOf) et ajout de autoLayoutPage(id) qui ne reorganise qu'une seule zone (garde x/y/w, range sections/elements, ajuste la hauteur). applySmAiProposals appelle autoLayoutPage(scope) si scope, sinon autoLayoutSitemap. Ajout d'un bouton 'Organiser cette zone' dans le volet de zone (le bouton toolbar 'Organiser' reste global).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "cela ne doit réorganiser que la zone selectionné et non toute la site map",
+      "startedAt": "2026-06-22T12:00:00.000Z",
+      "completedAt": "2026-06-22T12:15:00.000Z"
+    },
+    {
+      "id": "mod-467",
+      "version": "B-0.305",
+      "date": "2026-06-23T00:00:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : mode plein écran masquant les barres de menu",
+      "description": "Ajout d'un bouton 'Plein écran' dans la barre d'outils de la Site Map (Admin > Tests). En mode plein écran, la carte occupe toute la fenêtre via un overlay fixe (fixed inset-0 z-[100]) qui masque le header, la navigation Admin et les sous-onglets Tests ; seule la barre d'outils de la Site Map reste visible et la carte s'agrandit (calc(100vh - 90px)). Le bouton bascule en 'Mode normal' (icone fullscreen_exit) pour revenir a l'affichage standard. Signal sitemapFullscreen + methode toggleSitemapFullscreen.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "dans l'outil admin/test/sitemap, rajoute une option pour affiché sur toute la page la sitemap en cachant toutes les barre de menu en dehors de celle de la sitemap et rajoute un bouton pour revenir en mode normal (affichage actuel)",
+      "startedAt": "2026-06-23T00:00:00.000Z",
+      "completedAt": "2026-06-23T00:10:00.000Z"
+    },
+    {
+      "id": "mod-468",
+      "version": "B-0.305",
+      "date": "2026-06-23T00:30:00.000Z",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : MAJ IA organisée (zones conteneurs) + auto-layout récursif emboîté",
+      "description": "Le prompt IA de mise a jour de la Site Map (buildSitemapUpdatePrompt) est enrichi pour produire des cartes claires, aerees et hierarchisees dans le style de reference : nouveau niveau ZONE conteneur (role=zone) regroupant les pages d'un meme domaine via parentId, bloc 'Organisation graphique attendue' (regrouper les pages par domaine, chainer parentId/groupId, ranger chaque element dans une section, creer les sections manquantes, relier les domaines par des liaisons), exemple d'operation zone et regle parentId renforcee. Cote app, l'auto-layout devient RECURSIF (smMeasureTree/smPlaceTree) : il emboite zones conteneurs > pages > sections > elements, place les sous-groupes en grille avec retour a la ligne (ZONE_MAXW=1500) et dimensionne chaque zone sur son contenu. autoLayoutSitemap et autoLayoutPage utilisent ce moteur. defaultSmAiInstructions (popup) mis a jour pour mentionner l'organisation attendue.",
+      "files": [
+        "server/server-data.js",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "en prenant exemple sur l'organisation graphique de toutes les zone, pages section élément et liaison de cette capture je veux que toutes les modifications de la site map via une IA puisse modifié ou créé des sitemap avec une organisation dans le même style, avec des zones et des éléments écarté, clair et orgtanisé., améliore le prompt de modification des zones via IA",
+      "startedAt": "2026-06-23T00:15:00.000Z",
+      "completedAt": "2026-06-23T00:45:00.000Z"
+    },
+    {
+      "id": "mod-469",
+      "version": "B-0.305",
+      "date": "2026-06-23T01:00:00.000Z",
+      "type": "fix",
+      "commitType": "FIX",
+      "scope": ["portail"],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map plein écran : popups (Versions, MAJ IA…) passaient sous l'overlay",
+      "description": "En mode plein ecran, l'overlay de la Site Map (z-[120]) recouvrait les popups (Versions, Mise a jour par IA, Revue des propositions, Confirmation) rendues en z-50 : elles etaient invisibles/non cliquables. Ces 4 popups passent en z-[130] pour rester au-dessus de l'overlay.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "en mode pleine écran certain bouton ne fonctionne pas comme Versions, popup page : Nouvelle version par IA etc",
+      "startedAt": "2026-06-23T00:50:00.000Z",
+      "completedAt": "2026-06-23T01:00:00.000Z"
+    },
+    {
+      "id": "mod-470",
+      "version": "B-0.305",
+      "date": "2026-06-23T01:30:00.000Z",
+      "type": "fix",
+      "commitType": "AMELIORATION",
+      "scope": ["portail", "server"],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : intégration IA lisible — sections multi-colonnes + anti-chevauchement",
+      "description": "Apres une MAJ IA, la carte devenait illisible (sections empilees/superposees dans la page Admin). Corrections : (1) smSectionsOf prend l'union des sections rattachees par parentId ET contenues geometriquement (plus de section oubliee en etat mixte) ; (2) disposition MULTI-COLONNES des sections d'une page (retour a la ligne sur SEC_MAX_COL_H au lieu d'une longue colonne unique) -> page compacte et epuree ; (3) sections orphelines (sans page valide) placees comme blocs de premier niveau et elements non rattaches (groupId vide/invalide) ranges en grille -> jamais de chevauchement meme si l'IA omet un parentId/groupId ; (4) largeur de page dynamique selon le nombre de colonnes. Cote prompt (buildSitemapUpdatePrompt) : regles de GRANULARITE (peu de sections larges, une section = aire structurelle et jamais une section par onglet/fonction ; les onglets sont des elements link dans une seule section Onglets) et rattachement obligatoire a la page existante via son id exact.",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "server/server-data.js",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "comme on peux le voir sur cette capture la création et modification de la sitemap est illisible trouve une solution pour amélioré l'intégration d'element via IA dans un format pour claire et épuré",
+      "startedAt": "2026-06-23T01:00:00.000Z",
+      "completedAt": "2026-06-23T01:30:00.000Z"
+    },
+    {
+      "id": "mod-471",
+      "version": "B-0.305",
+      "date": "2026-06-23T19:05:00.000Z",
+      "type": "config",
+      "commitType": "AMELIORATION",
+      "scope": ["data"],
+      "features": "system:sitemap-proposals",
+      "title": "Site Map — Propositions de mise à jour pour la zone Admin (sm-1782241403995)",
+      "description": "Génération du fichier proposals.json pour refléter l'état réel de la zone d'administration dans la Site Map (sections, sous-onglets, widgets, formulaires et liaisons de navigation/activation).",
+      "files": [
+        "data/tests-admin/sitemap-runs/sm-1782241403995/proposals.json"
+      ],
+      "ai": "Antigravity",
+      "model": "Gemini 3.5 Flash",
+      "prompt": "Mets à jour UNIQUEMENT la zone « Admin » de la Site Map pour refléter l'état réel de l'application : ajoute les pages/onglets/composants manquants de cette zone, corrige les éléments obsolètes et signale ceux à supprimer. Analyse le code (routes, composants, onglets) et l'historique. Ne touche à aucune autre zone. Garde une organisation claire et aérée : sections cohérentes, éléments bien rangés dans leur section (groupId). Des onglets ont été rajouté, verifi les pages et liaison de ces onglets et rajoute les éléments nécéssaire",
+      "startedAt": "2026-06-23T21:03:27+02:00",
+      "completedAt": "2026-06-23T21:05:30+02:00"
+    },
+    {
+      "id": "mod-472",
+      "version": "B-0.305",
+      "date": "2026-06-23T21:30:00+02:00",
+      "type": "feature",
+      "commitType": "AMELIORATION",
+      "scope": ["portail"],
+      "features": "portail:admin-tests,system:tests",
+      "title": "Site Map : multi-sélection des zones/sections pour les aligner",
+      "description": "Auparavant seuls les noeuds (elements) etaient multi-selectionnables ; impossible d'aligner plusieurs sections/zones. Ajout d'une multi-selection des zones/sections via Ctrl/Maj+clic (sur la bordure ou l'etiquette) : nouveau signal smGroupMultiSelect, surlignage cyan, comptage combine noeuds+zones (smMultiCount) qui pilote la barre d'alignement. alignSelected et distributeSelected operent desormais sur des 'boites' combinees (noeuds + zones) via selectedBoxes/applyBoxDeltas : aligner/repartir une zone entraine du meme delta ses noeuds internes et zones imbriquees (coherence). resizeMultiWidth/uniformizeMultiWidth etendus aux zones. Nettoyage de la multi-selection de zones lors des autres selections (noeud, arete, mode liaison, reset disposition, changement d'onglet).",
+      "files": [
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.ts",
+        "apps/portail/src/app/pages/admin/tabs/admin-tests/admin-tests.component.html",
+        "tests/fonctions/connecte/admin/tests/fonctions.md"
+      ],
+      "ai": "Claude Code",
+      "model": "claude-opus-4-8",
+      "prompt": "jr n'arrive pas à selectionner plusieurs sections afin de pouvoir les alignés",
+      "startedAt": "2026-06-23T21:10:00+02:00",
+      "completedAt": "2026-06-23T21:30:00+02:00"
     }
   ]
 }
