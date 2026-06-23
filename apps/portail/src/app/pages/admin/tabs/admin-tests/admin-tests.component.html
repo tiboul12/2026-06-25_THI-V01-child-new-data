@@ -1043,7 +1043,10 @@
   <!-- ════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'sitemap') {
     <!-- Plein écran : sort du conteneur centré de la page admin pour occuper toute la largeur de la fenêtre -->
-    <div class="pt-4 relative left-1/2 -translate-x-1/2 w-screen px-6">
+    <!-- Mode plein écran total : overlay fixe couvrant toute la fenêtre (masque header + barres de menu) -->
+    <div [ngClass]="sitemapFullscreen()
+            ? 'fixed inset-0 z-[120] p-4 bg-white dark:bg-background overflow-auto'
+            : 'pt-4 relative left-1/2 -translate-x-1/2 w-screen px-6'">
 
       <!-- Barre d'outils -->
       <div class="flex flex-wrap items-center gap-2 mb-3">
@@ -1066,6 +1069,13 @@
                 class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:border-light-primary dark:hover:border-primary transition-all">
           <span class="material-symbols-outlined text-sm">restart_alt</span>
           Disposition
+        </button>
+
+        <!-- Organiser automatiquement -->
+        <button (click)="autoLayoutSitemap()" title="Organiser automatiquement (pages en grille, sections/éléments empilés)"
+                class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:border-light-primary dark:hover:border-primary transition-all">
+          <span class="material-symbols-outlined text-sm">grid_view</span>
+          Organiser
         </button>
 
         <!-- Ajouter une page / une zone -->
@@ -1096,6 +1106,16 @@
           Versions
         </button>
 
+        <!-- Plein écran : masque les barres de menu et affiche la Site Map sur toute la fenêtre -->
+        <button (click)="toggleSitemapFullscreen()"
+                [title]="sitemapFullscreen() ? 'Revenir en mode normal' : 'Afficher la Site Map en plein écran'"
+                [ngClass]="sitemapFullscreen()
+                  ? 'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-light-primary dark:border-primary bg-light-primary/15 dark:bg-primary/15 text-light-primary dark:text-primary font-semibold transition-all'
+                  : 'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/50 hover:text-light-text dark:hover:text-white hover:border-light-primary dark:hover:border-primary transition-all'">
+          <span class="material-symbols-outlined text-sm">{{ sitemapFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
+          {{ sitemapFullscreen() ? 'Mode normal' : 'Plein écran' }}
+        </button>
+
         <!-- Barre d'alignement (multi-sélection : Ctrl/Maj+clic) -->
         @if (smMultiCount() >= 2) {
           <div class="flex items-center gap-1 border border-cyan-500/40 bg-cyan-500/10 rounded-lg px-1.5 py-1">
@@ -1121,6 +1141,14 @@
               <button (click)="distributeSelected('v')" title="Répartir verticalement"
                       class="w-7 h-7 flex items-center justify-center rounded text-cyan-300 hover:bg-cyan-500/20 transition-all"><span class="material-symbols-outlined text-base">vertical_distribute</span></button>
             }
+            <span class="h-4 w-px bg-cyan-500/30"></span>
+            <!-- Largeur : réduire / agrandir / uniformiser -->
+            <button (click)="resizeMultiWidth(-20)" title="Réduire la largeur"
+                    class="w-7 h-7 flex items-center justify-center rounded text-cyan-300 hover:bg-cyan-500/20 transition-all"><span class="material-symbols-outlined text-base">remove</span></button>
+            <button (click)="resizeMultiWidth(20)" title="Augmenter la largeur"
+                    class="w-7 h-7 flex items-center justify-center rounded text-cyan-300 hover:bg-cyan-500/20 transition-all"><span class="material-symbols-outlined text-base">add</span></button>
+            <button (click)="uniformizeMultiWidth()" title="Même largeur (la plus étroite)"
+                    class="w-7 h-7 flex items-center justify-center rounded text-cyan-300 hover:bg-cyan-500/20 transition-all"><span class="material-symbols-outlined text-base">width</span></button>
             <span class="h-4 w-px bg-cyan-500/30"></span>
             <button (click)="clearMultiSelect()" title="Effacer la sélection"
                     class="w-7 h-7 flex items-center justify-center rounded text-cyan-300 hover:bg-cyan-500/20 transition-all"><span class="material-symbols-outlined text-base">close</span></button>
@@ -1180,7 +1208,7 @@
       </div>
 
       <!-- Conteneur principal : carte SVG pleine largeur + volet en overlay -->
-      <div class="relative" style="height:72vh">
+      <div class="relative" [style.height]="sitemapFullscreen() ? 'calc(100vh - 90px)' : '72vh'">
 
         <!-- Zone SVG interactive -->
         <div #sitemapContainer
@@ -1426,6 +1454,19 @@
                        (input)="renameSelectedNode($any($event.target).value)"
                        class="w-full px-2 py-1.5 rounded-md bg-light-surface dark:bg-white/5 border border-light-border dark:border-white/10 text-light-text dark:text-white text-xs focus:outline-none focus:border-light-primary dark:focus:border-primary" />
               </div>
+
+              <!-- Largeur (si élément) -->
+              @if (node.elType) {
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-light-text-muted dark:text-white/40 mb-1.5">Largeur ({{ node.w }} px)</div>
+                  <div class="flex items-center gap-2">
+                    <button (click)="resizeSelectedNodeWidth(-20)"
+                            class="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/60 hover:border-indigo-500/50 transition-all"><span class="material-symbols-outlined text-sm">remove</span>Réduire</button>
+                    <button (click)="resizeSelectedNodeWidth(20)"
+                            class="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/60 hover:border-indigo-500/50 transition-all"><span class="material-symbols-outlined text-sm">add</span>Agrandir</button>
+                  </div>
+                </div>
+              }
 
               <!-- Type d'élément (si élément) -->
               @if (node.elType) {
@@ -1757,6 +1798,11 @@
                   }
                 </div>
               </div>
+              <!-- Organiser uniquement cette zone -->
+              <button (click)="autoLayoutPage(grp.id)"
+                      class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-light-border dark:border-white/10 text-light-text-muted dark:text-white/60 hover:border-light-primary dark:hover:border-primary transition-all">
+                <span class="material-symbols-outlined text-sm">grid_view</span>Organiser cette zone
+              </button>
               <!-- Mise à jour IA de cette zone -->
               <button (click)="openSmAiUpdate(grp.id)"
                       class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 transition-all">

@@ -259,6 +259,13 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Molette** : zoom in/out (min 15%, max 250%).
   - **Cliquer-glisser** sur le fond : pan.
   - **Barre d'outils** : boutons `−` / `+` / reset (`center_focus_strong`), % de zoom courant.
+- **Mode plein écran** :
+  - Bouton toolbar **« Plein écran »** (`fullscreen`) → la Site Map occupe toute la fenêtre via un overlay fixe (`fixed inset-0 z-[100]`) qui masque le header, la navigation Admin et les sous-onglets Tests ; seule la barre d'outils de la Site Map reste visible. La carte s'agrandit (`calc(100vh - 90px)`).
+  - En plein écran, le bouton devient **« Mode normal »** (`fullscreen_exit`, état actif surligné) → revient à l'affichage standard intégré à la page Admin.
+- **Organisation automatique** :
+  - Bouton toolbar **« Organiser »** (`grid_view`) → recalcule TOUTE la disposition (pages en grille avec retour à la ligne, sections empilées dans leur page via `parentId`/contenance, éléments empilés dans leur section, tailles ajustées).
+  - Volet d'une zone : bouton **« Organiser cette zone »** → réorganise UNIQUEMENT cette zone (garde sa position, range ses sections/éléments, ajuste sa hauteur).
+  - Après une **mise à jour par IA** : si scopée à une zone → seule cette zone est réorganisée ; sinon → toute la carte.
 - **Déplacement des nœuds (drag & drop)** :
   - Glisser un nœud le repositionne ; les **liaisons suivent** le déplacement en temps réel (positions recalculées).
   - Un clic sans mouvement (< 3px) ouvre/ferme le volet de détails ; au-delà, c'est un déplacement.
@@ -270,7 +277,8 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
 - **Multi-sélection & alignement de nœuds** :
   - **Ctrl/Maj+clic** ajoute/retire un nœud de la multi-sélection (contour cyan épais). Un clic simple réinitialise la sélection.
   - Glisser un nœud déjà multi-sélectionné **déplace tout le groupe** ensemble.
-  - **Barre d'alignement** (visible dès 2 nœuds) : aligner gauche / centre vertical / droite, haut / milieu horizontal / bas ; **répartir** horizontalement/verticalement (dès 3 nœuds) ; bouton « Effacer la sélection ».
+  - **Barre d'alignement** (visible dès 2 nœuds) : aligner gauche / centre vertical / droite, haut / milieu horizontal / bas ; **répartir** horizontalement/verticalement (dès 3 nœuds) ; **largeur** : réduire (`−`) / agrandir (`+`) tous les sélectionnés, **« Même largeur »** (uniformise sur le plus étroit) ; bouton « Effacer la sélection ».
+- **Largeur d'un élément** : le volet d'un élément propose « Réduire » / « Agrandir » la largeur (pas de 20 px, min 80 px), avec la largeur courante affichée.
 - **Édition des liaisons (arêtes)** :
   - Clic sur une liaison la sélectionne (halo cyan) et ouvre un volet d'édition.
   - **Côté d'accroche** de chaque extrémité (départ / arrivée) : haut / bas / gauche / droite ; par défaut, choix automatique selon la position des nœuds.
@@ -305,7 +313,7 @@ Interface organisée en **4 onglets** (inspirée de l'outil projets `tests-outil
   - **Popup de revue** : chaque proposition est cochable (badge op + type, before→after, justification) → rien n'est appliqué sans validation.
   - À l'application : ops cochées appliquées (placement auto des nouveaux éléments), diffusion (`persistLayout`) **et** enregistrement automatique d'une version **« MAJ IA — <date> »**.
   - Serveur : `POST /api/admin/tests/sitemap-update/prepare` (écrit le run) + `GET …/sitemap-update-stream` (SSE, exécute l'agent CLI via l'executor port 3002). Prérequis : executor lancé + provider CLI actif.
-  - **Restreint à une zone** : le volet d'édition d'une zone propose **« Nouvelle version par IA (cette zone) »** → même flux mais l'IA ne propose des changements QUE pour cette zone (nœuds dont `groupId` = la zone, la zone elle-même, liaisons internes). Le `scope` est transmis au serveur (filtrage + consigne de prompt) ; la version créée est nommée `MAJ IA (<zone>) — <date>`.
+  - **Restreint à une zone** : le volet d'édition d'une zone propose **« Nouvelle version par IA (cette zone) »** → même flux restreint au périmètre de la page : ses **sections** (zones contenues) et leurs **éléments**, plus les **liaisons** impliquant ces éléments/sections. Le prompt liste les sections existantes (id + libellé) et impose : rattacher chaque élément au `groupId` de la **section** adaptée (pas la page), créer la section manquante si besoin (réutilisable via id temporaire dans la même réponse), et créer les **liaisons**. Côté application : passe 1 = création des zones (mapping id temporaire → id réel, nouvelles sections placées DANS la page), passe 2 = éléments rattachés à leur section + liaisons résolues. Version créée : `MAJ IA (<zone>) — <date>`.
 - **Créer / lancer un test depuis un nœud** (volet de détails) :
   - **« Lancer »** (vert, `play_circle`) sur chaque section de test liée → pré-sélectionne la section et bascule sur l'onglet Exécution.
   - **« Créer une section de test ici »** (indigo, `add`) → ouvre le popup de création pré-rempli (section parente = chemin du nœud, titre/slug d'après le label).

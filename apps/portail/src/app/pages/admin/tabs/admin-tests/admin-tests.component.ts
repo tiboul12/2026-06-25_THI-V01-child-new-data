@@ -179,6 +179,7 @@ interface SitemapGroup {
   url?: string;           // route (si role=page)
   component?: string;     // composant Angular lié (page ou section)
   description?: string;
+  parentId?: string;      // page parente (si role=section) — pour l'organisation automatique
 }
 type SmSide = 'left' | 'right' | 'top' | 'bottom';
 interface SmEdgeOverride { fromSide?: SmSide; toSide?: SmSide; bend?: number; }
@@ -186,6 +187,7 @@ interface SmAiProposal {
   op: 'add' | 'modify' | 'delete';
   kind: 'node' | 'group' | 'edge';
   id: string | null;
+  tempId?: string | null;
   data?: any;
   before?: any;
   reason?: string;
@@ -1494,11 +1496,12 @@ Exemple :
   /** Lit la disposition sauvegardée. */
   private readSmLayout(): {
     schema?: string;
-    nodes?: Record<string, { x: number; y: number; groupId?: string; label?: string; elType?: SmElType }>;
-    groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string; role?: SmGroupRole; sectionType?: string; url?: string; component?: string }>;
+    nodes?: Record<string, { x: number; y: number; w?: number; h?: number; groupId?: string; label?: string; elType?: SmElType }>;
+    groups?: Record<string, { x: number; y: number; w: number; h: number; label?: string; role?: SmGroupRole; sectionType?: string; url?: string; component?: string; parentId?: string }>;
     edges?: Record<string, SmEdgeOverride>;
     customGroups?: SitemapGroup[];
     customEdges?: SitemapEdge[];
+    customNodes?: SitemapNode[];
     edgesAll?: SitemapEdge[];
   } {
     try {
@@ -1510,14 +1513,17 @@ Exemple :
 
   private smLayoutValid(l: any): boolean { return !!l && l.schema === this.SM_SCHEMA; }
 
-  /** Applique les positions + réassignations de zone sauvegardées sur les nœuds par défaut. */
+  /** Applique les positions/tailles + réassignations sauvegardées sur les nœuds par défaut, + nœuds personnalisés. */
   private loadInitialSmNodes(): SitemapNode[] {
     const l = this.readSmLayout();
-    const saved = this.smLayoutValid(l) ? (l.nodes || {}) : {};
-    return this.SM_BASE_NODES.map(n => {
+    if (!this.smLayoutValid(l)) return this.SM_BASE_NODES.map(n => ({ ...n }));
+    const saved = l.nodes || {};
+    const base = this.SM_BASE_NODES.map(n => {
       const p = saved[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label, elType: p.elType ?? n.elType } : { ...n };
+      return p ? { ...n, x: p.x, y: p.y, w: p.w ?? n.w, h: p.h ?? n.h, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label, elType: p.elType ?? n.elType } : { ...n };
     });
+    const custom = (l.customNodes || []).map(n => ({ ...n }));
+    return [...base, ...custom];
   }
 
   /** Charge les overrides d'arêtes sauvegardés (côtés d'accroche, courbure). */
@@ -1533,7 +1539,7 @@ Exemple :
     const saved = l.groups || {};
     const base = this.SM_BASE_GROUPS.map(g => {
       const s = saved[g.id];
-      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label, role: s.role ?? g.role, sectionType: s.sectionType ?? g.sectionType, url: s.url ?? g.url, component: s.component ?? g.component } : { ...g };
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label, role: s.role ?? g.role, sectionType: s.sectionType ?? g.sectionType, url: s.url ?? g.url, component: s.component ?? g.component, parentId: s.parentId ?? g.parentId } : { ...g };
     });
     const custom = (l.customGroups || []).map(g => ({ ...g }));
     return [...base, ...custom];
@@ -1552,6 +1558,8 @@ Exemple :
 
   sitemapZoom        = signal(0.6);
   sitemapPan         = signal({ x: 10, y: 10 });
+  /** Mode plein écran : la Site Map occupe toute la fenêtre, masque les barres de menu. */
+  sitemapFullscreen  = signal(false);
   selectedSmNode     = signal<SitemapNode | null>(null);
   /** Sélection multiple de nœuds (Ctrl/Maj+clic) pour alignement / déplacement groupé. */
   smMultiSelect      = signal<Set<string>>(new Set());
@@ -1661,6 +1669,8 @@ Exemple :
   sitemapZoomIn()    { this.sitemapZoom.update(z => Math.min(2.5, +(z + 0.1).toFixed(1))); }
   sitemapZoomOut()   { this.sitemapZoom.update(z => Math.max(0.15, +(z - 0.1).toFixed(1))); }
   sitemapZoomReset() { this.sitemapZoom.set(0.6); this.sitemapPan.set({ x: 10, y: 10 }); }
+  /** Bascule le mode plein écran de la Site Map (masque toutes les barres de menu hors celle de la Site Map). */
+  toggleSitemapFullscreen() { this.sitemapFullscreen.update(v => !v); }
 
   smMouseDown(e: MouseEvent) {
     const tgt = e.target as Element;
@@ -1809,6 +1819,35 @@ Exemple :
   smNodeMultiSelected(id: string): boolean { return this.smMultiSelect().has(id); }
   clearMultiSelect() { this.smMultiSelect.set(new Set()); }
 
+  private readonly SM_NODE_MIN_W = 80;
+
+  /** Réduit/agrandit la largeur du nœud sélectionné (volet élément). */
+  resizeSelectedNodeWidth(delta: number) {
+    const id = this.selectedSmNode()?.id;
+    if (!id) return;
+    this.smNodes.update(ns => ns.map(n => n.id === id ? { ...n, w: Math.max(this.SM_NODE_MIN_W, n.w + delta) } : n));
+    this.selectedSmNode.set(this.smNodes().find(n => n.id === id) ?? null);
+    this.persistLayout();
+  }
+
+  /** Réduit/agrandit la largeur de tous les nœuds multi-sélectionnés. */
+  resizeMultiWidth(delta: number) {
+    const sel = this.smMultiSelect();
+    if (sel.size < 1) return;
+    this.smNodes.update(ns => ns.map(n => sel.has(n.id) ? { ...n, w: Math.max(this.SM_NODE_MIN_W, n.w + delta) } : n));
+    this.persistLayout();
+  }
+
+  /** Uniformise la largeur des nœuds multi-sélectionnés (sur la plus étroite). */
+  uniformizeMultiWidth() {
+    const nodes = this.selectedNodesList();
+    if (nodes.length < 2) return;
+    const w = Math.max(this.SM_NODE_MIN_W, Math.min(...nodes.map(n => n.w)));
+    const ids = new Set(nodes.map(n => n.id));
+    this.smNodes.update(ns => ns.map(n => ids.has(n.id) ? { ...n, w } : n));
+    this.persistLayout();
+  }
+
   /** Liste des nœuds actuellement multi-sélectionnés. */
   private selectedNodesList(): SitemapNode[] {
     const sel = this.smMultiSelect();
@@ -1889,14 +1928,19 @@ Exemple :
 
   /** Construit l'objet disposition (nœuds + zones + liaisons, base & personnalisées). */
   private buildLayoutObject() {
-    const nodes: Record<string, { x: number; y: number; groupId?: string; label?: string; elType?: SmElType }> = {};
-    for (const n of this.smNodes()) nodes[n.id] = { x: n.x, y: n.y, groupId: n.groupId, label: n.label, elType: n.elType };
+    const baseNodeIds = new Set(this.SM_BASE_NODES.map(n => n.id));
+    const nodes: Record<string, { x: number; y: number; w?: number; h?: number; groupId?: string; label?: string; elType?: SmElType }> = {};
+    const customNodes: SitemapNode[] = [];
+    for (const n of this.smNodes()) {
+      if (baseNodeIds.has(n.id)) nodes[n.id] = { x: n.x, y: n.y, w: n.w, h: n.h, groupId: n.groupId, label: n.label, elType: n.elType };
+      else customNodes.push({ ...n });   // élément/nœud ajouté → sauvegarde complète
+    }
 
     const baseGroupIds = new Set(this.SM_BASE_GROUPS.map(g => g.id));
-    const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string; role?: SmGroupRole; sectionType?: string; url?: string; component?: string }> = {};
+    const groups: Record<string, { x: number; y: number; w: number; h: number; label?: string; role?: SmGroupRole; sectionType?: string; url?: string; component?: string; parentId?: string }> = {};
     const customGroups: SitemapGroup[] = [];
     for (const g of this.smGroups()) {
-      if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label, role: g.role, sectionType: g.sectionType, url: g.url, component: g.component };
+      if (baseGroupIds.has(g.id)) groups[g.id] = { x: g.x, y: g.y, w: g.w, h: g.h, label: g.label, role: g.role, sectionType: g.sectionType, url: g.url, component: g.component, parentId: g.parentId };
       else customGroups.push({ ...g });
     }
 
@@ -1905,21 +1949,23 @@ Exemple :
     // Liste complète des liaisons (base + custom, avec modifs/suppressions) → toute liaison éditable & persistée
     const edgesAll = this.smEdges().map(e => ({ ...e }));
 
-    return { schema: this.SM_SCHEMA, nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges, edgesAll };
+    return { schema: this.SM_SCHEMA, nodes, groups, edges: this.smEdgeOverrides(), customGroups, customEdges, customNodes, edgesAll };
   }
 
   /** Applique un objet disposition (chargé du serveur ou du cache) sur les signaux. */
   private applySmLayout(layout: any) {
     if (!this.smLayoutValid(layout)) return;   // schéma incompatible → on garde la base
     const savedNodes = layout?.nodes || {};
-    this.smNodes.set(this.SM_BASE_NODES.map(n => {
+    const baseNodes = this.SM_BASE_NODES.map(n => {
       const p = savedNodes[n.id];
-      return p ? { ...n, x: p.x, y: p.y, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label, elType: p.elType ?? n.elType } : { ...n };
-    }));
+      return p ? { ...n, x: p.x, y: p.y, w: p.w ?? n.w, h: p.h ?? n.h, groupId: p.groupId ?? n.groupId, label: p.label ?? n.label, elType: p.elType ?? n.elType } : { ...n };
+    });
+    const customNodes = Array.isArray(layout?.customNodes) ? layout.customNodes.map((n: SitemapNode) => ({ ...n })) : [];
+    this.smNodes.set([...baseNodes, ...customNodes]);
     const savedGroups = layout?.groups || {};
     const base = this.SM_BASE_GROUPS.map(g => {
       const s = savedGroups[g.id];
-      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label, role: s.role ?? g.role, sectionType: s.sectionType ?? g.sectionType, url: s.url ?? g.url, component: s.component ?? g.component } : { ...g };
+      return s ? { ...g, x: s.x, y: s.y, w: s.w, h: s.h, label: s.label ?? g.label, role: s.role ?? g.role, sectionType: s.sectionType ?? g.sectionType, url: s.url ?? g.url, component: s.component ?? g.component, parentId: s.parentId ?? g.parentId } : { ...g };
     });
     const customGroups = Array.isArray(layout?.customGroups) ? layout.customGroups.map((g: SitemapGroup) => ({ ...g })) : [];
     this.smGroups.set([...base, ...customGroups]);
@@ -2193,18 +2239,56 @@ Exemple :
     const approved = props.filter((_, i) => ap.has(i));
     if (approved.length === 0) { this.closeSmAiReview(); return; }
 
-    // Point de départ pour placer les nouveaux nœuds (colonne de staging à droite)
+    // Point de départ pour placer les éléments/zones sans cible (colonne de staging à droite)
     let stageX = Math.max(0, ...this.smNodes().map(n => n.x + n.w)) + 80;
     let stageY = 80;
+    const rid = (pfx: string) => pfx + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+    const scopePageId = (() => { const id = this.smAiScopeGroupId(); return (id && this.smGroups().find(g => g.id === id && g.role === 'page')) ? id : null; })();
+    // Mapping id temporaire (proposé par l'IA) → id réel généré (pour rattacher éléments/liaisons aux nouvelles sections)
+    const tempMap = new Map<string, string>();
+    const resolveRef = (ref: string): string => {
+      if (!ref) return ref;
+      if (ref.startsWith('group:')) { const inner = ref.slice(6); return 'group:' + (tempMap.get(inner) || inner); }
+      return tempMap.get(ref) || ref;
+    };
 
+    // ── Passe 1 : créer les ZONES (pages/sections) d'abord, pour rattacher ensuite éléments & liaisons ──
+    for (const p of approved) {
+      if (p.kind !== 'group' || p.op !== 'add') continue;
+      const d = p.data || {};
+      const role: SmGroupRole = (['page', 'section', 'zone'].includes(d.role) ? d.role : 'zone');
+      const id = rid(role === 'page' ? 'pg-' : role === 'section' ? 'sec-' : 'grp-');
+      if (p.tempId) tempMap.set(p.tempId, id);
+      const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
+      const stroke = role === 'section' ? this.SM_SECTION_STROKE : pal.stroke;
+      const fill = role === 'section' ? this.SM_SECTION_FILL : (role === 'page' ? pal.stroke + '0d' : pal.fill);
+      let gx = stageX - 20, gy = stageY, gw = role === 'section' ? 320 : 360, gh = role === 'section' ? 110 : 260;
+      // Une nouvelle section issue d'une MAJ scopée sur une page → placée DANS la page
+      const page = (role === 'section' && scopePageId) ? this.smGroups().find(g => g.id === scopePageId) : null;
+      if (page) {
+        const inner = this.smGroups().filter(g => g.id !== page.id && g.x >= page.x && g.y >= page.y && g.x + g.w <= page.x + page.w && g.y + g.h <= page.y + page.h);
+        gx = page.x + 20; gw = page.w - 40;
+        gy = inner.length ? Math.max(...inner.map(g => g.y + g.h)) + 12 : page.y + 50;
+        if (gy + gh > page.y + page.h) this.smGroups.update(gs => gs.map(g => g.id === page.id ? { ...g, h: gy + gh + 20 - g.y } : g));
+      } else { stageY += gh + 20; }
+      const parentId = role === 'section' ? (resolveRef(d.parentId || '') || scopePageId || undefined) : undefined;
+      this.smGroups.update(gs => [...gs, {
+        id, label: d.label || (role === 'page' ? 'Nouvelle page' : role === 'section' ? 'Nouvelle section' : 'Nouvelle zone'),
+        role, sectionType: d.sectionType, url: d.url, component: d.component, description: d.description, parentId,
+        x: gx, y: gy, w: gw, h: gh, stroke, fill,
+      }]);
+    }
+
+    // ── Passe 2 : éléments (nœuds), modifs/suppressions de zones, liaisons ──
     for (const p of approved) {
       if (p.kind === 'node') {
         if (p.op === 'add') {
           const d = p.data || {};
-          const id = 'el-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+          const id = rid('el-');
           const elType: SmElType | undefined = (['link', 'button', 'form', 'widget'].includes(d.elType) ? d.elType : (d.kind ? undefined : 'link'));
-          // Si l'élément cible une section existante → placement empilé dans la section
-          const sec = elType ? this.smGroups().find(g => g.id === d.groupId && g.role === 'section') : null;
+          const gid = resolveRef(d.groupId || '');
+          // Rattache l'élément à sa section → placement empilé dedans
+          const sec = elType ? this.smGroups().find(g => g.id === gid && g.role === 'section') : null;
           let nx = stageX, ny = stageY, nw = 300, nh = elType ? 30 : (d.tabs?.length ? 60 + d.tabs.length * 22 : 60);
           if (sec) {
             const inner = this.smNodes().filter(n => n.groupId === sec.id);
@@ -2212,15 +2296,14 @@ Exemple :
             nx = sec.x + 12; nw = sec.w - 24;
             this.smGroups.update(gs => gs.map(g => g.id === sec.id && (ny + nh) > g.y + g.h ? { ...g, h: ny + nh + 10 - g.y } : g));
           }
-          const node: SitemapNode = {
+          this.smNodes.update(ns => [...ns, {
             id, label: d.label || 'Nouvel élément', url: d.url || 'embed',
             port: (d.port === 4203 ? 4203 : 4202), kind: (d.kind || 'protected'),
-            groupId: d.groupId || '', x: nx, y: ny, w: nw, h: nh, elType,
+            groupId: sec ? sec.id : (gid || ''), x: nx, y: ny, w: nw, h: nh, elType,
             components: Array.isArray(d.components) ? d.components : [],
             tabs: Array.isArray(d.tabs) && d.tabs.length ? d.tabs : undefined,
             description: d.description || '', cahierPaths: Array.isArray(d.cahierPaths) ? d.cahierPaths : [],
-          };
-          this.smNodes.update(ns => [...ns, node]);
+          }]);
           if (!sec) stageY += nh + 24;
         } else if (p.op === 'modify' && p.id) {
           const d = p.data || {};
@@ -2228,7 +2311,7 @@ Exemple :
             ...n,
             label: d.label ?? n.label, url: d.url ?? n.url, port: d.port ?? n.port, kind: d.kind ?? n.kind,
             elType: (['link', 'button', 'form', 'widget'].includes(d.elType) ? d.elType : n.elType),
-            groupId: d.groupId ?? n.groupId, components: Array.isArray(d.components) ? d.components : n.components,
+            groupId: d.groupId ? resolveRef(d.groupId) : n.groupId, components: Array.isArray(d.components) ? d.components : n.components,
             tabs: Array.isArray(d.tabs) ? (d.tabs.length ? d.tabs : undefined) : n.tabs,
             description: d.description ?? n.description, cahierPaths: Array.isArray(d.cahierPaths) ? d.cahierPaths : n.cahierPaths,
           } : n));
@@ -2236,20 +2319,7 @@ Exemple :
           this.smNodes.update(ns => ns.filter(n => n.id !== p.id));
         }
       } else if (p.kind === 'group') {
-        if (p.op === 'add') {
-          const d = p.data || {};
-          const id = (d.role === 'page' ? 'pg-' : d.role === 'section' ? 'sec-' : 'grp-') + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
-          const role: SmGroupRole = (['page', 'section', 'zone'].includes(d.role) ? d.role : 'zone');
-          const pal = this.zonePalette[this.smGroups().length % this.zonePalette.length];
-          const stroke = role === 'section' ? this.SM_SECTION_STROKE : pal.stroke;
-          const fill = role === 'section' ? this.SM_SECTION_FILL : (role === 'page' ? pal.stroke + '0d' : pal.fill);
-          this.smGroups.update(gs => [...gs, {
-            id, label: d.label || (role === 'page' ? 'Nouvelle page' : role === 'section' ? 'Nouvelle section' : 'Nouvelle zone'),
-            role, sectionType: d.sectionType, url: d.url, component: d.component, description: d.description,
-            x: stageX - 20, y: stageY, w: role === 'section' ? 320 : 360, h: role === 'section' ? 120 : 260, stroke, fill,
-          }]);
-          stageY += (role === 'section' ? 140 : 284);
-        } else if (p.op === 'modify' && p.id) {
+        if (p.op === 'modify' && p.id) {
           const d = p.data || {};
           this.smGroups.update(gs => gs.map(g => g.id === p.id ? {
             ...g, label: d.label ?? g.label, role: (['page', 'section', 'zone'].includes(d.role) ? d.role : g.role),
@@ -2261,26 +2331,103 @@ Exemple :
       } else if (p.kind === 'edge') {
         if (p.op === 'add') {
           const d = p.data || {};
-          if (d.from && d.to) {
-            const id = 'edge-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
-            this.smEdges.update(es => [...es, { id, from: d.from, to: d.to, type: (d.type || 'nav'), label: d.label || '' } as SitemapEdge]);
+          const from = resolveRef(d.from || ''), to = resolveRef(d.to || '');
+          if (from && to) {
+            const id = rid('edge-');
+            this.smEdges.update(es => [...es, { id, from, to, type: (d.type || 'nav'), label: d.label || '' } as SitemapEdge]);
           }
         } else if (p.op === 'modify' && p.id) {
           const d = p.data || {};
-          this.smEdges.update(es => es.map(e => e.id === p.id ? { ...e, type: d.type ?? e.type, label: d.label ?? e.label, from: d.from ?? e.from, to: d.to ?? e.to } : e));
+          this.smEdges.update(es => es.map(e => e.id === p.id ? { ...e, type: d.type ?? e.type, label: d.label ?? e.label, from: d.from ? resolveRef(d.from) : e.from, to: d.to ? resolveRef(d.to) : e.to } : e));
         } else if (p.op === 'delete' && p.id) {
           this.smEdges.update(es => es.filter(e => e.id !== p.id));
         }
       }
     }
 
-    this.persistLayout();
+    // Organise automatiquement : seulement la zone ciblée si MAJ scopée, sinon toute la carte
+    const aiScope = this.smAiScopeGroupId();
+    if (aiScope && this.smGroups().some(g => g.id === aiScope)) this.autoLayoutPage(aiScope);
+    else this.autoLayoutSitemap();
     // Enregistre automatiquement une nouvelle version
     const scopeLabel = this.smAiScopeLabel();
     const name = (scopeLabel ? `MAJ IA (${scopeLabel}) — ` : 'MAJ IA — ') + new Date().toLocaleString('fr-FR');
     this.smVersionName.set(name);
     await this.saveSmVersion();
     this.closeSmAiReview();
+  }
+
+  private readonly SM_L = { PAGE_GAP: 60, COL_PAD: 18, SEC_GAP: 14, PAGE_LABEL: 42, SEC_LABEL: 30, EL_H: 30, EL_GAP: 8, EL_PAD: 12, PAGE_W: 380, MAXW: 2000, START: 40 };
+
+  /** Sections d'une page : par parentId, sinon par contenance géométrique (base sans parentId). */
+  private smSectionsOf(page: SitemapGroup, groups: SitemapGroup[]): SitemapGroup[] {
+    const direct = groups.filter(s => s.role === 'section' && s.parentId === page.id);
+    if (direct.length) return direct;
+    return groups.filter(s => s.role === 'section' && s.id !== page.id
+      && s.x >= page.x && s.y >= page.y && s.x + s.w <= page.x + page.w && s.y + s.h <= page.y + page.h);
+  }
+
+  /** Calcule la disposition interne (relative) d'une page : hauteur + placements sections/éléments. */
+  private smComputePageLayout(page: SitemapGroup, groups: SitemapGroup[], nodes: SitemapNode[]) {
+    const L = this.SM_L;
+    const elementsOf = (gid: string) => nodes.filter(n => n.groupId === gid);
+    let contentY = L.PAGE_LABEL + 8;
+    const secPlacements: { sec: SitemapGroup; relY: number; h: number; els: { el: SitemapNode; relY: number }[] }[] = [];
+    for (const sec of this.smSectionsOf(page, groups)) {
+      let ey = L.SEC_LABEL;
+      const els = elementsOf(sec.id).map(el => { const pos = { el, relY: ey }; ey += L.EL_H + L.EL_GAP; return pos; });
+      const h = Math.max(56, ey + 6);
+      secPlacements.push({ sec, relY: contentY, h, els });
+      contentY += h + L.SEC_GAP;
+    }
+    const directEls = elementsOf(page.id).map(el => { const pos = { el, relY: contentY }; contentY += L.EL_H + L.EL_GAP; return pos; });
+    return { height: Math.max(150, contentY + L.COL_PAD), secPlacements, directEls };
+  }
+
+  /** Applique une disposition calculée (positions absolues à partir de page.x/y/w). */
+  private smApplyPageLayout(page: SitemapGroup, lay: ReturnType<typeof this.smComputePageLayout>) {
+    const L = this.SM_L;
+    const secW = page.w - 2 * L.COL_PAD;
+    for (const pl of lay.secPlacements) {
+      pl.sec.x = page.x + L.COL_PAD; pl.sec.w = secW; pl.sec.y = page.y + pl.relY; pl.sec.h = pl.h;
+      for (const ep of pl.els) { ep.el.x = pl.sec.x + L.EL_PAD; ep.el.w = pl.sec.w - 2 * L.EL_PAD; ep.el.y = pl.sec.y + ep.relY; ep.el.h = L.EL_H; }
+    }
+    for (const dp of lay.directEls) { dp.el.x = page.x + L.COL_PAD; dp.el.w = secW; dp.el.y = page.y + dp.relY; dp.el.h = L.EL_H; }
+  }
+
+  /** Organise TOUTE la carte : pages en grille, sections/éléments empilés. */
+  autoLayoutSitemap() {
+    const groups = this.smGroups().map(g => ({ ...g }));
+    const nodes  = this.smNodes().map(n => ({ ...n }));
+    const byId = new Map(groups.map(g => [g.id, g]));
+    const L = this.SM_L;
+    const topGroups = groups.filter(g => (g.role === 'page' || g.role === 'zone' || !g.role) && !(g.parentId && byId.has(g.parentId)));
+    let curX = L.START, curY = L.START, rowH = 0;
+    for (const page of topGroups) {
+      page.w = L.PAGE_W;
+      const lay = this.smComputePageLayout(page, groups, nodes);
+      if (curX > L.START && curX + L.PAGE_W > L.MAXW) { curX = L.START; curY += rowH + L.PAGE_GAP; rowH = 0; }
+      page.x = curX; page.y = curY; page.h = lay.height;
+      this.smApplyPageLayout(page, lay);
+      curX += L.PAGE_W + L.PAGE_GAP; rowH = Math.max(rowH, lay.height);
+    }
+    this.smGroups.set(groups);
+    this.smNodes.set(nodes);
+    this.persistLayout();
+  }
+
+  /** Organise UNIQUEMENT la zone donnée (garde sa position, range ses sections/éléments, ajuste sa hauteur). */
+  autoLayoutPage(pageId: string) {
+    const groups = this.smGroups().map(g => ({ ...g }));
+    const nodes  = this.smNodes().map(n => ({ ...n }));
+    const page = groups.find(g => g.id === pageId);
+    if (!page) return;
+    const lay = this.smComputePageLayout(page, groups, nodes);
+    page.h = lay.height;             // conserve x/y/w, ajuste seulement la hauteur
+    this.smApplyPageLayout(page, lay);
+    this.smGroups.set(groups);
+    this.smNodes.set(nodes);
+    this.persistLayout();
   }
 
   /** Restaure la disposition par défaut (supprime zones/liaisons personnalisées). */
