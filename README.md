@@ -185,3 +185,126 @@ Un fichier `sync-from-base.bat` est présent à la racine de chaque child. Il :
 ```
 .\sync-from-base.bat
 ```
+
+---
+
+## 🤖 Systèmes RAG pour Mistral Vibe
+
+Ce projet inclut **deux systèmes RAG (Retrieval-Augmented Generation)** spécialement conçus pour **Mistral Vibe**, permettant une compréhension complète et une recherche sémantique dans toute la documentation et le code du projet.
+
+### 📚 Disponibles
+
+| Système | Script | Base de données | Portée | Utilisation |
+|---------|--------|----------------|--------|------------|
+| **Functions RAG** | `rag_functions.py` | `functions_rag_db/` | Documentation des fonctions | Questions sur les fonctions métiers |
+| **Project RAG** | `project_rag.py` | `project_rag_db/` | **Projet complet** | Recherche dans tout le code et la documentation |
+
+### 🚀 Installation
+
+```bash
+# Installer les dépendances (une seule fois)
+pip install chromadb
+```
+
+### 🔧 Construction des bases de données
+
+Les bases de données sont **générées localement** et **non trackées** dans Git (via `.gitignore`).
+
+```bash
+# Construire le RAG des fonctions (247 fonctions)
+python rag_functions.py --build
+
+# Construire le RAG du projet complet (782 fichiers)
+python project_rag.py --build
+```
+
+### 🔍 Recherche
+
+#### Recherche dans les fonctions
+```bash
+# Recherche générale
+python rag_functions.py --query "création de projet"
+
+# Avec plus de résultats
+python rag_functions.py --query "gestion des commentaires" --n 10
+
+# Voir les statistiques
+python rag_functions.py --stats
+```
+
+#### Recherche dans le projet complet
+```bash
+# Recherche générale
+python project_rag.py --query "déploiement application"
+
+# Filtrer par catégorie
+python project_rag.py --query "configuration API" --category configuration
+
+# Filtrer par fichier
+python project_rag.py --query "fonction" --file "server/db.js"
+
+# Voir les statistiques
+python project_rag.py --stats
+
+# Lister les catégories disponibles
+python project_rag.py --list-categories
+```
+
+### 📊 Statistiques
+
+| Métrique | Functions RAG | Project RAG |
+|----------|---------------|-------------|
+| Fichiers indexés | 28 | 782 |
+| Chunks vectorisés | 316 | 4264 |
+| Fonctions identifiées | 247 | - |
+| Catégories | 1 (documentation) | 8 (documentation, javascript, html, configuration, python, css, other) |
+
+### 🎯 Catégories de fichiers (Project RAG)
+
+- `documentation` : Fichiers `.md`, `.txt`
+- `configuration` : Fichiers `.json`, `.yaml`, `.yml`, `.toml`, `.ini`, `.env`
+- `javascript` : Fichiers `.js`, `.jsx`, `.ts`, `.tsx`
+- `python` : Fichiers `.py`
+- `html` : Fichiers `.html`, `.htm`
+- `css` : Fichiers `.css`, `.scss`, `.sass`, `.less`
+- `sql` : Fichiers `.sql`
+- `shell` : Fichiers `.sh`, `.bash`
+
+### 📖 Documentation complète
+
+- **Functions RAG** : Voir [RAG_README.md](RAG_README.md)
+- **Project RAG** : Voir [PROJECT_RAG_README.md](PROJECT_RAG_README.md)
+
+### ⚠️ Important
+
+- Les bases de données (`functions_rag_db/` et `project_rag_db/`) sont **exclues de Git**
+- Chaque utilisateur doit exécuter `--build` une fois pour générer les bases localement
+- Ces systèmes sont **réservés à Mistral Vibe** pour une utilisation interne
+- Ne pas exposer publiquement les bases de données
+
+---
+
+## 💡 Utilisation avec Mistral Vibe
+
+Une fois les bases de données construites, Mistral Vibe peut :
+
+1. **Comprendre le contexte** de n'importe quelle partie du projet
+2. **Trouver du code, de la documentation, des configurations** rapidement
+3. **Répondre à des questions techniques** avec précision
+4. **Naviguer dans la structure** du projet de manière intelligente
+5. **Identifier les fonctions modifiées** à retester
+
+### Exemples de questions pour Mistral Vibe
+
+```
+"Quelle est la fonction 2-5-1-3 et que fait-elle ?"
+"Comment configurer le déploiement automatique ?"
+"Montre-moi le code de gestion des utilisateurs"
+"Quelles sont les fonctions marquées comme modifiées ?"
+"Où se trouve la configuration de la base de données ?"
+"Explique-moi l'architecture du projet"
+```
+
+---
+
+**Dernière mise à jour** : 2026-06-25
